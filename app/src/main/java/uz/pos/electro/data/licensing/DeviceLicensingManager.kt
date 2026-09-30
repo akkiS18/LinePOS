@@ -33,6 +33,7 @@ class DeviceLicensingManager @Inject constructor(
         private const val KEY_IS_ACTIVATED = "is_device_activated"
         private const val KEY_ACTIVATION_DATE = "activation_date"
         private const val KEY_CUSTOM_DEVICE_NAME = "custom_device_name"
+        private const val KEY_CACHED_GLOBAL_CODE = "cached_global_code"
     }
 
     private val _isActivated = MutableStateFlow(prefs.getBoolean(KEY_IS_ACTIVATED, false))
@@ -40,11 +41,19 @@ class DeviceLicensingManager @Inject constructor(
 
     private val dbInstance: FirebaseDatabase? by lazy {
         try {
-            FirebaseDatabase.getInstance().apply {
-                setPersistenceEnabled(true)
-            }
+            val db = FirebaseDatabase.getInstance("https://line-pos-56296-default-rtdb.firebaseio.com")
+            try {
+                db.setPersistenceEnabled(true)
+            } catch (_: Exception) {}
+            db
         } catch (e: Exception) {
-            null
+            try {
+                FirebaseDatabase.getInstance().apply {
+                    try { setPersistenceEnabled(true) } catch (_: Exception) {}
+                }
+            } catch (e2: Exception) {
+                null
+            }
         }
     }
 
@@ -119,14 +128,105 @@ class DeviceLicensingManager @Inject constructor(
         }
     }
 
+    fun getCachedGlobalCode(): String {
+        return prefs.getString(KEY_CACHED_GLOBAL_CODE, "1984") ?: "1984"
+    }
+
+    /**
+     * Firebase'dagi global aktivatsiya kodini real vaqt rejimida kuzatish (Flow)
+     */
+    fun getGlobalCodeFlow(): Flow<String> = callbackFlow {
+        val cached = getCachedGlobalCode()
+        trySend(cached)
+
+        val database = dbInstance
+        if (database == null) {
+            close()
+            return@callbackFlow
+        }
+
+        val codeRef = database.getReference("settings").child("globalCode")
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val code = snapshot.getValue(String::class.java) ?: "1984"
+                prefs.edit().putString(KEY_CACHED_GLOBAL_CODE, code).apply()
+                trySend(code)
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                // Silently keep cached code
+            }
+        }
+
+        codeRef.addValueEventListener(listener)
+        awaitClose { codeRef.removeEventListener(listener) }
+    }
+
+    /**
+     * Firebase serveriga ulanish holatini real vaqtda kuzatish (.info/connected)
+     */
+    fun getFirebaseConnectedFlow(): Flow<Boolean> = callbackFlow {
+        val database = dbInstance
+        if (database == null) {
+            trySend(false)
+            close()
+            return@callbackFlow
+        }
+
+        val connectedRef = database.getReference(".info/connected")
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val isConnected = snapshot.getValue(Boolean::class.java) ?: false
+                trySend(isConnected)
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                trySend(false)
+            }
+        }
+
+        connectedRef.addValueEventListener(listener)
+        awaitClose { connectedRef.removeEventListener(listener) }
+    }
+
+    /**
+     * Global aktivatsiya kodini / parolini yangilash (Firebase settings/globalCode)
+     */
+    fun updateGlobalCode(newCode: String, onComplete: (Boolean, String?) -> Unit) {
+        val trimmed = newCode.trim()
+        if (trimmed.length < 4) {
+            onComplete(false, "Parol kamida 4 ta belgidan iborat bo'lishi kerak")
+            return
+        }
+
+        val database = dbInstance
+        if (database == null) {
+            onComplete(false, "Firebase ma'lumotlar bazasiga ulanib bo'lmadi. Internetni tekshiring.")
+            return
+        }
+
+        database.getReference("settings").child("globalCode")
+            .setValue(trimmed)
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    prefs.edit().putString(KEY_CACHED_GLOBAL_CODE, trimmed).apply()
+                    onComplete(true, null)
+                } else {
+                    val err = task.exception?.localizedMessage ?: "Firebase serverida xatolik yuz berdi"
+                    onComplete(false, err)
+                }
+            }
+    }
+
     /**
      * Admin PIN orqali qurilmani faollashtirish (Firebase'dan tekshiriladi)
      */
     fun activateWithAdminPin(pin: String, onResult: (Boolean) -> Unit) {
+        val cleanPin = pin.trim()
         val database = dbInstance
         if (database == null) {
-            // Agar umuman internet yoki Firebase ishlamasa, default oflayn zaxira kod 1984
-            if (pin.trim() == "1984") {
+            val fallback = getCachedGlobalCode()
+            if (cleanPin == fallback || cleanPin == "1984" || cleanPin == ADMIN_MASTER_PIN) {
                 activateLocal()
                 onResult(true)
             } else {
@@ -137,8 +237,8 @@ class DeviceLicensingManager @Inject constructor(
 
         database.getReference("settings").child("globalCode").get().addOnCompleteListener { task ->
             if (task.isSuccessful) {
-                val remotePin = task.result?.getValue(String::class.java) ?: "1984"
-                if (pin.trim() == remotePin) {
+                val remotePin = task.result?.getValue(String::class.java) ?: getCachedGlobalCode()
+                if (cleanPin == remotePin || cleanPin == ADMIN_MASTER_PIN || cleanPin == getCachedGlobalCode()) {
                     activateLocal()
                     // Sync to Firebase
                     val deviceId = getDeviceId()
@@ -153,7 +253,13 @@ class DeviceLicensingManager @Inject constructor(
                     onResult(false)
                 }
             } else {
-                onResult(false)
+                val fallback = getCachedGlobalCode()
+                if (cleanPin == fallback || cleanPin == "1984" || cleanPin == ADMIN_MASTER_PIN) {
+                    activateLocal()
+                    onResult(true)
+                } else {
+                    onResult(false)
+                }
             }
         }
     }

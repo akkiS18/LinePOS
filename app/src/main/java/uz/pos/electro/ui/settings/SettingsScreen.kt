@@ -37,11 +37,15 @@ import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FileOpen
+import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.LockReset
 import androidx.compose.material.icons.filled.Percent
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.SupportAgent
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.AlertDialog
@@ -114,6 +118,12 @@ fun SettingsScreen(
     var isTaxDialogOpen by remember { mutableStateOf(false) }
     var isContactDialogOpen by remember { mutableStateOf(false) }
     var isWifiSyncOpen by remember { mutableStateOf(false) }
+
+    // Do'kon global paroli va Firebase holati
+    val globalCode by licensingManager.getGlobalCodeFlow().collectAsState(initial = licensingManager.getCachedGlobalCode())
+    val isFirebaseConnected by licensingManager.getFirebaseConnectedFlow().collectAsState(initial = false)
+    var isPasswordRevealed by remember { mutableStateOf(false) }
+    var isChangePasswordDialogOpen by remember { mutableStateOf(false) }
 
     // Telegram zaxira holatlari
     var telegramChatId by remember { mutableStateOf(BackupPreferences.getChatId(context)) }
@@ -227,7 +237,208 @@ fun SettingsScreen(
             }
         }
 
-        // ==================== 2. TELEGRAM ZAXIRA (AVTOMATLASHTIRILGAN 1-VARIANT) ====================
+        // ==================== 2. DO'KON GLOBAL PAROLI (AKTIVATSIYA KODI) ====================
+        Card(
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                // Sarlavha va Firebase holati
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(
+                            shape = CircleShape,
+                            color = Color(0xFFF59E0B).copy(alpha = 0.12f),
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.Key,
+                                    contentDescription = null,
+                                    tint = Color(0xFFD97706),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Text(
+                                text = "Do'kon Global Paroli",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Boshqa telefonlarni ulash kodi",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    // Firebase status badge
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = if (isFirebaseConnected) Color(0xFF10B981).copy(alpha = 0.15f) else Color(0xFFF59E0B).copy(alpha = 0.15f)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(7.dp)
+                                    .clip(CircleShape)
+                                    .background(if (isFirebaseConnected) Color(0xFF10B981) else Color(0xFFF59E0B))
+                            )
+                            Spacer(modifier = Modifier.width(5.dp))
+                            Text(
+                                text = if (isFirebaseConnected) "Bulutda Faol ✅" else "Oflayn ⚠️",
+                                color = if (isFirebaseConnected) Color(0xFF10B981) else Color(0xFFD97706),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Parolni ko'rsatish va nusxalash / ulashish bloki
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text(
+                                text = "Aktivatsiya Paroli:",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = if (isPasswordRevealed) globalCode.ifBlank { "1984" } else "••••",
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = LinePrimary,
+                                letterSpacing = if (isPasswordRevealed) 1.sp else 4.sp,
+                                fontFamily = FontFamily.Monospace
+                            )
+                        }
+
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Ko'zcha (ko'rish/yashirish)
+                            IconButton(
+                                onClick = { isPasswordRevealed = !isPasswordRevealed },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (isPasswordRevealed) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                    contentDescription = if (isPasswordRevealed) "Yashirish" else "Ko'rish",
+                                    tint = LinePrimary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            // Nusxalash
+                            IconButton(
+                                onClick = {
+                                    val codeToCopy = globalCode.ifBlank { "1984" }
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                    clipboard.setPrimaryClip(ClipData.newPlainText("Global PIN", codeToCopy))
+                                    Toast.makeText(context, "Parol nusxalandi: $codeToCopy", Toast.LENGTH_SHORT).show()
+                                },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.ContentCopy,
+                                    contentDescription = "Nusxalash",
+                                    tint = LineSecondary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            // Ulashish (Telegram, SMS, va hk)
+                            IconButton(
+                                onClick = {
+                                    val codeToShare = globalCode.ifBlank { "1984" }
+                                    try {
+                                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                            type = "text/plain"
+                                            putExtra(
+                                                Intent.EXTRA_TEXT,
+                                                "🔑 SMART Kassa aktivatsiya paroli: $codeToShare\n\nUshbu parolni yangi telefonda kassa ilovasini ochish uchun kiriting."
+                                            )
+                                        }
+                                        context.startActivity(Intent.createChooser(shareIntent, "Parolni ulashish"))
+                                    } catch (_: Throwable) {}
+                                },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Share,
+                                    contentDescription = "Ulashish",
+                                    tint = Color(0xFF0088CC),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Text(
+                    text = "Boshqa yangi telefon yoki kassirlarda ilovani o'rnatganda ushbu parolni terib kassa tizimini faollashtiradi.",
+                    fontSize = 11.sp,
+                    lineHeight = 15.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Parolni o'zgartirish tugmasi
+                Button(
+                    onClick = { isChangePasswordDialogOpen = true },
+                    colors = ButtonDefaults.buttonColors(containerColor = LinePrimary),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.LockReset,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Parolni O'zgartirish",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
+                }
+            }
+        }
+
+        // ==================== 3. TELEGRAM ZAXIRA (AVTOMATLASHTIRILGAN 1-VARIANT) ====================
         Card(
             shape = RoundedCornerShape(20.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -1154,6 +1365,18 @@ fun SettingsScreen(
                 }) {
                     Text("Bekor qilish")
                 }
+            }
+        )
+    }
+
+    // Global parolni o'zgartirish dialogi
+    if (isChangePasswordDialogOpen) {
+        ChangeGlobalPasswordDialog(
+            currentCode = globalCode.ifBlank { "1984" },
+            licensingManager = licensingManager,
+            onDismiss = { isChangePasswordDialogOpen = false },
+            onSuccess = {
+                isChangePasswordDialogOpen = false
             }
         )
     }
