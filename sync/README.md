@@ -48,7 +48,9 @@ instead of clearing store data. The SQL uses API-26-compatible stock updates.
 
 Pairing issues a random per-device token; only its SHA-256 hash is stored on the desktop.
 Every read/write/export requires the token. **Telefonlar ruxsatini bekor qilish** revokes all
-issued tokens. Firewall rules are limited to Private networks and LocalSubnet. Android
+issued tokens. V2 requests also carry the paired database identity; the server rejects a
+missing or mismatched identity before applying writes. Firewall rules are limited to
+Private networks and LocalSubnet. Android
 accepts only local/link-local/loopback destinations and does not follow redirects.
 
 HTTP header limits, an 8-MiB request-body limit, a 15-second request timeout and a 32-client
@@ -95,14 +97,18 @@ Before release, test on Windows and two Android devices:
 
 * C# core and actual loopback HTTP server: 20 executable tests passed (see test source).
 * Exact shipped SQLite trigger schema: 7 Python/SQLite tests passed.
-* GitHub Actions runs both suites on pull requests; device instrumentation remains separate.
-* Kotlin manager/repositories/DAOs/entities: source/type compilation with Android API
-  classes and lightweight Room/Hilt/database stubs; this does **not** validate KSP/DI or APK.
-* Full desktop build is blocked by a pre-existing `CornerRadius` property on a WPF Button
-  in `Views/CashierView.xaml` (line 1282). In a temporary copy only, removing that invalid
-  Button property allowed the desktop project to compile. Repository cashier UI is unchanged.
-* Full Android Gradle build and device instrumentation were not completed here. No release
-  APK/EXE was published; real-device sign-off remains required.
+* Windows GitHub Actions runner: full WPF Debug build passed after removing two invalid
+  `CornerRadius` attributes from Buttons in `CashierView.xaml`; their Border templates
+  retain the rounding.
+* Android GitHub Actions runner: `:app:assembleDebug :app:assembleDebugAndroidTest` passed,
+  including real Room/KSP, Hilt and Compose compilation (no stubs).
+* The HTTP test also checks missing/wrong paired database identities: rejected writes
+  leave inventory unchanged; a matching identity commits exactly once.
+* Real Android Room/SQLite capture tests: all 4 passed on API 26, and all 4 passed on API 35.
+  [GitHub Actions verification run](https://github.com/akkiS18/LinePOS/actions/runs/36781175813)
+  includes both builds, the 27 core/schema tests and both emulator runs.
+* Physical Windows/Android Wi-Fi, firewall, migrated shop databases and load tests remain
+  separate release gates. No production APK/EXE was published.
 
 ### Operational limits
 
