@@ -80,6 +80,16 @@ try {
             Assert(response.IsSuccessStatusCode,"Pairing failed");var credentials=JObject.Parse(response.Content.ReadAsStringAsync().Result);
             Assert((int)http.PostAsync("/api/v2/pair",new StringContent(pair.ToString(),Encoding.UTF8,"application/json")).Result.StatusCode==401,"Pairing code reused");
             http.DefaultRequestHeaders.Authorization=new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer",(string)credentials["token"]!);
+            var beforeWrongServer=Quantity(store);
+            var guardedBatch=new JObject{["operations"]=new JArray(Stock(-1))};
+            Assert((int)http.PostAsync("/api/v2/push",new StringContent(guardedBatch.ToString(),Encoding.UTF8,"application/json")).Result.StatusCode==400,"Missing database identity accepted");
+            http.DefaultRequestHeaders.Add("X-LinePOS-Server-Id","another-database");
+            Assert((int)http.PostAsync("/api/v2/push",new StringContent(guardedBatch.ToString(),Encoding.UTF8,"application/json")).Result.StatusCode==400,"Wrong database identity accepted");
+            Assert(Quantity(store)==beforeWrongServer,"Rejected identity changed inventory");
+            http.DefaultRequestHeaders.Remove("X-LinePOS-Server-Id");
+            http.DefaultRequestHeaders.Add("X-LinePOS-Server-Id",(string)credentials["serverId"]!);
+            Assert(http.PostAsync("/api/v2/push",new StringContent(guardedBatch.ToString(),Encoding.UTF8,"application/json")).Result.IsSuccessStatusCode,"Correct database identity rejected");
+            Assert(Quantity(store)==beforeWrongServer-1,"Correct identity did not commit exactly once");
             Assert(http.GetAsync("/api/v2/pull?cursor=0").Result.IsSuccessStatusCode,"Paired device rejected");
             Assert((int)http.PostAsync("/api/sync/push_stocks",new StringContent("[]")).Result.StatusCode==410,"Legacy overwrite endpoint still active");
             server.RevokeDevices();Assert((int)http.GetAsync("/api/v2/pull").Result.StatusCode==401,"Revoked token still accepted");

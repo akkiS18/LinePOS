@@ -273,7 +273,10 @@ class LocalSyncManager @Inject constructor(
         val conn = URL(base + path).openConnection() as HttpURLConnection
         conn.connectTimeout=5000;conn.readTimeout=15000;conn.instanceFollowRedirects=false
         try {
-            if(authenticated) conn.setRequestProperty("Authorization","Bearer ${token() ?: error("Qurilmani QR orqali ulang.")}")
+            if(authenticated) {
+                conn.setRequestProperty("Authorization","Bearer ${token() ?: error("Qurilmani QR orqali ulang.")}")
+                conn.setRequestProperty("X-LinePOS-Server-Id", metadata("server_id") ?: error("Qurilmani QR orqali ulang."))
+            }
             conn.requestMethod=if(body == null) "GET" else "POST"
             if(body != null) {
                 val bytes=body.toString().toByteArray(Charsets.UTF_8)

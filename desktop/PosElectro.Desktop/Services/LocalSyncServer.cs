@@ -179,6 +179,10 @@ namespace PosElectro.Desktop.Services
                         Authenticate(request.Headers,(client.Client.RemoteEndPoint as IPEndPoint)?.Address.ToString()??"");
                         if(path=="/api/ping" && request.Method=="GET")
                         {await Reply(stream,200,new JObject{["protocol"]=2,["serverId"]=store.ServerId,["name"]="Line kassa",["productsCount"]=_db.GetActiveProductsCount(),["salesCount"]=_db.GetTotalSalesCount()},timeout.Token);return;}
+                        // Bind V2 requests to the paired database before any mutation occurs.
+                        if(path.StartsWith("/api/v2/",StringComparison.Ordinal) &&
+                           (!request.Headers.TryGetValue("X-LinePOS-Server-Id",out var expectedServer) || expectedServer!=store.ServerId))
+                            throw new InvalidOperationException("Kompyuter bazasi almashgan; qayta ulash kerak. Amallar saqlanmadi.");
                         if(path=="/api/v2/push" && request.Method=="POST")
                         {var reply=store.Push((JArray?)JObject.Parse(request.Body)["operations"]??throw new ArgumentException("Amallar yo'q."));DataSynced?.Invoke();await Reply(stream,200,reply,timeout.Token);return;}
                         if(path=="/api/v2/pull" && request.Method=="GET")
