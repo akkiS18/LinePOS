@@ -64,33 +64,6 @@ POS/
 * **Installer:** Inno Setup Compiler (`Line_kassa_Setup.iss`)
 * **Ulanish:** TCP/HTTP Local Wi-Fi Sync Server
 
----
-
-## 🚀 O'rnatish va Ishga Tushirish
-
-### 📱 Android ilovasi:
-1. Loyihani **Android Studio** (Ladybug yoki undan yuqori) orqali oching.
-2. `local.properties` faylini yarating va SDK yo'lini ko'rsating:
-   ```properties
-   sdk.dir=C\:\\Users\\...\\AppData\\Local\\Android\\Sdk
-   ADMIN_PIN=2846
-   ```
-3. Gradle bilan sinxronizatsiya qiling va `app` modulini ishga tushiring:
-   ```bash
-   ./gradlew assembleDebug
-   ```
-
-### 🖥️ Windows Desktop ilovasi:
-1. `desktop/PosElectro.Desktop.sln` faylini **Visual Studio 2022** orqali oching.
-2. Target: `.NET 8.0-windows`, Platform: `x64` yoki `Any CPU`.
-3. Yoki terminal orqali ishga tushiring:
-   ```powershell
-   dotnet build desktop/PosElectro.Desktop/PosElectro.Desktop.csproj
-   dotnet run --project desktop/PosElectro.Desktop/PosElectro.Desktop.csproj
-   ```
-
----
-
 ## 📄 Hujjatlar
 
 Batafsil qo'llanmalar loyiha ichida mavjud:
