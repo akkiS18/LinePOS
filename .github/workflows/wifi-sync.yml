@@ -1,14 +1,6 @@
 name: Wi-Fi sync core
 on:
   pull_request:
-    paths:
-      - 'desktop/PosElectro.Desktop/Sync/**'
-      - 'desktop/PosElectro.Desktop/Services/LocalSyncServer.cs'
-      - 'app/src/main/java/uz/pos/electro/data/sync/**'
-      - 'app/src/main/assets/wifi-sync-schema.sql'
-      - 'sync/**'
-      - 'tests/**'
-      - '.github/workflows/wifi-sync.yml'
   workflow_dispatch:
 permissions:
   contents: read
@@ -25,3 +17,24 @@ jobs:
           python-version: '3.12'
       - run: dotnet run --project tests/WifiSync.CoreTests
       - run: python -m unittest discover -s tests -p 'test_*.py' -v
+  desktop-build:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - run: dotnet build desktop/PosElectro.Desktop/PosElectro.Desktop.csproj --configuration Debug
+  android-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+      - run: bash gradlew :app:assembleDebug :app:assembleDebugAndroidTest --no-daemon --stacktrace

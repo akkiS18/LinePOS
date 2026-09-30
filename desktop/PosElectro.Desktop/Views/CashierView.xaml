@@ -1279,7 +1279,7 @@
                                 Command="{Binding CloseBrakModalCommand}"
                                 Background="#334155" Foreground="#F8FAFC"
                                 FontSize="13" FontWeight="SemiBold" Padding="0,12"
-                                BorderThickness="0" CornerRadius="10" Cursor="Hand">
+                                BorderThickness="0" Cursor="Hand">
                             <Button.Template>
                                 <ControlTemplate TargetType="Button">
                                     <Border Background="{TemplateBinding Background}" CornerRadius="10">
@@ -1294,7 +1294,7 @@
                                 Command="{Binding ConfirmBrakWriteOffCommand}"
                                 Background="#E11D48" Foreground="White"
                                 FontSize="13" FontWeight="Bold" Padding="0,12"
-                                BorderThickness="0" CornerRadius="10" Cursor="Hand">
+                                BorderThickness="0" Cursor="Hand">
                             <Button.Template>
                                 <ControlTemplate TargetType="Button">
                                     <Border Background="{TemplateBinding Background}" CornerRadius="10">
