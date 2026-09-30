@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <cache-path name="cache_reports" path="reports/" />
+    <cache-path name="cache_backups" path="backups/" />
+    <cache-path name="cache_root" path="." />
+    <external-cache-path name="external_cache_reports" path="reports/" />
+    <external-cache-path name="external_cache_backups" path="backups/" />
+    <files-path name="files_reports" path="reports/" />
+    <files-path name="files_backups" path="backups/" />
+</paths>

@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "814185717362",
+    "project_id": "line-pos-56296",
+    "firebase_url": "https://line-pos-56296-default-rtdb.firebaseio.com",
+    "storage_bucket": "line-pos-56296.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:814185717362:android:e01e803d5e6235363aeceb",
+        "android_client_info": {
+          "package_name": "uz.pos.electro"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAifnP02k8nCM84BmmmGcthBrYodjutIrE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

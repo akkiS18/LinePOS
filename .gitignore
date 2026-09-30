@@ -1,0 +1,95 @@
+# ==========================================
+# Operating System & IDE Files
+# ==========================================
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# JetBrains / Android Studio / IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# Visual Studio / VS Code
+.vscode/
+.vs/
+*.suo
+*.user
+*.userosv
+*.userprefs
+*.sln.docstates
+
+# ==========================================
+# Android / Gradle Build Artifacts
+# ==========================================
+.gradle/
+build/
+*/build/
+app/build/
+admin/build/
+/captures/
+.externalNativeBuild/
+.cxx/
+output.json
+
+# Local configurations & caches
+local.properties
+.kotlin/
+
+# Android Packaging & Binaries (Keep repository lean; use GitHub Releases)
+*.apk
+*.ap_
+*.aab
+*.dex
+*.class
+
+# Signing keys & Keystores
+*.jks
+*.keystore
+*.p12
+
+# ==========================================
+# .NET / C# Desktop Build Artifacts
+# ==========================================
+**/bin/
+**/obj/
+**/Output/
+*.exe
+*.dll
+*.pdb
+*.dylib
+*.so
+
+# Standalone builds / Published binaries
+LinePOS_Desktop/
+PROD/LinePOS_Desktop/
+PROD/*.exe
+PROD/*.apk
+
+# Temporary Desktop logs & debug files
+err.txt
+out.txt
+
+# ==========================================
+# Databases & Local Data
+# ==========================================
+*.db
+*.sqlite
+*.db-shm
+*.db-wal
+*.log
+*.tmp
+*.bak
+*.swp
+
+# ==========================================
+# Agent / Scratch Artifacts
+# ==========================================
+.agents/
+.artifacts/
+scratch/

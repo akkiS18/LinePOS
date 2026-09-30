@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <UseWPF>true</UseWPF>
+    <ApplicationIcon>Assets\app_logo.ico</ApplicationIcon>
+    <!-- Intel Celeron va past quvvatli kompyuterlar uchun optimizatsiyalar -->
+    <TieredCompilation>true</TieredCompilation>
+    <TieredCompilationQuickJit>true</TieredCompilationQuickJit>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\app_logo.png" />
+    <Resource Include="Assets\app_logo.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Yengil SQLite drayveri (micro-ORM footprint) -->
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.8" />
+    <!-- JSON va sinxronizatsiya -->
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <!-- QR Kod generatsiyasi (Lokal Wi-Fi ulash uchun) -->
+    <PackageReference Include="QRCoder" Version="1.6.0" />
+  </ItemGroup>
+
+</Project>

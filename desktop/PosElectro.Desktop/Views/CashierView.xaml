@@ -1,0 +1,1360 @@
+<UserControl x:Class="PosElectro.Desktop.Views.CashierView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:models="clr-namespace:PosElectro.Desktop.Models"
+             PreviewKeyDown="UserControl_PreviewKeyDown"
+             mc:Ignorable="d" 
+             d:DesignHeight="700" d:DesignWidth="1100">
+    <Grid Background="#0F172A">
+        <!-- ASOSIY KASSA EKRANI -->
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <!-- Chap tomon: Tovarlar katalogi (60%) -->
+                <ColumnDefinition Width="6*"/>
+                <!-- O'ng tomon: Savatcha va To'lov (40%) -->
+                <ColumnDefinition Width="4*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- CHAP TOMON: TOVARLAR KATALOGI -->
+            <Grid Grid.Column="0" Margin="16">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <!-- Qidiruv -->
+                    <RowDefinition Height="Auto"/>
+                    <!-- Kategoriyalar (faqat qidiruv rejimida) -->
+                    <RowDefinition Height="*"/>
+                    <!-- Tovarlar -->
+                </Grid.RowDefinitions>
+
+                <!-- Qidiruv maydoni (faqat o'ngda bitta icon) -->
+                <Grid Grid.Row="0" Margin="0,0,0,12">
+                    <TextBox x:Name="SearchBox"
+                             Style="{StaticResource ModernTextBox}"
+                             Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"
+                             KeyDown="SearchTextBox_KeyDown"
+                             FontSize="15" Padding="16,12,46,12"/>
+
+                    <!-- Bitta qidiruv icon (o'ngda) -->
+                    <TextBlock Text="🔍" 
+                               Foreground="#94A3B8" 
+                               FontSize="16" 
+                               HorizontalAlignment="Right" 
+                               VerticalAlignment="Center" 
+                               Margin="0,0,16,0" 
+                               IsHitTestVisible="False"/>
+                </Grid>
+
+                <!-- Kategoriyalar filtri (FAQAT qidiruv rejimida ko'rinadi) -->
+                <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Margin="0,0,0,12"
+                              Visibility="{Binding IsShowingSearch, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <ItemsControl ItemsSource="{Binding Categories}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Content="{Binding}" 
+                                        Command="{Binding DataContext.SelectCategoryCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding}"
+                                        Margin="0,0,8,0" Padding="14,8"
+                                        Background="#1E293B" Foreground="#F8FAFC"
+                                        BorderBrush="#334155" BorderThickness="1"
+                                        Cursor="Hand">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border Background="{TemplateBinding Background}" 
+                                                    BorderBrush="{TemplateBinding BorderBrush}" 
+                                                    BorderThickness="{TemplateBinding BorderThickness}" 
+                                                    CornerRadius="20" Padding="{TemplateBinding Padding}">
+                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+
+                <!-- ============================================================= -->
+                <!-- TOP-SELLERS: Bo'sh qidiruv => Eng ko'p sotiladigan tovarlar   -->
+                <!-- ============================================================= -->
+                <Grid Grid.Row="2" Visibility="{Binding IsShowingTopSellers, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Sarlavha -->
+                    <TextBlock Grid.Row="0" Text="⭐ ENG KO'P SOTILADIGAN TOVARLAR" 
+                               Foreground="#94A3B8" FontSize="12" FontWeight="Bold"
+                               Margin="0,0,0,10"/>
+
+                    <!-- Katta kartalarda ko'rsatish, pastga scroll -->
+                    <ListBox Grid.Row="1"
+                             ItemsSource="{Binding TopSellingProducts}"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             VirtualizingStackPanel.IsVirtualizing="True"
+                             VirtualizingStackPanel.VirtualizationMode="Recycling">
+                        <ListBox.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="Padding" Value="0"/>
+                                <Setter Property="Margin" Value="0,0,12,12"/>
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="BorderThickness" Value="0"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListBoxItem">
+                                            <ContentPresenter/>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border x:Name="productCard"
+                                        Background="#1E293B" 
+                                        BorderBrush="#334155" 
+                                        BorderThickness="1" 
+                                        CornerRadius="14" 
+                                        Width="215" Height="172" 
+                                        Padding="14"
+                                        Cursor="Hand">
+                                    <Border.InputBindings>
+                                        <MouseBinding Gesture="LeftClick" 
+                                                      Command="{Binding DataContext.AddToCartCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                                      CommandParameter="{Binding}"/>
+                                    </Border.InputBindings>
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="#1E293B"/>
+                                            <Style.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter Property="Background" Value="#243349"/>
+                                                    <Setter Property="BorderBrush" Value="#3B82F6"/>
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="*"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <!-- Tovar nomi -->
+                                        <TextBlock Grid.Row="0" Text="{Binding Name}" 
+                                                   Foreground="#F1F5F9" FontWeight="Bold" FontSize="15" 
+                                                   TextWrapping="Wrap" MaxHeight="48" TextTrimming="CharacterEllipsis"
+                                                   LineHeight="18"/>
+
+                                        <!-- Qoldiq miqdori -->
+                                        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,5,0,0">
+                                            <TextBlock Text="Qoldiq: " Foreground="#64748B" FontSize="12"/>
+                                            <TextBlock Text="{Binding StockQuantity}" Foreground="#94A3B8" FontWeight="SemiBold" FontSize="12"/>
+                                            <TextBlock Text=" "/>
+                                            <TextBlock Text="{Binding UnitDisplay}" Foreground="#64748B" FontSize="12"/>
+                                        </StackPanel>
+
+                                        <!-- Narxi (yashil, katta) -->
+                                        <TextBlock Grid.Row="2" 
+                                                   Text="{Binding SellingPrice, StringFormat='{}{0:N0} so\'m'}" 
+                                                   Foreground="#10B981" FontWeight="Bold" FontSize="15" Margin="0,4,0,0"/>
+
+                                        <!-- Mahsulot ombori belgisi -->
+                                        <Border Grid.Row="3" Background="#0F243A" BorderBrush="#0284C7" BorderThickness="1" CornerRadius="4" Padding="6,2" HorizontalAlignment="Left" Margin="0,5,0,0"
+                                                Visibility="{Binding HasWarehouse, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                ToolTip="Ushbu tovar ombori">
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <TextBlock Text="🏢 " FontSize="9" Foreground="#38BDF8"/>
+                                                <TextBlock Text="{Binding WarehouseName}" Foreground="#38BDF8" FontSize="11" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxWidth="170"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+
+                <!-- ============================================================= -->
+                <!-- QIDIRUV NATIJALARI: SearchQuery bo'sh emas => filtr ko'rsatish -->
+                <!-- ============================================================= -->
+                <ListBox Grid.Row="2"
+                         ItemsSource="{Binding FilteredProducts}"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         VirtualizingStackPanel.IsVirtualizing="True"
+                         VirtualizingStackPanel.VirtualizationMode="Recycling"
+                         Visibility="{Binding IsShowingSearch, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Orientation="Horizontal"/>
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Padding" Value="0"/>
+                            <Setter Property="Margin" Value="0,0,12,12"/>
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="BorderThickness" Value="0"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListBoxItem">
+                                        <ContentPresenter/>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="#1E293B" 
+                                    BorderBrush="#334155" 
+                                    BorderThickness="1" 
+                                    CornerRadius="14" 
+                                    Width="215" Height="172" 
+                                    Padding="14"
+                                    Cursor="Hand">
+                                <Border.InputBindings>
+                                    <MouseBinding Gesture="LeftClick" 
+                                                  Command="{Binding DataContext.AddToCartCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                                  CommandParameter="{Binding}"/>
+                                </Border.InputBindings>
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Grid.Row="0" Text="{Binding Name}" 
+                                               Foreground="#F1F5F9" FontWeight="Bold" FontSize="15" 
+                                               TextWrapping="Wrap" MaxHeight="48" TextTrimming="CharacterEllipsis"
+                                               LineHeight="18"/>
+                                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,5,0,0">
+                                        <TextBlock Text="Qoldiq: " Foreground="#64748B" FontSize="12"/>
+                                        <TextBlock Text="{Binding StockQuantity}" Foreground="#94A3B8" FontWeight="SemiBold" FontSize="12"/>
+                                        <TextBlock Text=" "/>
+                                        <TextBlock Text="{Binding UnitDisplay}" Foreground="#64748B" FontSize="12"/>
+                                    </StackPanel>
+                                    <TextBlock Grid.Row="2" 
+                                               Text="{Binding SellingPrice, StringFormat='{}{0:N0} so\'m'}" 
+                                               Foreground="#10B981" FontWeight="Bold" FontSize="15" Margin="0,4,0,0"/>
+
+                                    <!-- Mahsulot ombori belgisi -->
+                                    <Border Grid.Row="3" Background="#0F243A" BorderBrush="#0284C7" BorderThickness="1" CornerRadius="4" Padding="6,2" HorizontalAlignment="Left" Margin="0,5,0,0"
+                                            Visibility="{Binding HasWarehouse, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                            ToolTip="Ushbu tovar ombori">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <TextBlock Text="🏢 " FontSize="9" Foreground="#38BDF8"/>
+                                            <TextBlock Text="{Binding WarehouseName}" Foreground="#38BDF8" FontSize="11" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxWidth="170"/>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
+
+            <!-- O'NG TOMON: SAVATCHA VA TO'LOV -->
+            <Border Grid.Column="1" Background="#1E293B" BorderBrush="#334155" BorderThickness="1,0,0,0">
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <!-- Savatcha sarlavhasi va Hold paneli -->
+                        <RowDefinition Height="Auto"/>
+                        <!-- Savatchadagi tovarlar ro'yxati -->
+                        <RowDefinition Height="*"/>
+                        <!-- Jami hisob-kitob -->
+                        <RowDefinition Height="Auto"/>
+                        <!-- Yagona SOTISH tugmasi -->
+                        <RowDefinition Height="Auto"/>
+                        <!-- Status xabari -->
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- SARLAVHA VA KUTISH (HOLD) BOSHQARUVI -->
+                    <Grid Grid.Row="0" Margin="0,0,0,10">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Yuqori qator -->
+                        <Grid Grid.Row="0">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="🛒 Savatcha" Foreground="#F8FAFC" FontSize="18" FontWeight="Bold"/>
+                                <Border Background="#0B6477" CornerRadius="10" Padding="8,2" Margin="10,0,0,0" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding TotalItemsCount}" Foreground="White" FontSize="12" FontWeight="Bold"/>
+                                </Border>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                <!-- Brak tovarlarni hisobdan chiqarish (0 so'm / Backspace) -->
+                                <Button Command="{Binding OpenBrakModalCommand}"
+                                        ToolTip="Brak tovar sifatida hisobdan chiqarish (0 so'm) [Backspace]"
+                                        Background="#2A171D" 
+                                        Width="42" Height="36" Margin="0,0,8,0"
+                                        BorderThickness="0" Cursor="Hand">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="#F43F5E" BorderThickness="1.2" CornerRadius="8">
+                                                <Path x:Name="ic" Data="M12 2L1 21h22L12 2zm0 3.5L20.2 19H3.8L12 5.5zM11 10v4h2v-4h-2zm0 6v2h2v-2h-2z" Fill="#FB7185" HorizontalAlignment="Center" VerticalAlignment="Center" Width="15" Height="15" Stretch="Uniform"/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="bd" Property="Background" Value="#4C1D24"/>
+                                                    <Setter TargetName="bd" Property="BorderBrush" Value="#FDA4AF"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+
+                                <!-- Barcha tovarlar narxini 1-narx / 2-narxga o'tkazish (Vektor ikonka) -->
+                                <Button Command="{Binding ToggleAllCartPricesCommand}"
+                                        ToolTip="Barcha tovarlar narxini almashtirish (1-narx / 2-narx)"
+                                        Background="#1E293B" 
+                                        Width="42" Height="36" Margin="0,0,8,0"
+                                        BorderThickness="0" Cursor="Hand">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="#38BDF8" BorderThickness="1.5" CornerRadius="8">
+                                                <Path x:Name="ic" Data="M3 8h12m-3-3l3 3-3 3M17 14H5m3 3l-3-3 3-3" Stroke="#38BDF8" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" HorizontalAlignment="Center" VerticalAlignment="Center" Width="18" Height="18" Stretch="Uniform"/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <DataTrigger Binding="{Binding IsAllPrice2Active}" Value="True">
+                                                    <Setter TargetName="bd" Property="Background" Value="#064E3B"/>
+                                                    <Setter TargetName="bd" Property="BorderBrush" Value="#10B981"/>
+                                                    <Setter TargetName="ic" Property="Stroke" Value="#34D399"/>
+                                                </DataTrigger>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="bd" Property="Background" Value="#0F3B5F"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+
+                                <!-- Kutishga qo'yish (Hold) tugmasi (Vektor ikonka) -->
+                                <Button Command="{Binding HoldCurrentCartCommand}"
+                                        ToolTip="Kutishga qo'yish (Hold)"
+                                        Background="#1E293B" Foreground="#F8FAFC" 
+                                        Width="42" Height="36" Margin="0,0,8,0"
+                                        BorderThickness="0" Cursor="Hand">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="#F59E0B" BorderThickness="1.2" CornerRadius="8">
+                                                <Path Data="M6 4h3v14H6zm9 0h3v14h-3z" Fill="#FBBF24" HorizontalAlignment="Center" VerticalAlignment="Center" Width="14" Height="14" Stretch="Uniform"/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="bd" Property="Background" Value="#382E10"/>
+                                                    <Setter TargetName="bd" Property="BorderBrush" Value="#FBBF24"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+
+                                <!-- Tozalash tugmasi (Vektor Trash Can) -->
+                                <Button Command="{Binding ClearCartCommand}"
+                                        ToolTip="Savatchani tozalash"
+                                        Background="#2A171D" Foreground="#EF4444" 
+                                        Width="42" Height="36"
+                                        BorderThickness="0" Cursor="Hand">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="#EF4444" BorderThickness="1.2" CornerRadius="8">
+                                                <Path Data="M3 6h14M8 6V4a1 1 0 011-1h2a1 1 0 011 1v2m3 0v11a2 2 0 01-2 2H6a2 2 0 01-2-2V6h11zM8 10v6M12 10v6" Stroke="#EF4444" StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round" HorizontalAlignment="Center" VerticalAlignment="Center" Width="16" Height="16" Stretch="Uniform"/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="bd" Property="Background" Value="#451A23"/>
+                                                    <Setter TargetName="bd" Property="BorderBrush" Value="#F87171"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Kutishdagi savatlar qatori -->
+                        <Grid Grid.Row="1" Margin="0,8,0,0"
+                              Visibility="{Binding HasHeldCarts, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <Button Grid.Column="0" Click="HeldCartsScrollLeft_Click"
+                                    Background="#334155" Foreground="#94A3B8"
+                                    Width="22" Height="32" Margin="0,0,4,6" BorderThickness="0" Cursor="Hand">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="4">
+                                            <TextBlock Text="◀" FontSize="9" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="bd" Property="Background" Value="#475569"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Button.Template>
+                            </Button>
+
+                            <ScrollViewer Grid.Column="1" 
+                                          x:Name="HeldCartsScrollViewer"
+                                          HorizontalScrollBarVisibility="Auto" 
+                                          VerticalScrollBarVisibility="Disabled" 
+                                          CanContentScroll="False"
+                                          Focusable="False"
+                                          PreviewMouseWheel="HeldCartsScrollViewer_PreviewMouseWheel"
+                                          Padding="0,0,0,6">
+                                <ItemsControl ItemsSource="{Binding HeldCarts}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Orientation="Horizontal"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Background="#1E293B" BorderBrush="#F59E0B" BorderThickness="1"
+                                                    CornerRadius="8" Padding="10,6" Margin="0,0,8,2" Cursor="Hand">
+                                                <Border.InputBindings>
+                                                    <MouseBinding Gesture="LeftClick"
+                                                                  Command="{Binding DataContext.ResumeHeldCartCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                  CommandParameter="{Binding}"/>
+                                                </Border.InputBindings>
+                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <TextBlock Text="⏸️ " FontSize="12"/>
+                                                    <TextBlock Text="{Binding DisplayText}" Foreground="#FBBF24" FontSize="12" FontWeight="SemiBold"/>
+                                                    <Button Content="✕" 
+                                                            Command="{Binding DataContext.DeleteHeldCartCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            CommandParameter="{Binding}"
+                                                            Foreground="#94A3B8" Background="#334155" BorderThickness="0"
+                                                            Cursor="Hand" Margin="8,0,0,0" Padding="5,2" FontSize="11">
+                                                        <Button.Template>
+                                                            <ControlTemplate TargetType="Button">
+                                                                <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                </Border>
+                                                            </ControlTemplate>
+                                                        </Button.Template>
+                                                    </Button>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+
+                            <Button Grid.Column="2" Click="HeldCartsScrollRight_Click"
+                                    Background="#334155" Foreground="#94A3B8"
+                                    Width="22" Height="32" Margin="4,0,0,6" BorderThickness="0" Cursor="Hand">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="4">
+                                            <TextBlock Text="▶" FontSize="9" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="bd" Property="Background" Value="#475569"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Button.Template>
+                            </Button>
+                        </Grid>
+                    </Grid>
+
+                    <!-- Savatcha tovarlari ro'yxati -->
+                    <ListBox Grid.Row="1" 
+                             ItemsSource="{Binding CartItems}"
+                             Background="Transparent" BorderThickness="0"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             VirtualizingStackPanel.IsVirtualizing="True">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="Padding" Value="0"/>
+                                <Setter Property="Margin" Value="0,0,0,8"/>
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListBoxItem">
+                                            <ContentPresenter/>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border CornerRadius="10" Padding="12,10" Margin="0,0,0,8" Cursor="Hand">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <!-- Oddiy tovar: qoramtir -->
+                                            <Setter Property="Background" Value="#1E293B"/>
+                                            <Setter Property="BorderBrush" Value="#334155"/>
+                                            <Setter Property="BorderThickness" Value="1"/>
+                                            <Style.Triggers>
+                                                <!-- Chegirma qo'yilgan: sariq chegara -->
+                                                <DataTrigger Binding="{Binding IsDiscounted}" Value="True">
+                                                    <Setter Property="BorderBrush" Value="#D97706"/>
+                                                    <Setter Property="Background" Value="#1C1A10"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <Border.InputBindings>
+                                        <MouseBinding Gesture="LeftDoubleClick" 
+                                                      Command="{Binding DataContext.OpenEditModalCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                                      CommandParameter="{Binding}"/>
+                                    </Border.InputBindings>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <!-- 1-Ustun: Nomi va narxi (chapda) -->
+                                            <ColumnDefinition Width="*"/>
+                                            <!-- 2-Ustun: Minus/Miqdor/Plyus (aniq bitta ustun, barcha qatorlarda bir tekisda) -->
+                                            <ColumnDefinition Width="120"/>
+                                            <!-- 3-Ustun: Jami narx va O'chirish (o'ngda, qat'iy ustun) -->
+                                            <ColumnDefinition Width="90"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- 1-Ustun: Nomi va Dona narxi -->
+                                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,8,0">
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <!-- Switch icon agar 2-narx bo'lsa (Katta va qulay tugma) -->
+                                                <Button Command="{Binding DataContext.ToggleCartPriceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}"
+                                                        Visibility="{Binding HasSellingPrice2, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                        ToolTip="1-narx va 2-narx (Usta narxi) o'rtasida almashtirish"
+                                                        Background="Transparent" BorderThickness="0" Cursor="Hand" Padding="0" Margin="0,0,8,0">
+                                                    <Border CornerRadius="6" Padding="8,4" MinWidth="46" Height="28">
+                                                        <Border.Style>
+                                                            <Style TargetType="Border">
+                                                                <Setter Property="Background" Value="#1E293B"/>
+                                                                <Setter Property="BorderBrush" Value="#475569"/>
+                                                                <Setter Property="BorderThickness" Value="1.5"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsPrice2Active}" Value="True">
+                                                                        <Setter Property="Background" Value="#064E3B"/>
+                                                                        <Setter Property="BorderBrush" Value="#10B981"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Border.Style>
+                                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                            <TextBlock Text="⇄" FontSize="14" FontWeight="Bold">
+                                                                <TextBlock.Style>
+                                                                    <Style TargetType="TextBlock">
+                                                                        <Setter Property="Foreground" Value="#94A3B8"/>
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding IsPrice2Active}" Value="True">
+                                                                                <Setter Property="Foreground" Value="#34D399"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </TextBlock.Style>
+                                                            </TextBlock>
+                                                            <TextBlock Text="{Binding PriceNumberDisplay}" FontSize="12" FontWeight="Bold" Margin="2,0,0,0">
+                                                                <TextBlock.Style>
+                                                                    <Style TargetType="TextBlock">
+                                                                        <Setter Property="Foreground" Value="#94A3B8"/>
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding IsPrice2Active}" Value="True">
+                                                                                <Setter Property="Foreground" Value="#34D399"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </TextBlock.Style>
+                                                            </TextBlock>
+                                                        </StackPanel>
+                                                    </Border>
+                                                </Button>
+                                                <TextBlock Text="{Binding Product.Name}" Foreground="#F8FAFC" FontWeight="Bold" FontSize="14" TextTrimming="CharacterEllipsis"/>
+                                            </StackPanel>
+                                            
+                                            <!-- Narx va Ombor bloki -->
+                                            <StackPanel Orientation="Horizontal" Margin="0,5,0,0" VerticalAlignment="Center">
+                                                <!-- Chegirmali narx sariq rangda -->
+                                                <TextBlock Text="{Binding PriceAtSale, StringFormat='{}{0:N0}'}" 
+                                                           FontSize="12" FontWeight="SemiBold"
+                                                           ToolTip="Narxni o'zgartirish yoki chegirma berish uchun 2 marta bosing"
+                                                           Cursor="Hand">
+                                                    <TextBlock.InputBindings>
+                                                        <MouseBinding Gesture="LeftDoubleClick" 
+                                                                      Command="{Binding DataContext.OpenEditModalCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                      CommandParameter="{Binding}"/>
+                                                    </TextBlock.InputBindings>
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="#94A3B8"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsDiscounted}" Value="True">
+                                                                    <Setter Property="Foreground" Value="#F59E0B"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+
+                                                <!-- Chegirma bo'lsa asl narx chizilgan -->
+                                                <TextBlock Text="{Binding OriginalPrice, StringFormat='{} ({0:N0})'}" 
+                                                           Foreground="#475569" FontSize="11" TextDecorations="Strikethrough" Margin="5,0,0,0"
+                                                           Visibility="{Binding IsDiscounted, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+                                                <!-- Mahsulot qaysi ombordan ekanligi belgisi -->
+                                                <Border Background="#0F243A" BorderBrush="#0284C7" BorderThickness="1" CornerRadius="4" Padding="6,2" Margin="8,0,0,0" VerticalAlignment="Center"
+                                                        Visibility="{Binding HasWarehouse, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                        ToolTip="Ushbu tovar beriladigan ombor">
+                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                        <TextBlock Text="🏢 " FontSize="10" Foreground="#38BDF8"/>
+                                                        <TextBlock Text="{Binding WarehouseName}" Foreground="#38BDF8" FontSize="11" FontWeight="SemiBold"/>
+                                                    </StackPanel>
+                                                </Border>
+                                            </StackPanel>
+                                        </StackPanel>
+
+                                        <!-- 2-Ustun: Miqdori boshqaruvi [-] QTY [+] -->
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <Button Command="{Binding DataContext.DecreaseQuantityCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}"
+                                                    Width="30" Height="30" Cursor="Hand">
+                                                <Button.Template>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border x:Name="btnBorder" Background="#334155" CornerRadius="6">
+                                                            <TextBlock Text="-" Foreground="White" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        </Border>
+                                                        <ControlTemplate.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter TargetName="btnBorder" Property="Background" Value="#475569"/>
+                                                            </Trigger>
+                                                        </ControlTemplate.Triggers>
+                                                    </ControlTemplate>
+                                                </Button.Template>
+                                            </Button>
+
+                                            <TextBlock Text="{Binding Quantity}" Foreground="#F8FAFC" FontWeight="Bold" FontSize="15" 
+                                                       VerticalAlignment="Center" Margin="8,0" MinWidth="26" TextAlignment="Center"/>
+
+                                            <Button Command="{Binding DataContext.IncreaseQuantityCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}"
+                                                    Width="30" Height="30" Cursor="Hand">
+                                                <Button.Template>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border x:Name="btnBorder" Background="#334155" CornerRadius="6">
+                                                            <TextBlock Text="+" Foreground="White" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        </Border>
+                                                        <ControlTemplate.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter TargetName="btnBorder" Property="Background" Value="#475569"/>
+                                                            </Trigger>
+                                                        </ControlTemplate.Triggers>
+                                                    </ControlTemplate>
+                                                </Button.Template>
+                                            </Button>
+                                        </StackPanel>
+
+                                        <!-- 3-Ustun: Jami summa va o'chirish (so'm so'zi yo'q) -->
+                                        <StackPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">
+                                            <TextBlock Text="{Binding TotalPrice, StringFormat='{}{0:N0}'}" 
+                                                       Foreground="#10B981" FontWeight="Bold" FontSize="15" TextAlignment="Right"/>
+                                            <Button Command="{Binding DataContext.RemoveFromCartCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}"
+                                                    ToolTip="Savatdan o'chirish"
+                                                    Width="28" Height="28"
+                                                    Cursor="Hand" HorizontalAlignment="Right" Margin="0,4,0,0">
+                                                <Button.Template>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border x:Name="delBorder" Background="#2A171D" BorderBrush="#7F1D1D" BorderThickness="1" CornerRadius="6">
+                                                            <Path Data="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                                                  Stroke="#EF4444" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                                                  Width="13" Height="13" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        </Border>
+                                                        <ControlTemplate.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter TargetName="delBorder" Property="Background" Value="#7F1D1D"/>
+                                                                <Setter TargetName="delBorder" Property="BorderBrush" Value="#EF4444"/>
+                                                            </Trigger>
+                                                        </ControlTemplate.Triggers>
+                                                    </ControlTemplate>
+                                                </Button.Template>
+                                            </Button>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <!-- Jami hisob bloki -->
+                    <Border Grid.Row="2" Background="#0F172A" CornerRadius="12" Padding="14" Margin="0,10,0,12" BorderBrush="#334155" BorderThickness="1">
+                        <Grid>
+                            <TextBlock Text="Jami to'lov:" Foreground="#94A3B8" FontSize="16" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding TotalAmount, StringFormat='{}{0:N0} so\'m'}" 
+                                       Foreground="#10B981" FontSize="22" FontWeight="Bold" HorizontalAlignment="Right"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- YAGONA SOTISH TUGMASI -->
+                    <Button Grid.Row="3" 
+                            Content="{Binding CompleteSaleButtonText}"
+                            Command="{Binding CompleteSaleCommand}" 
+                            Style="{StaticResource SuccessButton}" 
+                            FontSize="18" FontWeight="Bold" Padding="0,16" 
+                            Cursor="Hand" HorizontalAlignment="Stretch"/>
+
+                    <!-- Status panel -->
+                    <TextBlock Grid.Row="4" Text="{Binding StatusMessage}" 
+                               Foreground="#94A3B8" FontSize="12" Margin="0,10,0,0" 
+                               HorizontalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- NARX VA MIQDORNI TAHRIRLASH MODAL OYNASI -->
+        <Border Background="#CC000000" Panel.ZIndex="100"
+                Visibility="{Binding IsEditModalOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Border Background="#1E293B" BorderBrush="#0B6477" BorderThickness="1.5"
+                    CornerRadius="16" Padding="24" Width="440"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel>
+                    <!-- Modal Sarlavhasi -->
+                    <TextBlock Text="✏️ Mahsulot Narxi va Miqdorini Tahrirlash" Foreground="#F8FAFC" FontSize="17" FontWeight="Bold" Margin="0,0,0,6"/>
+                    <TextBlock Text="Mana shu sotuv uchun narxni o'zgartiring (Chegirma). Ombordagi asl narx o'zgarmaydi." Foreground="#94A3B8" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,16"/>
+
+                    <!-- Tovar Nomi va Ombori -->
+                    <Border Background="#0F172A" CornerRadius="8" Padding="12" Margin="0,0,0,14" BorderBrush="#334155" BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock Text="{Binding EditProductName}" Foreground="#F8FAFC" FontSize="15" FontWeight="Bold"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding EditOriginalPrice, StringFormat='{}Asl sotish narxi: {0:N0} so\'m'}" Foreground="#94A3B8" FontSize="12"/>
+                                <Border Background="#0F243A" BorderBrush="#0284C7" BorderThickness="1" CornerRadius="4" Padding="6,1" Margin="10,0,0,0" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding EditWarehouseName, StringFormat='{}🏢 {0}'}" Foreground="#38BDF8" FontSize="11" FontWeight="SemiBold"/>
+                                </Border>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Narx kiritish maydoni -->
+                    <TextBlock Text="Ushbu sotuv uchun narx (so'm):" Foreground="#F8FAFC" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                    <TextBox Style="{StaticResource ModernTextBox}"
+                             Text="{Binding EditPriceText, UpdateSourceTrigger=PropertyChanged}"
+                             KeyDown="EditModal_KeyDown"
+                             FontSize="16" FontWeight="Bold" Padding="10,8" Margin="0,0,0,14"/>
+
+                    <!-- Miqdor kiritish maydoni -->
+                    <TextBlock Text="{Binding EditUnitDisplay, StringFormat='{}Miqdori ({0}):'}" Foreground="#F8FAFC" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                    <TextBox Style="{StaticResource ModernTextBox}"
+                             Text="{Binding EditQuantityText, UpdateSourceTrigger=PropertyChanged}"
+                             KeyDown="EditModal_KeyDown"
+                             FontSize="16" FontWeight="Bold" Padding="10,8" Margin="0,0,0,14"/>
+
+                    <!-- Xatolik matni -->
+                    <TextBlock Text="{Binding EditErrorMessage}" Foreground="#EF4444" FontSize="12" FontWeight="SemiBold" 
+                               Margin="0,0,0,12" Visibility="{Binding EditErrorMessage, Converter={x:Null}}"/>
+
+                    <!-- Tugmalar -->
+                    <Grid Margin="0,6,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Button Grid.Column="0" Content="Bekor qilish (Esc)" 
+                                Command="{Binding CancelEditModalCommand}"
+                                Background="#334155" Style="{StaticResource ModernButton}" 
+                                Margin="0,0,6,0" Padding="0,12"/>
+
+                        <Button Grid.Column="1" Content="Saqlash (Enter)" 
+                                Command="{Binding SaveEditModalCommand}"
+                                Style="{StaticResource SuccessButton}" 
+                                Margin="6,0,0,0" Padding="0,12"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Border>
+
+        <!-- TO'LOV TURINI TANLASH VA JONLI PREVIEW MODAL OYNASI -->
+        <Border Background="#CC000000" Panel.ZIndex="110"
+                Visibility="{Binding IsPaymentModalOpen, Converter={StaticResource BooleanToVisibilityConverter}}"
+                KeyDown="PaymentModal_KeyDown">
+            <Border Background="#1E293B" BorderBrush="#0B6477" BorderThickness="1.5"
+                    CornerRadius="16" Padding="24" Width="920" MaxHeight="680"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="30" ShadowDepth="8" Direction="270" Color="#000000" Opacity="0.8"/>
+                </Border.Effect>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <!-- Chap ustun: To'lov parametrlari va tugmalar (430px) -->
+                        <ColumnDefinition Width="430"/>
+                        <!-- Vertikal ajratgich -->
+                        <ColumnDefinition Width="25"/>
+                        <!-- O'ng ustun: Jonli Chek / Hujjat Preview (qolgan kenglik) -->
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- CHAP USTUN -->
+                    <Grid Grid.Column="0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/> <!-- Header -->
+                            <RowDefinition Height="Auto"/> <!-- Jami to'lov -->
+                            <RowDefinition Height="Auto"/> <!-- To'lov turi tanlash -->
+                            <RowDefinition Height="Auto"/> <!-- Karta solig'i yoki Aralash qismlari -->
+                            <RowDefinition Height="Auto"/> <!-- Printer tanlash -->
+                            <RowDefinition Height="*"/>    <!-- Elastik bo'sh joy -->
+                            <RowDefinition Height="Auto"/> <!-- Tugmalar -->
+                        </Grid.RowDefinitions>
+
+                        <!-- Header -->
+                        <Grid Grid.Row="0" Margin="0,0,0,16">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Border Background="#042F2E" BorderBrush="#0D9488" BorderThickness="1" Width="36" Height="36" CornerRadius="10" Margin="0,0,10,0" VerticalAlignment="Center">
+                                    <Path Data="M20 4H4C2.89 4 2 4.89 2 6V18C2 19.1 2.89 20 4 20H20C21.1 20 22 19.1 22 18V6C22 4.89 21.1 4 20 4ZM20 8H4V6H20V8ZM20 18H4V12H20V18Z" 
+                                          Fill="#2DD4BF" Width="20" Height="20" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <TextBlock Text="To'lovni amalga oshirish" Foreground="#F8FAFC" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <Button HorizontalAlignment="Right" Content="✕" 
+                                    Command="{Binding ClosePaymentModalCommand}"
+                                    Background="Transparent" Foreground="#94A3B8" BorderThickness="0"
+                                    FontSize="16" Cursor="Hand" Padding="6"/>
+                        </Grid>
+
+                        <!-- Jami to'lov -->
+                        <Border Grid.Row="1" Background="#0F172A" CornerRadius="12" Padding="14,12" Margin="0,0,0,14" BorderBrush="#334155" BorderThickness="1">
+                            <Grid>
+                                <TextBlock Text="Jami to'lov:" Foreground="#94A3B8" FontSize="14" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding TotalAmount, StringFormat='{}{0:N0} so\'m'}" 
+                                           Foreground="#10B981" FontSize="20" FontWeight="Bold" HorizontalAlignment="Right"/>
+                            </Grid>
+                        </Border>
+
+                        <!-- To'lov turi tanlash -->
+                        <StackPanel Grid.Row="2" Margin="0,0,0,12">
+                            <TextBlock Text="To'lov turini tanlang:" Foreground="#F8FAFC" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Naqd -->
+                                <Button Grid.Column="0" Command="{Binding SelectPaymentTypeCommand}" CommandParameter="0" Margin="0,0,4,0" Padding="0,10" Cursor="Hand">
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Setter Property="Background" Value="#0F172A"/>
+                                            <Setter Property="BorderBrush" Value="#334155"/>
+                                            <Setter Property="BorderThickness" Value="1.5"/>
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="10" Padding="{TemplateBinding Padding}">
+                                                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                                <Path Data="M21 6H3C1.89 6 1 6.89 1 8V16C1 17.11 1.89 18 3 18H21C22.11 18 23 17.11 23 16V8C23 6.89 22.11 6 21 6ZM21 16H3V8H21V16ZM12 9C10.34 9 9 10.34 9 12C9 13.66 10.34 15 12 15C13.66 15 15 13.66 15 12C15 10.34 13.66 9 12 9Z" 
+                                                                      Fill="#10B981" Width="20" Height="20" Stretch="Uniform" Margin="0,0,0,4" HorizontalAlignment="Center"/>
+                                                                <TextBlock Text="Naqd" FontWeight="Bold" FontSize="13" Foreground="White" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </Border>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsCashSelected}" Value="True">
+                                                    <Setter Property="Background" Value="#064E3B"/>
+                                                    <Setter Property="BorderBrush" Value="#10B981"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+
+                                <!-- Karta -->
+                                <Button Grid.Column="1" Command="{Binding SelectPaymentTypeCommand}" CommandParameter="1" Margin="4,0,4,0" Padding="0,10" Cursor="Hand">
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Setter Property="Background" Value="#0F172A"/>
+                                            <Setter Property="BorderBrush" Value="#334155"/>
+                                            <Setter Property="BorderThickness" Value="1.5"/>
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="10" Padding="{TemplateBinding Padding}">
+                                                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                                <Path Data="M20 4H4C2.89 4 2.01 4.89 2.01 6L2 18C2 19.1 2.89 20 4 20H20C21.1 20 22 19.1 22 18V6C22 4.89 21.1 4 20 4ZM20 18H4V12H20V18ZM20 8H4V6H20V8Z" 
+                                                                      Fill="#38BDF8" Width="20" Height="20" Stretch="Uniform" Margin="0,0,0,4" HorizontalAlignment="Center"/>
+                                                                <TextBlock Text="Karta" FontWeight="Bold" FontSize="13" Foreground="White" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </Border>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsCardSelected}" Value="True">
+                                                    <Setter Property="Background" Value="#0C4A6E"/>
+                                                    <Setter Property="BorderBrush" Value="#38BDF8"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+
+                                <!-- Aralash -->
+                                <Button Grid.Column="2" Command="{Binding SelectPaymentTypeCommand}" CommandParameter="2" Margin="4,0,0,0" Padding="0,10" Cursor="Hand">
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Setter Property="Background" Value="#0F172A"/>
+                                            <Setter Property="BorderBrush" Value="#334155"/>
+                                            <Setter Property="BorderThickness" Value="1.5"/>
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="10" Padding="{TemplateBinding Padding}">
+                                                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                                <Path Data="M6.99 11L3 15L6.99 19V16H14V14H6.99V11ZM21 9L17.01 5V8H10V10H17.01V13L21 9Z" 
+                                                                      Fill="#F59E0B" Width="20" Height="20" Stretch="Uniform" Margin="0,0,0,4" HorizontalAlignment="Center"/>
+                                                                <TextBlock Text="Aralash" FontWeight="Bold" FontSize="13" Foreground="White" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </Border>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsSplitSelected}" Value="True">
+                                                    <Setter Property="Background" Value="#78350F"/>
+                                                    <Setter Property="BorderBrush" Value="#F59E0B"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+                            </Grid>
+                        </StackPanel>
+
+                        <!-- Soliq / Aralash maydonlari -->
+                        <StackPanel Grid.Row="3" Margin="0,0,0,12">
+                            <!-- Karta tanlanganda Soliq xabarnomasi -->
+                            <Border Background="#0F172A" BorderBrush="#0284C7" BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="0,0,0,8"
+                                    Visibility="{Binding IsCardSelected, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="ℹ️" FontSize="14" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                    <TextBlock Foreground="#38BDF8" FontSize="13" VerticalAlignment="Center">
+                                        <Run Text="Karta solig'i ("/><Run Text="{Binding CurrentCardTaxRate, Mode=OneWay}"/><Run Text="%): "/><Run Text="{Binding PreviewCardTax, StringFormat='-{0:N0} so\'m', Mode=OneWay}" FontWeight="Bold"/>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Aralash to'lov maydonlari -->
+                            <StackPanel Visibility="{Binding IsSplitSelected, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <TextBlock Text="Naqd to'lanadigan qismi (so'm):" Foreground="#F8FAFC" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <TextBox Style="{StaticResource ModernTextBox}"
+                                         Text="{Binding CashAmountInput, UpdateSourceTrigger=PropertyChanged}"
+                                         FontSize="14" FontWeight="Bold" Padding="10,6" Margin="0,0,0,8"/>
+
+                                <TextBlock Text="Kartadan to'lanadigan qismi (so'm):" Foreground="#F8FAFC" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <TextBox Style="{StaticResource ModernTextBox}"
+                                         Text="{Binding CardAmountInput, UpdateSourceTrigger=PropertyChanged}"
+                                         FontSize="14" FontWeight="Bold" Padding="10,6" Margin="0,0,0,8"/>
+
+                                <!-- Aralash soliq hisobi -->
+                                <Border Background="#0F172A" BorderBrush="#0284C7" BorderThickness="1" CornerRadius="8" Padding="10,6">
+                                    <TextBlock Foreground="#38BDF8" FontSize="12">
+                                        <Run Text="Kartadan soliq ("/><Run Text="{Binding CurrentCardTaxRate, Mode=OneWay}"/><Run Text="%): "/><Run Text="{Binding PreviewCardTax, StringFormat='-{0:N0} so\'m', Mode=OneWay}" FontWeight="Bold"/>
+                                    </TextBlock>
+                                </Border>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- Chek chop etish tanlovi (Dropdown) -->
+                        <StackPanel Grid.Row="4" Margin="0,0,0,16">
+                            <TextBlock Text="Chek yoki hisob-faktura chop etish:" Foreground="#94A3B8" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                            <ComboBox SelectedIndex="{Binding SelectedReceiptPrintOption}" Height="38" VerticalContentAlignment="Center">
+                                <ComboBoxItem Content="🚫 Chek chiqarilmasin"/>
+                                <ComboBoxItem Content="🧾 Termo printer (Kassa cheki)"/>
+                                <ComboBoxItem Content="📄 A4 Printer (Hisob-faktura)"/>
+                            </ComboBox>
+
+                            <!-- Termo chek printerini tanlash (agar mavjud bo'lsa) -->
+                            <StackPanel Visibility="{Binding Is58mmPreview, Converter={StaticResource BooleanToVisibilityConverter}}" Margin="0,8,0,0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="🖨️ Printer:" Foreground="#94A3B8" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <ComboBox Grid.Column="1" ItemsSource="{Binding AvailablePrinters}" 
+                                              SelectedItem="{Binding SelectedReceiptPrinter, Mode=TwoWay}"
+                                              Height="34" VerticalContentAlignment="Center"/>
+                                </Grid>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- Tugmalar (Bekor qilish / Tasdiqlash) -->
+                        <Grid Grid.Row="6" Margin="0,4,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <Button Grid.Column="0" Content="Bekor qilish (Esc)" 
+                                    Command="{Binding ClosePaymentModalCommand}"
+                                    Background="#334155" Style="{StaticResource ModernButton}" 
+                                    Margin="0,0,6,0" Padding="0,12"/>
+
+                            <Button Grid.Column="1" Content="Tasdiqlash (Enter)" 
+                                    Command="{Binding ConfirmSaleCommand}"
+                                    Style="{StaticResource SuccessButton}" 
+                                    Margin="6,0,0,0" Padding="0,12"/>
+                        </Grid>
+                    </Grid>
+
+                    <!-- O'NG USTUN: JONLI PREVIEW -->
+                    <Grid Grid.Column="2">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Header: Preview Sarlavhasi va Printer statusi -->
+                        <Grid Grid.Row="0" Margin="0,0,0,10">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="JONLI KO'RINISH (PREVIEW)" Foreground="#94A3B8" FontSize="12" FontWeight="Bold"/>
+                            </StackPanel>
+                            <!-- Printer holati badge -->
+                            <Border HorizontalAlignment="Right" Background="#0F172A" BorderBrush="#334155" BorderThickness="1" CornerRadius="12" Padding="8,4">
+                                <TextBlock Text="{Binding PrinterStatusText}" Foreground="{Binding PrinterStatusColor}" FontSize="11" FontWeight="SemiBold"/>
+                            </Border>
+                        </Grid>
+
+                        <!-- Asosiy Preview hududi (Fonda to'q ko'k ramka) -->
+                        <Border Grid.Row="1" Background="#0B132B" BorderBrush="#334155" BorderThickness="1" CornerRadius="12" Padding="12" MinHeight="360" MaxHeight="520">
+                            <Grid>
+                                <!-- 1. CHEKSIZ REJIM PREVIEW (IsNoReceiptPreview) -->
+                                <StackPanel Visibility="{Binding IsNoReceiptPreview, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                            VerticalAlignment="Center" HorizontalAlignment="Center">
+                                    <Border Background="#1E293B" BorderBrush="#475569" BorderThickness="1.5"
+                                            Width="64" Height="64" CornerRadius="32" HorizontalAlignment="Center" Margin="0,0,0,16">
+                                        <TextBlock Text="🚫" FontSize="28" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <TextBlock Text="Chek chop etilmaydi" Foreground="#F8FAFC" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,6"/>
+                                    <TextBlock Text="Savdo faqat tizim xotirasida saqlanadi. Qog'oz chek yoki faktura chiqarilmaydi." 
+                                               Foreground="#94A3B8" FontSize="12" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="280"/>
+                                </StackPanel>
+
+                                <!-- 2. XPRINTER 58MM TERMO-CHEK PREVIEW (Is58mmPreview) -->
+                                <Border Visibility="{Binding Is58mmPreview, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                        Background="#FFFFFF" CornerRadius="6" Width="280" HorizontalAlignment="Center" Padding="12"
+                                        BorderBrush="#CBD5E1" BorderThickness="1">
+                                    <Border.Effect>
+                                        <DropShadowEffect BlurRadius="12" ShadowDepth="4" Direction="270" Color="#000000" Opacity="0.5"/>
+                                    </Border.Effect>
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                        <TextBlock Text="{Binding Receipt58mmPreviewText}" 
+                                                   FontFamily="Consolas, Courier New" FontSize="11" Foreground="#0F172A" LineHeight="15" TextWrapping="Wrap"/>
+                                    </ScrollViewer>
+                                </Border>
+
+                                <!-- 3. A4 PRINTER (HISOB-FAKTURA) PREVIEW (IsA4Preview) -->
+                                <Border Visibility="{Binding IsA4Preview, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                        Background="#FFFFFF" CornerRadius="6" HorizontalAlignment="Stretch" Padding="16,14"
+                                        BorderBrush="#CBD5E1" BorderThickness="1">
+                                    <Border.Effect>
+                                        <DropShadowEffect BlurRadius="12" ShadowDepth="4" Direction="270" Color="#000000" Opacity="0.5"/>
+                                    </Border.Effect>
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                        <StackPanel>
+                                            <!-- A4 Mini Header -->
+                                            <Border BorderBrush="#0F172A" BorderThickness="0,0,0,1.5" Padding="0,0,0,8" Margin="0,0,0,10">
+                                                <Grid>
+                                                    <StackPanel>
+                                                        <TextBlock Text="HISOB-FAKTURA (A4)" FontSize="14" FontWeight="Bold" Foreground="#0F172A"/>
+                                                        <TextBlock Text="LinePOS Savdo Tizimi" FontSize="10" Foreground="#64748B"/>
+                                                    </StackPanel>
+                                                    <StackPanel HorizontalAlignment="Right">
+                                                        <TextBlock Text="{Binding A4DateDisplay}" FontSize="10" Foreground="#475569" HorizontalAlignment="Right"/>
+                                                        <TextBlock Text="{Binding A4PaymentDisplay}" FontSize="10" FontWeight="SemiBold" Foreground="#0284C7" HorizontalAlignment="Right"/>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Border>
+
+                                            <!-- A4 Jadval Sarlavhasi -->
+                                            <Grid Background="#F1F5F9" Margin="0,0,0,4">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="22"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="50"/>
+                                                    <ColumnDefinition Width="65"/>
+                                                    <ColumnDefinition Width="70"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="#" FontSize="10" FontWeight="Bold" Foreground="#334155" Padding="2"/>
+                                                <TextBlock Grid.Column="1" Text="Mahsulot" FontSize="10" FontWeight="Bold" Foreground="#334155" Padding="2"/>
+                                                <TextBlock Grid.Column="2" Text="Miqdor" FontSize="10" FontWeight="Bold" Foreground="#334155" HorizontalAlignment="Right" Padding="2"/>
+                                                <TextBlock Grid.Column="3" Text="Narx" FontSize="10" FontWeight="Bold" Foreground="#334155" HorizontalAlignment="Right" Padding="2"/>
+                                                <TextBlock Grid.Column="4" Text="Jami" FontSize="10" FontWeight="Bold" Foreground="#334155" HorizontalAlignment="Right" Padding="2"/>
+                                            </Grid>
+
+                                            <!-- A4 Jadval Qatorlari -->
+                                            <ItemsControl ItemsSource="{Binding A4PreviewRows}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="0,3">
+                                                            <Grid>
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="22"/>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                    <ColumnDefinition Width="50"/>
+                                                                    <ColumnDefinition Width="65"/>
+                                                                    <ColumnDefinition Width="70"/>
+                                                                </Grid.ColumnDefinitions>
+                                                                <TextBlock Grid.Column="0" Text="{Binding IndexDisplay}" FontSize="10" Foreground="#64748B"/>
+                                                                <TextBlock Grid.Column="1" Text="{Binding ProductName}" FontSize="10" Foreground="#0F172A" TextTrimming="CharacterEllipsis"/>
+                                                                <TextBlock Grid.Column="2" Text="{Binding QuantityDisplay}" FontSize="10" Foreground="#0F172A" HorizontalAlignment="Right"/>
+                                                                <TextBlock Grid.Column="3" Text="{Binding PriceDisplay}" FontSize="10" Foreground="#0F172A" HorizontalAlignment="Right"/>
+                                                                <TextBlock Grid.Column="4" Text="{Binding TotalDisplay}" FontSize="10" FontWeight="SemiBold" Foreground="#0F172A" HorizontalAlignment="Right"/>
+                                                            </Grid>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+
+                                            <!-- A4 Jami va Imzo -->
+                                            <Grid Margin="0,12,0,0">
+                                                <StackPanel HorizontalAlignment="Left">
+                                                    <TextBlock Text="Tovarni qabul qildi:" FontSize="9" Foreground="#64748B"/>
+                                                    <TextBlock Text="____________________" FontSize="9" Foreground="#94A3B8" Margin="0,6,0,0"/>
+                                                </StackPanel>
+                                                <StackPanel HorizontalAlignment="Right">
+                                                    <TextBlock Text="Jami to'lov:" FontSize="10" Foreground="#64748B" HorizontalAlignment="Right"/>
+                                                    <TextBlock Text="{Binding TotalAmount, StringFormat='{}{0:N0} so\'m'}" 
+                                                               FontSize="14" FontWeight="Bold" Foreground="#047857" HorizontalAlignment="Right"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </StackPanel>
+                                    </ScrollViewer>
+                                </Border>
+                            </Grid>
+                        </Border>
+
+                        <!-- Pastki eslatma -->
+                        <TextBlock Grid.Row="2" Text="💡 Printer tanlovi o'zgartirilganda ushbu oyna darhol yangilanadi" 
+                                   Foreground="#64748B" FontSize="11" HorizontalAlignment="Center" Margin="0,8,0,0"/>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Border>
+
+        <!-- TOPILMAGAN MAHSULOT (YANGI QO'SHISH) MODAL OYNASI -->
+        <Border Background="#CC000000" Panel.ZIndex="120"
+                Visibility="{Binding IsUnrecognizedBarcodeModalOpen, Converter={StaticResource BooleanToVisibilityConverter}}"
+                Focusable="True"
+                IsVisibleChanged="UnrecognizedBarcodeModal_IsVisibleChanged"
+                KeyDown="UnrecognizedBarcodeModal_KeyDown">
+            <Border Background="#1E293B" BorderBrush="#0B6477" BorderThickness="1.5"
+                    CornerRadius="16" Padding="28" Width="460"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="30" ShadowDepth="8" Direction="270" Color="#000000" Opacity="0.8"/>
+                </Border.Effect>
+                <StackPanel HorizontalAlignment="Center">
+                    <!-- Icon -->
+                    <Border Background="#134E4A" BorderBrush="#2DD4BF" BorderThickness="1"
+                            Width="56" Height="56" CornerRadius="28" HorizontalAlignment="Center" Margin="0,0,0,16">
+                        <TextBlock Text="❓" FontSize="26" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+
+                    <!-- Sarlavha -->
+                    <TextBlock Text="Mahsulot topilmadi" Foreground="#F8FAFC" FontSize="18" FontWeight="Bold" 
+                               HorizontalAlignment="Center" Margin="0,0,0,8"/>
+
+                    <!-- Shtrix-kod ko'rinishi -->
+                    <Border Background="#0F172A" BorderBrush="#334155" BorderThickness="1" CornerRadius="8" 
+                            Padding="14,8" Margin="0,0,0,14" HorizontalAlignment="Center">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Shtrix-kod: " Foreground="#94A3B8" FontSize="13" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding UnrecognizedBarcode}" Foreground="#2DD4BF" FontFamily="Consolas" 
+                                       FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Matn -->
+                    <TextBlock Text="Ushbu shtrix-kodli mahsulot omborda mavjud emas. Yangi mahsulot sifatida bazaga qo'shamizmi?" 
+                               Foreground="#94A3B8" FontSize="13" TextWrapping="Wrap" TextAlignment="Center" 
+                               MaxWidth="380" Margin="0,0,0,24" LineHeight="20"/>
+
+                    <!-- Tugmalar -->
+                    <Grid Width="380">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Button Grid.Column="0" Content="Yo'q (Esc)" 
+                                Command="{Binding CloseUnrecognizedBarcodeCommand}"
+                                Background="#334155" Style="{StaticResource ModernButton}" 
+                                Margin="0,0,6,0" Padding="0,12" Cursor="Hand"/>
+
+                        <Button x:Name="AddUnrecognizedBarcodeBtn" Grid.Column="1" Content="Ha, qo'shish (Enter)" 
+                                Command="{Binding ConfirmAddUnrecognizedBarcodeCommand}"
+                                Style="{StaticResource SuccessButton}" 
+                                Margin="6,0,0,0" Padding="0,12" Cursor="Hand"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Border>
+
+        <!-- ============================================================= -->
+        <!-- BRAK TOVARLARNI CHIQARISH (SPISANIE) TASDIQLASH MODALI -->
+        <!-- ============================================================= -->
+        <Border Background="#CC000000" Panel.ZIndex="105"
+                Visibility="{Binding IsBrakModalOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Border Background="#1E293B" BorderBrush="#F43F5E" BorderThickness="1.5"
+                    CornerRadius="16" Padding="24" Width="440"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel>
+                    <!-- Modal Sarlavhasi -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <TextBlock Text="⚠️" FontSize="20" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Brak Tovarlarni Chiqarish (0 so'm)" Foreground="#F8FAFC" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <TextBlock Text="Savatdagi barcha tovarlarni 0 so'm narx bilan brak (spisanie) sifatida hisobdan chiqarishni tasdiqlaysizmi?" 
+                               Foreground="#94A3B8" FontSize="13" TextWrapping="Wrap" Margin="0,0,0,16"/>
+
+                    <!-- Xulosa kartochkasi -->
+                    <Border Background="#0F172A" CornerRadius="10" Padding="14" Margin="0,0,0,16" BorderBrush="#334155" BorderThickness="1">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,8">
+                                <TextBlock Text="Chiqarilayotgan tovarlar:" Foreground="#94A3B8" FontSize="13"/>
+                                <TextBlock Text="{Binding BrakItemsCount, StringFormat='{}{0} xil tovar'}" Foreground="#F8FAFC" FontSize="14" FontWeight="Bold" HorizontalAlignment="Right"/>
+                            </Grid>
+                            <Grid Margin="0,0,0,8">
+                                <TextBlock Text="Sotish narxi:" Foreground="#94A3B8" FontSize="13"/>
+                                <TextBlock Text="0 so'm (Bepul)" Foreground="#10B981" FontSize="14" FontWeight="Bold" HorizontalAlignment="Right"/>
+                            </Grid>
+                            <Border Height="1" Background="#334155" Margin="0,4,0,8"/>
+                            <Grid>
+                                <TextBlock Text="Yetkazilgan sof zarar (tannarx):" Foreground="#F43F5E" FontSize="13" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding BrakTotalCostDisplay, StringFormat='{}-{0}'}" Foreground="#F43F5E" FontSize="16" FontWeight="Black" HorizontalAlignment="Right"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Eslatma -->
+                    <TextBlock Text="ℹ️ Ushbu tovarlar ombor qoldig'idan to'liq ayiriladi, chek chop etilmaydi va hisobotlarda sof zarar sifatida qayd etiladi." 
+                               Foreground="#64748B" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,20"/>
+
+                    <!-- Tugmalar: Ha yoki Yo'q -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="12"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Yo'q, bekor qilish -->
+                        <Button Grid.Column="0" Content="✕ Yo'q, bekor qilish" 
+                                Command="{Binding CloseBrakModalCommand}"
+                                Background="#334155" Foreground="#F8FAFC"
+                                FontSize="13" FontWeight="SemiBold" Padding="0,12"
+                                BorderThickness="0" CornerRadius="10" Cursor="Hand">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="{TemplateBinding Background}" CornerRadius="10">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+
+                        <!-- Ha, chiqarilsin -->
+                        <Button Grid.Column="2" Content="⚠️ Ha, chiqarilsin" 
+                                Command="{Binding ConfirmBrakWriteOffCommand}"
+                                Background="#E11D48" Foreground="White"
+                                FontSize="13" FontWeight="Bold" Padding="0,12"
+                                BorderThickness="0" CornerRadius="10" Cursor="Hand">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="{TemplateBinding Background}" CornerRadius="10">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Border>
+
+        <!-- ========================================================= -->
+        <!-- TOAST BILDIRISHNOMA (Next.js / Sonner uslubidagi zamonaviy xabar) -->
+        <!-- ========================================================= -->
+        <Border HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,24,0,0"
+                Panel.ZIndex="200"
+                IsHitTestVisible="True"
+                Visibility="{Binding IsToastVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Border Background="#0F172A" BorderBrush="#10B981" BorderThickness="1.5"
+                    CornerRadius="12" Padding="16,12" MinWidth="340" MaxWidth="520">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="25" ShadowDepth="6" Direction="270" Color="#000000" Opacity="0.7"/>
+                </Border.Effect>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Yashil Check Icon -->
+                    <Border Grid.Column="0" Background="#064E3B" BorderBrush="#10B981" BorderThickness="1"
+                            Width="36" Height="36" CornerRadius="18" Margin="0,0,12,0" VerticalAlignment="Center">
+                        <TextBlock Text="✓" Foreground="#10B981" FontSize="18" FontWeight="Bold" 
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+
+                    <!-- Matn -->
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding ToastTitle}" Foreground="#F8FAFC" FontSize="14" FontWeight="Bold"/>
+                        <TextBlock Text="{Binding ToastMessage}" Foreground="#94A3B8" FontSize="12" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                    </StackPanel>
+
+                    <!-- Yopish tugmasi ✕ -->
+                    <Button Grid.Column="2" Content="✕" 
+                            Command="{Binding DismissToastCommand}"
+                            Background="Transparent" Foreground="#64748B" BorderThickness="0"
+                            FontSize="12" Padding="6" Cursor="Hand" VerticalAlignment="Top" Margin="8,-4,-4,0">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border Background="{TemplateBinding Background}" CornerRadius="4">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </Grid>
+            </Border>
+        </Border>
+    </Grid>
+</UserControl>

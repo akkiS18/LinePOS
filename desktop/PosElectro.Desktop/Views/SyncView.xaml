@@ -1,0 +1,315 @@
+<UserControl x:Class="PosElectro.Desktop.Views.SyncView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" 
+             d:DesignHeight="700" d:DesignWidth="1100">
+    <Grid Background="#0F172A">
+        <!-- Asosiy Tarkib -->
+        <Grid Margin="24">
+            <Grid.ColumnDefinitions>
+                <!-- Chap tomon: QR Kod va Wi-Fi holati -->
+                <ColumnDefinition Width="380"/>
+                <!-- O'ng tomon: Kassa va Mobil Aloqa Markazi -->
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- CHAP: QR KOD VA SOZLAMALAR -->
+            <Border Grid.Column="0" Background="#1E293B" CornerRadius="16" Padding="20" BorderBrush="#334155" BorderThickness="1" Margin="0,0,20,0">
+                <StackPanel>
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="📱 Wi-Fi Orqali Ulanish" Foreground="#F8FAFC" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
+                        <Button Grid.Column="1" Command="{Binding OpenHelpModalCommand}"
+                                ToolTip="Qanday ulaniladi? (Yo'riqnoma)"
+                                Background="#074F61" BorderBrush="#2DD4BF" BorderThickness="1.5"
+                                Width="36" Height="36" Cursor="Hand" Padding="0">
+                            <Button.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="18"/>
+                                </Style>
+                            </Button.Resources>
+                            <TextBlock Text="💡" FontFamily="Segoe UI Emoji" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Button>
+                    </Grid>
+                    <TextBlock Text="Internetsiz, to'g'ridan-to'g'ri Wi-Fi tarmog'ida ishlaydi" Foreground="#94A3B8" FontSize="12" Margin="0,0,0,16"/>
+
+                    <!-- QR Kod kartasi -->
+                    <Border Background="White" CornerRadius="12" Padding="14" HorizontalAlignment="Center" Width="240" Height="240" Margin="0,0,0,16">
+                        <Image Source="{Binding QrCodeImage}" Stretch="Uniform"/>
+                    </Border>
+
+                    <!-- IP Manzil va Port -->
+                    <Border Background="#0F172A" CornerRadius="10" Padding="12" Margin="0,0,0,16" BorderBrush="#334155" BorderThickness="1">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <TextBlock Text="Lokal Server: " Foreground="#94A3B8" FontSize="13" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding ServerIp}" Foreground="#16A34A" FontWeight="Bold" FontSize="14" VerticalAlignment="Center"/>
+                            <TextBlock Text=":" Foreground="#94A3B8" FontSize="13" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding ServerPort}" Foreground="#16A34A" FontWeight="Bold" FontSize="14" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Server boshqaruv tugmalari -->
+                    <Button Content="🔄 Serverni qayta ishga tushirish" Command="{Binding StartServerCommand}"
+                            Style="{StaticResource ModernButton}" HorizontalAlignment="Stretch" Margin="0,0,0,10"/>
+                    <Button Content="🛡️ Windows Firewall ruxsatini ochish" Command="{Binding OpenFirewallCommand}"
+                            Style="{StaticResource ModernButton}" Background="#D97706" HorizontalAlignment="Stretch"/>
+                </StackPanel>
+            </Border>
+
+            <!-- O'NG: REALTIME ULANGAN QURILMALAR VA TERMINAL JURNALI -->
+            <Border Grid.Column="1" Background="#1E293B" CornerRadius="16" Padding="20" BorderBrush="#334155" BorderThickness="1">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <!-- 0: Ulangan Qurilmalar Bo'limi (Auto) -->
+                    <RowDefinition Height="Auto"/>
+                    <!-- 1: Divider -->
+                    <RowDefinition Height="Auto"/>
+                    <!-- 2: Realtime Terminal Sarlavhasi -->
+                    <RowDefinition Height="Auto"/>
+                    <!-- 3: Realtime Terminal Body (*) -->
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- 0: ULANGAN QURILMALAR SECTION (REAL-TIME) -->
+                <StackPanel Grid.Row="0" Margin="0,0,0,16">
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Sarlavha -->
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="📶 Ulangan Qurilmalar" Foreground="#F8FAFC" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        </StackPanel>
+
+                        <!-- Realtime Qurilmalar Soni Nishoni -->
+                        <Border Grid.Column="1" Background="#064E3B" BorderBrush="#10B981" BorderThickness="1.5" CornerRadius="16" Padding="12,5" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Ellipse Width="8" Height="8" Fill="#10B981" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding ConnectedClientsCountText}" Foreground="#A7F3D0" FontSize="12" FontWeight="Bold" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <!-- Ulangan qurilmalar ro'yxati (har bir telefon alohida kartada) -->
+                    <ItemsControl ItemsSource="{Binding ConnectedClients}" Margin="0,0,0,4">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="#0F172A" BorderBrush="#10B981" BorderThickness="1.5" CornerRadius="12" Padding="14,10" Margin="0,0,12,8" MinWidth="260">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0" Background="#064E3B" BorderBrush="#10B981" BorderThickness="1" CornerRadius="10" Width="36" Height="42" Margin="0,0,12,0" VerticalAlignment="Center">
+                                            <Path Data="M7 2h10a2 2 0 012 2v16a2 2 0 01-2 2H7a2 2 0 01-2-2V4a2 2 0 012-2zm0 3v13h10V5H7zm5 14a1 1 0 100 2 1 1 0 000-2z" 
+                                                  Fill="#34D399" Stretch="Uniform" Width="18" Height="22" 
+                                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding DeviceName}" Foreground="#F8FAFC" FontSize="14" FontWeight="Bold"/>
+                                            <TextBlock Text="{Binding IpAddress}" Foreground="#38BDF8" FontSize="12" FontWeight="SemiBold"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="10,0,0,0">
+                                            <Border Background="#064E3B" CornerRadius="8" Padding="6,2" Margin="0,0,0,2">
+                                                <TextBlock Text="🟢 JONLI" Foreground="#34D399" FontSize="10" FontWeight="Bold"/>
+                                            </Border>
+                                            <TextBlock Text="{Binding ConnectedAtText}" Foreground="#64748B" FontSize="10" HorizontalAlignment="Right"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- Agar 0 ta bo'lsa ko'rsatiladigan qulay placeholder -->
+                    <Border Background="#0F172A" CornerRadius="12" BorderBrush="#334155" BorderThickness="1" Padding="16,12"
+                            Visibility="{Binding HasNoConnectedClients, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="📲" FontSize="18" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="Hozirda ulangan mobil qurilma yo'q. Mobil ilovadan chapdagi QR kodni skanerlang." Foreground="#94A3B8" FontSize="13" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- 1: DIVIDER -->
+                <Separator Grid.Row="1" Background="#334155" Margin="0,0,0,14"/>
+
+                <!-- 2: REALTIME TERMINAL SARLAVHASI -->
+                <Grid Grid.Row="2" Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="⚡ Real-time Terminal &amp; O'tkazishlar" Foreground="#F8FAFC" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Command="{Binding ClearLogsCommand}" ToolTip="Terminalni tozalash"
+                                Style="{StaticResource ModernButton}" Background="#334155" Padding="10,5" FontSize="12" Margin="0,0,8,0">
+                            <TextBlock Text="🧹 Tozalash" VerticalAlignment="Center"/>
+                        </Button>
+                        <Button Command="{Binding RefreshStatsCommand}" ToolTip="Yangilash"
+                                Style="{StaticResource ModernButton}" Padding="10,5" FontSize="12">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="🔄" Margin="0,0,4,0"/>
+                                <TextBlock Text="Yangilash" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+
+                <!-- 3: REALTIME TERMINAL TANA QISMI -->
+                <Border Grid.Row="3" Background="#0A0F1D" CornerRadius="12" BorderBrush="#1E293B" BorderThickness="1.5" Padding="8">
+                    <ListBox ItemsSource="{Binding Activities}" 
+                             Background="Transparent" BorderThickness="0"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             HorizontalContentAlignment="Stretch">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="Padding" Value="0,2"/>
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListBoxItem">
+                                            <ContentPresenter HorizontalAlignment="Stretch" />
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="#131C31" CornerRadius="8" Padding="10,7" Margin="0,2" BorderBrush="#1E293B" BorderThickness="1">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Rangli Ikonka Badge (Yashil, Sariq, Qizil, Ko'k) -->
+                                        <Border Grid.Column="0" 
+                                                Background="{Binding BadgeBgHex}" 
+                                                BorderBrush="{Binding BorderColorHex}" 
+                                                BorderThickness="1" 
+                                                CornerRadius="6" 
+                                                Width="24" Height="24" 
+                                                Margin="0,0,10,0" 
+                                                VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Icon}" 
+                                                       Foreground="{Binding ColorHex}" 
+                                                       FontSize="13" 
+                                                       FontWeight="Bold"
+                                                       FontFamily="Segoe UI, Segoe UI Emoji" 
+                                                       HorizontalAlignment="Center" 
+                                                       VerticalAlignment="Center"/>
+                                        </Border>
+
+                                        <!-- Xabar: Uzun bo'lsa pastki qatorga chiroyli tushishi uchun Wrap -->
+                                        <TextBlock Grid.Column="1" Text="{Binding Message}" Foreground="#F1F5F9" FontFamily="Consolas, Segoe UI" FontSize="13" VerticalAlignment="Center" TextWrapping="Wrap"/>
+
+                                        <!-- Vaqt -->
+                                        <TextBlock Grid.Column="2" Text="{Binding TimeText}" Foreground="#64748B" FontFamily="Consolas, Segoe UI" FontSize="11" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Border>
+            </Grid>
+        </Border>
+    </Grid>
+
+    <!-- YO'RIQNOMA MODALI (OK MODAL) -->
+    <Grid Visibility="{Binding IsHelpModalOpen, Converter={StaticResource BooleanToVisibilityConverter}}"
+          Background="#CC000000" Panel.ZIndex="1000">
+        <Border Background="#1E293B" CornerRadius="16" BorderBrush="#0B6477" BorderThickness="1.5"
+                Width="460" VerticalAlignment="Center" HorizontalAlignment="Center" Padding="24">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="30" ShadowDepth="0" Opacity="0.7" Color="#000000"/>
+            </Border.Effect>
+            <StackPanel>
+                <!-- Modal Sarlavhasi -->
+                <Grid Margin="0,0,0,16">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Background="#074F61" CornerRadius="8" Width="36" Height="36" Margin="0,0,10,0" BorderBrush="#2DD4BF" BorderThickness="1">
+                            <TextBlock Text="💡" FontFamily="Segoe UI Emoji" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="Qanday ulaniladi?" Foreground="#F8FAFC" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <Button Command="{Binding CloseHelpModalCommand}" HorizontalAlignment="Right" VerticalAlignment="Center"
+                            Background="Transparent" BorderThickness="0" Cursor="Hand" Padding="6,2">
+                        <TextBlock Text="✕" Foreground="#94A3B8" FontSize="16" FontWeight="Bold"/>
+                    </Button>
+                </Grid>
+
+                <Separator Background="#334155" Margin="0,0,0,16"/>
+
+                <!-- Yo'riqnoma Qadamlari -->
+                <Border Background="#0F172A" CornerRadius="12" Padding="16" Margin="0,0,0,20" BorderBrush="#334155" BorderThickness="1">
+                    <StackPanel>
+                        <!-- 1-qadam -->
+                        <Grid Margin="0,0,0,14">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="28"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Background="#074F61" CornerRadius="12" Width="24" Height="24" HorizontalAlignment="Left" VerticalAlignment="Top">
+                                <TextBlock Text="1" Foreground="#2DD4BF" FontWeight="Bold" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Grid.Column="1" Text="Telefon va kompyuter bitta Wi-Fi da bo'lsin (yoki telefon Hotspot yoqsin)." 
+                                       Foreground="#E2E8F0" FontSize="13" LineHeight="18" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <!-- 2-qadam -->
+                        <Grid Margin="0,0,0,14">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="28"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Background="#074F61" CornerRadius="12" Width="24" Height="24" HorizontalAlignment="Left" VerticalAlignment="Top">
+                                <TextBlock Text="2" Foreground="#2DD4BF" FontWeight="Bold" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Grid.Column="1" Text="Mobil ilovada QR kodni skanerlang." 
+                                       Foreground="#E2E8F0" FontSize="13" LineHeight="18" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <!-- 3-qadam -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="28"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Background="#064E3B" CornerRadius="12" Width="24" Height="24" HorizontalAlignment="Left" VerticalAlignment="Top">
+                                <TextBlock Text="3" Foreground="#16A34A" FontWeight="Bold" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Grid.Column="1" Text="O'tkazishni tanlang — ma'lumotlar bir zumda yangilanadi!" 
+                                       Foreground="#16A34A" FontWeight="SemiBold" FontSize="13" LineHeight="18" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- OK Tugmasi -->
+                <Button Content="Tushundim (OK)" Command="{Binding CloseHelpModalCommand}"
+                        Style="{StaticResource ModernButton}" HorizontalAlignment="Stretch" Height="42" FontSize="14" FontWeight="Bold"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Grid>
+</UserControl>
