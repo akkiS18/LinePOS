@@ -1,70 +1,38 @@
 package uz.pos.electro.data.sync
 
 import android.content.Context
-import android.content.SharedPreferences
 import android.os.Build
 import android.util.Log
+import androidx.room.withTransaction
+import androidx.sqlite.db.SupportSQLiteDatabase
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.json.JSONArray
 import org.json.JSONObject
-import uz.pos.electro.data.local.dao.ProductDao
-import uz.pos.electro.data.local.dao.SaleDao
-import uz.pos.electro.data.local.dao.WarehouseDao
-import uz.pos.electro.data.local.dao.ProductStockDao
-import uz.pos.electro.data.local.entity.ProductEntity
-import uz.pos.electro.data.local.entity.SaleEntity
-import uz.pos.electro.data.local.entity.SaleItemEntity
-import uz.pos.electro.data.local.entity.WarehouseEntity
+import uz.pos.electro.data.local.AppDatabase
+import uz.pos.electro.data.local.dao.*
+import uz.pos.electro.data.local.entity.*
 import uz.pos.electro.data.model.PaymentType
 import uz.pos.electro.data.model.UnitType
 import uz.pos.electro.data.repository.CurrencyRepository
 import uz.pos.electro.data.repository.TaxSettingsRepository
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
 import javax.inject.Inject
 import javax.inject.Singleton
 
-enum class LiveSyncStatus {
-    CONNECTED,   // 🟢 Jonli bog'langan
-    CONNECTING,  // 🟠 Ulanmoqda...
-    OFFLINE      // ⚪ Aloqa yo'q
-}
-
-data class TransferCheckResult(
-    val direction: String,
-    val desktopProductsCount: Int,
-    val desktopSalesCount: Int,
-    val desktopModifiedProducts: Int,
-    val desktopUnsyncedSales: Int,
-    val phoneModifiedProducts: Int,
-    val phoneUnsyncedSales: Int,
-    val hasConflict: Boolean
-)
-
-data class TransferExecutionResult(
-    val success: Boolean,
-    val direction: String,
-    val transferredProducts: Int,
-    val transferredSales: Int,
-    val message: String
-)
-
-data class SyncSummary(
-    val downloadedProducts: Int,
-    val uploadedProducts: Int,
-    val message: String
-)
+enum class LiveSyncStatus { OFFLINE, CONNECTING, CONNECTED }
+data class SyncSummary(val downloadedProducts: Int, val uploadedProducts: Int, val message: String)
 
 @Singleton
 class LocalSyncManager @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val database: AppDatabase,
     private val productDao: ProductDao,
     private val saleDao: SaleDao,
     private val warehouseDao: WarehouseDao,
@@ -72,1018 +40,259 @@ class LocalSyncManager @Inject constructor(
     private val currencyRepository: CurrencyRepository,
     private val taxSettingsRepository: TaxSettingsRepository
 ) {
-    private val prefs: SharedPreferences = context.getSharedPreferences("pos_local_sync_prefs", Context.MODE_PRIVATE)
+    private val prefs = context.getSharedPreferences("pos_local_sync_prefs", Context.MODE_PRIVATE)
     private val syncScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val syncMutex = Mutex()
     private var liveJob: Job? = null
-
     private val _liveSyncStatus = MutableStateFlow(LiveSyncStatus.OFFLINE)
     val liveSyncStatus: StateFlow<LiveSyncStatus> = _liveSyncStatus.asStateFlow()
-
+    private val _syncMessage = MutableStateFlow("")
+    val syncMessage = _syncMessage.asStateFlow()
+    private val _pendingCount = MutableStateFlow(0)
+    val pendingCount = _pendingCount.asStateFlow()
+    private val _hasConflict = MutableStateFlow(false)
+    val hasConflict = _hasConflict.asStateFlow()
+    private fun db(): SupportSQLiteDatabase = database.openHelper.writableDatabase
     companion object {
-        private const val KEY_SERVER_URL = "local_desktop_url"
-        private const val KEY_LAST_SYNC_TIME = "last_sync_timestamp"
-
         fun normalizeUrl(raw: String): String {
-            var clean = raw.trim()
-            if (clean.startsWith("{") && clean.endsWith("}")) {
-                try {
-                    val json = JSONObject(clean)
-                    if (json.has("serverUrl")) {
-                        clean = json.getString("serverUrl").trim()
-                    }
-                } catch (_: Exception) {}
-            }
-            if (!clean.startsWith("http://", ignoreCase = true) && !clean.startsWith("https://", ignoreCase = true)) {
-                clean = "http://$clean"
-            }
-            return clean.trimEnd('/')
+            val value = if (raw.trim().startsWith("{")) JSONObject(raw).getString("serverUrl") else raw.trim()
+            val normalized = (if (value.startsWith("http://") || value.startsWith("https://")) value else "http://$value").trimEnd('/')
+            val uri = java.net.URI(normalized)
+            require(uri.host != null && uri.userInfo == null && uri.query == null && uri.fragment == null && uri.path.isNullOrEmpty()) { "Faqat kompyuter IP manzili va portini kiriting." }
+            return normalized
         }
     }
-
-    fun getServerUrl(): String? {
-        return prefs.getString(KEY_SERVER_URL, null)?.let { normalizeUrl(it) }
+    fun getServerUrl(): String? = prefs.getString("local_desktop_url", null)
+    fun saveServerUrl(url: String) { prefs.edit().putString("local_desktop_url", normalizeUrl(url)).apply() }
+    private fun token(): String? = prefs.getString("wifi_v2_token", null)
+    suspend fun pairDesktop(raw: String, code: String = ""): Result<String> = withContext(Dispatchers.IO) {
+        runCatching {
+            val qr = if (raw.trim().startsWith("{")) JSONObject(raw) else null
+            val base = normalizeUrl(raw)
+            val pairingCode = qr?.optString("pairingCode")?.takeIf { it.isNotBlank() } ?: code
+            val id = prefs.getString("wifi_device_id", null) ?: java.util.UUID.randomUUID().toString().also { prefs.edit().putString("wifi_device_id", it).commit() }
+            syncMutex.withLock {
+                val reply = request(base, "/api/v2/pair", JSONObject().put("code", pairingCode).put("deviceId", id).put("deviceName", "${Build.MANUFACTURER} ${Build.MODEL}"), authenticated = false)
+                val serverId = reply.getString("serverId")
+                val oldId = metadata("server_id")
+                require(oldId == null || oldId == serverId) { "Bu baza boshqa kompyuterga bog'langan. Bazalarni alohida ko'chirish kerak; avtomatik aralashtirilmaydi." }
+                database.withTransaction { putMetadata("server_id", serverId) }
+                prefs.edit().putString("local_desktop_url", base).putString("wifi_v2_token", reply.getString("token")).commit()
+            }
+            "Line kassa"
+        }
     }
-
-    fun saveServerUrl(url: String) {
-        val cleanUrl = normalizeUrl(url)
-        prefs.edit().putString(KEY_SERVER_URL, cleanUrl).apply()
-    }
-
-    fun getLastSyncTime(): Long {
-        return prefs.getLong(KEY_LAST_SYNC_TIME, 0L)
-    }
-
-    private fun updateLastSyncTime(timestamp: Long) {
-        prefs.edit().putLong(KEY_LAST_SYNC_TIME, timestamp).apply()
-    }
-
     suspend fun pingDesktop(serverUrl: String): Result<String> = withContext(Dispatchers.IO) {
-        try {
-            val base = normalizeUrl(serverUrl)
-            val url = URL("$base/api/ping")
-            val conn = url.openConnection() as HttpURLConnection
-            conn.connectTimeout = 4000
-            conn.readTimeout = 4000
-            conn.requestMethod = "GET"
-
-            if (conn.responseCode == HttpURLConnection.HTTP_OK) {
-                val text = conn.inputStream.bufferedReader().use { it.readText() }
-                val json = JSONObject(text)
-                val name = json.optString("name", "Desktop POS")
-                Result.success(name)
-            } else {
-                Result.failure(Exception("Ulanish xatosi: HTTP ${conn.responseCode}"))
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        runCatching { require(normalizeUrl(serverUrl) == getServerUrl()) { "Boshqa kompyuterga ulash uchun uning QR yoki ulanish kodidan foydalaning." }; val reply = request(normalizeUrl(serverUrl), "/api/ping"); require(reply.getInt("protocol") == 2); require(reply.getString("serverId") == metadata("server_id")) { "Kompyuter bazasi almashgan. Avval qayta ulang." }; reply.getString("name") }
     }
-
-    /**
-     * O'tkazishdan oldin ikkala qurilmadagi o'zgarishlar sonini hisoblash va konfliktni aniqlash
-     */
-    suspend fun checkTransferDiff(direction: String): Result<TransferCheckResult> = withContext(Dispatchers.IO) {
-        val rawUrl = getServerUrl() ?: return@withContext Result.failure(Exception("Kompyuter IP manzili topilmadi!"))
-        val baseUrl = normalizeUrl(rawUrl)
-        val lastSync = getLastSyncTime()
-
-        try {
-            val phoneActiveCount = productDao.getActiveProductsCount()
-            val phoneTotalSales = saleDao.getAllSalesCount()
-            val phoneModifiedProducts = productDao.getModifiedProductsCount(lastSync)
-            val phoneUnsyncedSales = saleDao.getUnsyncedSalesCount()
-
-            val checkPayload = JSONObject().apply {
-                put("direction", direction)
-                put("deviceName", "${Build.MANUFACTURER} ${Build.MODEL}".trim())
-                put("phoneProductsCount", phoneActiveCount)
-                put("phoneSalesCount", phoneTotalSales)
-                put("phoneLastSyncTime", lastSync)
-                put("phoneModifiedProducts", phoneModifiedProducts)
-                put("phoneUnsyncedSales", phoneUnsyncedSales)
-            }
-
-            val checkUrl = URL("$baseUrl/api/sync/check")
-            val conn = checkUrl.openConnection() as HttpURLConnection
-            conn.connectTimeout = 5000
-            conn.readTimeout = 5000
-            conn.requestMethod = "POST"
-            conn.doOutput = true
-            conn.setRequestProperty("Content-Type", "application/json; charset=utf-8")
-
-            OutputStreamWriter(conn.outputStream, "UTF-8").use { writer ->
-                writer.write(checkPayload.toString())
-                writer.flush()
-            }
-
-            if (conn.responseCode == HttpURLConnection.HTTP_OK) {
-                val respText = conn.inputStream.bufferedReader().use { it.readText() }
-                val root = JSONObject(respText)
-
-                val result = TransferCheckResult(
-                    direction = direction,
-                    desktopProductsCount = root.optInt("desktopProductsCount", 0),
-                    desktopSalesCount = root.optInt("desktopSalesCount", 0),
-                    desktopModifiedProducts = root.optInt("desktopModifiedProducts", 0),
-                    desktopUnsyncedSales = root.optInt("desktopUnsyncedSales", 0),
-                    phoneModifiedProducts = phoneModifiedProducts,
-                    phoneUnsyncedSales = phoneUnsyncedSales,
-                    hasConflict = root.optBoolean("hasConflict", false)
-                )
-                Result.success(result)
-            } else {
-                Result.failure(Exception("Tekshirishda xatolik: HTTP ${conn.responseCode}"))
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    /**
-     * Aniq yo'nalish bo'yicha ma'lumotlarni o'tkazish yoki Smart Merge qilish
-     */
-    suspend fun executeTransfer(direction: String, isSmartMerge: Boolean = false): Result<TransferExecutionResult> = withContext(Dispatchers.IO) {
-        val rawUrl = getServerUrl() ?: return@withContext Result.failure(Exception("Kompyuter server manzili topilmadi!"))
-        val baseUrl = normalizeUrl(rawUrl)
-        val finalDirection = if (isSmartMerge) "smart_merge" else direction
-
-        try {
-            val transferPayload = JSONObject().apply {
-                put("direction", finalDirection)
-                put("deviceName", "${Build.MANUFACTURER} ${Build.MODEL}".trim())
-                put("clientTimestamp", System.currentTimeMillis())
-            }
-
-            val localSales = saleDao.getUnsyncedSales()
-            val localSaleIdsToMark = mutableListOf<Long>()
-
-            if (finalDirection == "phone_to_desktop" || finalDirection == "smart_merge") {
-                val localProducts = productDao.getAllProductsIncludingDeleted()
-                val productsJsonArray = JSONArray()
-
-                for (p in localProducts) {
-                    val pJson = JSONObject().apply {
-                        put("Id", p.id)
-                        put("Guid", p.guid)
-                        put("Barcode", p.barcode ?: JSONObject.NULL)
-                        put("Name", p.name)
-                        put("Category", p.category)
-                        put("CostPrice", p.costPrice)
-                        put("CostCurrency", p.costCurrency)
-                        put("SellingPrice", p.sellingPrice)
-                        put("SellingPrice2", if (p.sellingPrice2 != null) p.sellingPrice2 else JSONObject.NULL)
-                        put("StockQuantity", p.stockQuantity)
-                        put("UnitType", when (p.unitType) {
-                            UnitType.DONA -> 0
-                            UnitType.METR -> 1
-                            UnitType.KG -> 2
-                        })
-                        put("MinStockAlert", p.minStockAlert)
-                        put("IsDeleted", p.isDeleted)
-                        put("Note", p.note)
-                        put("UpdatedAt", p.updatedAt)
-                    }
-                    productsJsonArray.put(pJson)
-                }
-                transferPayload.put("Products", productsJsonArray)
-
-                val localWarehouses = warehouseDao.getAllWarehousesList()
-                val warehousesJsonArray = JSONArray()
-                for (w in localWarehouses) {
-                    warehousesJsonArray.put(warehouseToJson(w))
-                }
-                transferPayload.put("Warehouses", warehousesJsonArray)
-
-                val salesJsonArray = JSONArray()
-                for (saleWithItems in localSales) {
-                    localSaleIdsToMark.add(saleWithItems.sale.id)
-                    val sJson = JSONObject().apply {
-                        put("Id", saleWithItems.sale.id)
-                        put("Guid", saleWithItems.sale.guid)
-                        put("TotalAmount", saleWithItems.sale.totalAmount)
-                        put("TotalCost", saleWithItems.sale.totalCost)
-                        put("PaymentType", when (saleWithItems.sale.paymentType) {
-                            PaymentType.CASH -> 0
-                            PaymentType.CARD -> 1
-                            PaymentType.SPLIT -> 2
-                            PaymentType.BRAK -> 6
-                        })
-                        put("CashAmount", saleWithItems.sale.cashAmount)
-                        put("CardAmount", saleWithItems.sale.cardAmount)
-                        put("TaxAmount", saleWithItems.sale.taxAmount)
-                        put("TaxRate", saleWithItems.sale.taxRate)
-                        put("CreatedAt", saleWithItems.sale.createdAt)
-                        put("UserId", saleWithItems.sale.userId)
-                        put("IsSynced", true)
-
-                        val itemsArray = JSONArray()
-                        for (item in saleWithItems.items) {
-                            val iJson = JSONObject().apply {
-                                put("Id", item.id)
-                                put("SaleId", item.saleId)
-                                put("SaleGuid", item.saleGuid)
-                                put("ProductId", item.productId)
-                                put("ProductGuid", item.productGuid)
-                                put("ProductName", item.productName)
-                                put("Quantity", item.quantity)
-                                put("PriceAtSale", item.priceAtSale)
-                                put("CostAtSale", item.costAtSale)
-                                put("CostCurrency", item.costCurrency)
-                            }
-                            itemsArray.put(iJson)
-                        }
-                        put("Items", itemsArray)
-                    }
-                    salesJsonArray.put(sJson)
-                }
-                transferPayload.put("Sales", salesJsonArray)
-            } else {
-                transferPayload.put("Products", JSONArray())
-                transferPayload.put("Sales", JSONArray())
-            }
-
-            val transferUrl = URL("$baseUrl/api/sync/transfer")
-            val conn = transferUrl.openConnection() as HttpURLConnection
-            conn.connectTimeout = 8000
-            conn.readTimeout = 8000
-            conn.requestMethod = "POST"
-            conn.doOutput = true
-            conn.setRequestProperty("Content-Type", "application/json; charset=utf-8")
-
-            OutputStreamWriter(conn.outputStream, "UTF-8").use { writer ->
-                writer.write(transferPayload.toString())
-                writer.flush()
-            }
-
-            if (conn.responseCode == HttpURLConnection.HTTP_OK) {
-                val respText = conn.inputStream.bufferedReader().use { it.readText() }
-                val root = JSONObject(respText)
-                val serverTimestamp = root.optLong("serverTimestamp", System.currentTimeMillis())
-
-                // Agar kompyuterdan tovarlar olingan bo'lsa (desktop_to_phone yoki smart_merge)
-                if (root.has("products")) {
-                    val productsArray = root.optJSONArray("products") ?: JSONArray()
-                    val toUpsert = mutableListOf<ProductEntity>()
-
-                    for (i in 0 until productsArray.length()) {
-                        val p = productsArray.getJSONObject(i)
-                        val guid = p.optString("Guid", "")
-                        val barcode = if (p.isNull("Barcode") || p.optString("Barcode").isBlank()) null else p.optString("Barcode")
-
-                        val existing = if (guid.isNotBlank()) productDao.getProductByGuid(guid) else null
-                        val existingByBarcode = if (existing == null && barcode != null) productDao.getProductByBarcode(barcode) else null
-                        val localId = existing?.id ?: existingByBarcode?.id ?: 0L
-
-                        val unitType = when (p.optInt("UnitType", 0)) {
-                            0 -> UnitType.DONA
-                            1 -> UnitType.METR
-                            2 -> UnitType.KG
-                            else -> UnitType.DONA
-                        }
-
-                        toUpsert.add(
-                            ProductEntity(
-                                id = localId,
-                                guid = if (guid.isNotBlank()) guid else (existing?.guid ?: java.util.UUID.randomUUID().toString()),
-                                barcode = barcode,
-                                name = p.optString("Name"),
-                                category = p.optString("Category", "Barchasi"),
-                                costPrice = p.optDouble("CostPrice", 0.0),
-                                costCurrency = p.optString("CostCurrency", "UZS"),
-                                sellingPrice = p.optDouble("SellingPrice", 0.0),
-                                sellingPrice2 = if (p.has("SellingPrice2") && !p.isNull("SellingPrice2")) p.optDouble("SellingPrice2") else null,
-                                stockQuantity = p.optDouble("StockQuantity", 0.0),
-                                unitType = unitType,
-                                minStockAlert = p.optDouble("MinStockAlert", 3.0),
-                                isDeleted = p.optBoolean("IsDeleted", false),
-                                note = p.optString("Note", ""),
-                                updatedAt = p.optLong("UpdatedAt", serverTimestamp)
-                            )
-                        )
-                    }
-
-                    if (toUpsert.isNotEmpty()) {
-                        productDao.insertProducts(toUpsert)
-                    }
-                }
-
-                // Agar kompyuterdan cheklar olingan bo'lsa (desktop_to_phone yoki smart_merge)
-                var receivedSalesCount = 0
-                if (root.has("sales")) {
-                    val salesArray = root.optJSONArray("sales") ?: JSONArray()
-                    for (i in 0 until salesArray.length()) {
-                        val sJson = salesArray.getJSONObject(i)
-                        val sGuid = sJson.optString("Guid", "")
-                        if (sGuid.isBlank()) continue
-
-                        val existingSale = saleDao.getSaleByGuid(sGuid)
-                        if (existingSale != null) {
-                            if (!existingSale.isSynced) {
-                                saleDao.markSalesSyncedByGuids(listOf(sGuid))
-                            }
-                            continue
-                        }
-
-                        val totalAmount = sJson.optDouble("TotalAmount", 0.0)
-                        val totalCost = sJson.optDouble("TotalCost", 0.0)
-                        val paymentType = when (val raw = sJson.opt("PaymentType")) {
-                            is Number -> when (raw.toInt()) {
-                                1 -> PaymentType.CARD
-                                2 -> PaymentType.SPLIT
-                                6 -> PaymentType.BRAK
-                                else -> PaymentType.CASH
-                            }
-                            is String -> when {
-                                raw.equals("CARD", ignoreCase = true) || raw == "1" -> PaymentType.CARD
-                                raw.equals("SPLIT", ignoreCase = true) || raw == "2" -> PaymentType.SPLIT
-                                raw.equals("BRAK", ignoreCase = true) || raw == "6" -> PaymentType.BRAK
-                                else -> PaymentType.CASH
-                            }
-                            else -> PaymentType.CASH
-                        }
-                        val cashAmount = sJson.optDouble("CashAmount", if (paymentType == PaymentType.CASH) totalAmount else 0.0)
-                        val cardAmount = sJson.optDouble("CardAmount", if (paymentType == PaymentType.CARD) totalAmount else 0.0)
-                        val taxAmount = sJson.optDouble("TaxAmount", 0.0)
-                        val taxRate = sJson.optDouble("TaxRate", 0.0)
-                        val createdAt = sJson.optLong("CreatedAt", serverTimestamp)
-                        val userId = sJson.optLong("UserId", 1L)
-
-                        val saleEntity = SaleEntity(
-                            id = 0L,
-                            guid = sGuid,
-                            totalAmount = totalAmount,
-                            totalCost = totalCost,
-                            paymentType = paymentType,
-                            cashAmount = cashAmount,
-                            cardAmount = cardAmount,
-                            taxAmount = taxAmount,
-                            taxRate = taxRate,
-                            createdAt = createdAt,
-                            userId = userId,
-                            isSynced = true
-                        )
-
-                        val itemsArray = sJson.optJSONArray("Items") ?: JSONArray()
-                        val saleItems = mutableListOf<SaleItemEntity>()
-                        for (j in 0 until itemsArray.length()) {
-                            val iJson = itemsArray.getJSONObject(j)
-                            val pGuid = iJson.optString("ProductGuid", "")
-                            val pName = iJson.optString("ProductName", "")
-
-                            val localProd = if (pGuid.isNotBlank()) productDao.getProductByGuid(pGuid) else null
-                            val localProdId = localProd?.id ?: iJson.optLong("ProductId", 0L)
-
-                            saleItems.add(
-                                SaleItemEntity(
-                                    id = 0L,
-                                    saleId = 0L,
-                                    saleGuid = sGuid,
-                                    productId = localProdId,
-                                    productGuid = pGuid,
-                                    productName = pName,
-                                    quantity = iJson.optDouble("Quantity", 1.0),
-                                    priceAtSale = iJson.optDouble("PriceAtSale", 0.0),
-                                    costAtSale = iJson.optDouble("CostAtSale", 0.0),
-                                    costCurrency = iJson.optString("CostCurrency", "UZS"),
-                                    warehouseGuid = iJson.optString("WarehouseGuid", ""),
-                                    warehouseName = iJson.optString("WarehouseName", "")
-                                )
-                            )
-                        }
-
-                        saleDao.insertSaleWithItems(saleEntity, saleItems)
-                        receivedSalesCount++
-                    }
-                }
-
-                // Agar kompyuterdan omborlar olingan bo'lsa (desktop_to_phone yoki smart_merge)
-                if (root.has("warehouses")) {
-                    val whArr = root.optJSONArray("warehouses") ?: JSONArray()
-                    for (i in 0 until whArr.length()) {
-                        val wh = parseWarehouseJson(whArr.getJSONObject(i), serverTimestamp)
-                        val existing = if (wh.guid.isNotBlank()) warehouseDao.getWarehouseByGuid(wh.guid) else null
-                        if (existing == null) {
-                            val toSave = wh.copy(id = 0L)
-                            if (toSave.isPrimary) {
-                                warehouseDao.clearPrimaryStatus()
-                            }
-                            warehouseDao.insertWarehouse(toSave)
-                        } else if (wh.updatedAt >= existing.updatedAt || wh.name != existing.name || wh.isPrimary != existing.isPrimary || wh.isDeleted != existing.isDeleted) {
-                            val toSave = wh.copy(id = existing.id)
-                            if (toSave.isPrimary) {
-                                warehouseDao.clearPrimaryStatus()
-                            }
-                            warehouseDao.insertWarehouse(toSave)
-                        }
-                    }
-                }
-
-                // Agar telefondan cheklar kompyuterga o'tkazilgan bo'lsa, ularni sinxronlandi deb belgilash
-                if (localSaleIdsToMark.isNotEmpty()) {
-                    saleDao.markSalesSynced(localSaleIdsToMark)
-                }
-
-                updateLastSyncTime(serverTimestamp)
-
-                val pCount = root.optInt("syncedProducts", 0)
-                val sCount = root.optInt("syncedSales", 0)
-                val finalSalesCount = if (sCount > 0) sCount else receivedSalesCount
-
-                val message = when (finalDirection) {
-                    "phone_to_desktop" -> "✅ Telefondan $pCount ta tovar va $finalSalesCount ta chek kompyuterga muvaffaqiyatli o'tkazildi!"
-                    "desktop_to_phone" -> "✅ Kompyuterdagi $pCount ta tovar va $finalSalesCount ta chek telefonga muvaffaqiyatli yuklandi!"
-                    "smart_merge" -> "✅ Aqlli birlashtirish (Smart Merge) yakunlandi: ikkala qurilma ma'lumotlari tenglashtirildi!"
-                    else -> "Muvaffaqiyatli yakunlandi!"
-                }
-
-                Result.success(
-                    TransferExecutionResult(
-                        success = true,
-                        direction = finalDirection,
-                        transferredProducts = pCount,
-                        transferredSales = finalSalesCount,
-                        message = message
-                    )
-                )
-            } else {
-                Result.failure(Exception("O'tkazish xatosi: HTTP ${conn.responseCode}"))
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    suspend fun syncWithDesktop(): Result<SyncSummary> {
-        val rawUrl = getServerUrl()
-        if (!rawUrl.isNullOrBlank()) {
-            val baseUrl = normalizeUrl(rawUrl)
-            try {
-                productStockDao.deleteInvalidStocks()
-                pushLocalWarehousesInternal(baseUrl)
-                pushLocalStocksInternal(baseUrl)
-            } catch (_: Exception) { }
-        }
-        val res = executeTransfer("smart_merge", isSmartMerge = true)
-        if (res.isSuccess && !rawUrl.isNullOrBlank()) {
-            val baseUrl = normalizeUrl(rawUrl)
-            try {
-                pullDeltaInternal(baseUrl)
-            } catch (_: Exception) { }
-        }
-        return if (res.isSuccess) {
-            val d = res.getOrNull()!!
-            Result.success(SyncSummary(d.transferredProducts, d.transferredProducts, d.message))
-        } else {
-            Result.failure(res.exceptionOrNull() ?: Exception("Xatolik"))
-        }
-    }
-
-    // ==========================================
-    // UZLUKSIZ (REAL-TIME) WI-FI JONLI SINXRON
-    // ==========================================
-
-    fun restartLiveSyncEngine() {
-        liveJob?.cancel()
-        liveJob = null
-        startLiveSyncEngine()
-    }
-
+    fun restartLiveSyncEngine() { liveJob?.cancel(); liveJob = null; startLiveSyncEngine() }
     fun startLiveSyncEngine() {
         if (liveJob?.isActive == true) return
-
         liveJob = syncScope.launch {
             while (isActive) {
-                val rawUrl = getServerUrl()
-                if (rawUrl.isNullOrBlank()) {
+                if (getServerUrl().isNullOrBlank() || token().isNullOrBlank()) {
                     _liveSyncStatus.value = LiveSyncStatus.OFFLINE
-                    delay(3000)
-                    continue
+                    _pendingCount.value = pending().size
+                    _syncMessage.value = "V2 sinxron uchun kompyuterdagi QR yoki ulanish kodidan foydalaning."
+                } else {
+                    _liveSyncStatus.value = LiveSyncStatus.CONNECTING
+                    try { syncOnce(); _liveSyncStatus.value = LiveSyncStatus.CONNECTED }
+                    catch (e: CancellationException) { throw e }
+                    catch (e: Exception) { _syncMessage.value = e.message ?: "Aloqa uzildi; amallar lokal navbatda."; _liveSyncStatus.value = LiveSyncStatus.OFFLINE; Log.w("WifiSyncV2", "Sync retry: ${e.message}") }
                 }
-
-                val baseUrl = normalizeUrl(rawUrl)
-                _liveSyncStatus.value = LiveSyncStatus.CONNECTING
-
-                try {
-                    // 1. Aloqa o'rnatilganda avval oflayn qolgan cheklarni o'tkazamiz
-                    pushUnsyncedSalesInternal(baseUrl)
-                    // 2. Mahalliy omborlarni kompyuterga uzatamiz
-                    pushLocalWarehousesInternal(baseUrl)
-                    // 3. Oflaynda o'zgargan tovarlarni kompyuterga uzatamiz
-                    pushModifiedProductsInternal(baseUrl)
-                    // 4. Mahalliy ombor qoldiqlarini kompyuterga uzatamiz
-                    pushLocalStocksInternal(baseUrl)
-                    // 5. Kompyuterdan oxirgi o'zgarishlarni yuklab olamiz
-                    pullDeltaInternal(baseUrl)
-
-                    // 5. Doimiy SSE oqimini ochamiz (qurilma modeli bilan)
-                    val deviceModel = "${Build.MANUFACTURER} ${Build.MODEL}".trim()
-                    val deviceParam = java.net.URLEncoder.encode(deviceModel, "UTF-8")
-                    val sseUrl = URL("$baseUrl/api/sync/events?device=$deviceParam")
-                    val conn = sseUrl.openConnection() as HttpURLConnection
-                    conn.connectTimeout = 6000
-                    conn.readTimeout = 30000 // Server har 10 soniyada keep-alive yuboradi
-                    conn.requestMethod = "GET"
-                    conn.setRequestProperty("Accept", "text/event-stream")
-
-                    if (conn.responseCode == HttpURLConnection.HTTP_OK) {
-                        _liveSyncStatus.value = LiveSyncStatus.CONNECTED
-                        Log.d("LocalSyncManager", "🟢 Desktop bilan doimiy jonli aloqa o'rnatildi ($baseUrl)")
-
-                        val reader = BufferedReader(InputStreamReader(conn.inputStream, "UTF-8"))
-                        var currentEvent = ""
-
-                        while (isActive) {
-                            val line = reader.readLine() ?: break // null bo'lsa aloqa uzildi
-                            val trimmed = line.trim()
-                            if (trimmed.isEmpty()) {
-                                currentEvent = ""
-                                continue
-                            }
-
-                            if (trimmed.startsWith(":")) {
-                                // Server ping xabari (: ping)
-                                continue
-                            } else if (trimmed.startsWith("event:")) {
-                                currentEvent = trimmed.substring("event:".length).trim()
-                            } else if (trimmed.startsWith("data:")) {
-                                val dataStr = trimmed.substring("data:".length).trim()
-                                handleIncomingLiveEvent(currentEvent, dataStr)
-                            }
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.d("LocalSyncManager", "SSE aloqa uzildi: ${e.message}")
-                }
-
-                _liveSyncStatus.value = LiveSyncStatus.CONNECTING
-                delay(3000) // 3 soniyadan so'ng qayta ulanishga urinish
+                delay(2000)
             }
         }
     }
-
-    private suspend fun handleIncomingLiveEvent(eventType: String, dataStr: String) = withContext(Dispatchers.IO) {
-        try {
-            when (eventType) {
-                "connected" -> {
-                    val json = JSONObject(dataStr)
-                    val serverTimestamp = json.optLong("serverTimestamp", System.currentTimeMillis())
-                    updateLastSyncTime(serverTimestamp)
-                    if (json.has("cardTaxRate")) {
-                        val tax = json.optDouble("cardTaxRate", -1.0)
-                        if (tax >= 0.0) {
-                            taxSettingsRepository.setCardTaxRate(tax)
-                            Log.d("LocalSyncManager", "⚡ Serverdan karta komissiyasi yangilandi: $tax%")
-                        }
-                    }
-                    if (json.has("usdRate")) {
-                        val usd = json.optDouble("usdRate", 0.0)
-                        if (usd > 0.0) {
-                            currencyRepository.updateCachedRate(usd)
-                            Log.d("LocalSyncManager", "⚡ Serverdan dollar kursi yangilandi: $usd so'm")
-                        }
-                    }
-                }
-
-                "sale_created" -> {
-                    val sJson = JSONObject(dataStr)
-                    val sGuid = sJson.optString("Guid", "")
-                    if (sGuid.isNotBlank()) {
-                        val existing = saleDao.getSaleByGuid(sGuid)
-                        if (existing == null) {
-                            val saleEntity = parseSaleJson(sJson)
-                            val items = parseSaleItemsJson(sJson.optJSONArray("Items") ?: JSONArray(), sGuid)
-                            val now = System.currentTimeMillis()
-                            saleDao.insertSaleWithItems(saleEntity, items)
-
-                            val primaryWh = warehouseDao.getPrimaryWarehouse() ?: warehouseDao.getAllWarehousesList().firstOrNull()
-                            val primaryGuid = primaryWh?.guid ?: "main-default-warehouse"
-
-                            // Delta usulida ombor qoldiqlarini zudlik bilan kamaytirish
-                            for (item in items) {
-                                val targetWhGuid = if (item.warehouseGuid.isNotBlank()) item.warehouseGuid else primaryGuid
-                                if (item.productGuid.isNotBlank()) {
-                                    productDao.decreaseStockByGuid(item.productGuid, item.quantity, now)
-                                    productStockDao.deductStock(item.productGuid, targetWhGuid, item.quantity, now)
-                                } else if (item.productId > 0) {
-                                    productDao.decreaseStock(item.productId, item.quantity, now)
+    // Writes are captured durably by triggers. These methods only wake the drain early.
+    private fun wake() { syncScope.launch { try { syncOnce() } catch (e: CancellationException) { throw e } catch (_: Exception) {} } }
+    fun sendLiveSale(sale: SaleEntity, items: List<SaleItemEntity>) = wake()
+    fun sendLiveProduct(product: ProductEntity, warehouseGuid: String? = null) = wake()
+    fun sendLiveWarehouse(warehouse: WarehouseEntity) = wake()
+    fun sendLiveStockTransfer(productGuid: String, fromWarehouseGuid: String, toWarehouseGuid: String, quantity: Double) = wake()
+    suspend fun syncWithDesktop(): Result<SyncSummary> = runCatching { require(!getServerUrl().isNullOrBlank() && !token().isNullOrBlank()) { "Avval kompyuter QR kodini skanerlang." }; syncOnce(); SyncSummary(0, 0, "V2 sinxron yakunlandi") }
+    private data class Pending(val seq: Long, val id: String, val kind: String, val guid: String, val warehouse: String, val delta: Double, val base: Long, val payload: String?, val group: String)
+    private fun pending(): List<Pending> = db().query("SELECT seq,op_id,kind,entity_guid,warehouse_guid,delta,base_revision,payload,group_id FROM sync_journal WHERE acked=0 ORDER BY seq").use { c ->
+        buildList { while (c.moveToNext()) add(Pending(c.getLong(0),c.getString(1),c.getString(2),c.getString(3),c.getString(4),c.getDouble(5),c.getLong(6),if(c.isNull(7)) null else c.getString(7),c.getString(8))) }
+    }
+    private fun metadata(key: String): String? = db().query("SELECT value FROM sync_meta WHERE key=?", arrayOf(key)).use { if(it.moveToFirst()) it.getString(0) else null }
+    private fun putMetadata(key: String, value: String) { db().execSQL("INSERT OR REPLACE INTO sync_meta(key,value) VALUES(?,?)", arrayOf(key,value)) }
+    private suspend fun freeze(): List<JSONObject> = database.withTransaction {
+        // Coalesce unfrozen metadata edits only. Frozen operation bodies are immutable across retries.
+        db().execSQL("UPDATE sync_journal SET base_revision=-1 WHERE payload IS NULL AND kind IN ('product','warehouse') AND EXISTS (SELECT 1 FROM sync_journal b WHERE b.kind=sync_journal.kind AND b.entity_guid=sync_journal.entity_guid AND b.base_revision=-1 AND b.payload IS NULL)")
+        db().execSQL("DELETE FROM sync_journal WHERE payload IS NULL AND kind IN ('product','warehouse') AND seq NOT IN (SELECT MAX(seq) FROM sync_journal WHERE payload IS NULL AND kind IN ('product','warehouse') GROUP BY kind,entity_guid)")
+        val candidates = pending()
+        val seen = mutableSetOf<String>()
+        val eligibleMetadata = candidates.filter { it.kind in listOf("product", "warehouse") && seen.add("${it.kind}:${it.guid}") }.map { it.id }.toSet()
+        val blockedGroups = candidates.filter { it.kind in listOf("product", "warehouse") && it.id !in eligibleMetadata }.map { it.group }.filter { it.isNotBlank() }.toSet()
+        val eligible = candidates.filter { it.group !in blockedGroups && (it.kind !in listOf("product", "warehouse") || it.id in eligibleMetadata) }
+        val selected = eligible.take(250)
+        val groups = selected.map { it.group }.filter { it.isNotBlank() }.toSet()
+        val selectedIds = selected.map { it.id }.toSet()
+        val ordered = eligible.filter { it.id in selectedIds || (it.group.isNotBlank() && it.group in groups) }
+            .sortedBy { when(it.kind) { "warehouse" -> 0; "product" -> 1; "sale", "legacy_sale" -> 2; else -> 3 } }
+        require(ordered.size <= 500) { "Bitta savdo yoki o‘tkazmada juda ko‘p amal bor; navbat saqlanadi." }
+        ordered.map { op ->
+            if (op.payload != null) JSONObject(op.payload) else {
+                val data = when(op.kind) {
+                    "product" -> {
+                        val product = productDao.getProductByGuid(op.guid) ?: error("Navbatdagi tovar topilmadi.")
+                        productToJson(product).also { json ->
+                            if(op.base == -1L) {
+                                val stocks = JSONArray()
+                                for(stock in productStockDao.getStocksForProduct(op.guid)) {
+                                    val unsyncedQty = db().query("SELECT COALESCE(SUM(i.quantity),0) FROM sale_items i JOIN sales s ON i.sale_id=s.id JOIN sync_journal j ON j.entity_guid=s.guid AND j.kind='legacy_sale' WHERE i.product_guid=? AND (i.warehouse_guid=? OR (i.warehouse_guid='' AND ?='main-default-warehouse'))",arrayOf(op.guid,stock.warehouseGuid,stock.warehouseGuid)).use { it.moveToFirst(); it.getDouble(0) }
+                                    stocks.put(JSONObject().put("WarehouseGuid",stock.warehouseGuid).put("Quantity",stock.quantity + unsyncedQty - pending().filter { it.kind == "stock" && it.guid == op.guid && it.warehouse == stock.warehouseGuid }.sumOf { it.delta }))
                                 }
-                            }
-                            Log.d("LocalSyncManager", "⚡ Kompyuterdan jonli savdo cheki qabul qilindi ($sGuid)")
-                        }
-                    }
-                }
-
-                "product_updated" -> {
-                    val pJson = JSONObject(dataStr)
-                    val prod = parseProductJson(pJson, System.currentTimeMillis())
-                    val existing = if (prod.guid.isNotBlank()) {
-                        productDao.getProductByGuid(prod.guid)
-                    } else if (!prod.barcode.isNullOrBlank()) {
-                        productDao.getProductByBarcode(prod.barcode!!)
-                    } else null
-
-                    val toSave = prod.copy(id = existing?.id ?: 0L)
-                    productDao.insertProduct(toSave)
-
-                    val whGuid = if (pJson.has("WarehouseGuid") && pJson.getString("WarehouseGuid").isNotBlank()) {
-                        pJson.getString("WarehouseGuid")
-                    } else if (pJson.has("warehouseGuid") && pJson.getString("warehouseGuid").isNotBlank()) {
-                        pJson.getString("warehouseGuid")
-                    } else null
-
-                    if (!whGuid.isNullOrBlank() && whGuid != "null" && toSave.guid.isNotBlank()) {
-                        productStockDao.upsertStock(toSave.guid, whGuid, toSave.stockQuantity, System.currentTimeMillis())
-                        Log.d("LocalSyncManager", "⚡ Kompyuterdan tovar yangilandi: ${toSave.name} (Ombor: $whGuid, Qoldiq: ${toSave.stockQuantity})")
-                    } else {
-                        Log.d("LocalSyncManager", "⚡ Kompyuterdan tovar yangilandi: ${toSave.name}")
-                    }
-                }
-
-                "warehouse_updated" -> {
-                    val wJson = JSONObject(dataStr)
-                    val wh = parseWarehouseJson(wJson, System.currentTimeMillis())
-                    val existing = if (wh.guid.isNotBlank()) warehouseDao.getWarehouseByGuid(wh.guid) else null
-                    val toSave = wh.copy(id = existing?.id ?: 0L)
-                    if (toSave.isPrimary) {
-                        warehouseDao.clearPrimaryStatus()
-                    }
-                    warehouseDao.insertWarehouse(toSave)
-                    Log.d("LocalSyncManager", "⚡ Kompyuterdan ombor yangilandi: ${toSave.name}")
-                }
-
-                "stock_transferred" -> {
-                    val trJson = JSONObject(dataStr)
-                    val prodGuid = trJson.optString("productGuid", "")
-                    val fromWh = trJson.optString("fromWarehouseGuid", "")
-                    val toWh = trJson.optString("toWarehouseGuid", "")
-                    val qty = trJson.optDouble("quantity", 0.0)
-                    val ts = trJson.optLong("timestamp", System.currentTimeMillis())
-                    if (prodGuid.isNotBlank() && fromWh.isNotBlank() && toWh.isNotBlank() && qty > 0) {
-                        productStockDao.transferStock(prodGuid, fromWh, toWh, qty, ts)
-                        Log.d("LocalSyncManager", "⚡ Kompyuterdan omborlararo o'tkazma qabul qilindi: $prodGuid ($fromWh -> $toWh : $qty)")
-                    }
-                }
-
-                "settings_updated" -> {
-                    val json = JSONObject(dataStr)
-                    if (json.has("cardTaxRate")) {
-                        val tax = json.optDouble("cardTaxRate", -1.0)
-                        if (tax >= 0.0) {
-                            taxSettingsRepository.setCardTaxRate(tax)
-                            Log.d("LocalSyncManager", "⚡ Kompyuterdan karta komissiyasi yangilandi: $tax%")
-                        }
-                    }
-                    if (json.has("usdRate")) {
-                        val usd = json.optDouble("usdRate", 0.0)
-                        if (usd > 0.0) {
-                            currencyRepository.updateCachedRate(usd)
-                            Log.d("LocalSyncManager", "⚡ Kompyuterdan dollar kursi yangilandi: $usd so'm")
-                        }
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            Log.e("LocalSyncManager", "Live event parsing xatosi: ${e.message}", e)
-        }
-    }
-
-    fun sendLiveSale(sale: SaleEntity, items: List<SaleItemEntity>) {
-        syncScope.launch {
-            val rawUrl = getServerUrl() ?: return@launch
-            val baseUrl = normalizeUrl(rawUrl)
-            try {
-                val saleJson = saleToJson(sale, items)
-                val url = URL("$baseUrl/api/sync/live_sale")
-                val conn = url.openConnection() as HttpURLConnection
-                conn.connectTimeout = 4000
-                conn.readTimeout = 4000
-                conn.requestMethod = "POST"
-                conn.doOutput = true
-                conn.setRequestProperty("Content-Type", "application/json; charset=utf-8")
-
-                OutputStreamWriter(conn.outputStream, "UTF-8").use { it.write(saleJson.toString()) }
-
-                if (conn.responseCode == HttpURLConnection.HTTP_OK) {
-                    saleDao.markSalesSyncedByGuids(listOf(sale.guid))
-                    val resp = conn.inputStream.bufferedReader().use { it.readText() }
-                    val json = JSONObject(resp)
-                    val serverTimestamp = json.optLong("serverTimestamp", System.currentTimeMillis())
-                    updateLastSyncTime(serverTimestamp)
-                    Log.d("LocalSyncManager", "⚡ Jonli savdo cheki kompyuterga uzatildi (${sale.guid})")
-                }
-            } catch (e: Exception) {
-                Log.d("LocalSyncManager", "Live sale jo'natishda xatolik (oflayn saqlandi): ${e.message}")
-            }
-        }
-    }
-
-    fun sendLiveProduct(product: ProductEntity, warehouseGuid: String? = null) {
-        syncScope.launch {
-            val rawUrl = getServerUrl() ?: return@launch
-            val baseUrl = normalizeUrl(rawUrl)
-            try {
-                val prodJson = productToJson(product, warehouseGuid)
-                val url = URL("$baseUrl/api/sync/live_product")
-                val conn = url.openConnection() as HttpURLConnection
-                conn.connectTimeout = 4000
-                conn.readTimeout = 4000
-                conn.requestMethod = "POST"
-                conn.doOutput = true
-                conn.setRequestProperty("Content-Type", "application/json; charset=utf-8")
-
-                OutputStreamWriter(conn.outputStream, "UTF-8").use { it.write(prodJson.toString()) }
-
-                if (conn.responseCode == HttpURLConnection.HTTP_OK) {
-                    val resp = conn.inputStream.bufferedReader().use { it.readText() }
-                    val json = JSONObject(resp)
-                    val serverTimestamp = json.optLong("serverTimestamp", System.currentTimeMillis())
-                    updateLastSyncTime(serverTimestamp)
-                    Log.d("LocalSyncManager", "⚡ Jonli tovar kompyuterga uzatildi (${product.name})")
-                }
-            } catch (e: Exception) {
-                Log.d("LocalSyncManager", "Live product jo'natishda xatolik: ${e.message}")
-            }
-        }
-    }
-
-    fun sendLiveWarehouse(warehouse: WarehouseEntity) {
-        syncScope.launch {
-            val rawUrl = getServerUrl() ?: return@launch
-            val baseUrl = normalizeUrl(rawUrl)
-            try {
-                val whJson = warehouseToJson(warehouse)
-                val url = URL("$baseUrl/api/sync/live_warehouse")
-                val conn = url.openConnection() as HttpURLConnection
-                conn.connectTimeout = 4000
-                conn.readTimeout = 4000
-                conn.requestMethod = "POST"
-                conn.doOutput = true
-                conn.setRequestProperty("Content-Type", "application/json; charset=utf-8")
-
-                OutputStreamWriter(conn.outputStream, "UTF-8").use { it.write(whJson.toString()) }
-
-                if (conn.responseCode == HttpURLConnection.HTTP_OK) {
-                    val resp = conn.inputStream.bufferedReader().use { it.readText() }
-                    val json = JSONObject(resp)
-                    val serverTimestamp = json.optLong("serverTimestamp", System.currentTimeMillis())
-                    updateLastSyncTime(serverTimestamp)
-                    Log.d("LocalSyncManager", "⚡ Jonli ombor kompyuterga uzatildi (${warehouse.name})")
-                }
-            } catch (e: Exception) {
-                Log.d("LocalSyncManager", "Live warehouse jo'natishda xatolik: ${e.message}")
-            }
-        }
-    }
-
-    fun sendLiveStockTransfer(productGuid: String, fromWarehouseGuid: String, toWarehouseGuid: String, quantity: Double) {
-        syncScope.launch {
-            val rawUrl = getServerUrl() ?: return@launch
-            val baseUrl = normalizeUrl(rawUrl)
-            try {
-                val json = JSONObject().apply {
-                    put("productGuid", productGuid)
-                    put("fromWarehouseGuid", fromWarehouseGuid)
-                    put("toWarehouseGuid", toWarehouseGuid)
-                    put("quantity", quantity)
-                    put("timestamp", System.currentTimeMillis())
-                }
-                val url = URL("$baseUrl/api/sync/live_transfer_stock")
-                val conn = url.openConnection() as HttpURLConnection
-                conn.connectTimeout = 4000
-                conn.readTimeout = 4000
-                conn.requestMethod = "POST"
-                conn.doOutput = true
-                conn.setRequestProperty("Content-Type", "application/json; charset=utf-8")
-
-                OutputStreamWriter(conn.outputStream, "UTF-8").use { it.write(json.toString()) }
-
-                if (conn.responseCode == HttpURLConnection.HTTP_OK) {
-                    val resp = conn.inputStream.bufferedReader().use { it.readText() }
-                    val respJson = JSONObject(resp)
-                    val serverTimestamp = respJson.optLong("serverTimestamp", System.currentTimeMillis())
-                    updateLastSyncTime(serverTimestamp)
-                    Log.d("LocalSyncManager", "⚡ Omborlararo o'tkazma kompyuterga uzatildi ($productGuid: $quantity)")
-                }
-            } catch (e: Exception) {
-                Log.d("LocalSyncManager", "Live stock transfer jo'natishda xatolik: ${e.message}")
-            }
-        }
-    }
-
-    private suspend fun pushLocalWarehousesInternal(baseUrl: String) = withContext(Dispatchers.IO) {
-        try {
-            val localWarehouses = warehouseDao.getAllWarehousesList()
-            if (localWarehouses.isEmpty()) return@withContext
-            val arr = JSONArray()
-            for (w in localWarehouses) {
-                arr.put(warehouseToJson(w))
-            }
-            val url = URL("$baseUrl/api/sync/push_warehouses")
-            val conn = url.openConnection() as HttpURLConnection
-            conn.connectTimeout = 4000
-            conn.readTimeout = 4000
-            conn.requestMethod = "POST"
-            conn.doOutput = true
-            conn.setRequestProperty("Content-Type", "application/json; charset=utf-8")
-            OutputStreamWriter(conn.outputStream, "UTF-8").use { it.write(arr.toString()) }
-            if (conn.responseCode == HttpURLConnection.HTTP_OK) {
-                Log.d("LocalSyncManager", "📥 ${localWarehouses.size} ta ombor kompyuterga uzatildi.")
-            }
-        } catch (e: Exception) {
-            Log.d("LocalSyncManager", "Push warehouses xatosi: ${e.message}")
-        }
-    }
-
-    private suspend fun pushModifiedProductsInternal(baseUrl: String) = withContext(Dispatchers.IO) {
-        try {
-            val lastSync = getLastSyncTime()
-            val modifiedProducts = productDao.getProductsChangedSince(lastSync)
-            if (modifiedProducts.isEmpty()) return@withContext
-            val arr = JSONArray()
-            for (p in modifiedProducts) {
-                val stocks = productStockDao.getStocksForProduct(p.guid)
-                val primaryStock = stocks.firstOrNull { it.quantity > 0 && !it.warehouseGuid.isNullOrBlank() && it.warehouseGuid != "null" }
-                    ?: stocks.firstOrNull { !it.warehouseGuid.isNullOrBlank() && it.warehouseGuid != "null" }
-                val whGuid = primaryStock?.warehouseGuid
-                arr.put(productToJson(p, whGuid))
-            }
-            val url = URL("$baseUrl/api/sync/push_products")
-            val conn = url.openConnection() as HttpURLConnection
-            conn.connectTimeout = 5000
-            conn.readTimeout = 5000
-            conn.requestMethod = "POST"
-            conn.doOutput = true
-            conn.setRequestProperty("Content-Type", "application/json; charset=utf-8")
-            OutputStreamWriter(conn.outputStream, "UTF-8").use { it.write(arr.toString()) }
-            if (conn.responseCode == HttpURLConnection.HTTP_OK) {
-                Log.d("LocalSyncManager", "📥 Oflaynda o'zgargan ${modifiedProducts.size} ta tovar kompyuterga uzatildi.")
-            }
-        } catch (e: Exception) {
-            Log.d("LocalSyncManager", "Push modified products xatosi: ${e.message}")
-        }
-    }
-
-    private suspend fun pushLocalStocksInternal(baseUrl: String) = withContext(Dispatchers.IO) {
-        try {
-            productStockDao.deleteInvalidStocks()
-            val stocks = productStockDao.getAllProductStocksList()
-            if (stocks.isEmpty()) return@withContext
-            val arr = JSONArray()
-            for (s in stocks) {
-                if (!s.warehouseGuid.isNullOrBlank() && s.warehouseGuid != "null" && s.warehouseGuid.trim().isNotEmpty()) {
-                    arr.put(JSONObject().apply {
-                        put("ProductGuid", s.productGuid)
-                        put("WarehouseGuid", s.warehouseGuid)
-                        put("Quantity", s.quantity)
-                        put("UpdatedAt", s.updatedAt)
-                    })
-                }
-            }
-            val url = URL("$baseUrl/api/sync/push_stocks")
-            val conn = url.openConnection() as HttpURLConnection
-            conn.connectTimeout = 4000
-            conn.readTimeout = 4000
-            conn.requestMethod = "POST"
-            conn.doOutput = true
-            conn.setRequestProperty("Content-Type", "application/json; charset=utf-8")
-            OutputStreamWriter(conn.outputStream, "UTF-8").use { it.write(arr.toString()) }
-            if (conn.responseCode == HttpURLConnection.HTTP_OK) {
-                Log.d("LocalSyncManager", "📥 ${stocks.size} ta ombor qoldig'i kompyuterga uzatildi.")
-            }
-        } catch (e: Exception) {
-            Log.d("LocalSyncManager", "Push stocks xatosi: ${e.message}")
-        }
-    }
-
-    private suspend fun pushUnsyncedSalesInternal(baseUrl: String) = withContext(Dispatchers.IO) {
-        val unsynced = saleDao.getUnsyncedSales()
-        if (unsynced.isEmpty()) return@withContext
-
-        val salesArray = JSONArray()
-        val guids = mutableListOf<String>()
-
-        for (saleWithItems in unsynced) {
-            guids.add(saleWithItems.sale.guid)
-            salesArray.put(saleToJson(saleWithItems.sale, saleWithItems.items))
-        }
-
-        try {
-            val url = URL("$baseUrl/api/sync/push_unsynced")
-            val conn = url.openConnection() as HttpURLConnection
-            conn.connectTimeout = 5000
-            conn.readTimeout = 5000
-            conn.requestMethod = "POST"
-            conn.doOutput = true
-            conn.setRequestProperty("Content-Type", "application/json; charset=utf-8")
-
-            OutputStreamWriter(conn.outputStream, "UTF-8").use { it.write(salesArray.toString()) }
-
-            if (conn.responseCode == HttpURLConnection.HTTP_OK) {
-                saleDao.markSalesSyncedByGuids(guids)
-                Log.d("LocalSyncManager", "📥 Oflaynda to'plangan ${guids.size} ta savdo cheki kompyuterga sinxronlandi.")
-            }
-        } catch (e: Exception) {
-            Log.d("LocalSyncManager", "Push unsynced xatosi: ${e.message}")
-        }
-    }
-
-    private suspend fun pullDeltaInternal(baseUrl: String) = withContext(Dispatchers.IO) {
-        val lastSync = getLastSyncTime()
-        try {
-            val url = URL("$baseUrl/api/sync/delta?since=$lastSync")
-            val conn = url.openConnection() as HttpURLConnection
-            conn.connectTimeout = 5000
-            conn.readTimeout = 5000
-            conn.requestMethod = "GET"
-
-            if (conn.responseCode == HttpURLConnection.HTTP_OK) {
-                val text = conn.inputStream.bufferedReader().use { it.readText() }
-                val root = JSONObject(text)
-                val serverTimestamp = root.optLong("serverTimestamp", System.currentTimeMillis())
-
-                if (root.has("products")) {
-                    val productsArr = root.optJSONArray("products") ?: JSONArray()
-                    val toUpsert = mutableListOf<ProductEntity>()
-                    for (i in 0 until productsArr.length()) {
-                        val pJson = productsArr.getJSONObject(i)
-                        val prod = parseProductJson(pJson, serverTimestamp)
-                        val existing = if (prod.guid.isNotBlank()) productDao.getProductByGuid(prod.guid) else null
-                        val existingByBc = if (existing == null && !prod.barcode.isNullOrBlank()) productDao.getProductByBarcode(prod.barcode!!) else null
-                        toUpsert.add(prod.copy(id = existing?.id ?: existingByBc?.id ?: 0L))
-                    }
-                    if (toUpsert.isNotEmpty()) {
-                        productDao.insertProducts(toUpsert)
-                    }
-                }
-
-                if (root.has("sales")) {
-                    val salesArr = root.optJSONArray("sales") ?: JSONArray()
-                    val now = System.currentTimeMillis()
-                    val primaryWh = warehouseDao.getPrimaryWarehouse() ?: warehouseDao.getAllWarehousesList().firstOrNull()
-                    val primaryGuid = primaryWh?.guid ?: "main-default-warehouse"
-
-                    for (i in 0 until salesArr.length()) {
-                        val sJson = salesArr.getJSONObject(i)
-                        val sGuid = sJson.optString("Guid", "")
-                        if (sGuid.isBlank()) continue
-
-                        val existing = saleDao.getSaleByGuid(sGuid)
-                        if (existing == null) {
-                            val sale = parseSaleJson(sJson)
-                            val items = parseSaleItemsJson(sJson.optJSONArray("Items") ?: JSONArray(), sGuid)
-                            saleDao.insertSaleWithItems(sale, items)
-
-                            // Delta hisobi: ombordan sotilgan miqdorni ayiramiz
-                            for (item in items) {
-                                val targetWhGuid = if (item.warehouseGuid.isNotBlank()) item.warehouseGuid else primaryGuid
-                                if (item.productGuid.isNotBlank()) {
-                                    productDao.decreaseStockByGuid(item.productGuid, item.quantity, now)
-                                    productStockDao.deductStock(item.productGuid, targetWhGuid, item.quantity, now)
-                                } else if (item.productId > 0) {
-                                    productDao.decreaseStock(item.productId, item.quantity, now)
-                                }
+                                json.put("InitialStocks",stocks)
                             }
                         }
                     }
-                }
-
-                if (root.has("warehouses")) {
-                    val whArr = root.optJSONArray("warehouses") ?: JSONArray()
-                    for (i in 0 until whArr.length()) {
-                        val wh = parseWarehouseJson(whArr.getJSONObject(i), serverTimestamp)
-                        val existing = if (wh.guid.isNotBlank()) warehouseDao.getWarehouseByGuid(wh.guid) else null
-                        val toSave = wh.copy(id = existing?.id ?: 0L)
-                        if (toSave.isPrimary) {
-                            warehouseDao.clearPrimaryStatus()
-                        }
-                        warehouseDao.insertWarehouse(toSave)
+                    "warehouse" -> {
+                        val w = warehouseDao.getWarehouseByGuid(op.guid) ?: error("Navbatdagi ombor topilmadi.")
+                        JSONObject().put("Guid",w.guid).put("Name",w.name).put("IsPrimary",w.isPrimary).put("IsDeleted",w.isDeleted).put("UpdatedAt",w.updatedAt)
                     }
-                }
-
-                if (root.has("productStocks")) {
-                    val stocksArr = root.optJSONArray("productStocks") ?: JSONArray()
-                    for (i in 0 until stocksArr.length()) {
-                        val sJson = stocksArr.getJSONObject(i)
-                        val pGuid = sJson.optString("ProductGuid", "")
-                        val wGuid = sJson.optString("WarehouseGuid", "")
-                        val qty = sJson.optDouble("Quantity", 0.0)
-                        val ts = sJson.optLong("UpdatedAt", serverTimestamp)
-                        if (pGuid.isNotBlank() && wGuid.isNotBlank() && wGuid != "null") {
-                            productStockDao.upsertStock(pGuid, wGuid, qty, ts)
-                        }
+                    "sale", "legacy_sale" -> {
+                        val sale = saleDao.getSaleByGuid(op.guid) ?: error("Navbatdagi chek topilmadi.")
+                        val full = saleDao.getSaleWithItemsById(sale.id) ?: error("Chek tovarlari topilmadi.")
+                        saleToJson(full.sale, full.items)
                     }
-                    if (stocksArr.length() > 0) {
-                        Log.d("LocalSyncManager", "📥 Kompyuterdan ${stocksArr.length()} ta ombor qoldiqlari yangilandi.")
-                    }
+                    "stock" -> JSONObject().put("WarehouseGuid",op.warehouse).put("Delta",op.delta)
+                    else -> error("Noma'lum navbat turi.")
                 }
-
-                updateLastSyncTime(serverTimestamp)
+                val json = JSONObject().put("group",op.group).put("id",op.id).put("kind",op.kind).put("guid",op.guid).put("baseRevision",maxOf(0,op.base)).put("bootstrap",op.base == -1L).put("data",data)
+                db().execSQL("UPDATE sync_journal SET payload=? WHERE op_id=?",arrayOf(json.toString(),op.id))
+                json
             }
-        } catch (e: Exception) {
-            Log.d("LocalSyncManager", "Pull delta xatosi: ${e.message}")
         }
     }
-
+    private suspend fun syncOnce() = withContext(Dispatchers.IO) { syncMutex.withLock {
+        val base = getServerUrl() ?: return@withLock
+        if(token().isNullOrBlank()) return@withLock
+        // Bounded batches, but drain all prior operations before pulling authoritative stock.
+        while(true) {
+            currentCoroutineContext().ensureActive()
+            val ops = freeze()
+            _pendingCount.value = pending().size
+            if(ops.isEmpty()) break
+            val reply = request(base,"/api/v2/push",JSONObject().put("operations",JSONArray(ops)))
+            val accepted = reply.getJSONArray("accepted")
+            val sentIds = ops.map { it.getString("id") }.toSet()
+            val acceptedIds = (0 until accepted.length()).map { accepted.getJSONObject(it).getString("id") }.toSet()
+            require(acceptedIds == sentIds) { "Server barcha amallarni tasdiqlamadi; navbat saqlanadi." }
+            database.withTransaction {
+                for(i in 0 until accepted.length()) {
+                    val ack = accepted.getJSONObject(i)
+                    val id = ack.getString("id")
+                    val kind = ack.getString("kind")
+                    val guid = ack.getString("guid")
+                    val op = ops.first { it.getString("id") == id }
+                    db().execSQL("UPDATE sync_journal SET acked=1 WHERE op_id=?",arrayOf(id))
+                    if(kind == "product" || kind == "warehouse") {
+                        val revision = ack.getLong("revision")
+                        db().execSQL("INSERT OR REPLACE INTO sync_versions(kind,entity_guid,revision) VALUES(?,?,?)",arrayOf(kind,guid,revision))
+                        // An edit made locally during the request descends from our accepted edit.
+                        db().execSQL("UPDATE sync_journal SET base_revision=? WHERE acked=0 AND payload IS NULL AND kind=? AND entity_guid=? AND (base_revision=? OR base_revision=-1)",arrayOf(revision,kind,guid,op.getLong("baseRevision")))
+                    }
+                    if(kind == "sale" || kind == "legacy_sale") saleDao.markSalesSyncedByGuids(listOf(guid))
+                }
+            }
+        }
+        val cursor = metadata("cursor")?.toLongOrNull() ?: 0L
+        val reply = request(base,"/api/v2/pull?cursor=$cursor")
+        require(reply.getString("serverId") == metadata("server_id")) { "Kompyuter bazasi almashgan; sinxron to'xtatildi." }
+        applySnapshot(reply)
+        _pendingCount.value = pending().size
+        _hasConflict.value = db().query("SELECT 1 FROM sync_conflicts LIMIT 1").use { it.moveToFirst() }
+        _syncMessage.value = if(_pendingCount.value == 0) "Barcha amallar sinxronlandi." else "${_pendingCount.value} ta amal navbatda."
+    } }
+    private suspend fun applySnapshot(root: JSONObject) = database.withTransaction {
+        val sql = db()
+        sql.execSQL("UPDATE sync_control SET applying=1 WHERE id=1")
+        try {
+            val localPending = pending()
+            for(i in 0 until root.getJSONArray("warehouses").length()) {
+                val w = root.getJSONArray("warehouses").getJSONObject(i)
+                if(localPending.none { it.kind == "warehouse" && it.guid == w.getString("Guid") }) {
+                    val entity = parseWarehouseJson(w,System.currentTimeMillis())
+                    val old = warehouseDao.getWarehouseByGuid(entity.guid)
+                    if(old == null) warehouseDao.insertWarehouse(entity) else warehouseDao.updateWarehouse(entity.copy(id=old.id))
+                    saveVersion("warehouse",entity.guid,w.getLong("Revision"))
+                }
+            }
+            for(i in 0 until root.getJSONArray("products").length()) {
+                val p = root.getJSONArray("products").getJSONObject(i)
+                if(localPending.none { it.kind == "product" && it.guid == p.getString("Guid") }) {
+                    val entity = parseProductJson(p,System.currentTimeMillis())
+                    val old = productDao.getProductByGuid(entity.guid)
+                    if(old == null) productDao.insertProduct(entity) else productDao.updateProduct(entity.copy(id=old.id))
+                    saveVersion("product",entity.guid,p.getLong("Revision"))
+                }
+            }
+            for(i in 0 until root.getJSONArray("sales").length()) {
+                val s = root.getJSONArray("sales").getJSONObject(i)
+                val guid = s.getString("Guid")
+                if(saleDao.getSaleByGuid(guid) == null) {
+                    val sale = parseSaleJson(s)
+                    saleDao.insertSaleWithItems(sale,parseSaleItemsJson(s.getJSONArray("Items"),guid))
+                }
+                // Stock comes from the same snapshot. Never deduct a received receipt again.
+            }
+            for(i in 0 until root.getJSONArray("productStocks").length()) {
+                val stock = root.getJSONArray("productStocks").getJSONObject(i)
+                val guid = stock.getString("ProductGuid")
+                val wh = stock.getString("WarehouseGuid")
+                val unpushed = localPending.filter { it.kind == "stock" && it.guid == guid && it.warehouse == wh }.sumOf { it.delta }
+                productStockDao.upsertStock(guid,wh,stock.getDouble("Quantity") + unpushed,stock.getLong("UpdatedAt"))
+            }
+            sql.execSQL("UPDATE products SET stock_quantity=(SELECT COALESCE(SUM(quantity),0) FROM product_stocks WHERE product_guid=products.guid)")
+            putMetadata("cursor",root.getLong("cursor").toString())
+        } finally { sql.execSQL("UPDATE sync_control SET applying=0 WHERE id=1") }
+        // Settings are unrelated to inventory capture. Existing CBU/Firebase behavior is preserved.
+        if(root.has("cardTaxRate")) taxSettingsRepository.setCardTaxRate(root.getDouble("cardTaxRate"))
+        if(root.has("usdRate")) currencyRepository.updateCachedRate(root.getDouble("usdRate"))
+    }
+    private fun saveVersion(kind: String,guid: String,revision: Long) { db().execSQL("INSERT OR REPLACE INTO sync_versions(kind,entity_guid,revision) VALUES(?,?,?)",arrayOf(kind,guid,revision)) }
+    suspend fun resolveConflicts(keepLocal: Boolean) = withContext(Dispatchers.IO) { syncMutex.withLock {
+        database.withTransaction {
+            db().query("SELECT kind,entity_guid,revision FROM sync_conflicts").use { c ->
+                while(c.moveToNext()) {
+                    val kind=c.getString(0); val guid=c.getString(1); val revision=c.getLong(2)
+                    if(keepLocal) db().execSQL("UPDATE sync_journal SET base_revision=?,payload=NULL WHERE acked=0 AND kind=? AND entity_guid=?",arrayOf(revision,kind,guid))
+                    else db().execSQL("DELETE FROM sync_journal WHERE acked=0 AND kind=? AND entity_guid=?",arrayOf(kind,guid))
+                }
+            }
+            db().execSQL("DELETE FROM sync_conflicts")
+            putMetadata("cursor","0")
+        }
+        _hasConflict.value=false
+    } }
+    private fun request(base: String,path: String,body: JSONObject? = null,authenticated: Boolean = true): JSONObject {
+        val address = java.net.InetAddress.getByName(java.net.URI(base).host)
+        require(address.isSiteLocalAddress || address.isLinkLocalAddress || address.isLoopbackAddress) { "Wi-Fi sinxron faqat lokal tarmoqda ishlaydi." }
+        val conn = URL(base + path).openConnection() as HttpURLConnection
+        conn.connectTimeout=5000;conn.readTimeout=15000;conn.instanceFollowRedirects=false
+        try {
+            if(authenticated) conn.setRequestProperty("Authorization","Bearer ${token() ?: error("Qurilmani QR orqali ulang.")}")
+            conn.requestMethod=if(body == null) "GET" else "POST"
+            if(body != null) {
+                val bytes=body.toString().toByteArray(Charsets.UTF_8)
+                require(bytes.size <= 8*1024*1024) { "Sinxron so'rovi 8 MB dan katta." }
+                conn.doOutput=true;conn.setRequestProperty("Content-Type","application/json; charset=utf-8");conn.setFixedLengthStreamingMode(bytes.size)
+                conn.outputStream.use { it.write(bytes) }
+            }
+            val status=conn.responseCode
+            val text=(if(status in 200..299) conn.inputStream else conn.errorStream)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() } ?: "{}"
+            val reply=JSONObject(text)
+            if(status == 409) {
+                val kind=reply.getString("kind");val guid=reply.getString("guid")
+                db().execSQL("INSERT OR REPLACE INTO sync_conflicts(kind,entity_guid,revision,message) VALUES(?,?,?,?)",arrayOf(kind,guid,reply.getLong("revision"),reply.getString("error")))
+                _hasConflict.value=true
+            }
+            require(status in 200..299) { reply.optString("error","HTTP $status") }
+            return reply
+        } finally { conn.disconnect() }
+    }
     private fun productToJson(p: ProductEntity, warehouseGuid: String? = null): JSONObject {
         return JSONObject().apply {
             put("Id", p.id)

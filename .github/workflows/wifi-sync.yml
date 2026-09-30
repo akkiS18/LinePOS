@@ -1,0 +1,27 @@
+name: Wi-Fi sync core
+on:
+  pull_request:
+    paths:
+      - 'desktop/PosElectro.Desktop/Sync/**'
+      - 'desktop/PosElectro.Desktop/Services/LocalSyncServer.cs'
+      - 'app/src/main/java/uz/pos/electro/data/sync/**'
+      - 'app/src/main/assets/wifi-sync-schema.sql'
+      - 'sync/**'
+      - 'tests/**'
+      - '.github/workflows/wifi-sync.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: dotnet run --project tests/WifiSync.CoreTests
+      - run: python -m unittest discover -s tests -p 'test_*.py' -v

@@ -53,6 +53,10 @@
                         </StackPanel>
                     </Border>
 
+                    <TextBlock Text="{Binding PairingCode}" Foreground="#16A34A" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Ulanish kodi: 5 daqiqa, bir qurilma uchun" Foreground="#94A3B8" HorizontalAlignment="Center" Margin="0,4,0,8"/>
+                    <Button Content="Yangi ulanish kodi / QR" Command="{Binding GenerateQrCommand}" Style="{StaticResource ModernButton}" Margin="0,0,0,8"/>
+                    <Button Content="Telefonlar ruxsatini bekor qilish" Command="{Binding RevokeDevicesCommand}" Style="{StaticResource ModernButton}" Margin="0,0,0,8"/>
                     <!-- Server boshqaruv tugmalari -->
                     <Button Content="🔄 Serverni qayta ishga tushirish" Command="{Binding StartServerCommand}"
                             Style="{StaticResource ModernButton}" HorizontalAlignment="Stretch" Margin="0,0,0,10"/>

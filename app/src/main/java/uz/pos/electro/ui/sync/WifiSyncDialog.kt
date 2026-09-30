@@ -2,6 +2,10 @@ package uz.pos.electro.ui.sync
 
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -57,6 +61,10 @@ fun WifiSyncDialog(
     val scope = rememberCoroutineScope()
 
     var serverUrl by remember { mutableStateOf(syncManager.getServerUrl() ?: "") }
+    var pairingCode by remember { mutableStateOf("") }
+    val syncMessage by syncManager.syncMessage.collectAsState()
+    val pendingCount by syncManager.pendingCount.collectAsState()
+    val hasConflict by syncManager.hasConflict.collectAsState()
     var isLoading by remember { mutableStateOf(false) }
     var statusText by remember { mutableStateOf("") }
     var isConnected by remember { mutableStateOf(false) }
@@ -69,17 +77,18 @@ fun WifiSyncDialog(
             statusText = "Iltimos, server IP manzilini kiriting"
             return
         }
-        val normalized = LocalSyncManager.normalizeUrl(urlToTest)
+        val normalized = runCatching { LocalSyncManager.normalizeUrl(urlToTest) }.getOrElse { statusText = it.message ?: "IP noto‘g‘ri"; return }
         serverUrl = normalized
-        syncManager.saveServerUrl(normalized)
 
         scope.launch {
             isLoading = true
             statusText = "Kompyuterga ulanish tekshirilmoqda..."
-            val res = syncManager.pingDesktop(normalized)
+            val res = if (urlToTest.trim().startsWith("{") || pairingCode.isNotBlank())
+                syncManager.pairDesktop(urlToTest, pairingCode) else syncManager.pingDesktop(normalized)
             isLoading = false
             if (res.isSuccess) {
                 isConnected = true
+                pairingCode = ""
                 statusText = "Muvaffaqiyatli bog'landi: ${res.getOrNull()}"
                 syncManager.restartLiveSyncEngine()
                 Toast.makeText(context, "🟢 Kompyuter bilan jonli aloqa o'rnatildi!", Toast.LENGTH_SHORT).show()
@@ -96,9 +105,7 @@ fun WifiSyncDialog(
             onDismissRequest = { isScannerOpen = false },
             onBarcodeScanned = { scannedValue ->
                 isScannerOpen = false
-                val normalized = LocalSyncManager.normalizeUrl(scannedValue)
-                serverUrl = normalized
-                testAndConnect(normalized)
+                testAndConnect(scannedValue)
             }
         )
     }
@@ -113,6 +120,8 @@ fun WifiSyncDialog(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .heightIn(max = (LocalConfiguration.current.screenHeightDp * 0.85f).dp)
+                    .verticalScroll(rememberScrollState())
                     .padding(20.dp)
             ) {
                 // Sarlavha
@@ -132,7 +141,7 @@ fun WifiSyncDialog(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "Real-vaqtli (Jonli) Wi-Fi sinxronizatsiya",
+                            text = "Internetsiz Wi-Fi sinxronizatsiya",
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -177,6 +186,14 @@ fun WifiSyncDialog(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
+                OutlinedTextField(value = pairingCode, onValueChange = { pairingCode = it }, label = { Text("Kompyuterdagi 8 raqamli ulanish kodi") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                Text("Navbat: $pendingCount ta. $syncMessage", fontSize = 12.sp)
+                if (hasConflict) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = { scope.launch { syncManager.resolveConflicts(true) } }) { Text("Telefon tahriri") }
+                        OutlinedButton(onClick = { scope.launch { syncManager.resolveConflicts(false) } }) { Text("Kompyuter tahriri") }
+                    }
+                }
                 // Bog'lanish tugmasi
                 Button(
                     onClick = { testAndConnect(serverUrl) },
@@ -212,7 +229,7 @@ fun WifiSyncDialog(
                 Spacer(modifier = Modifier.height(14.dp))
 
                 // JONLI SINXRON STATUS KARTASI
-                val isCurrentlyLive = (liveStatus == LiveSyncStatus.CONNECTED) || isConnected
+                val isCurrentlyLive = liveStatus == LiveSyncStatus.CONNECTED
 
                 Box(
                     modifier = Modifier

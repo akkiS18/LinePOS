@@ -1,6 +1,10 @@
 package uz.pos.electro.data.repository
 
 import kotlinx.coroutines.flow.Flow
+import androidx.room.withTransaction
+import uz.pos.electro.data.local.AppDatabase
+import uz.pos.electro.data.local.dao.ProductStockDao
+import uz.pos.electro.data.local.dao.WarehouseDao
 import uz.pos.electro.data.local.dao.ProductDao
 import uz.pos.electro.data.local.entity.ProductEntity
 import uz.pos.electro.data.sync.LocalSyncManager
@@ -10,6 +14,9 @@ import javax.inject.Singleton
 @Singleton
 class ProductRepository @Inject constructor(
     private val productDao: ProductDao,
+    private val database: AppDatabase,
+    private val productStockDao: ProductStockDao,
+    private val warehouseDao: WarehouseDao,
     private val localSyncManager: LocalSyncManager
 ) {
     fun getAllProducts(): Flow<List<ProductEntity>> = productDao.getAllProducts()
@@ -37,7 +44,19 @@ class ProductRepository @Inject constructor(
 
     suspend fun getProductByBarcode(barcode: String): ProductEntity? = productDao.getProductByBarcode(barcode)
 
-    suspend fun saveProduct(product: ProductEntity, warehouseGuid: String? = null): Long {
+    suspend fun saveProduct(product: ProductEntity, warehouseGuid: String? = null): Long = database.withTransaction {
+        database.openHelper.writableDatabase.execSQL("UPDATE sync_control SET current_group=? WHERE id=1", arrayOf(java.util.UUID.randomUUID().toString()))
+        val id = saveMetadata(product, warehouseGuid)
+        val saved = productDao.getProductById(id) ?: error("Tovar saqlanmadi")
+        val wh = warehouseGuid ?: warehouseDao.getPrimaryWarehouse()?.guid ?: "main-default-warehouse"
+        productStockDao.upsertStock(saved.guid, wh, product.stockQuantity, System.currentTimeMillis())
+        val total = productStockDao.getTotalStockForProduct(saved.guid)
+        productDao.updateStock(id,total,System.currentTimeMillis())
+        database.openHelper.writableDatabase.execSQL("UPDATE sync_control SET current_group='' WHERE id=1")
+        id
+    }
+
+    private suspend fun saveMetadata(product: ProductEntity, warehouseGuid: String?): Long {
         val now = System.currentTimeMillis()
         if (product.id == 0L) {
             // 1. Shtrix-kod bo'yicha tekshirish (o'chirilganlar ichidan ham)
@@ -91,10 +110,10 @@ class ProductRepository @Inject constructor(
         localSyncManager.sendLiveProduct(product.copy(isDeleted = true, updatedAt = now))
     }
 
-    suspend fun updateStock(productId: Long, newStock: Double) {
-        val now = System.currentTimeMillis()
-        productDao.updateStock(productId, newStock, now)
-        val p = productDao.getProductById(productId)
-        if (p != null) localSyncManager.sendLiveProduct(p)
+    suspend fun updateStock(productId: Long, newStock: Double) = database.withTransaction {
+        val p = productDao.getProductById(productId) ?: return@withTransaction
+        val wh = warehouseDao.getPrimaryWarehouse()?.guid ?: "main-default-warehouse"
+        productStockDao.upsertStock(p.guid,wh,newStock,System.currentTimeMillis())
+        productDao.updateStock(productId,productStockDao.getTotalStockForProduct(p.guid),System.currentTimeMillis())
     }
 }

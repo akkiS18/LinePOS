@@ -33,7 +33,7 @@ import uz.pos.electro.data.local.entity.WarehouseEntity
         WarehouseEntity::class,
         ProductStockEntity::class
     ],
-    version = 10,
+    version = 11,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -180,9 +180,16 @@ abstract class AppDatabase : RoomDatabase() {
                 DATABASE_NAME
             )
             .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_8_10)
-            .fallbackToDestructiveMigration()
-            .fallbackToDestructiveMigrationOnDowngrade()
+            .addMigrations(object : Migration(10, 11) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    uz.pos.electro.data.sync.WifiSyncSchema.install(db, context.assets.open("wifi-sync-schema.sql").bufferedReader().use { it.readText() })
+                }
+            })
             .addCallback(object : Callback() {
+                override fun onOpen(db: SupportSQLiteDatabase) {
+                    super.onOpen(db)
+                    uz.pos.electro.data.sync.WifiSyncSchema.install(db, context.assets.open("wifi-sync-schema.sql").bufferedReader().use { it.readText() })
+                }
                 private fun seedDefaults(db: SupportSQLiteDatabase) {
                     try {
                         val now = System.currentTimeMillis()

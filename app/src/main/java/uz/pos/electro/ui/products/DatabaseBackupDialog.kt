@@ -739,7 +739,7 @@ fun DatabaseBackupDialog(
                             }.onSuccess { successMsg ->
                                 isLoading = false
                                 Toast.makeText(context, successMsg, Toast.LENGTH_LONG).show()
-                                DatabaseBackupExporter.restartApp(context)
+                                // V2 imports into the existing Room database; no file replacement or restart.
                             }.onFailure { err ->
                                 isLoading = false
                                 Toast.makeText(context, "Xatolik: ${err.localizedMessage}", Toast.LENGTH_LONG).show()
@@ -775,7 +775,7 @@ fun DatabaseBackupDialog(
             text = {
                 Column {
                     Text(
-                        "Kassa kompyuteringiz bilan bir xil Wi-Fi tarmog'iga ulaning va kompyuter ekranida ko'rsatilgan IP-manzilni kiriting:",
+                        "Avval Wi-Fi sinxron oynasida kompyuter QR kodini skanerlang. So'ng uning IP manzilini kiriting. Mavjud savdolar saqlanadi:",
                         style = MaterialTheme.typography.bodySmall
                     )
                     Spacer(modifier = Modifier.height(10.dp))
@@ -794,7 +794,7 @@ fun DatabaseBackupDialog(
                     colors = ButtonDefaults.buttonColors(containerColor = LineSecondary),
                     onClick = {
                         showDesktopRestoreDialog = false
-                        sharedPrefs.edit().putString("local_desktop_url", desktopUrlInput).apply()
+                        // Pairing is performed only in the Wi-Fi dialog; never overwrite its server identity here.
                         scope.launch {
                             isLoading = true
                             loadingMessage = "Kompyuterdan baza yuklab olinmoqda..."
@@ -803,7 +803,7 @@ fun DatabaseBackupDialog(
                             }.onSuccess { successMsg ->
                                 isLoading = false
                                 Toast.makeText(context, successMsg, Toast.LENGTH_LONG).show()
-                                DatabaseBackupExporter.restartApp(context)
+                                // V2 imports into the existing Room database; no file replacement or restart.
                             }.onFailure { err ->
                                 isLoading = false
                                 Toast.makeText(context, "Yuklab bo'lmadi: ${err.localizedMessage}", Toast.LENGTH_LONG).show()
