@@ -73,7 +73,3 @@ Batafsil qo'llanmalar loyiha ichida mavjud:
 
 ---
 
-## 🔐 Litsenziya
-
-Barcha huquqlar himoyalangan. Ushbu dasturiy ta'minot mualliflik huquqi bilan himoyalangan.
-Ruxsatsiz nusxa ko'chirish, tarqatish yoki tijoriy maqsadlarda foydalanish taqiqlanadi.
