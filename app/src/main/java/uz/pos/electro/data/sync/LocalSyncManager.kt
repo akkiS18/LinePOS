@@ -95,7 +95,11 @@ class LocalSyncManager @Inject constructor(
                     _pendingCount.value = pending().size
                     _syncMessage.value = "V2 sinxron uchun kompyuterdagi QR yoki ulanish kodidan foydalaning."
                 } else {
-                    _liveSyncStatus.value = LiveSyncStatus.CONNECTING
+                    // A normal poll keeps an established connection live. Show CONNECTING
+                    // only for the first connection or a retry after an actual failure.
+                    if (_liveSyncStatus.value != LiveSyncStatus.CONNECTED) {
+                        _liveSyncStatus.value = LiveSyncStatus.CONNECTING
+                    }
                     try { syncOnce(); _liveSyncStatus.value = LiveSyncStatus.CONNECTED }
                     catch (e: CancellationException) { throw e }
                     catch (e: Exception) { _syncMessage.value = e.message ?: "Aloqa uzildi; amallar lokal navbatda."; _liveSyncStatus.value = LiveSyncStatus.OFFLINE; Log.w("WifiSyncV2", "Sync retry: ${e.message}") }

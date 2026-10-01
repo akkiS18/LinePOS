@@ -165,10 +165,16 @@ fun WifiSyncDialog(
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Ekrandagi QR Kodni Skaner Qilish", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text("QR orqali bir marta ulash", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    "QR skanerlang — kod terish shart emas. Keyingi ulanishlar ilova ochilganda avtomatik amalga oshadi.",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
 
                 // Server URL maydoni
                 OutlinedTextField(
@@ -186,7 +192,7 @@ fun WifiSyncDialog(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                OutlinedTextField(value = pairingCode, onValueChange = { pairingCode = it }, label = { Text("Kompyuterdagi 8 raqamli ulanish kodi") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = pairingCode, onValueChange = { pairingCode = it }, label = { Text("QR ishlamasa: 8 raqamli kod") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 Text("Navbat: $pendingCount ta. $syncMessage", fontSize = 12.sp)
                 if (hasConflict) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
