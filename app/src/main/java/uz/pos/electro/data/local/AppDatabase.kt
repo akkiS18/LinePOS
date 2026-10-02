@@ -173,8 +173,11 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        fun databaseName(context: Context): String =
+            if (context.packageName.endsWith(".test")) "electro_pos_test.db" else DATABASE_NAME
+
         fun buildDatabase(context: Context, scope: CoroutineScope): AppDatabase {
-            val dbName = if (context.packageName.endsWith(".test")) "electro_pos_test.db" else DATABASE_NAME
+            val dbName = databaseName(context)
             return Room.databaseBuilder(
                 context.applicationContext,
                 AppDatabase::class.java,

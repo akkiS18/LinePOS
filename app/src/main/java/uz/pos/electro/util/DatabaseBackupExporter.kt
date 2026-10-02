@@ -56,7 +56,7 @@ object DatabaseBackupExporter {
         }
 
         // 2. Asosiy baza faylini qidirish va nusxalash
-        var dbFile = context.getDatabasePath(AppDatabase.DATABASE_NAME)
+        var dbFile = context.getDatabasePath(AppDatabase.databaseName(context))
         if (!dbFile.exists()) {
             dbFile = context.getDatabasePath("pos_database.db")
         }
@@ -131,7 +131,7 @@ object DatabaseBackupExporter {
             database?.close()
         } catch (_: Throwable) {}
 
-        val targetDbFile = context.getDatabasePath(AppDatabase.DATABASE_NAME)
+        val targetDbFile = context.getDatabasePath(AppDatabase.databaseName(context))
         val targetWalFile = File(targetDbFile.path + "-wal")
         val targetShmFile = File(targetDbFile.path + "-shm")
 

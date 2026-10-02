@@ -890,7 +890,7 @@ fun SettingsScreen(
                         shape = RoundedCornerShape(10.dp),
                         color = when (liveSyncStatus) {
                             LiveSyncStatus.CONNECTED -> Color(0xFF16A34A).copy(alpha = 0.15f)
-                            LiveSyncStatus.CONNECTING -> Color(0xFFF59E0B).copy(alpha = 0.15f)
+                            LiveSyncStatus.CONFLICT, LiveSyncStatus.CONNECTING -> Color(0xFFF59E0B).copy(alpha = 0.15f)
                             LiveSyncStatus.OFFLINE -> MaterialTheme.colorScheme.surfaceVariant
                         }
                     ) {
@@ -898,11 +898,12 @@ fun SettingsScreen(
                             text = when (liveSyncStatus) {
                                 LiveSyncStatus.CONNECTED -> "Jonli ✅"
                                 LiveSyncStatus.CONNECTING -> "Ulanmoqda..."
+                                LiveSyncStatus.CONFLICT -> "Tahrirni tanlang"
                                 LiveSyncStatus.OFFLINE -> "Oflayn"
                             },
                             color = when (liveSyncStatus) {
                                 LiveSyncStatus.CONNECTED -> Color(0xFF16A34A)
-                                LiveSyncStatus.CONNECTING -> Color(0xFFF59E0B)
+                                LiveSyncStatus.CONFLICT, LiveSyncStatus.CONNECTING -> Color(0xFFF59E0B)
                                 LiveSyncStatus.OFFLINE -> MaterialTheme.colorScheme.onSurfaceVariant
                             },
                             fontWeight = FontWeight.Bold,
