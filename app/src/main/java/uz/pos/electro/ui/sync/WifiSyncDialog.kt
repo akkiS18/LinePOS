@@ -243,7 +243,7 @@ fun WifiSyncDialog(
                         .clip(RoundedCornerShape(14.dp))
                         .background(
                             if (isCurrentlyLive) Color(0xFF10B981).copy(alpha = 0.10f)
-                            else if (liveStatus == LiveSyncStatus.CONNECTING) Color(0xFFF59E0B).copy(alpha = 0.10f)
+                            else if (liveStatus == LiveSyncStatus.CONNECTING || liveStatus == LiveSyncStatus.CONFLICT) Color(0xFFF59E0B).copy(alpha = 0.10f)
                             else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f)
                         )
                         .padding(14.dp)
@@ -252,7 +252,7 @@ fun WifiSyncDialog(
                         Surface(
                             shape = RoundedCornerShape(10.dp),
                             color = if (isCurrentlyLive) Color(0xFF10B981)
-                            else if (liveStatus == LiveSyncStatus.CONNECTING) Color(0xFFF59E0B)
+                            else if (liveStatus == LiveSyncStatus.CONNECTING || liveStatus == LiveSyncStatus.CONFLICT) Color(0xFFF59E0B)
                             else Color(0xFF6B7280),
                             modifier = Modifier.size(38.dp)
                         ) {
@@ -270,6 +270,7 @@ fun WifiSyncDialog(
                         Column {
                             Text(
                                 text = if (isCurrentlyLive) "🟢 Jonli sinxronizatsiya faol"
+                                else if (liveStatus == LiveSyncStatus.CONFLICT) "🟡 Tahrirni tanlang"
                                 else if (liveStatus == LiveSyncStatus.CONNECTING) "🟡 Ulanmoqda..."
                                 else "⚪ Aloqa yo'q",
                                 fontWeight = FontWeight.Bold,
@@ -279,6 +280,8 @@ fun WifiSyncDialog(
                             Text(
                                 text = if (isCurrentlyLive)
                                     "Kompyuter bilan bog'langan. Barcha tovarlar, omborlar va savdolar avtomatik almashinadi."
+                                else if (liveStatus == LiveSyncStatus.CONFLICT)
+                                    "Aloqa bor. Sinxron davom etishi uchun yuqorida telefon yoki kompyuter tahririni tanlang."
                                 else if (liveStatus == LiveSyncStatus.CONNECTING)
                                     "Kompyuter bilan aloqa o'rnatilmoqda..."
                                 else

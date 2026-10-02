@@ -26,7 +26,8 @@ import java.net.URL
 import javax.inject.Inject
 import javax.inject.Singleton
 
-enum class LiveSyncStatus { OFFLINE, CONNECTING, CONNECTED }
+enum class LiveSyncStatus { OFFLINE, CONNECTING, CONNECTED, CONFLICT }
+private class PendingSyncConflict(message: String) : Exception(message)
 data class SyncSummary(val downloadedProducts: Int, val uploadedProducts: Int, val message: String)
 
 @Singleton
@@ -89,19 +90,20 @@ class LocalSyncManager @Inject constructor(
     fun startLiveSyncEngine() {
         if (liveJob?.isActive == true) return
         liveJob = syncScope.launch {
+            // Only an explicit engine start shows a connection attempt. Background retries
+            // retain OFFLINE/CONFLICT until their outcome is known.
+            if (!getServerUrl().isNullOrBlank() && !token().isNullOrBlank()) {
+                _liveSyncStatus.value = LiveSyncStatus.CONNECTING
+            }
             while (isActive) {
                 if (getServerUrl().isNullOrBlank() || token().isNullOrBlank()) {
                     _liveSyncStatus.value = LiveSyncStatus.OFFLINE
                     _pendingCount.value = pending().size
                     _syncMessage.value = "V2 sinxron uchun kompyuterdagi QR yoki ulanish kodidan foydalaning."
                 } else {
-                    // A normal poll keeps an established connection live. Show CONNECTING
-                    // only for the first connection or a retry after an actual failure.
-                    if (_liveSyncStatus.value != LiveSyncStatus.CONNECTED) {
-                        _liveSyncStatus.value = LiveSyncStatus.CONNECTING
-                    }
                     try { syncOnce(); _liveSyncStatus.value = LiveSyncStatus.CONNECTED }
                     catch (e: CancellationException) { throw e }
+                    catch (e: PendingSyncConflict) { _syncMessage.value = e.message ?: "Tahrirni tanlang"; _liveSyncStatus.value = LiveSyncStatus.CONFLICT }
                     catch (e: Exception) { _syncMessage.value = e.message ?: "Aloqa uzildi; amallar lokal navbatda."; _liveSyncStatus.value = LiveSyncStatus.OFFLINE; Log.w("WifiSyncV2", "Sync retry: ${e.message}") }
                 }
                 delay(2000)
@@ -173,6 +175,15 @@ class LocalSyncManager @Inject constructor(
     private suspend fun syncOnce() = withContext(Dispatchers.IO) { syncMutex.withLock {
         val base = getServerUrl() ?: return@withLock
         if(token().isNullOrBlank()) return@withLock
+        // A known conflict needs a user choice, not another failed push every two seconds.
+        // Probe transport while paused so loss/recovery of Wi-Fi remains visible.
+        if (db().query("SELECT 1 FROM sync_conflicts LIMIT 1").use { it.moveToFirst() }) {
+            _hasConflict.value = true
+            _pendingCount.value = pending().size
+            val ping = request(base, "/api/ping")
+            require(ping.getString("serverId") == metadata("server_id")) { "Kompyuter bazasi almashgan." }
+            throw PendingSyncConflict("Narx yoki tovar tahriri farq qiladi. Telefon yoki kompyuter tahririni tanlang; navbat saqlanadi.")
+        }
         // Bounded batches, but drain all prior operations before pulling authoritative stock.
         while(true) {
             currentCoroutineContext().ensureActive()
@@ -295,6 +306,7 @@ class LocalSyncManager @Inject constructor(
                 val kind=reply.getString("kind");val guid=reply.getString("guid")
                 db().execSQL("INSERT OR REPLACE INTO sync_conflicts(kind,entity_guid,revision,message) VALUES(?,?,?,?)",arrayOf(kind,guid,reply.getLong("revision"),reply.getString("error")))
                 _hasConflict.value=true
+                throw PendingSyncConflict(reply.getString("error"))
             }
             require(status in 200..299) { reply.optString("error","HTTP $status") }
             return reply
