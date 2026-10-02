@@ -98,7 +98,7 @@ fun ReportsScreen(
     val isExportModalOpen by viewModel.isExportModalOpen.collectAsState()
 
     // Chek raqami bo'yicha qidiruv
-    var searchQuery by androidx.compose.runtime.mutableStateOf("")
+    var searchQuery by remember { androidx.compose.runtime.mutableStateOf("") }
 
     val filteredSales = remember(salesList, searchQuery) {
         if (searchQuery.isBlank()) salesList
