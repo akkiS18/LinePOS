@@ -9,14 +9,45 @@ namespace PosElectro.Desktop.Data
 {
     public class DatabaseContext
     {
+        public static bool IsTestEnvironment { get; private set; }
+
         private readonly string _connectionString;
         public string DatabaseFilePath { get; }
 
-        public DatabaseContext()
+        public DatabaseContext(string? dbPath = null)
         {
-            var appDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PosElectro");
-            Directory.CreateDirectory(appDataDir);
-            DatabaseFilePath = Path.Combine(appDataDir, "pos_desktop.db");
+            var flagFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "test_env.flag");
+            var envPath = Environment.GetEnvironmentVariable("LINEPOS_DB_PATH");
+            var envTest = Environment.GetEnvironmentVariable("LINEPOS_TEST_ENV");
+
+            if (!string.IsNullOrWhiteSpace(dbPath))
+            {
+                DatabaseFilePath = dbPath;
+                IsTestEnvironment = true;
+            }
+            else if (!string.IsNullOrWhiteSpace(envPath))
+            {
+                DatabaseFilePath = envPath;
+                IsTestEnvironment = true;
+            }
+            else if (envTest == "1" || File.Exists(flagFile))
+            {
+                var testDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "test_data");
+                Directory.CreateDirectory(testDir);
+                DatabaseFilePath = Path.Combine(testDir, "pos_desktop_test.db");
+                IsTestEnvironment = true;
+            }
+            else
+            {
+                var appDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PosElectro");
+                Directory.CreateDirectory(appDataDir);
+                DatabaseFilePath = Path.Combine(appDataDir, "pos_desktop.db");
+                IsTestEnvironment = false;
+            }
+
+            var baseDir = Path.GetDirectoryName(DatabaseFilePath);
+            if (!string.IsNullOrEmpty(baseDir)) Directory.CreateDirectory(baseDir);
+
             _connectionString = $"Data Source={DatabaseFilePath}";
 
             InitializeDatabase();
@@ -40,8 +71,17 @@ namespace PosElectro.Desktop.Data
         {
             try
             {
-                var appDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PosElectro");
-                var backupDir = Path.Combine(appDataDir, "Backups");
+                string backupDir;
+                if (IsTestEnvironment)
+                {
+                    var baseDir = Path.GetDirectoryName(DatabaseFilePath) ?? AppDomain.CurrentDomain.BaseDirectory;
+                    backupDir = Path.Combine(baseDir, "Backups");
+                }
+                else
+                {
+                    var appDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PosElectro");
+                    backupDir = Path.Combine(appDataDir, "Backups");
+                }
                 Directory.CreateDirectory(backupDir);
 
                 var fileName = $"LinePOS_AutoBackup_{DateTime.Now:yyyyMMdd_HHmmss}_{reason}.db";

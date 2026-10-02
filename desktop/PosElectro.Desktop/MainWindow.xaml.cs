@@ -18,6 +18,10 @@ namespace PosElectro.Desktop
         {
             InitializeComponent();
             Services.KeyboardLayoutHelper.ForceEnglishLayout();
+            if (Data.DatabaseContext.IsTestEnvironment)
+            {
+                Title = "[TEST MUHITI] " + Title;
+            }
             _viewModel = new MainViewModel();
             _viewModel.PropertyChanged += ViewModel_PropertyChanged;
             DataContext = _viewModel;

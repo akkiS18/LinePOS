@@ -42,10 +42,17 @@ android {
         ksp {
             arg("room.schemaLocation", "$projectDir/schemas")
         }
+        manifestPlaceholders["appLabel"] = "SMART kassa"
     }
 
     buildTypes {
+        debug {
+            applicationIdSuffix = ".test"
+            versionNameSuffix = "-test"
+            manifestPlaceholders["appLabel"] = "SMART kassa (Test)"
+        }
         release {
+            manifestPlaceholders["appLabel"] = "SMART kassa"
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
