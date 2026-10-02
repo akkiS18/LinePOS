@@ -70,5 +70,34 @@ namespace PosElectro.Desktop.Views
                 vm.OpenEditProductCommand.Execute(product);
             }
         }
+
+        private void DataGrid_PreviewMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
+        {
+            if (System.Windows.Input.Keyboard.Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Shift))
+            {
+                if (sender is DependencyObject dep)
+                {
+                    var sv = FindChildScrollViewer(dep);
+                    if (sv != null && sv.HorizontalScrollBarVisibility != ScrollBarVisibility.Disabled)
+                    {
+                        sv.ScrollToHorizontalOffset(sv.HorizontalOffset - e.Delta);
+                        e.Handled = true;
+                    }
+                }
+            }
+        }
+
+        private static ScrollViewer? FindChildScrollViewer(DependencyObject? root)
+        {
+            if (root == null) return null;
+            if (root is ScrollViewer sv) return sv;
+            for (int i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(root); i++)
+            {
+                var child = System.Windows.Media.VisualTreeHelper.GetChild(root, i);
+                var result = FindChildScrollViewer(child);
+                if (result != null) return result;
+            }
+            return null;
+        }
     }
 }

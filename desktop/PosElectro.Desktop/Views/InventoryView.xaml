@@ -332,6 +332,7 @@
                         <DataGrid ItemsSource="{Binding Products}" 
                                   AutoGenerateColumns="False" 
                                   CanUserAddRows="False" 
+                                  CanUserResizeColumns="True"
                                   IsReadOnly="True"
                                   Background="Transparent" 
                                   RowBackground="#1E293B" 
@@ -345,7 +346,10 @@
                                   VirtualizingPanel.IsVirtualizing="True"
                                   VirtualizingPanel.VirtualizationMode="Recycling"
                                   VirtualizingPanel.ScrollUnit="Pixel"
-                                  ScrollViewer.CanContentScroll="True">
+                                  ScrollViewer.CanContentScroll="True"
+                                  ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                  ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                  PreviewMouseWheel="DataGrid_PreviewMouseWheel">
                             <DataGrid.Resources>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Margin" Value="0"/>
@@ -365,7 +369,7 @@
                                                 <Border Background="{TemplateBinding Background}" 
                                                         BorderBrush="#334155" 
                                                         BorderThickness="0,0,0,1" 
-                                                        Padding="12,12">
+                                                        Padding="10,10">
                                                     <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Left"/>
                                                 </Border>
                                             </ControlTemplate>
@@ -377,13 +381,13 @@
                                 <Style TargetType="DataGridCell">
                                     <Setter Property="Background" Value="Transparent"/>
                                     <Setter Property="BorderThickness" Value="0"/>
-                                    <Setter Property="Padding" Value="12,8"/>
+                                    <Setter Property="Padding" Value="10,8"/>
                                     <Setter Property="Template">
                                         <Setter.Value>
                                             <ControlTemplate TargetType="DataGridCell">
                                                 <Border Background="{TemplateBinding Background}" 
                                                         BorderThickness="0" 
-                                                        Padding="12,8" 
+                                                        Padding="10,8" 
                                                         SnapsToDevicePixels="True">
                                                     <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Left" 
                                                                       SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
@@ -408,15 +412,15 @@
                                 </Style>
                             </DataGrid.RowStyle>
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="Mahsulot nomi" Binding="{Binding Name}" Width="2*" FontWeight="SemiBold"/>
-                                <DataGridTextColumn Header="Shtrix-kod" Binding="{Binding Barcode}" Width="1.2*"/>
-                                <DataGridTextColumn Header="Kategoriya" Binding="{Binding Category}" Width="1.1*"/>
-                                <DataGridTextColumn Header="Tan narxi" Binding="{Binding CostPriceDisplay}" Width="1.1*"/>
-                                <DataGridTextColumn Header="Sotish narxi" Binding="{Binding SellingPrice, StringFormat='{}{0:N0} so\'m'}" Width="1.1*"/>
-                                <DataGridTextColumn Header="2-sotish narxi" Binding="{Binding SellingPrice2Display}" Width="1.1*"/>
+                                <DataGridTextColumn Header="Mahsulot nomi" Binding="{Binding Name}" Width="2*" MinWidth="220" FontWeight="SemiBold"/>
+                                <DataGridTextColumn Header="Shtrix-kod" Binding="{Binding Barcode}" Width="150" MinWidth="140"/>
+                                <DataGridTextColumn Header="Kategoriya" Binding="{Binding Category}" Width="150" MinWidth="135"/>
+                                <DataGridTextColumn Header="Tan narxi" Binding="{Binding CostPriceDisplay}" Width="135" MinWidth="120"/>
+                                <DataGridTextColumn Header="Sotish narxi" Binding="{Binding SellingPrice, StringFormat='{}{0:N0} so\'m'}" Width="145" MinWidth="130"/>
+                                <DataGridTextColumn Header="2-sotish narxi" Binding="{Binding SellingPrice2Display}" Width="145" MinWidth="130"/>
                                 
                                 <!-- Qoldiq (kam qolgan yoki manfiy bo'lsa qizil) -->
-                                <DataGridTemplateColumn Header="Qoldiq" Width="100">
+                                <DataGridTemplateColumn Header="Qoldiq" Width="105" MinWidth="95">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <Border Padding="6,2" CornerRadius="6" HorizontalAlignment="Left">
@@ -450,13 +454,13 @@
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
 
-                                <DataGridTextColumn Header="Birlik" Binding="{Binding UnitDisplay}" Width="80"/>
+                                <DataGridTextColumn Header="Birlik" Binding="{Binding UnitDisplay}" Width="80" MinWidth="70"/>
 
                                 <!-- Izoh (Zakaz uchun telefon raqam / ma'lumot) -->
-                                <DataGridTextColumn Header="Izoh (Zakaz uchun)" Binding="{Binding Note}" Width="1.6*" Foreground="#94A3B8"/>
+                                <DataGridTextColumn Header="Izoh (Zakaz uchun)" Binding="{Binding Note}" Width="1.5*" MinWidth="160" Foreground="#94A3B8"/>
 
                                 <!-- Amallar (Tahrirlash ✏️, Shtrix-kod 🖨️, O'chirish 🗑️) -->
-                                <DataGridTemplateColumn Header="Amallar" Width="120">
+                                <DataGridTemplateColumn Header="Amallar" Width="125" MinWidth="120">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
