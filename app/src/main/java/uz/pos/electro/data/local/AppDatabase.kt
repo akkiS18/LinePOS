@@ -33,7 +33,7 @@ import uz.pos.electro.data.local.entity.WarehouseEntity
         WarehouseEntity::class,
         ProductStockEntity::class
     ],
-    version = 10,
+    version = 11,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -173,16 +173,27 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        fun databaseName(context: Context): String =
+            if (context.packageName.endsWith(".test")) "electro_pos_test.db" else DATABASE_NAME
+
         fun buildDatabase(context: Context, scope: CoroutineScope): AppDatabase {
+            val dbName = databaseName(context)
             return Room.databaseBuilder(
                 context.applicationContext,
                 AppDatabase::class.java,
-                DATABASE_NAME
+                dbName
             )
             .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_8_10)
-            .fallbackToDestructiveMigration()
-            .fallbackToDestructiveMigrationOnDowngrade()
+            .addMigrations(object : Migration(10, 11) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    uz.pos.electro.data.sync.WifiSyncSchema.install(db, context.assets.open("wifi-sync-schema.sql").bufferedReader().use { it.readText() })
+                }
+            })
             .addCallback(object : Callback() {
+                override fun onOpen(db: SupportSQLiteDatabase) {
+                    super.onOpen(db)
+                    uz.pos.electro.data.sync.WifiSyncSchema.install(db, context.assets.open("wifi-sync-schema.sql").bufferedReader().use { it.readText() })
+                }
                 private fun seedDefaults(db: SupportSQLiteDatabase) {
                     try {
                         val now = System.currentTimeMillis()

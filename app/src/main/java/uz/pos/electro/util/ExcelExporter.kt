@@ -172,7 +172,7 @@ object ExcelExporter {
     private fun shareExcelFile(context: Context, file: File) {
         val uri: Uri = FileProvider.getUriForFile(
             context,
-            "uz.pos.electro.fileprovider",
+            "${context.packageName}.fileprovider",
             file
         )
 

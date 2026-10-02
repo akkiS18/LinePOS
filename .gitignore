@@ -93,3 +93,7 @@ out.txt
 .agents/
 .artifacts/
 scratch/
+
+# Python sync test caches
+__pycache__/
+*.pyc

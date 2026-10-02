@@ -33,32 +33,39 @@ interface ProductStockDao {
     @Query("DELETE FROM product_stocks WHERE warehouse_guid IS NULL OR warehouse_guid = 'null' OR warehouse_guid = ''")
     suspend fun deleteInvalidStocks(): Int
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertOrUpdateStock(stock: ProductStockEntity): Long
+    suspend fun insertOrUpdateStock(stock: ProductStockEntity): Long =
+        upsertStock(stock.productGuid, stock.warehouseGuid, stock.quantity, stock.updatedAt)
 
-    @Query("""
-        INSERT INTO product_stocks (product_guid, warehouse_guid, quantity, updated_at)
-        VALUES (:productGuid, :warehouseGuid, -:qty, :now)
-        ON CONFLICT(product_guid, warehouse_guid)
-        DO UPDATE SET quantity = quantity - :qty, updated_at = :now
-    """)
-    suspend fun deductStock(productGuid: String, warehouseGuid: String, qty: Double, now: Long): Long
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun ensureStock(stock: ProductStockEntity): Long
 
-    @Query("""
-        INSERT INTO product_stocks (product_guid, warehouse_guid, quantity, updated_at)
-        VALUES (:productGuid, :warehouseGuid, :qty, :now)
-        ON CONFLICT(product_guid, warehouse_guid)
-        DO UPDATE SET quantity = quantity + :qty, updated_at = :now
-    """)
-    suspend fun addStock(productGuid: String, warehouseGuid: String, qty: Double, now: Long): Long
+    @Query("UPDATE product_stocks SET quantity=quantity-:qty,updated_at=:now WHERE product_guid=:productGuid AND warehouse_guid=:warehouseGuid")
+    suspend fun deductExistingStock(productGuid: String,warehouseGuid: String,qty: Double,now: Long): Int
 
-    @Query("""
-        INSERT INTO product_stocks (product_guid, warehouse_guid, quantity, updated_at)
-        VALUES (:productGuid, :warehouseGuid, :quantity, :now)
-        ON CONFLICT(product_guid, warehouse_guid)
-        DO UPDATE SET quantity = :quantity, updated_at = :now
-    """)
-    suspend fun upsertStock(productGuid: String, warehouseGuid: String, quantity: Double, now: Long = System.currentTimeMillis()): Long
+    @Query("UPDATE product_stocks SET quantity=quantity+:qty,updated_at=:now WHERE product_guid=:productGuid AND warehouse_guid=:warehouseGuid")
+    suspend fun addExistingStock(productGuid: String,warehouseGuid: String,qty: Double,now: Long): Int
+
+    @Query("UPDATE product_stocks SET quantity=:qty,updated_at=:now WHERE product_guid=:productGuid AND warehouse_guid=:warehouseGuid")
+    suspend fun setExistingStock(productGuid: String,warehouseGuid: String,qty: Double,now: Long): Int
+
+    // INSERT OR IGNORE + UPDATE also works with SQLite shipped on Android 8 (API 26).
+    @Transaction
+    suspend fun deductStock(productGuid: String,warehouseGuid: String,qty: Double,now: Long): Long {
+        ensureStock(ProductStockEntity(productGuid=productGuid,warehouseGuid=warehouseGuid,quantity=0.0,updatedAt=now))
+        return deductExistingStock(productGuid,warehouseGuid,qty,now).toLong()
+    }
+
+    @Transaction
+    suspend fun addStock(productGuid: String,warehouseGuid: String,qty: Double,now: Long): Long {
+        ensureStock(ProductStockEntity(productGuid=productGuid,warehouseGuid=warehouseGuid,quantity=0.0,updatedAt=now))
+        return addExistingStock(productGuid,warehouseGuid,qty,now).toLong()
+    }
+
+    @Transaction
+    suspend fun upsertStock(productGuid: String,warehouseGuid: String,quantity: Double,now: Long = System.currentTimeMillis()): Long {
+        ensureStock(ProductStockEntity(productGuid=productGuid,warehouseGuid=warehouseGuid,quantity=0.0,updatedAt=now))
+        return setExistingStock(productGuid,warehouseGuid,quantity,now).toLong()
+    }
 
     @Query("SELECT COALESCE(SUM(quantity), 0.0) FROM product_stocks WHERE product_guid = :productGuid")
     suspend fun getTotalStockForProduct(productGuid: String): Double

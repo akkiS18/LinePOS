@@ -12,7 +12,7 @@
         android:name=".POSApplication"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
-        android:label="SMART kassa"
+        android:label="${appLabel}"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:usesCleartextTraffic="true"
@@ -31,7 +31,7 @@
 
         <provider
             android:name="androidx.core.content.FileProvider"
-            android:authorities="uz.pos.electro.fileprovider"
+            android:authorities="${applicationId}.fileprovider"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data

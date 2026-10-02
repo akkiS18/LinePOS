@@ -1,6 +1,8 @@
 package uz.pos.electro.data.repository
 
 import kotlinx.coroutines.flow.Flow
+import androidx.room.withTransaction
+import uz.pos.electro.data.local.AppDatabase
 import uz.pos.electro.data.local.dao.ProductDao
 import uz.pos.electro.data.local.dao.ProductStockDao
 import uz.pos.electro.data.local.dao.WarehouseDao
@@ -23,6 +25,7 @@ data class WarehouseWithStats(
 @Singleton
 class WarehouseRepository @Inject constructor(
     private val warehouseDao: WarehouseDao,
+    private val database: AppDatabase,
     private val productStockDao: ProductStockDao,
     private val productDao: ProductDao,
     private val localSyncManager: LocalSyncManager
@@ -63,8 +66,9 @@ class WarehouseRepository @Inject constructor(
 
     suspend fun getPrimaryWarehouse(): WarehouseEntity? = warehouseDao.getPrimaryWarehouse()
 
-    suspend fun saveWarehouse(name: String, isPrimary: Boolean, id: Long = 0L, guid: String = "") {
+    suspend fun saveWarehouse(name: String, isPrimary: Boolean, id: Long = 0L, guid: String = "") = database.withTransaction {
         val now = System.currentTimeMillis()
+        database.openHelper.writableDatabase.execSQL("UPDATE sync_control SET current_group=? WHERE id=1",arrayOf(UUID.randomUUID().toString()))
         val whGuid = if (guid.isBlank()) "wh_${UUID.randomUUID()}" else guid
 
         if (isPrimary) {
@@ -81,10 +85,12 @@ class WarehouseRepository @Inject constructor(
         )
         val insertedId = warehouseDao.insertWarehouse(entity)
         val toSend = entity.copy(id = if (id == 0L) insertedId else id)
+        database.openHelper.writableDatabase.execSQL("UPDATE sync_control SET current_group='' WHERE id=1")
         localSyncManager.sendLiveWarehouse(toSend)
     }
 
-    suspend fun setPrimaryWarehouse(guid: String) {
+    suspend fun setPrimaryWarehouse(guid: String) = database.withTransaction {
+        database.openHelper.writableDatabase.execSQL("UPDATE sync_control SET current_group=? WHERE id=1",arrayOf(UUID.randomUUID().toString()))
         val now = System.currentTimeMillis()
         warehouseDao.clearPrimaryStatus()
         warehouseDao.setPrimaryWarehouse(guid, now)
@@ -92,6 +98,7 @@ class WarehouseRepository @Inject constructor(
         if (wh != null) {
             localSyncManager.sendLiveWarehouse(wh)
         }
+        database.openHelper.writableDatabase.execSQL("UPDATE sync_control SET current_group='' WHERE id=1")
     }
 
     suspend fun deleteWarehouse(guid: String) {
@@ -111,7 +118,7 @@ class WarehouseRepository @Inject constructor(
         return productStockDao.getProductStockInWarehouse(productGuid, warehouseGuid) ?: 0.0
     }
 
-    suspend fun updateProductStockInWarehouse(productGuid: String, warehouseGuid: String, quantity: Double) {
+    suspend fun updateProductStockInWarehouse(productGuid: String, warehouseGuid: String, quantity: Double) = database.withTransaction {
         val now = System.currentTimeMillis()
         productStockDao.insertOrUpdateStock(
             ProductStockEntity(
@@ -129,10 +136,12 @@ class WarehouseRepository @Inject constructor(
         }
     }
 
-    suspend fun transferStock(productGuid: String, fromWh: String, toWh: String, quantity: Double) {
-        if (quantity <= 0 || fromWh == toWh) return
+    suspend fun transferStock(productGuid: String, fromWh: String, toWh: String, quantity: Double) = database.withTransaction {
+        if (quantity <= 0 || fromWh == toWh) return@withTransaction
         val now = System.currentTimeMillis()
+        database.openHelper.writableDatabase.execSQL("UPDATE sync_control SET current_group=? WHERE id=1",arrayOf(UUID.randomUUID().toString()))
         productStockDao.transferStock(productGuid, fromWh, toWh, quantity, now)
+        database.openHelper.writableDatabase.execSQL("UPDATE sync_control SET current_group='' WHERE id=1")
         localSyncManager.sendLiveStockTransfer(productGuid, fromWh, toWh, quantity)
     }
 }

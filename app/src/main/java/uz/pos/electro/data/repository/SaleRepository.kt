@@ -52,6 +52,7 @@ class SaleRepository @Inject constructor(
         taxRate: Double = 0.0
     ): Long {
         val (saleId, savedEntity, savedItems) = database.withTransaction {
+            database.openHelper.writableDatabase.execSQL("UPDATE sync_control SET current_group=? WHERE id=1", arrayOf(java.util.UUID.randomUUID().toString()))
             val currentUsdRate = currencyRepository.getCachedUsdRate()
             val totalAmount = items.sumOf { it.priceAtSale * it.quantity }
             val totalCost = items.sumOf { item ->
@@ -192,6 +193,7 @@ class SaleRepository @Inject constructor(
 
             val saleId = saleDao.insertSaleWithItems(saleEntity, saleItems)
 
+            database.openHelper.writableDatabase.execSQL("UPDATE sync_control SET current_group='' WHERE id=1")
             Triple(saleId, saleEntity, saleItems)
         }
 

@@ -398,7 +398,6 @@ class ProductViewModel @Inject constructor(
                     _selectedWarehouse.value = currentWh
                 }
                 val whGuid = currentWh?.guid ?: "main-default-warehouse"
-                warehouseRepository.updateProductStockInWarehouse(product.guid, whGuid, stock)
                 productRepository.saveProduct(product, whGuid)
 
                 _refreshTrigger.value = System.currentTimeMillis()
