@@ -23,6 +23,10 @@ namespace PosElectro.Desktop.Models
         public DateTime CreatedDateTime => DateTimeOffset.FromUnixTimeMilliseconds(CreatedAt).LocalDateTime;
         public double NetProfit => (TotalAmount - TaxAmount) - TotalCost;
         public double Profit => NetProfit;
+        public bool IsProfitNegative => Profit < 0;
+        public string ProfitDisplay => Profit < 0
+            ? $"{Profit:N0} so'm"
+            : $"+{Profit:N0} so'm";
         public string PaymentTypeDisplay => PaymentType switch
         {
             PaymentType.CASH => "Naqd",

@@ -97,6 +97,14 @@ fun ReportsScreen(
 
     val isExportModalOpen by viewModel.isExportModalOpen.collectAsState()
 
+    // Chek raqami bo'yicha qidiruv
+    var searchQuery by androidx.compose.runtime.mutableStateOf("")
+
+    val filteredSales = remember(salesList, searchQuery) {
+        if (searchQuery.isBlank()) salesList
+        else salesList.filter { it.sale.id.toString().contains(searchQuery.trim()) }
+    }
+
     val infiniteTransition = rememberInfiniteTransition(label = "refreshRotation")
     val refreshRotation by infiniteTransition.animateFloat(
         initialValue = 0f,
@@ -226,13 +234,18 @@ fun ReportsScreen(
                     // SOF FOYDA (So'mda va Dollarda)
                     val formattedUsdProfit = String.format(Locale.US, "%.2f", summary.netProfitUsd)
                     val taxSubtitle = if (summary.totalTaxAmount > 0) "Karta solig'i: -${numberFormat.format(summary.totalTaxAmount)}" else null
-                    val fullSubtitle = if (taxSubtitle != null) "($$formattedUsdProfit) • $taxSubtitle" else "($$formattedUsdProfit)"
+                    val fullSubtitle = if (taxSubtitle != null) "($${formattedUsdProfit}) • $taxSubtitle" else "($${formattedUsdProfit})"
+                    val profitIsNegative = summary.netProfit < 0
+                    val profitValueText = if (profitIsNegative)
+                        "${numberFormat.format(summary.netProfit)} so'm"
+                    else
+                        "+${numberFormat.format(summary.netProfit)} so'm"
                     KpiCard(
                         title = "SOF FOYDA",
-                        value = "+${numberFormat.format(summary.netProfit)} so'm",
+                        value = profitValueText,
                         subtitle = fullSubtitle,
                         icon = Icons.Default.TrendingUp,
-                        containerColor = LineSecondary,
+                        containerColor = if (profitIsNegative) Color(0xFF7F1D1D) else LineSecondary,
                         contentColor = Color.White,
                         modifier = Modifier
                             .weight(1f)
@@ -289,11 +302,44 @@ fun ReportsScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Chek raqami bo'yicha qidiruv
+            androidx.compose.material3.OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Chek № bo'yicha qidirish...", fontSize = 14.sp) },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.ReceiptLong,
+                        contentDescription = "Chek qidirish",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                },
+                trailingIcon = if (searchQuery.isNotEmpty()) {
+                    {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(Icons.Default.Close, contentDescription = "Tozalash")
+                        }
+                    }
+                } else null,
+                singleLine = true,
+                shape = RoundedCornerShape(14.dp),
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                )
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
 
             // 4. Savdolar tarixi (Cheklar ro'yxati)
             Text(
-                text = "SAVDOLAR TARIXI (${salesList.size} ta chek)",
+                text = if (searchQuery.isNotBlank())
+                    "QIDIRUV NATIJALARI (${filteredSales.size} ta chek)"
+                else
+                    "SAVDOLAR TARIXI (${salesList.size} ta chek)",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
@@ -301,7 +347,7 @@ fun ReportsScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            if (salesList.isEmpty()) {
+            if (filteredSales.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -309,7 +355,8 @@ fun ReportsScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Ushbu davrda savdolar mavjud emas",
+                        text = if (searchQuery.isNotBlank()) "Chek #${searchQuery.trim()} topilmadi"
+                               else "Ushbu davrda savdolar mavjud emas",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodyMedium
                     )
@@ -320,7 +367,7 @@ fun ReportsScreen(
                     contentPadding = PaddingValues(bottom = 70.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(salesList, key = { it.sale.id }) { saleWithItems ->
+                    items(filteredSales, key = { it.sale.id }) { saleWithItems ->
                         SaleHistoryCard(
                             saleWithItems = saleWithItems,
                             onClick = { viewModel.selectSaleForDetail(saleWithItems) }
@@ -485,11 +532,16 @@ private fun SaleHistoryCard(
                     fontWeight = FontWeight.ExtraBold,
                     color = MaterialTheme.colorScheme.primary
                 )
+                val profitText = if (profit < 0)
+                    "Foyda: ${numberFormat.format(profit)} so'm"
+                else
+                    "Foyda: +${numberFormat.format(profit)} so'm"
+                val profitColor = if (profit < 0) Color(0xFFEF4444) else LineSecondary
                 Text(
-                    text = "Foyda: +${numberFormat.format(profit)} so'm",
+                    text = profitText,
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Bold,
-                    color = LineSecondary
+                    color = profitColor
                 )
             }
         }
@@ -503,7 +555,8 @@ private fun SaleDetailDialog(
 ) {
     val numberFormat = remember { NumberFormat.getNumberInstance(Locale.US) }
     val dateFormat = remember { SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault()) }
-    val profit = saleWithItems.sale.totalAmount - saleWithItems.sale.totalCost
+    // Tax ajratilgan holda hisoblash (SaleHistoryCard bilan bir xil)
+    val profit = (saleWithItems.sale.totalAmount - saleWithItems.sale.taxAmount) - saleWithItems.sale.totalCost
 
     Dialog(onDismissRequest = onDismissRequest) {
         Card(
@@ -588,11 +641,16 @@ private fun SaleDetailDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("SOF FOYDA:", fontWeight = FontWeight.Bold, color = LineSecondary)
+                    val profitLabelColor = if (profit < 0) Color(0xFFEF4444) else LineSecondary
+                    val profitValueText = if (profit < 0)
+                        "${numberFormat.format(profit)} SO'M"
+                    else
+                        "+${numberFormat.format(profit)} SO'M"
+                    Text("SOF FOYDA:", fontWeight = FontWeight.Bold, color = profitLabelColor)
                     Text(
-                        "+${numberFormat.format(profit)} SO'M",
+                        profitValueText,
                         fontWeight = FontWeight.Bold,
-                        color = LineSecondary
+                        color = profitLabelColor
                     )
                 }
 

@@ -257,14 +257,35 @@
             </Border>
 
             <!-- 2. SOF FOYDA (So'mda va Dollarda) -->
-            <Border Grid.Column="1" Background="#1E293B" CornerRadius="14" Padding="18,14" Margin="4,0,4,0" BorderBrush="#334155" BorderThickness="1">
+            <Border Grid.Column="1" CornerRadius="14" Padding="18,14" Margin="4,0,4,0" BorderBrush="#334155" BorderThickness="1">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Background" Value="#1E293B"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsProfitNegative}" Value="True">
+                                <Setter Property="Background" Value="#1C0A0A"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
                 <StackPanel>
                     <Grid>
                         <TextBlock Text="SOF FOYDA" Foreground="#94A3B8" FontSize="12" FontWeight="Bold"/>
                         <TextBlock Text="📈" HorizontalAlignment="Right" FontSize="14"/>
                     </Grid>
                     <StackPanel Orientation="Horizontal" Margin="0,4,0,2">
-                        <TextBlock Text="{Binding TotalProfitText}" Foreground="#10B981" FontSize="22" FontWeight="Black"/>
+                        <TextBlock Text="{Binding TotalProfitText}" FontSize="22" FontWeight="Black">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="#10B981"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsProfitNegative}" Value="True">
+                                            <Setter Property="Foreground" Value="#EF4444"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
                         <TextBlock Text="{Binding TotalProfitUsdText}" Foreground="#34D399" FontSize="14" FontWeight="Bold" VerticalAlignment="Bottom" Margin="8,0,0,3"/>
                     </StackPanel>
                     <TextBlock Foreground="#94A3B8" FontSize="11">
@@ -378,7 +399,26 @@
                     <DataGridTextColumn Header="To'lov turi" Binding="{Binding PaymentTypeDisplay}" Width="90"/>
                     <DataGridTextColumn Header="Tovarlar soni" Binding="{Binding Items.Count, StringFormat='{}{0} xil'}" Width="110"/>
                     <DataGridTextColumn Header="Jami summa" Binding="{Binding TotalAmount, StringFormat='{}{0:N0} so\'m'}" Width="*" FontWeight="Bold"/>
-                    <DataGridTextColumn Header="Foyda" Binding="{Binding Profit, StringFormat='{}+{0:N0} so\'m'}" Width="*" Foreground="#10B981" FontWeight="Bold"/>
+
+                    <!-- Foyda: minus bo'lsa qizil, musbat bo'lsa yashil -->
+                    <DataGridTemplateColumn Header="Foyda" Width="*">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding ProfitDisplay}" FontWeight="Bold" VerticalAlignment="Center">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground" Value="#10B981"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsProfitNegative}" Value="True">
+                                                    <Setter Property="Foreground" Value="#EF4444"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
                     
                     <!-- Tafsilotlarni ko'rish tugmasi -->
                     <DataGridTemplateColumn Header="Tafsilot" Width="100">

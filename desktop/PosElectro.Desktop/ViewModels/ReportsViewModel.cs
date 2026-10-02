@@ -316,8 +316,11 @@ namespace PosElectro.Desktop.ViewModels
         public string TotalCashRevenueText => $"{TotalCashRevenue:N0} so'm";
         public string TotalCardRevenueText => $"{TotalCardRevenue:N0} so'm";
         public string TotalTaxAmountText => $"{TotalTaxAmount:N0} so'm";
-        public string TotalProfitText => $"+{TotalProfit:N0} so'm";
+        public string TotalProfitText => TotalProfit < 0
+            ? $"{TotalProfit:N0} so'm"
+            : $"+{TotalProfit:N0} so'm";
         public string TotalProfitUsdText => $"(${TotalProfitUsd:N2})";
+        public bool IsProfitNegative => TotalProfit < 0;
         public string TotalSalesCountText => $"{TotalSalesCount} ta chek";
         public string TotalItemsCountText => $"{TotalItemsCount:0.##} ta/m";
 
@@ -431,6 +434,7 @@ namespace PosElectro.Desktop.ViewModels
             OnPropertyChanged(nameof(TotalTaxAmountText));
             OnPropertyChanged(nameof(TotalProfitText));
             OnPropertyChanged(nameof(TotalProfitUsdText));
+            OnPropertyChanged(nameof(IsProfitNegative));
             OnPropertyChanged(nameof(TotalSalesCountText));
             OnPropertyChanged(nameof(TotalItemsCountText));
             OnPropertyChanged(nameof(UsdRateText));
