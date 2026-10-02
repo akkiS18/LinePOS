@@ -897,8 +897,8 @@ fun SettingsScreen(
                         Text(
                             text = when (liveSyncStatus) {
                                 LiveSyncStatus.CONNECTED -> "Jonli ✅"
+                                LiveSyncStatus.CONFLICT -> "Tahrirni tanlang ⚠️"
                                 LiveSyncStatus.CONNECTING -> "Ulanmoqda..."
-                                LiveSyncStatus.CONFLICT -> "Tahrirni tanlang"
                                 LiveSyncStatus.OFFLINE -> "Oflayn"
                             },
                             color = when (liveSyncStatus) {
