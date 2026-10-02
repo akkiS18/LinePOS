@@ -88,6 +88,9 @@ namespace PosElectro.Desktop.ViewModels
         public ICommand StartServerCommand { get; }
         public ICommand StopServerCommand { get; }
         public ICommand GenerateQrCommand { get; }
+        public ICommand RevokeDevicesCommand { get; }
+        private string _pairingCode = "";
+        public string PairingCode { get => _pairingCode; set => SetProperty(ref _pairingCode, value); }
         public ICommand OpenFirewallCommand { get; }
         public ICommand RefreshStatsCommand { get; }
         public ICommand ClearLogsCommand { get; }
@@ -105,6 +108,7 @@ namespace PosElectro.Desktop.ViewModels
             StartServerCommand = new RelayCommand(StartServer);
             StopServerCommand = new RelayCommand(StopServer);
             GenerateQrCommand = new RelayCommand(GenerateQrCode);
+            RevokeDevicesCommand = new RelayCommand(() => { if (System.Windows.MessageBox.Show("Barcha telefonlarning ulanish ruxsati bekor qilinsinmi?", "Wi-Fi", System.Windows.MessageBoxButton.YesNo) == System.Windows.MessageBoxResult.Yes) { _server.RevokeDevices(); GenerateQrCode(); } });
             OpenFirewallCommand = new RelayCommand(OpenFirewallRule);
             RefreshStatsCommand = new RelayCommand(RefreshStats);
             ClearLogsCommand = new RelayCommand(() =>
@@ -273,7 +277,7 @@ namespace PosElectro.Desktop.ViewModels
         public void StartServer()
         {
             _server.Start();
-            IsRunning = true;
+            IsRunning = _server.IsRunning;
             ServerIp = _server.GetLocalIpAddress();
             GenerateQrCode();
         }
@@ -288,9 +292,12 @@ namespace PosElectro.Desktop.ViewModels
         {
             try
             {
+                PairingCode = _server.NewPairingCode();
                 var payload = new
                 {
                     serverUrl = $"http://{ServerIp}:{ServerPort}",
+                    pairingCode = PairingCode,
+                    protocol = 2,
                     type = "POS_ELECTRO_LOCAL_SYNC",
                     name = "SMART Kassa"
                 };
@@ -314,13 +321,14 @@ namespace PosElectro.Desktop.ViewModels
             {
                 var psi = new System.Diagnostics.ProcessStartInfo
                 {
-                    FileName = "netsh",
-                    Arguments = "advfirewall firewall add rule name=\"SMART Kassa Desktop Sync\" dir=in action=allow protocol=TCP localport=8080",
+                    FileName = "cmd.exe",
+                    Arguments = "/c netsh advfirewall firewall delete rule name=\"SMART Kassa Desktop Sync\" & netsh advfirewall firewall delete rule name=\"Line kassa Desktop Sync\" & netsh advfirewall firewall add rule name=\"Line kassa Desktop Sync\" dir=in action=allow protocol=TCP localport=8080 profile=private remoteip=localsubnet",
                     UseShellExecute = true,
                     Verb = "runas"
                 };
                 var proc = System.Diagnostics.Process.Start(psi);
                 proc?.WaitForExit();
+                if (proc == null || proc.ExitCode != 0) throw new InvalidOperationException("Firewall qoidasi saqlanmadi.");
                 Activities.Insert(0, new SyncActivityItem
                 {
                     TimeText = DateTime.Now.ToString("HH:mm:ss"),

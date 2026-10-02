@@ -410,10 +410,15 @@ namespace PosElectro.Desktop.ViewModels
                     return;
                 }
 
-                _db.TransferStock(TransferProduct.Guid, TransferFromWarehouse.Guid, TransferToWarehouse.Guid, qty);
+                // Refresh clears ComboBox selections through two-way bindings. Capture the
+                // committed operation's labels before any collection/event refresh occurs.
+                var product = TransferProduct;
+                var from = TransferFromWarehouse;
+                var to = TransferToWarehouse;
+                _db.TransferStock(product.Guid, from.Guid, to.Guid, qty);
                 IsTransferModalOpen = false;
                 Refresh();
-                MessageBox.Show($"Muvaffaqiyatli ko'chirildi:\n{TransferProduct.Name} ({qty} ta)\n{TransferFromWarehouse.Name} ➔ {TransferToWarehouse.Name}", "Omborlararo ko'chirish", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show($"Muvaffaqiyatli ko'chirildi:\n{product.Name} ({qty} ta)\n{from.Name} ➔ {to.Name}", "Omborlararo ko'chirish", MessageBoxButton.OK, MessageBoxImage.Information);
             });
 
             RefreshCommand = new RelayCommand(Refresh);

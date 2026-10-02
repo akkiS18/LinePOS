@@ -212,13 +212,13 @@
         <!-- ASOSIY ISH MAYDONI: Doimiy yuklangan Grid (0ms lahzalik almashish, qayta yuklanmaydi) -->
         <Grid Grid.Row="1">
             <views:CashierView DataContext="{Binding CashierVM}"
-                               Visibility="{Binding IsCashierSelected, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                               Visibility="{Binding DataContext.IsCashierSelected, RelativeSource={RelativeSource AncestorType={x:Type Window}}, Converter={StaticResource BooleanToVisibilityConverter}}"/>
             <views:InventoryView DataContext="{Binding InventoryVM}"
-                                 Visibility="{Binding IsInventorySelected, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                 Visibility="{Binding DataContext.IsInventorySelected, RelativeSource={RelativeSource AncestorType={x:Type Window}}, Converter={StaticResource BooleanToVisibilityConverter}}"/>
             <views:ReportsView DataContext="{Binding ReportsVM}"
-                               Visibility="{Binding IsReportsSelected, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                               Visibility="{Binding DataContext.IsReportsSelected, RelativeSource={RelativeSource AncestorType={x:Type Window}}, Converter={StaticResource BooleanToVisibilityConverter}}"/>
             <views:SyncView DataContext="{Binding SyncVM}"
-                            Visibility="{Binding IsSyncSelected, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                            Visibility="{Binding DataContext.IsSyncSelected, RelativeSource={RelativeSource AncestorType={x:Type Window}}, Converter={StaticResource BooleanToVisibilityConverter}}"/>
         </Grid>
 
         <!-- QURILMA FAOL EMAS (AKTIVATSIYA OYNASI) OVERLAY -->

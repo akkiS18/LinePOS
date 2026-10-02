@@ -157,7 +157,7 @@ fun MainScreen(
                             shape = CircleShape,
                             color = when (liveSyncStatus) {
                                 LiveSyncStatus.CONNECTED -> Color(0xFF16A34A).copy(alpha = 0.15f)
-                                LiveSyncStatus.CONNECTING -> Color(0xFFF59E0B).copy(alpha = 0.15f)
+                                LiveSyncStatus.CONFLICT, LiveSyncStatus.CONNECTING -> Color(0xFFF59E0B).copy(alpha = 0.15f)
                                 LiveSyncStatus.OFFLINE -> MaterialTheme.colorScheme.surfaceVariant
                             },
                             modifier = Modifier.padding(end = 8.dp)
@@ -173,7 +173,7 @@ fun MainScreen(
                                         .background(
                                             when (liveSyncStatus) {
                                                 LiveSyncStatus.CONNECTED -> Color(0xFF16A34A)
-                                                LiveSyncStatus.CONNECTING -> Color(0xFFF59E0B)
+                                                LiveSyncStatus.CONFLICT, LiveSyncStatus.CONNECTING -> Color(0xFFF59E0B)
                                                 LiveSyncStatus.OFFLINE -> Color.Gray
                                             }
                                         )
@@ -183,13 +183,14 @@ fun MainScreen(
                                     text = when (liveSyncStatus) {
                                         LiveSyncStatus.CONNECTED -> "Jonli"
                                         LiveSyncStatus.CONNECTING -> "Ulanmoqda"
-                                        LiveSyncStatus.OFFLINE -> "Wi-Fi"
+                                        LiveSyncStatus.CONFLICT -> "Tahrirni tanlang"
+                                        LiveSyncStatus.OFFLINE -> "Oflayn"
                                     },
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = when (liveSyncStatus) {
                                         LiveSyncStatus.CONNECTED -> Color(0xFF16A34A)
-                                        LiveSyncStatus.CONNECTING -> Color(0xFFF59E0B)
+                                        LiveSyncStatus.CONFLICT, LiveSyncStatus.CONNECTING -> Color(0xFFF59E0B)
                                         LiveSyncStatus.OFFLINE -> MaterialTheme.colorScheme.onSurfaceVariant
                                     }
                                 )

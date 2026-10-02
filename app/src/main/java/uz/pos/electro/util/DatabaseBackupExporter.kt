@@ -56,7 +56,7 @@ object DatabaseBackupExporter {
         }
 
         // 2. Asosiy baza faylini qidirish va nusxalash
-        var dbFile = context.getDatabasePath(AppDatabase.DATABASE_NAME)
+        var dbFile = context.getDatabasePath(AppDatabase.databaseName(context))
         if (!dbFile.exists()) {
             dbFile = context.getDatabasePath("pos_database.db")
         }
@@ -131,7 +131,7 @@ object DatabaseBackupExporter {
             database?.close()
         } catch (_: Throwable) {}
 
-        val targetDbFile = context.getDatabasePath(AppDatabase.DATABASE_NAME)
+        val targetDbFile = context.getDatabasePath(AppDatabase.databaseName(context))
         val targetWalFile = File(targetDbFile.path + "-wal")
         val targetShmFile = File(targetDbFile.path + "-shm")
 
@@ -150,37 +150,11 @@ object DatabaseBackupExporter {
      * Desktop kompyuterdan Wi-Fi orqali to'liq SQLite bazasini tortib olib tiklash
      */
     fun restoreDatabaseFromDesktop(context: Context, serverUrl: String, database: AppDatabase? = null): Result<String> = runCatching {
-        var cleanUrl = serverUrl.trimEnd('/')
-        if (!cleanUrl.startsWith("http://") && !cleanUrl.startsWith("https://")) {
-            cleanUrl = "http://$cleanUrl"
-        }
-        val targetUrl = "$cleanUrl/api/sync/download_db"
-
-        val tempRestoreFile = File(context.cacheDir, "temp_desktop_restore_${System.currentTimeMillis()}.db")
-        if (tempRestoreFile.exists()) tempRestoreFile.delete()
-
-        val url = URL(targetUrl)
-        val conn = url.openConnection() as HttpURLConnection
-        conn.requestMethod = "GET"
-        conn.connectTimeout = 8000
-        conn.readTimeout = 25000
-
-        if (conn.responseCode != 200) {
-            throw Exception("Kompyuterdan javob olinmadi (HTTP ${conn.responseCode}). Kompyuterda kassa ochiq turganini tekshiring.")
-        }
-
-        conn.inputStream.use { input ->
-            FileOutputStream(tempRestoreFile).use { output ->
-                input.copyTo(output)
-            }
-        }
-
-        if (!tempRestoreFile.exists() || tempRestoreFile.length() == 0L) {
-            throw Exception("Kompyuterdan bo'sh fayl yuklandi!")
-        }
-
-        // Tiklash
-        return restoreDatabaseFromUri(context, Uri.fromFile(tempRestoreFile), database)
+        val entry = dagger.hilt.android.EntryPointAccessors.fromApplication(context.applicationContext, WifiRestoreEntryPoint::class.java)
+        val manager = entry.wifiSyncManager()
+        require(uz.pos.electro.data.sync.LocalSyncManager.normalizeUrl(serverUrl) == manager.getServerUrl()) { "Avval Wi-Fi sinxron oynasida shu kompyuter QR kodini skanerlang." }
+        kotlinx.coroutines.runBlocking { manager.syncWithDesktop().getOrThrow() }
+        "Kompyuterdagi tovarlar, omborlar va cheklar xavfsiz sinxronlandi."
     }
 
     /**
@@ -471,4 +445,10 @@ object DatabaseBackupExporter {
         }
         context.startActivity(chooser)
     }
+}
+
+@dagger.hilt.EntryPoint
+@dagger.hilt.InstallIn(dagger.hilt.components.SingletonComponent::class)
+interface WifiRestoreEntryPoint {
+    fun wifiSyncManager(): uz.pos.electro.data.sync.LocalSyncManager
 }

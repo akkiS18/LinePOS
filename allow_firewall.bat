@@ -5,7 +5,9 @@ echo   Line kassa Desktop uchun Windows Firewall ruxsati berish
 echo ============================================================
 echo.
 echo Port 8080 (TCP) uchun ruxsat qoidasi ochilmoqda...
-netsh advfirewall firewall add rule name="Line kassa Desktop Sync" dir=in action=allow protocol=TCP localport=8080
+netsh advfirewall firewall delete rule name="SMART Kassa Desktop Sync" >nul 2>&1
+netsh advfirewall firewall delete rule name="Line kassa Desktop Sync" >nul 2>&1
+netsh advfirewall firewall add rule name="Line kassa Desktop Sync" dir=in action=allow protocol=TCP localport=8080 profile=private remoteip=localsubnet
 echo.
 if %errorlevel% equ 0 (
     echo [Muvaffaqiyatli] Port 8080 muvaffaqiyatli ochildi!

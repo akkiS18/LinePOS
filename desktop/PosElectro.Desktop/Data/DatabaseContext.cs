@@ -9,14 +9,45 @@ namespace PosElectro.Desktop.Data
 {
     public class DatabaseContext
     {
+        public static bool IsTestEnvironment { get; private set; }
+
         private readonly string _connectionString;
         public string DatabaseFilePath { get; }
 
-        public DatabaseContext()
+        public DatabaseContext(string? dbPath = null)
         {
-            var appDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PosElectro");
-            Directory.CreateDirectory(appDataDir);
-            DatabaseFilePath = Path.Combine(appDataDir, "pos_desktop.db");
+            var flagFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "test_env.flag");
+            var envPath = Environment.GetEnvironmentVariable("LINEPOS_DB_PATH");
+            var envTest = Environment.GetEnvironmentVariable("LINEPOS_TEST_ENV");
+
+            if (!string.IsNullOrWhiteSpace(dbPath))
+            {
+                DatabaseFilePath = dbPath;
+                IsTestEnvironment = true;
+            }
+            else if (!string.IsNullOrWhiteSpace(envPath))
+            {
+                DatabaseFilePath = envPath;
+                IsTestEnvironment = true;
+            }
+            else if (envTest == "1" || File.Exists(flagFile))
+            {
+                var testDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "test_data");
+                Directory.CreateDirectory(testDir);
+                DatabaseFilePath = Path.Combine(testDir, "pos_desktop_test.db");
+                IsTestEnvironment = true;
+            }
+            else
+            {
+                var appDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PosElectro");
+                Directory.CreateDirectory(appDataDir);
+                DatabaseFilePath = Path.Combine(appDataDir, "pos_desktop.db");
+                IsTestEnvironment = false;
+            }
+
+            var baseDir = Path.GetDirectoryName(DatabaseFilePath);
+            if (!string.IsNullOrEmpty(baseDir)) Directory.CreateDirectory(baseDir);
+
             _connectionString = $"Data Source={DatabaseFilePath}";
 
             InitializeDatabase();
@@ -40,8 +71,17 @@ namespace PosElectro.Desktop.Data
         {
             try
             {
-                var appDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PosElectro");
-                var backupDir = Path.Combine(appDataDir, "Backups");
+                string backupDir;
+                if (IsTestEnvironment)
+                {
+                    var baseDir = Path.GetDirectoryName(DatabaseFilePath) ?? AppDomain.CurrentDomain.BaseDirectory;
+                    backupDir = Path.Combine(baseDir, "Backups");
+                }
+                else
+                {
+                    var appDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PosElectro");
+                    backupDir = Path.Combine(appDataDir, "Backups");
+                }
                 Directory.CreateDirectory(backupDir);
 
                 var fileName = $"LinePOS_AutoBackup_{DateTime.Now:yyyyMMdd_HHmmss}_{reason}.db";
@@ -79,7 +119,7 @@ namespace PosElectro.Desktop.Data
             var dispatcher = System.Windows.Application.Current?.Dispatcher;
             if (dispatcher != null && !dispatcher.CheckAccess())
             {
-                dispatcher.Invoke(() => ProductsChanged?.Invoke());
+                dispatcher.BeginInvoke(() => ProductsChanged?.Invoke());
             }
             else
             {
@@ -92,7 +132,7 @@ namespace PosElectro.Desktop.Data
             var dispatcher = System.Windows.Application.Current?.Dispatcher;
             if (dispatcher != null && !dispatcher.CheckAccess())
             {
-                dispatcher.Invoke(() => WarehousesChanged?.Invoke());
+                dispatcher.BeginInvoke(() => WarehousesChanged?.Invoke());
             }
             else
             {
@@ -590,6 +630,7 @@ namespace PosElectro.Desktop.Data
         public void SaveWarehouse(Warehouse w, bool isFromSync = false)
         {
             using var conn = CreateConnection();
+            using var syncTransaction = conn.BeginTransaction();
             if (!isFromSync || w.UpdatedAt <= 0)
             {
                 w.UpdatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -598,11 +639,13 @@ namespace PosElectro.Desktop.Data
             if (string.IsNullOrWhiteSpace(w.Guid)) w.Guid = Guid.NewGuid().ToString();
 
             using var cmd = conn.CreateCommand();
+            cmd.Transaction = syncTransaction;
             if (w.Id == 0)
             {
                 if (w.IsPrimary)
                 {
                     using var resetCmd = conn.CreateCommand();
+            resetCmd.Transaction = syncTransaction;
                     resetCmd.CommandText = "UPDATE warehouses SET is_primary = 0";
                     resetCmd.ExecuteNonQuery();
                 }
@@ -624,6 +667,7 @@ namespace PosElectro.Desktop.Data
                 if (w.IsPrimary)
                 {
                     using var resetCmd = conn.CreateCommand();
+            resetCmd.Transaction = syncTransaction;
                     resetCmd.CommandText = "UPDATE warehouses SET is_primary = 0 WHERE id != @id";
                     resetCmd.Parameters.AddWithValue("@id", w.Id);
                     resetCmd.ExecuteNonQuery();
@@ -645,6 +689,7 @@ namespace PosElectro.Desktop.Data
                 cmd.ExecuteNonQuery();
             }
 
+            syncTransaction.Commit();
             RaiseWarehousesChanged();
             if (!isFromSync)
             {
@@ -810,8 +855,10 @@ namespace PosElectro.Desktop.Data
         public void SetProductStockInWarehouse(string productGuid, string warehouseGuid, double quantity)
         {
             using var conn = CreateConnection();
+            using var syncTransaction = conn.BeginTransaction();
             long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             using var cmd = conn.CreateCommand();
+            cmd.Transaction = syncTransaction;
             cmd.CommandText = @"
                 INSERT INTO product_stocks (product_guid, warehouse_guid, quantity, updated_at)
                 VALUES (@pg, @wg, @qty, @now)
@@ -829,6 +876,7 @@ namespace PosElectro.Desktop.Data
             cmd.Parameters.AddWithValue("@qty", quantity);
             cmd.Parameters.AddWithValue("@now", now);
             cmd.ExecuteNonQuery();
+            syncTransaction.Commit();
             RaiseProductsChanged();
         }
 
@@ -1014,7 +1062,9 @@ namespace PosElectro.Desktop.Data
         public void SaveProduct(Product p, bool isFromSync = false)
         {
             using var conn = CreateConnection();
+            using var syncTransaction = conn.BeginTransaction();
             using var cmd = conn.CreateCommand();
+            cmd.Transaction = syncTransaction;
             if (!isFromSync || p.UpdatedAt <= 0)
             {
                 p.UpdatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -1028,6 +1078,7 @@ namespace PosElectro.Desktop.Data
                 {
                     var cleanBc = p.Barcode.Trim();
                     using var checkCmd = conn.CreateCommand();
+            checkCmd.Transaction = syncTransaction;
                     checkCmd.CommandText = "SELECT id, guid, is_deleted FROM products WHERE TRIM(barcode) = @bc COLLATE NOCASE LIMIT 1";
                     checkCmd.Parameters.AddWithValue("@bc", cleanBc);
                     using var r = checkCmd.ExecuteReader();
@@ -1055,6 +1106,7 @@ namespace PosElectro.Desktop.Data
                 else if (!string.IsNullOrWhiteSpace(p.Name))
                 {
                     using var checkNameCmd = conn.CreateCommand();
+            checkNameCmd.Transaction = syncTransaction;
                     checkNameCmd.CommandText = "SELECT id, guid FROM products WHERE TRIM(name) = @nm COLLATE NOCASE AND is_deleted = 1 LIMIT 1";
                     checkNameCmd.Parameters.AddWithValue("@nm", p.Name.Trim());
                     using var rName = checkNameCmd.ExecuteReader();
@@ -1131,6 +1183,7 @@ namespace PosElectro.Desktop.Data
 
                 using (var stockCmd = conn.CreateCommand())
                 {
+                    stockCmd.Transaction = syncTransaction;
                     stockCmd.CommandText = @"
                         INSERT INTO product_stocks (product_guid, warehouse_guid, quantity, updated_at)
                         VALUES (@pg, @wg, @qty, @now)
@@ -1148,6 +1201,7 @@ namespace PosElectro.Desktop.Data
                 // Umumiy tovar qoldig'ini omborlar yig'indisi bo'yicha hisoblash
                 using (var sumCmd = conn.CreateCommand())
                 {
+                    sumCmd.Transaction = syncTransaction;
                     sumCmd.CommandText = @"
                         UPDATE products
                         SET stock_quantity = (SELECT COALESCE(SUM(quantity), 0) FROM product_stocks WHERE product_guid = @pg)
@@ -1158,6 +1212,7 @@ namespace PosElectro.Desktop.Data
                 }
             }
 
+            syncTransaction.Commit();
             RaiseProductsChanged();
             if (!isFromSync)
             {
