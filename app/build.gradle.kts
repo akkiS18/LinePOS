@@ -52,7 +52,9 @@ android {
             manifestPlaceholders["appLabel"] = "SMART kassa (Test)"
         }
         release {
-            manifestPlaceholders["appLabel"] = "SMART kassa"
+            applicationIdSuffix = ".test"
+            versionNameSuffix = "-test"
+            manifestPlaceholders["appLabel"] = "SMART kassa (Test)"
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
