@@ -1308,6 +1308,74 @@
             </Border>
         </Border>
 
+        <!-- ============================================================= -->
+        <!-- SAVATNI KUTISHGA QO'YISH (HOLD) NOM BERISH MODALI -->
+        <!-- ============================================================= -->
+        <Border Background="#CC000000" Panel.ZIndex="110"
+                Visibility="{Binding IsHoldModalOpen, Converter={StaticResource BooleanToVisibilityConverter}}"
+                Focusable="True"
+                IsVisibleChanged="HoldModal_IsVisibleChanged"
+                KeyDown="HoldModal_KeyDown">
+            <Border Background="#1E293B" BorderBrush="#F59E0B" BorderThickness="1.5"
+                    CornerRadius="16" Padding="28" Width="440"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="30" ShadowDepth="8" Direction="270" Color="#000000" Opacity="0.8"/>
+                </Border.Effect>
+                <StackPanel HorizontalAlignment="Center">
+                    <!-- Icon -->
+                    <Border Background="#451A03" BorderBrush="#F59E0B" BorderThickness="1"
+                            Width="56" Height="56" CornerRadius="28" HorizontalAlignment="Center" Margin="0,0,0,16">
+                        <TextBlock Text="⏸️" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+
+                    <!-- Sarlavha -->
+                    <TextBlock Text="Savatni kutishga qo'yish" Foreground="#F8FAFC" FontSize="18" FontWeight="Bold" 
+                               HorizontalAlignment="Center" Margin="0,0,0,6"/>
+
+                    <TextBlock Text="Kutishga olinayotgan savat uchun mijoz yoki buyurtma nomini kiriting:" 
+                               Foreground="#94A3B8" FontSize="13" TextWrapping="Wrap" TextAlignment="Center" 
+                               MaxWidth="360" Margin="0,0,0,14"/>
+
+                    <!-- Savat ma'lumoti chipi -->
+                    <Border Background="#0F172A" BorderBrush="#334155" BorderThickness="1" CornerRadius="8" 
+                            Padding="14,8" Margin="0,0,0,16" HorizontalAlignment="Center">
+                        <TextBlock Text="{Binding HoldCartSummaryText}" Foreground="#FBBF24" FontSize="13" FontWeight="SemiBold"/>
+                    </Border>
+
+                    <!-- Kiritish maydoni (TextBox) -->
+                    <Border Background="#0F172A" BorderBrush="#334155" BorderThickness="1" CornerRadius="10" 
+                            Padding="12,4" Width="360" Margin="0,0,0,20">
+                        <TextBox x:Name="TxtHoldCartName" 
+                                 Text="{Binding HoldCartName, UpdateSourceTrigger=PropertyChanged}"
+                                 Background="Transparent" Foreground="#F8FAFC" BorderThickness="0"
+                                 FontSize="15" FontWeight="SemiBold" CaretBrush="White"
+                                 VerticalContentAlignment="Center" Height="36"/>
+                    </Border>
+
+                    <!-- Tugmalar -->
+                    <Grid Width="360">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="12"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Button Grid.Column="0" Content="Bekor qilish (Esc)" 
+                                Command="{Binding CloseHoldModalCommand}"
+                                Background="#334155" Style="{StaticResource ModernButton}" 
+                                Padding="0,12" Cursor="Hand"/>
+
+                        <Button x:Name="BtnConfirmHoldCart" Grid.Column="2" Content="Saqlash (Enter)" 
+                                Command="{Binding ConfirmHoldCartCommand}"
+                                Background="#F59E0B" Foreground="#0F172A" FontWeight="Bold"
+                                Style="{StaticResource ModernButton}" 
+                                Padding="0,12" Cursor="Hand"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Border>
+
         <!-- ========================================================= -->
         <!-- TOAST BILDIRISHNOMA (Next.js / Sonner uslubidagi zamonaviy xabar) -->
         <!-- ========================================================= -->

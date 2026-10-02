@@ -314,10 +314,30 @@ namespace PosElectro.Desktop.ViewModels
         public ICommand SelectCategoryCommand { get; }
         public ICommand SearchQueryEnterCommand { get; }
 
-        // Hold Cart komandalari
+        // Hold Cart komandalari va modal holatlari
+        private bool _isHoldModalOpen;
+        public bool IsHoldModalOpen
+        {
+            get => _isHoldModalOpen;
+            set => SetProperty(ref _isHoldModalOpen, value);
+        }
+
+        private string _holdCartName = string.Empty;
+        public string HoldCartName
+        {
+            get => _holdCartName;
+            set => SetProperty(ref _holdCartName, value);
+        }
+
+        public int HoldCartItemCount => CartItems.Count;
+        public double HoldCartTotalAmount => CartItems.Sum(i => i.TotalPrice);
+        public string HoldCartSummaryText => $"{HoldCartItemCount} ta tovar • {HoldCartTotalAmount:N0} so'm";
+
         public ICommand HoldCurrentCartCommand { get; }
         public ICommand ResumeHeldCartCommand { get; }
         public ICommand DeleteHeldCartCommand { get; }
+        public ICommand CloseHoldModalCommand { get; }
+        public ICommand ConfirmHoldCartCommand { get; }
 
         // Narx va miqdorni tahrirlash komandalari
         public ICommand OpenEditModalCommand { get; }
@@ -520,7 +540,9 @@ namespace PosElectro.Desktop.ViewModels
             ConfirmSaleCommand = new RelayCommand(_ => ConfirmSale());
             PreviewCurrentCartReceiptCommand = new RelayCommand(_ => PreviewCurrentCartReceipt());
 
-            HoldCurrentCartCommand = new RelayCommand(HoldCurrentCart);
+            HoldCurrentCartCommand = new RelayCommand(_ => OpenHoldCartModal());
+            CloseHoldModalCommand = new RelayCommand(CloseHoldModal);
+            ConfirmHoldCartCommand = new RelayCommand(ConfirmHoldCart);
             ResumeHeldCartCommand = new RelayCommand<HeldCartModel>(h => { if (h != null) ResumeHeldCart(h); });
             DeleteHeldCartCommand = new RelayCommand<HeldCartModel>(h => { if (h != null) DeleteHeldCart(h); });
 
@@ -819,11 +841,43 @@ namespace PosElectro.Desktop.ViewModels
         // --- HOLD CART LOGIKASI ---
         public void HoldCurrentCart()
         {
+            OpenHoldCartModal();
+        }
+
+        public void OpenHoldCartModal()
+        {
             if (CartItems.Count == 0) return;
+
+            HoldCartName = $"Mijoz #{HeldCarts.Count + 1}";
+            OnPropertyChanged(nameof(HoldCartItemCount));
+            OnPropertyChanged(nameof(HoldCartTotalAmount));
+            OnPropertyChanged(nameof(HoldCartSummaryText));
+            IsHoldModalOpen = true;
+        }
+
+        public void CloseHoldModal()
+        {
+            IsHoldModalOpen = false;
+            HoldCartName = string.Empty;
+        }
+
+        public void ConfirmHoldCart()
+        {
+            if (CartItems.Count == 0)
+            {
+                IsHoldModalOpen = false;
+                return;
+            }
+
+            var customName = HoldCartName?.Trim();
+            if (string.IsNullOrWhiteSpace(customName))
+            {
+                customName = $"Mijoz #{HeldCarts.Count + 1}";
+            }
 
             var held = new HeldCartModel
             {
-                Name = $"Mijoz #{HeldCarts.Count + 1} ({DateTime.Now:HH:mm})",
+                Name = $"{customName} ({DateTime.Now:HH:mm})",
                 Items = CartItems.Select(i => new CartItemModel(
                     i.Product, 
                     i.Quantity, 
@@ -838,6 +892,8 @@ namespace PosElectro.Desktop.ViewModels
             CartItems.Clear();
             NotifyTotals();
             OnPropertyChanged(nameof(HasHeldCarts));
+            IsHoldModalOpen = false;
+            HoldCartName = string.Empty;
             StatusMessage = $"⏸️ '{held.Name}' savatchasi kutishga qo'yildi";
         }
 

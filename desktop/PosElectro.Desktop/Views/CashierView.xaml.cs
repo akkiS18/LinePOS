@@ -1,3 +1,4 @@
+using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -100,6 +101,35 @@ namespace PosElectro.Desktop.Views
             }
         }
 
+        private void HoldModal_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            if (sender is Border border && border.Visibility == Visibility.Visible)
+            {
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    TxtHoldCartName?.Focus();
+                    TxtHoldCartName?.SelectAll();
+                }), System.Windows.Threading.DispatcherPriority.Input);
+            }
+        }
+
+        private void HoldModal_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (DataContext is CashierViewModel vm && vm.IsHoldModalOpen)
+            {
+                if (e.Key == Key.Enter)
+                {
+                    vm.ConfirmHoldCart();
+                    e.Handled = true;
+                }
+                else if (e.Key == Key.Escape)
+                {
+                    vm.CloseHoldModal();
+                    e.Handled = true;
+                }
+            }
+        }
+
         private void HeldCartsScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
         {
             if (sender is ScrollViewer sv)
@@ -123,6 +153,23 @@ namespace PosElectro.Desktop.Views
         {
             if (DataContext is CashierViewModel vm)
             {
+                // Agar Savatni kutishga qo'yish (Hold) modali ochiq bo'lsa:
+                if (vm.IsHoldModalOpen)
+                {
+                    if (e.Key == Key.Enter)
+                    {
+                        vm.ConfirmHoldCart();
+                        e.Handled = true;
+                        return;
+                    }
+                    else if (e.Key == Key.Escape)
+                    {
+                        vm.CloseHoldModal();
+                        e.Handled = true;
+                        return;
+                    }
+                }
+
                 // Agar Brak tasdiqlash modali ochiq bo'lsa:
                 if (vm.IsBrakModalOpen)
                 {
@@ -143,7 +190,7 @@ namespace PosElectro.Desktop.Views
                 // Agar foydalanuvchi matn maydonida yozmayotgan bo'lsa va Backspace bosilsa:
                 if (e.Key == Key.Back && !(e.OriginalSource is TextBox) && !(e.OriginalSource is PasswordBox))
                 {
-                    if (!vm.IsPaymentModalOpen && !vm.IsEditModalOpen && !vm.IsUnrecognizedBarcodeModalOpen)
+                    if (!vm.IsPaymentModalOpen && !vm.IsEditModalOpen && !vm.IsUnrecognizedBarcodeModalOpen && !vm.IsHoldModalOpen)
                     {
                         vm.OpenBrakModal();
                         e.Handled = true;

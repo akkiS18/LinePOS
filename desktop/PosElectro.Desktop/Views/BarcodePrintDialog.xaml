@@ -58,7 +58,7 @@
                             <StackPanel x:Name="PreviewBarcodePanel" HorizontalAlignment="Center" Margin="0,2,0,3">
                                 <Image x:Name="ImgBarcode" Height="42" Width="180" Stretch="Fill" RenderOptions.BitmapScalingMode="NearestNeighbor"/>
                                 <TextBlock x:Name="PreviewBarcodeText" Text="200000000000" Foreground="#0F172A" 
-                                           FontFamily="Consolas" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                                           FontFamily="Consolas" FontSize="12" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,2,0,0"/>
                             </StackPanel>
 
                             <!-- Sotish Narxi -->

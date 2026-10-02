@@ -22,6 +22,7 @@ namespace PosElectro.Desktop.ViewModels
         public bool HasLowStockWarning => IsLowStock && Count > 0;
         public string Icon { get; set; } = "📁";
         public string CountText => $"{Count} ta tovar";
+        public bool CanEdit => !IsAll && !IsLowStock;
     }
 
     public enum InventoryViewState
@@ -136,6 +137,35 @@ namespace PosElectro.Desktop.ViewModels
             set => SetProperty(ref _newCategoryErrorMessage, value);
         }
 
+        // Kategoriya tahrirlash modali
+        private bool _isEditCategoryModalOpen;
+        public bool IsEditCategoryModalOpen
+        {
+            get => _isEditCategoryModalOpen;
+            set => SetProperty(ref _isEditCategoryModalOpen, value);
+        }
+
+        private string _editCategoryOldName = string.Empty;
+        public string EditCategoryOldName
+        {
+            get => _editCategoryOldName;
+            set => SetProperty(ref _editCategoryOldName, value);
+        }
+
+        private string _editCategoryInput = string.Empty;
+        public string EditCategoryInput
+        {
+            get => _editCategoryInput;
+            set => SetProperty(ref _editCategoryInput, value);
+        }
+
+        private string _editCategoryErrorMessage = string.Empty;
+        public string EditCategoryErrorMessage
+        {
+            get => _editCategoryErrorMessage;
+            set => SetProperty(ref _editCategoryErrorMessage, value);
+        }
+
         // Ombor qo'shish modali
         private bool _isAddWarehouseModalOpen;
         public bool IsAddWarehouseModalOpen
@@ -232,6 +262,9 @@ namespace PosElectro.Desktop.ViewModels
         public ICommand OpenAddCategoryModalCommand { get; }
         public ICommand CloseAddCategoryModalCommand { get; }
         public ICommand SaveNewCategoryCommand { get; }
+        public ICommand OpenEditCategoryModalCommand { get; }
+        public ICommand CloseEditCategoryModalCommand { get; }
+        public ICommand SaveEditCategoryCommand { get; }
         public ICommand ClearSearchCommand { get; }
         public ICommand PrintProductBarcodeCommand { get; }
 
@@ -487,6 +520,78 @@ namespace PosElectro.Desktop.ViewModels
                 IsAddCategoryModalOpen = false;
                 NewCategoryInput = string.Empty;
                 NewCategoryErrorMessage = string.Empty;
+            });
+
+            OpenEditCategoryModalCommand = new RelayCommand<string?>(catName =>
+            {
+                var target = !string.IsNullOrWhiteSpace(catName) ? catName : FormCategory;
+                if (string.IsNullOrWhiteSpace(target) || 
+                    target == ProductService.CATEGORY_ALL || 
+                    target == ProductService.CATEGORY_LOW_STOCK)
+                {
+                    return;
+                }
+
+                EditCategoryOldName = target;
+                EditCategoryInput = target;
+                EditCategoryErrorMessage = string.Empty;
+                IsEditCategoryModalOpen = true;
+            });
+
+            CloseEditCategoryModalCommand = new RelayCommand(() =>
+            {
+                IsEditCategoryModalOpen = false;
+                EditCategoryOldName = string.Empty;
+                EditCategoryInput = string.Empty;
+                EditCategoryErrorMessage = string.Empty;
+            });
+
+            SaveEditCategoryCommand = new RelayCommand(() =>
+            {
+                var newCat = (EditCategoryInput ?? string.Empty).Trim();
+                if (string.IsNullOrWhiteSpace(newCat))
+                {
+                    EditCategoryErrorMessage = "Iltimos, kategoriya nomini kiriting!";
+                    return;
+                }
+                if (newCat == ProductService.CATEGORY_ALL || newCat == ProductService.CATEGORY_LOW_STOCK)
+                {
+                    EditCategoryErrorMessage = "Ushbu nom tizim tomonidan band qilingan!";
+                    return;
+                }
+
+                var oldCat = EditCategoryOldName;
+                if (!string.Equals(oldCat, newCat, StringComparison.OrdinalIgnoreCase))
+                {
+                    _productService.RenameCategory(oldCat, newCat);
+
+                    int idx = ExistingCategories.IndexOf(oldCat);
+                    if (idx >= 0)
+                    {
+                        ExistingCategories[idx] = newCat;
+                    }
+                    else if (!ExistingCategories.Contains(newCat))
+                    {
+                        ExistingCategories.Add(newCat);
+                    }
+
+                    if (FormCategory == oldCat)
+                    {
+                        FormCategory = newCat;
+                    }
+
+                    if (SelectedCategory == oldCat)
+                    {
+                        SelectedCategory = newCat;
+                    }
+
+                    Refresh();
+                }
+
+                IsEditCategoryModalOpen = false;
+                EditCategoryOldName = string.Empty;
+                EditCategoryInput = string.Empty;
+                EditCategoryErrorMessage = string.Empty;
             });
 
             Refresh();

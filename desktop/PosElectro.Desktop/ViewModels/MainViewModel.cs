@@ -10,7 +10,7 @@ namespace PosElectro.Desktop.ViewModels
 {
     public class MainViewModel : ViewModelBase
     {
-        private ViewModelBase _currentView;
+        private ViewModelBase _currentView = null!;
 
         public DatabaseContext Database { get; }
         public ProductService ProductService { get; }
@@ -132,7 +132,7 @@ namespace PosElectro.Desktop.ViewModels
             _ = CurrencyService.FetchLatestUsdRateAsync();
 
             // Standart boshlang'ich oyna: Har doim KASSA bo'lib ochiladi!
-            _currentView = CashierVM;
+            CurrentView = CashierVM;
 
             NavigateCashierCommand = new RelayCommand(() =>
             {

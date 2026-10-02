@@ -769,7 +769,7 @@ namespace PosElectro.Desktop.Services
         public double NameFontSize { get; set; } = 9.5;
         public int BarcodeWidth { get; set; } = 126;
         public int BarcodeHeight { get; set; } = 34;
-        public double BarcodeFontSize { get; set; } = 8.5;
+        public double BarcodeFontSize { get; set; } = 12;
         public double PriceFontSize { get; set; } = 11.5;
 
         public static readonly Dictionary<string, LabelSizeConfig> Presets = new()
@@ -787,7 +787,7 @@ namespace PosElectro.Desktop.Services
                 NameFontSize = 9.5,
                 BarcodeWidth = 126,
                 BarcodeHeight = 34,
-                BarcodeFontSize = 8.5,
+                BarcodeFontSize = 12,
                 PriceFontSize = 11.5
             },
             ["58x40"] = new LabelSizeConfig
@@ -803,7 +803,7 @@ namespace PosElectro.Desktop.Services
                 NameFontSize = 12,
                 BarcodeWidth = 175,
                 BarcodeHeight = 44,
-                BarcodeFontSize = 10,
+                BarcodeFontSize = 14,
                 PriceFontSize = 14
             },
             ["43x25"] = new LabelSizeConfig
@@ -819,7 +819,7 @@ namespace PosElectro.Desktop.Services
                 NameFontSize = 8.5,
                 BarcodeWidth = 126,
                 BarcodeHeight = 24,
-                BarcodeFontSize = 8,
+                BarcodeFontSize = 11,
                 PriceFontSize = 9.5
             },
             ["30x20"] = new LabelSizeConfig
@@ -835,7 +835,7 @@ namespace PosElectro.Desktop.Services
                 NameFontSize = 7.5,
                 BarcodeWidth = 92,
                 BarcodeHeight = 18,
-                BarcodeFontSize = 7,
+                BarcodeFontSize = 9,
                 PriceFontSize = 8.5
             }
         };

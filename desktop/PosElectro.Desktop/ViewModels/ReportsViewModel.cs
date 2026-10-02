@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
@@ -71,6 +72,22 @@ namespace PosElectro.Desktop.ViewModels
         public ICommand CloseExportModalCommand { get; }
         public ICommand ExecuteExportCommand { get; }
         public ICommand SetExportFilterCommand { get; }
+        public ICommand ClearReceiptSearchCommand { get; }
+
+        private string _searchReceiptNumber = string.Empty;
+        public string SearchReceiptNumber
+        {
+            get => _searchReceiptNumber;
+            set
+            {
+                if (SetProperty(ref _searchReceiptNumber, value))
+                {
+                    OnPropertyChanged(nameof(HasSearchReceiptNumber));
+                    LoadData();
+                }
+            }
+        }
+        public bool HasSearchReceiptNumber => !string.IsNullOrWhiteSpace(SearchReceiptNumber);
 
         // --- EXCEL EXPORT MODAL PROPERTIES ---
         private bool _isExportModalOpen;
@@ -184,6 +201,7 @@ namespace PosElectro.Desktop.ViewModels
                 else if (filter == "this_month") ExportFilter = ReportTimeFilter.ThisMonth;
                 else if (filter == "custom") ExportFilter = ReportTimeFilter.Custom;
             });
+            ClearReceiptSearchCommand = new RelayCommand(() => SearchReceiptNumber = string.Empty);
 
             LoadFilterOptions();
             LoadData();
@@ -361,7 +379,15 @@ namespace PosElectro.Desktop.ViewModels
 
         public void LoadData()
         {
-            var rawSales = _db.GetSales(_startDate, _endDate);
+            List<Sale> rawSales;
+            if (HasSearchReceiptNumber)
+            {
+                rawSales = _db.SearchSalesByReceiptNumber(SearchReceiptNumber);
+            }
+            else
+            {
+                rawSales = _db.GetSales(_startDate, _endDate);
+            }
             Sales.Clear();
 
             string? catFilter = (SelectedCategory == "Barchasi") ? null : SelectedCategory;

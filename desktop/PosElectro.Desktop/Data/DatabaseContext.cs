@@ -1610,6 +1610,35 @@ namespace PosElectro.Desktop.Data
             return list;
         }
 
+        public List<Sale> SearchSalesByReceiptNumber(string query, int limit = 50)
+        {
+            var list = new List<Sale>();
+            if (string.IsNullOrWhiteSpace(query)) return list;
+            var clean = query.Trim().TrimStart('#');
+
+            using var conn = CreateConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                SELECT * FROM sales 
+                WHERE CAST(id AS TEXT) LIKE @pattern 
+                ORDER BY id DESC 
+                LIMIT @limit;
+            ";
+            cmd.Parameters.AddWithValue("@pattern", $"%{clean}%");
+            cmd.Parameters.AddWithValue("@limit", limit);
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                list.Add(ReadSale(reader));
+            }
+            reader.Close();
+            foreach (var s in list)
+            {
+                s.Items = GetSaleItems(s.Id, conn);
+            }
+            return list;
+        }
+
         private List<SaleItem> GetSaleItems(long saleId, SqliteConnection conn)
         {
             var items = new List<SaleItem>();
@@ -1801,6 +1830,29 @@ namespace PosElectro.Desktop.Data
             }
 
             return sale;
+        }
+
+        public void RenameCategory(string oldCategory, string newCategory)
+        {
+            if (string.IsNullOrWhiteSpace(oldCategory) || string.IsNullOrWhiteSpace(newCategory)) return;
+            var trimmedOld = oldCategory.Trim();
+            var trimmedNew = newCategory.Trim();
+            if (string.Equals(trimmedOld, trimmedNew, StringComparison.OrdinalIgnoreCase)) return;
+
+            var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            using var conn = CreateConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                UPDATE products 
+                SET category = @newCategory, updated_at = @now 
+                WHERE category = @oldCategory;
+            ";
+            cmd.Parameters.AddWithValue("@newCategory", trimmedNew);
+            cmd.Parameters.AddWithValue("@oldCategory", trimmedOld);
+            cmd.Parameters.AddWithValue("@now", now);
+            cmd.ExecuteNonQuery();
+
+            RaiseProductsChanged();
         }
     }
 }

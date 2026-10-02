@@ -46,6 +46,7 @@
         <!-- 1. FILTRLAR VA ASBOBLAR PANELI (NAVBAR) -->
         <Grid Grid.Row="0" Margin="0,0,0,16">
             <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
@@ -120,8 +121,51 @@
                 </StackPanel>
             </StackPanel>
 
+            <!-- O'rta: Chek raqami bo'yicha qidiruv -->
+            <Border Grid.Column="1" Background="#1E293B" CornerRadius="20" BorderBrush="#334155" BorderThickness="1" 
+                    Height="38" Margin="16,0,16,0" VerticalAlignment="Center" MaxWidth="280" HorizontalAlignment="Left">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0" Text="🔍" FontSize="12" Foreground="#94A3B8" 
+                               VerticalAlignment="Center" Margin="12,0,4,0"/>
+
+                    <TextBox Grid.Column="1" Text="{Binding SearchReceiptNumber, UpdateSourceTrigger=PropertyChanged}"
+                             Background="Transparent" Foreground="#F8FAFC" BorderThickness="0"
+                             VerticalAlignment="Center" FontSize="13" FontWeight="SemiBold"
+                             CaretBrush="White" VerticalContentAlignment="Center" Padding="4,0,0,0"/>
+
+                    <!-- Placeholder -->
+                    <TextBlock Grid.Column="1" Text="Chek № bo'yicha qidirish..." Foreground="#64748B" FontSize="13"
+                               VerticalAlignment="Center" Margin="8,0,0,0" IsHitTestVisible="False">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SearchReceiptNumber}" Value="">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+
+                    <!-- Tozalash tugmasi -->
+                    <Button Grid.Column="2" Command="{Binding ClearReceiptSearchCommand}"
+                            Visibility="{Binding HasSearchReceiptNumber, Converter={StaticResource BooleanToVisibilityConverter}}"
+                            Background="Transparent" BorderThickness="0" Foreground="#94A3B8"
+                            Cursor="Hand" Margin="0,0,6,0" Padding="6,2" VerticalAlignment="Center">
+                        <TextBlock Text="✕" FontSize="11" FontWeight="Bold"/>
+                    </Button>
+                </Grid>
+            </Border>
+
             <!-- O'ng: Dollar Kursi, Excel Eksport Modali va Yangilash -->
-            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                 <!-- Dollar kursi indikatori va yangilash tugmasi -->
                 <Button Command="{Binding RefreshUsdRateCommand}" 
                         ToolTip="O'zbekiston Markaziy banki (CBU) jonli kursini yangilash"

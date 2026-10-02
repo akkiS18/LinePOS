@@ -139,16 +139,15 @@
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 CornerRadius="8"
-                                Padding="{TemplateBinding Padding}"
                                 SnapsToDevicePixels="True"
                                 UseLayoutRounding="True"
                                 TextElement.Foreground="{TemplateBinding Foreground}">
                             <ScrollViewer x:Name="PART_ContentHost"
-                                          VerticalAlignment="Stretch"
-                                          VerticalScrollBarVisibility="{TemplateBinding VerticalScrollBarVisibility}"
-                                          HorizontalScrollBarVisibility="{TemplateBinding HorizontalScrollBarVisibility}"
-                                          TextElement.Foreground="{TemplateBinding Foreground}"
-                                          Focusable="False"/>
+                                          Focusable="False"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          VerticalScrollBarVisibility="{TemplateBinding ScrollViewer.VerticalScrollBarVisibility}"
+                                          HorizontalScrollBarVisibility="{TemplateBinding ScrollViewer.HorizontalScrollBarVisibility}"
+                                          TextElement.Foreground="{TemplateBinding Foreground}"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsFocused" Value="True">
@@ -182,12 +181,11 @@
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 CornerRadius="8"
-                                Padding="{TemplateBinding Padding}"
                                 SnapsToDevicePixels="True"
                                 UseLayoutRounding="True"
                                 TextElement.Foreground="{TemplateBinding Foreground}">
                             <ScrollViewer x:Name="PART_ContentHost"
-                                          VerticalAlignment="Stretch"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                                           Focusable="False"/>
                         </Border>
                         <ControlTemplate.Triggers>

@@ -110,5 +110,10 @@ namespace PosElectro.Desktop.Services
         public DatabaseContext Database => _db;
 
         public string GenerateUniqueBarcode() => BarcodeGeneratorHelper.GenerateUniqueEan13(_db);
+
+        public void RenameCategory(string oldCategory, string newCategory)
+        {
+            _db.RenameCategory(oldCategory, newCategory);
+        }
     }
 }
