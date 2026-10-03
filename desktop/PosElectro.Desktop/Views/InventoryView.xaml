@@ -412,50 +412,10 @@
                                 </Style>
                             </DataGrid.RowStyle>
                             <DataGrid.Columns>
+                                <!-- 1. Mahsulot nomi -->
                                 <DataGridTextColumn Header="Mahsulot nomi" Binding="{Binding Name}" Width="2*" MinWidth="180" FontWeight="SemiBold"/>
-                                <DataGridTextColumn Header="Shtrix-kod" Binding="{Binding Barcode}" Width="140" MinWidth="120"/>
-                                <DataGridTextColumn Header="Tan narxi" Binding="{Binding CostPriceDisplay}" Width="125" MinWidth="105"/>
-                                <DataGridTextColumn Header="Sotish narxi" Binding="{Binding SellingPrice, StringFormat='{}{0:N0} so\'m'}" Width="135" MinWidth="115"/>
-                                
-                                <!-- Qoldiq (kam qolgan yoki manfiy bo'lsa qizil) -->
-                                <DataGridTemplateColumn Header="Qoldiq" Width="95" MinWidth="80">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <Border Padding="6,2" CornerRadius="6" HorizontalAlignment="Left">
-                                                <Border.Style>
-                                                    <Style TargetType="Border">
-                                                        <Setter Property="Background" Value="Transparent"/>
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsNegativeStock}" Value="True">
-                                                                <Setter Property="Background" Value="#30EF4444"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </Border.Style>
-                                                <TextBlock Text="{Binding StockDisplay}" VerticalAlignment="Center" FontWeight="Bold" ToolTip="{Binding UnitDisplay}">
-                                                    <TextBlock.Style>
-                                                        <Style TargetType="TextBlock">
-                                                            <Setter Property="Foreground" Value="#F8FAFC"/>
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding IsNegativeStock}" Value="True">
-                                                                    <Setter Property="Foreground" Value="#EF4444"/>
-                                                                </DataTrigger>
-                                                                <DataTrigger Binding="{Binding IsLowStock}" Value="True">
-                                                                    <Setter Property="Foreground" Value="#F59E0B"/>
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </TextBlock.Style>
-                                                </TextBlock>
-                                            </Border>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
 
-                                <!-- Izoh (Zakaz uchun telefon raqam / ma'lumot) -->
-                                <DataGridTextColumn Header="Izoh (Zakaz uchun)" Binding="{Binding Note}" Width="1.2*" MinWidth="110" Foreground="#94A3B8"/>
-
-                                <!-- Amallar (Tahrirlash ✏️, Shtrix-kod 🖨️, O'chirish 🗑️) -->
+                                <!-- 2. Amallar (Tahrirlash ✏️, Shtrix-kod 🖨️, O'chirish 🗑️) -->
                                 <DataGridTemplateColumn Header="Amallar" Width="125" MinWidth="120">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
@@ -525,6 +485,53 @@
                                                     </Button.Template>
                                                 </Button>
                                             </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <!-- 3. Shtrix-kod -->
+                                <DataGridTextColumn Header="Shtrix-kod" Binding="{Binding Barcode}" Width="140" MinWidth="120"/>
+
+                                <!-- 4. Izoh (Zakaz uchun telefon raqam / ma'lumot) -->
+                                <DataGridTextColumn Header="Izoh (Zakaz uchun)" Binding="{Binding Note}" Width="1.2*" MinWidth="110" Foreground="#94A3B8"/>
+
+                                <!-- 5. Tan narxi -->
+                                <DataGridTextColumn Header="Tan narxi" Binding="{Binding CostPriceDisplay}" Width="125" MinWidth="105"/>
+
+                                <!-- 6. Sotish narxi -->
+                                <DataGridTextColumn Header="Sotish narxi" Binding="{Binding SellingPrice, StringFormat='{}{0:N0} so\'m'}" Width="135" MinWidth="115"/>
+                                
+                                <!-- 7. Qoldiq (kam qolgan yoki manfiy bo'lsa qizil) -->
+                                <DataGridTemplateColumn Header="Qoldiq" Width="95" MinWidth="80">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Border Padding="6,2" CornerRadius="6" HorizontalAlignment="Left">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Background" Value="Transparent"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsNegativeStock}" Value="True">
+                                                                <Setter Property="Background" Value="#30EF4444"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <TextBlock Text="{Binding StockDisplay}" VerticalAlignment="Center" FontWeight="Bold" ToolTip="{Binding UnitDisplay}">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="#F8FAFC"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsNegativeStock}" Value="True">
+                                                                    <Setter Property="Foreground" Value="#EF4444"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding IsLowStock}" Value="True">
+                                                                    <Setter Property="Foreground" Value="#F59E0B"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </Border>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
