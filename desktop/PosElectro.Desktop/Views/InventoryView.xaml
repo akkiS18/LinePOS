@@ -412,15 +412,13 @@
                                 </Style>
                             </DataGrid.RowStyle>
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="Mahsulot nomi" Binding="{Binding Name}" Width="2*" MinWidth="220" FontWeight="SemiBold"/>
-                                <DataGridTextColumn Header="Shtrix-kod" Binding="{Binding Barcode}" Width="150" MinWidth="140"/>
-                                <DataGridTextColumn Header="Kategoriya" Binding="{Binding Category}" Width="150" MinWidth="135"/>
-                                <DataGridTextColumn Header="Tan narxi" Binding="{Binding CostPriceDisplay}" Width="135" MinWidth="120"/>
-                                <DataGridTextColumn Header="Sotish narxi" Binding="{Binding SellingPrice, StringFormat='{}{0:N0} so\'m'}" Width="145" MinWidth="130"/>
-                                <DataGridTextColumn Header="2-sotish narxi" Binding="{Binding SellingPrice2Display}" Width="145" MinWidth="130"/>
+                                <DataGridTextColumn Header="Mahsulot nomi" Binding="{Binding Name}" Width="2*" MinWidth="180" FontWeight="SemiBold"/>
+                                <DataGridTextColumn Header="Shtrix-kod" Binding="{Binding Barcode}" Width="140" MinWidth="120"/>
+                                <DataGridTextColumn Header="Tan narxi" Binding="{Binding CostPriceDisplay}" Width="125" MinWidth="105"/>
+                                <DataGridTextColumn Header="Sotish narxi" Binding="{Binding SellingPrice, StringFormat='{}{0:N0} so\'m'}" Width="135" MinWidth="115"/>
                                 
                                 <!-- Qoldiq (kam qolgan yoki manfiy bo'lsa qizil) -->
-                                <DataGridTemplateColumn Header="Qoldiq" Width="105" MinWidth="95">
+                                <DataGridTemplateColumn Header="Qoldiq" Width="95" MinWidth="80">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <Border Padding="6,2" CornerRadius="6" HorizontalAlignment="Left">
@@ -434,7 +432,7 @@
                                                         </Style.Triggers>
                                                     </Style>
                                                 </Border.Style>
-                                                <TextBlock Text="{Binding StockDisplay}" VerticalAlignment="Center" FontWeight="Bold">
+                                                <TextBlock Text="{Binding StockDisplay}" VerticalAlignment="Center" FontWeight="Bold" ToolTip="{Binding UnitDisplay}">
                                                     <TextBlock.Style>
                                                         <Style TargetType="TextBlock">
                                                             <Setter Property="Foreground" Value="#F8FAFC"/>
@@ -454,10 +452,8 @@
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
 
-                                <DataGridTextColumn Header="Birlik" Binding="{Binding UnitDisplay}" Width="80" MinWidth="70"/>
-
                                 <!-- Izoh (Zakaz uchun telefon raqam / ma'lumot) -->
-                                <DataGridTextColumn Header="Izoh (Zakaz uchun)" Binding="{Binding Note}" Width="1.5*" MinWidth="160" Foreground="#94A3B8"/>
+                                <DataGridTextColumn Header="Izoh (Zakaz uchun)" Binding="{Binding Note}" Width="1.2*" MinWidth="110" Foreground="#94A3B8"/>
 
                                 <!-- Amallar (Tahrirlash ✏️, Shtrix-kod 🖨️, O'chirish 🗑️) -->
                                 <DataGridTemplateColumn Header="Amallar" Width="125" MinWidth="120">
@@ -603,6 +599,7 @@
                         <!-- Mahsulot Nomi -->
                         <TextBlock Text="Mahsulot nomi *" Foreground="#94A3B8" FontSize="12" Margin="0,0,0,4"/>
                         <TextBox Text="{Binding FormName, UpdateSourceTrigger=PropertyChanged}" 
+                                 TextChanged="ProductNameTextBox_TextChanged"
                                  Style="{StaticResource ModernTextBox}" FontSize="14" Padding="12,0" Height="42" Margin="0,0,0,10"/>
 
                         <!-- Shtrix-kod va Generatsiya / Chop etish tugmalari -->

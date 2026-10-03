@@ -61,6 +61,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -280,7 +281,7 @@ fun AddEditProductDialog(
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             shape = RoundedCornerShape(14.dp),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Next),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Next),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = Color(0xFF0B6477),
                                 unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)

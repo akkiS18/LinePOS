@@ -162,11 +162,26 @@ namespace PosElectro.Desktop.Views
             Close();
         }
 
+        private void TxtName_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (sender is not TextBox tb) return;
+            var text = tb.Text;
+            if (string.IsNullOrEmpty(text)) return;
+
+            var capitalized = PosElectro.Desktop.Views.InventoryView.CapitalizeFirstLetter(text);
+            if (capitalized != text)
+            {
+                var caret = tb.CaretIndex;
+                tb.Text = capitalized;
+                tb.CaretIndex = Math.Min(capitalized.Length, caret);
+            }
+        }
+
         private void BtnSave_Click(object sender, RoutedEventArgs e)
         {
             TxtError.Visibility = Visibility.Collapsed;
 
-            var name = TxtName.Text.Trim();
+            var name = PosElectro.Desktop.Views.InventoryView.CapitalizeFirstLetter(TxtName.Text.Trim());
             if (string.IsNullOrWhiteSpace(name))
             {
                 ShowError("Mahsulot nomini kiritish majburiy!");

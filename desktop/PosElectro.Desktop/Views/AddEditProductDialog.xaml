@@ -21,7 +21,7 @@
             <StackPanel Margin="0,0,10,0">
                 <!-- Nomi -->
                 <TextBlock Text="Mahsulot nomi *" Foreground="#94A3B8" FontSize="12" Margin="0,0,0,4"/>
-                <TextBox x:Name="TxtName" Style="{StaticResource ModernTextBox}" Margin="0,0,0,12"/>
+                <TextBox x:Name="TxtName" Style="{StaticResource ModernTextBox}" Margin="0,0,0,12" TextChanged="TxtName_TextChanged"/>
 
                 <!-- Shtrix-kod va Generatsiya / Chop etish tugmalari -->
                 <TextBlock Text="Shtrix-kod" Foreground="#94A3B8" FontSize="12" Margin="0,0,0,4"/>

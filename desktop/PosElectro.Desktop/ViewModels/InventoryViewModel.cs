@@ -688,7 +688,7 @@ namespace PosElectro.Desktop.ViewModels
         public string FormName
         {
             get => _formName;
-            set => SetProperty(ref _formName, value);
+            set => SetProperty(ref _formName, PosElectro.Desktop.Views.InventoryView.CapitalizeFirstLetter(value));
         }
 
         public string FormBarcode
@@ -924,7 +924,7 @@ namespace PosElectro.Desktop.ViewModels
         {
             FormErrorMessage = string.Empty;
 
-            var name = FormName.Trim();
+            var name = PosElectro.Desktop.Views.InventoryView.CapitalizeFirstLetter(FormName.Trim());
             if (string.IsNullOrWhiteSpace(name))
             {
                 FormErrorMessage = "Mahsulot nomini kiritish majburiy!";

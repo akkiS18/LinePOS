@@ -208,6 +208,20 @@ class ProductViewModel @Inject constructor(
                 .lowercase(Locale.ROOT)
                 .replace(Regex("\\s+"), " ")
         }
+
+        fun capitalizeFirstLetter(input: String): String {
+            if (input.isEmpty()) return input
+            for (i in input.indices) {
+                val c = input[i]
+                if (c.isLetter()) {
+                    if (c.isUpperCase()) return input
+                    return input.substring(0, i) + c.uppercaseChar() + input.substring(i + 1)
+                } else if (c.isDigit()) {
+                    return input
+                }
+            }
+            return input
+        }
     }
 
     /**
@@ -290,7 +304,7 @@ class ProductViewModel @Inject constructor(
     }
 
     fun onNameChanged(value: String) {
-        nameInput.value = value
+        nameInput.value = capitalizeFirstLetter(value)
     }
 
     fun onCategoryChanged(value: String) {
@@ -330,7 +344,7 @@ class ProductViewModel @Inject constructor(
     }
 
     fun saveProduct(onSuccess: () -> Unit = {}) {
-        val rawName = nameInput.value
+        val rawName = capitalizeFirstLetter(nameInput.value)
         val name = rawName.trim().replace(Regex("\\s+"), " ")
         if (name.isBlank()) {
             _errorMessage.value = "Mahsulot nomini kiritish shart!"

@@ -87,6 +87,40 @@ namespace PosElectro.Desktop.Views
             }
         }
 
+        public static string CapitalizeFirstLetter(string? input)
+        {
+            if (string.IsNullOrEmpty(input)) return string.Empty;
+            for (int i = 0; i < input.Length; i++)
+            {
+                if (char.IsLetter(input[i]))
+                {
+                    if (char.IsUpper(input[i])) return input;
+                    return input.Substring(0, i) + char.ToUpper(input[i]) + input.Substring(i + 1);
+                }
+                else if (char.IsDigit(input[i]))
+                {
+                    // Birinchi belgi raqam bo'lsa (masalan: 2_ombor) o'zgarishsiz qoladi
+                    return input;
+                }
+            }
+            return input;
+        }
+
+        private void ProductNameTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (sender is not TextBox tb) return;
+            var text = tb.Text;
+            if (string.IsNullOrEmpty(text)) return;
+
+            var capitalized = CapitalizeFirstLetter(text);
+            if (capitalized != text)
+            {
+                var caret = tb.CaretIndex;
+                tb.Text = capitalized;
+                tb.CaretIndex = Math.Min(capitalized.Length, caret);
+            }
+        }
+
         private static ScrollViewer? FindChildScrollViewer(DependencyObject? root)
         {
             if (root == null) return null;
