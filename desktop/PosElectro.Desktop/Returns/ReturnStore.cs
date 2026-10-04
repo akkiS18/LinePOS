@@ -48,6 +48,24 @@ public sealed class ReturnStore
     // Ordinals refer to immutable original insertion order, never to device-local row IDs.
     public static string LineGuid(string saleGuid, int ordinal) => saleGuid + ":" + ordinal.ToString(CultureInfo.InvariantCulture);
 
+    static ReturnAccounting.Prior PriorAmounts(SqliteConnection c, SqliteTransaction tx, string lineGuid)
+    {
+        using var cmd = Command(c, tx, "SELECT quantity,refund_amount_uzs,cost_basis_uzs FROM return_items WHERE sale_item_guid=@p0", lineGuid);
+        using var r = cmd.ExecuteReader(); decimal qty=0, refund=0, cost=0;
+        while(r.Read()) { qty += r.GetDecimal(0); refund += r.GetDecimal(1); cost += r.GetDecimal(2); }
+        return new(qty,refund,cost);
+    }
+    public string History(string receiptGuid)
+    {
+        using var c = Open(); using var tx = c.BeginTransaction();
+        var original = Convert.ToString(Scalar(c, tx, "SELECT sale_guid FROM returns WHERE guid=@p0", receiptGuid));
+        var saleGuid = string.IsNullOrEmpty(original) ? receiptGuid : original;
+        using var cmd = Command(c, tx, "SELECT guid,created_at,cash_refund+card_refund,reason FROM returns WHERE sale_guid=@p0 ORDER BY created_at,guid", saleGuid);
+        using var r = cmd.ExecuteReader(); var lines = new List<string>();
+        if (!string.IsNullOrEmpty(original)) lines.Add("Asl chek: LP-" + original.Replace("-", "").ToUpperInvariant());
+        while (r.Read()) lines.Add($"RT-{r.GetString(0).Replace("-", "").ToUpperInvariant()} • {DateTimeOffset.FromUnixTimeMilliseconds(r.GetInt64(1)).LocalDateTime:dd.MM.yyyy HH:mm} • {r.GetDecimal(2):N2} so‘m • {r.GetString(3)}");
+        return string.Join(Environment.NewLine, lines);
+    }
     public ReturnQuote Quote(string saleGuid)
     {
         using var c = Open(); using var tx = c.BeginTransaction();
@@ -59,10 +77,9 @@ public sealed class ReturnStore
         var lines = new List<ReturnLine>();
         for (var i = 0; i < sale.Items.Count; i++) {
             var item = sale.Items[i];
-            using var cmd = Command(c, tx, "SELECT COALESCE(SUM(quantity),0),COALESCE(SUM(refund_amount_uzs),0),COALESCE(SUM(cost_basis_uzs),0) FROM return_items WHERE sale_item_guid=@p0", item.Guid);
-            using var r = cmd.ExecuteReader(); r.Read();
+            var prior = PriorAmounts(c, tx, item.Guid);
             lines.Add(new ReturnLine(item.Guid, item.ProductName, item.WarehouseGuid, (decimal)item.Quantity,
-                r.GetDecimal(0), (decimal)financials[i].TotalPrice, (decimal)financials[i].TotalCost, r.GetDecimal(1), r.GetDecimal(2)));
+                prior.Quantity, (decimal)financials[i].TotalPrice, (decimal)financials[i].TotalCost, prior.Refund, prior.CostBasis));
         }
         var fee = (decimal)sale.TaxAmount - Convert.ToDecimal(Scalar(c, tx, "SELECT COALESCE(SUM(fee_reversal),0) FROM returns WHERE sale_guid=@p0", saleGuid));
         return new ReturnQuote(saleGuid, lines, fee);
@@ -109,9 +126,7 @@ public sealed class ReturnStore
                 throw new ArgumentException("Qabul ombori mavjud emas");
             if (Convert.ToInt64(Scalar(c, tx, "SELECT COUNT(*) FROM products WHERE guid=@p0", item.ProductGuid)) != 1)
                 throw new ArgumentException("Mahsulot bog'lanishini tekshiring");
-            using var priorCmd = Command(c, tx, "SELECT COALESCE(SUM(quantity),0),COALESCE(SUM(refund_amount_uzs),0),COALESCE(SUM(cost_basis_uzs),0) FROM return_items WHERE sale_item_guid=@p0", selected.SaleItemGuid);
-            using var priorReader = priorCmd.ExecuteReader(); priorReader.Read();
-            var prior = new ReturnAccounting.Prior(priorReader.GetDecimal(0), priorReader.GetDecimal(1), priorReader.GetDecimal(2));
+            var prior = PriorAmounts(c, tx, selected.SaleItemGuid);
             var amount = ReturnAccounting.Calculate((decimal)item.Quantity, (decimal)line.TotalPrice, (decimal)line.TotalCost, prior, selected.Quantity, selected.Resellable);
             entries.Add((selected, item, amount));
         }

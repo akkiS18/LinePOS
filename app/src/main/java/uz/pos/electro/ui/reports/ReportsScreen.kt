@@ -92,6 +92,10 @@ fun ReportsScreen(
     val salesList by viewModel.salesList.collectAsState()
     val selectedSale by viewModel.selectedSaleForDetail.collectAsState()
     var returning by remember { mutableStateOf(false) }
+    var returnHistory by remember { mutableStateOf("") }
+    LaunchedEffect(selectedSale?.sale?.guid) {
+        returnHistory = selectedSale?.let { viewModel.returnSync.returnHistory(it.sale.guid) } ?: ""
+    }
     val customStart by viewModel.customStartDate.collectAsState()
     val customEnd by viewModel.customEndDate.collectAsState()
     val usdRate by viewModel.usdRate.collectAsState()
@@ -392,6 +396,7 @@ fun ReportsScreen(
             else SaleDetailDialog(
                 saleWithItems = saleWithItems,
                 onReturn = { returning = true },
+                returnHistory = returnHistory,
                 onDismissRequest = { viewModel.closeSaleDetail() }
             )
         }
@@ -564,6 +569,7 @@ private fun SaleHistoryCard(
 private fun SaleDetailDialog(
     saleWithItems: SaleWithItems,
     onReturn: () -> Unit,
+    returnHistory: String,
     onDismissRequest: () -> Unit
 ) {
     val numberFormat = remember { NumberFormat.getNumberInstance(Locale.US) }
@@ -669,6 +675,7 @@ private fun SaleDetailDialog(
 
                 Spacer(modifier = Modifier.height(18.dp))
 
+                if (returnHistory.isNotBlank()) Text(returnHistory, style = MaterialTheme.typography.bodySmall)
                 if (saleWithItems.sale.paymentType != uz.pos.electro.data.model.PaymentType.BRAK &&
                     saleWithItems.sale.paymentType != uz.pos.electro.data.model.PaymentType.RETURN) {
                     Button(onClick = onReturn, modifier = Modifier.fillMaxWidth()) { Text("Qaytarish") }

@@ -24,6 +24,11 @@ namespace PosElectro.Desktop.Views
             TxtTotalProfit.Text = $"+{sale.Profit:N0} SO'M";
 
             GridItems.ItemsSource = sale.Items;
+            if (database != null) {
+                var returns = new PosElectro.Desktop.Returns.ReturnStore(database.DatabaseFilePath); returns.Install();
+                var history = returns.History(sale.Guid);
+                if (!string.IsNullOrEmpty(history)) { TxtStatus.Text = history; TxtStatus.Visibility = Visibility.Visible; }
+            }
         }
 
         private void BtnPreview_Click(object sender, RoutedEventArgs e)

@@ -45,6 +45,19 @@ static class ReturnStoreTests
             using var conn = new SqliteConnection("Data Source=" + path); conn.Open();
             using var cmd = conn.CreateCommand(); cmd.CommandText = "SELECT COUNT(*) FROM returns";
             Check(Convert.ToInt32(cmd.ExecuteScalar()) == 2, "Duplicate return persisted");
+            var fractional = new Sale { TotalAmount = 100, TotalCost = 33.33, CashAmount = 100, UsdRate = 12000,
+                Items = new() { new SaleItem { ProductId = product.Id, ProductGuid = product.Guid, ProductName = product.Name,
+                    Quantity = .7, PriceAtSale = 100 / .7, CostAtSale = 33.33 / .7, WarehouseGuid = "main-default-warehouse" } } };
+            db.InsertSale(fractional);
+            var cents = new[] { 14.29m, 14.28m, 14.29m, 14.28m, 14.29m, 14.28m, 14.29m };
+            decimal refunded = 0, reversed = 0;
+            foreach (var amount in cents) {
+                var part = store.Commit(new ReturnRequest(Guid.NewGuid().ToString(), fractional.Guid, "Fractional", amount, 0, 0,
+                    new() { new(fractional.Items[0].Guid, .1m, "main-default-warehouse", true) }), "cashier", "desktop");
+                refunded += part.Refund; reversed += part.CostReversal;
+            }
+            Check(refunded == 100 && reversed == 33.33m, "Persisted fractional returns lost cents");
+            Check(store.Quote(fractional.Guid).Lines.Single().Returned == .7m, "Persisted fractional quantity drift");
             Console.WriteLine("PASS return transaction: historical amounts, idempotency across restart, payload mismatch, concurrent overreturn protection, inventory, immutable original");
         }
         finally { SqliteConnection.ClearAllPools(); foreach (var suffix in new[] { "", "-wal", "-shm" }) if (File.Exists(path + suffix)) File.Delete(path + suffix); }

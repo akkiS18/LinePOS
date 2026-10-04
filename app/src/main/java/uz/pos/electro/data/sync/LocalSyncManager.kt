@@ -117,6 +117,15 @@ class LocalSyncManager @Inject constructor(
     fun sendLiveWarehouse(warehouse: WarehouseEntity) = wake()
     fun sendLiveStockTransfer(productGuid: String, fromWarehouseGuid: String, toWarehouseGuid: String, quantity: Double) = wake()
     suspend fun syncWithDesktop(): Result<SyncSummary> = runCatching { require(!getServerUrl().isNullOrBlank() && !token().isNullOrBlank()) { "Avval kompyuter QR kodini skanerlang." }; syncOnce(); SyncSummary(0, 0, "V2 sinxron yakunlandi") }
+    suspend fun returnHistory(receiptGuid: String): String = withContext(Dispatchers.IO) {
+        val original = db().query("SELECT sale_guid FROM returns WHERE guid=?",arrayOf(receiptGuid)).use { if(it.moveToFirst()) it.getString(0) else null }
+        val lines = mutableListOf<String>()
+        if (original != null) lines.add("Asl chek: LP-" + original.replace("-", "").uppercase())
+        db().query("SELECT guid,cash_refund+card_refund,reason FROM returns WHERE sale_guid=? ORDER BY created_at,guid",arrayOf(original ?: receiptGuid)).use { c ->
+            while(c.moveToNext()) lines.add("RT-" + c.getString(0).replace("-", "").uppercase() + " • " + c.getDouble(1) + " so‘m • " + c.getString(2))
+        }
+        lines.joinToString("\n")
+    }
     suspend fun getReturnDraft(saleGuid: String): JSONObject? = withContext(Dispatchers.IO) {
         db().query("SELECT payload,result,state FROM return_drafts WHERE sale_guid=?", arrayOf(saleGuid)).use { c ->
             if (!c.moveToFirst()) null else JSONObject().put("payload", JSONObject(c.getString(0)))

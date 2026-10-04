@@ -50,6 +50,20 @@ namespace PosElectro.Desktop.Data
 
             _connectionString = $"Data Source={DatabaseFilePath}";
 
+            if (File.Exists(DatabaseFilePath) && new FileInfo(DatabaseFilePath).Length > 0)
+            {
+                using var source = new SqliteConnection(_connectionString); source.Open();
+                using var check = source.CreateCommand();
+                check.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE name='sale_items' AND type='table'";
+                if (Convert.ToInt32(check.ExecuteScalar()) > 0) {
+                    check.CommandText = "SELECT COUNT(*) FROM pragma_table_info('sale_items') WHERE name='guid'";
+                    if (Convert.ToInt32(check.ExecuteScalar()) == 0) {
+                        var backupDir = Path.Combine(Path.GetDirectoryName(DatabaseFilePath)!, "Backups"); Directory.CreateDirectory(backupDir);
+                        using var backup = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = Path.Combine(backupDir, $"before-returns-{DateTime.UtcNow:yyyyMMdd-HHmmss}-{Guid.NewGuid():N}.db") }.ToString());
+                        backup.Open(); source.BackupDatabase(backup);
+                    }
+                }
+            }
             InitializeDatabase();
         }
 

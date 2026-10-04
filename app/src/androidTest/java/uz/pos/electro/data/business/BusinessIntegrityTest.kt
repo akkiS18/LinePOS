@@ -70,4 +70,49 @@ class BusinessIntegrityTest {
             }
         } finally { source.close(); SQLiteDatabase.deleteDatabase(sourceFile); SQLiteDatabase.deleteDatabase(destination) }
     }
+    @Test fun version12MigrationPreservesReceiptLinesAndCreatesRecoverySnapshot() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val name = "return-migration-${java.util.UUID.randomUUID()}.db"
+        val file = context.getDatabasePath(name)
+        val initial = Room.databaseBuilder(context, AppDatabase::class.java, name).build()
+        initial.openHelper.writableDatabase
+        initial.close()
+        SQLiteDatabase.openDatabase(file.path, null, SQLiteDatabase.OPEN_READWRITE).use { old ->
+            val tableSql = old.rawQuery("SELECT sql FROM sqlite_master WHERE name='sale_items'", null).use { it.moveToFirst(); it.getString(0) }
+            val indexes = mutableListOf<String>()
+            old.rawQuery("SELECT sql FROM sqlite_master WHERE type='index' AND tbl_name='sale_items' AND sql IS NOT NULL", null).use { while(it.moveToNext()) indexes.add(it.getString(0)) }
+            val legacySql = tableSql.replace(Regex("`guid` TEXT NOT NULL DEFAULT '',\\s*"), "")
+            assertNotEquals(tableSql, legacySql)
+            old.execSQL("DROP TABLE sale_items")
+            old.execSQL(legacySql)
+            indexes.forEach { old.execSQL(it) }
+            old.execSQL("INSERT INTO users(id,name,pin_code,role) VALUES(1,'Admin','0000','ADMIN')")
+            old.execSQL("INSERT INTO sales(id,guid,total_amount,total_cost,payment_type,cash_amount,card_amount,tax_amount,tax_rate,created_at,user_id,is_synced,usd_rate) VALUES(77,'legacy-guid',100,60,'CASH',100,0,0,0,123,1,0,12000)")
+            old.execSQL("INSERT INTO sale_items(id,sale_id,sale_guid,product_id,quantity,price_at_sale,cost_at_sale) VALUES(501,77,'legacy-guid',1,0.7,100,60)")
+            old.version = 12
+        }
+        val backupDir = File(context.filesDir, "migration-backups")
+        val before = backupDir.listFiles()?.map { it.name }?.toSet() ?: emptySet()
+        val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+        val migrated = AppDatabase.buildDatabase(context, scope, name)
+        try {
+            val db = migrated.openHelper.writableDatabase
+            db.query("SELECT guid,quantity FROM sale_items WHERE id=501").use { c ->
+                assertTrue(c.moveToFirst()); assertEquals("legacy-guid:1", c.getString(0)); assertEquals(0.7, c.getDouble(1), 0.0)
+            }
+            db.query("SELECT total_amount,total_cost FROM sales WHERE id=77").use { c ->
+                c.moveToFirst(); assertEquals(100.0, c.getDouble(0), 0.0); assertEquals(60.0, c.getDouble(1), 0.0)
+            }
+            val backups = backupDir.listFiles()!!.filter { it.name !in before }
+            assertEquals(1, backups.size)
+            SQLiteDatabase.openDatabase(backups.single().path, null, SQLiteDatabase.OPEN_READONLY).use { recovery ->
+                assertEquals(12, recovery.version)
+                recovery.rawQuery("SELECT COUNT(*) FROM sale_items WHERE id=501",null).use { c -> c.moveToFirst(); assertEquals(1,c.getInt(0)) }
+            }
+            backups.forEach { SQLiteDatabase.deleteDatabase(it) }
+        } finally {
+            migrated.close(); scope.coroutineContext[kotlinx.coroutines.Job]?.cancel(); SQLiteDatabase.deleteDatabase(file)
+        }
+    }
+
 }

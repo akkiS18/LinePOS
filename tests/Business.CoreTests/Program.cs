@@ -28,9 +28,10 @@ try {
     Check(db.GetDetailedReportItems(DateTime.Today.AddDays(-11), DateTime.Today, 99999, "Other").Count == 0, "Category filter leaked");
     db.InsertSale(sale);
     Check(db.GetTotalSalesCount() == 1 && db.GetProductByGuid(product.Guid)!.StockQuantity == -1, "Duplicate GUID changed inventory");
-    using (var conn = new SqliteConnection("Data Source=" + path)) { conn.Open(); using var cmd = conn.CreateCommand(); cmd.CommandText = "ALTER TABLE sales DROP COLUMN usd_rate; ALTER TABLE sale_items DROP COLUMN category_at_sale; ALTER TABLE sale_items DROP COLUMN unit_at_sale;"; cmd.ExecuteNonQuery(); }
+    using (var conn = new SqliteConnection("Data Source=" + path)) { conn.Open(); using var cmd = conn.CreateCommand(); cmd.CommandText = "ALTER TABLE sales DROP COLUMN usd_rate; ALTER TABLE sale_items DROP COLUMN guid; ALTER TABLE sale_items DROP COLUMN category_at_sale; ALTER TABLE sale_items DROP COLUMN unit_at_sale;"; cmd.ExecuteNonQuery(); }
     db = new DatabaseContext(path);
     saved = db.GetSales(DateTime.Today.AddDays(-11), DateTime.Today).Single();
+    Check(saved.Items.Single().Guid == sale.Guid + ":1", "Migrated receipt line identity changed");
     Check(saved.Guid == sale.Guid && saved.TotalCost == 120000 && saved.UsdRate == 0, "Legacy migration changed money/identity");
     Check(SaleAccounting.Lines(saved).Single().Profit == 27300, "Legacy profit lost");
     Console.WriteLine("PASS real database: migrations, historic snapshots, receipt search, date/category/warehouse filters, negative stock, duplicate receipt");
