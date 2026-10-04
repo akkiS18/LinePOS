@@ -42,23 +42,6 @@ public sealed class ReturnStore
             ?? throw new InvalidOperationException("Sinxron sxemasi topilmadi");
         using var schemaReader = new System.IO.StreamReader(schema);
         foreach (var statement in schemaReader.ReadToEnd().Split("-- statement")) Exec(c, tx, statement);
-        Exec(c, tx, @"
-CREATE TABLE IF NOT EXISTS returns (
- guid TEXT PRIMARY KEY, sale_guid TEXT NOT NULL, created_at INTEGER NOT NULL,
- operator_guid TEXT NOT NULL, reason TEXT NOT NULL, status TEXT NOT NULL,
- cash_refund REAL NOT NULL, card_refund REAL NOT NULL, fee_reversal REAL NOT NULL,
- request_guid TEXT NOT NULL UNIQUE, authority_guid TEXT NOT NULL,
- request_hash TEXT NOT NULL, result_json TEXT NOT NULL);
-CREATE INDEX IF NOT EXISTS returns_sale ON returns(sale_guid);
-CREATE TABLE IF NOT EXISTS return_items (
- guid TEXT PRIMARY KEY, return_guid TEXT NOT NULL REFERENCES returns(guid), sale_item_guid TEXT NOT NULL,
- product_guid TEXT NOT NULL, quantity REAL NOT NULL, refund_amount_uzs REAL NOT NULL,
- cost_basis_uzs REAL NOT NULL, cost_reversal_uzs REAL NOT NULL, warehouse_guid TEXT NOT NULL,
- disposition TEXT NOT NULL, original_usd_rate REAL NOT NULL);
-CREATE INDEX IF NOT EXISTS returns_line ON return_items(sale_item_guid);
-CREATE TABLE IF NOT EXISTS return_quarantine (
- product_guid TEXT NOT NULL, warehouse_guid TEXT NOT NULL, quantity REAL NOT NULL,
- PRIMARY KEY(product_guid,warehouse_guid));");
         tx.Commit();
     }
 

@@ -26,3 +26,27 @@ CREATE TRIGGER IF NOT EXISTS sync_stocks_insert AFTER INSERT ON product_stocks W
 CREATE TRIGGER IF NOT EXISTS sync_stocks_update AFTER UPDATE ON product_stocks WHEN (SELECT applying FROM sync_control WHERE id=1)=0 AND NEW.quantity IS NOT OLD.quantity BEGIN INSERT INTO sync_journal(op_id,kind,entity_guid,warehouse_guid,delta,group_id) VALUES(lower(hex(randomblob(16))),'stock',NEW.product_guid,NEW.warehouse_guid,NEW.quantity-OLD.quantity,(SELECT current_group FROM sync_control WHERE id=1)); END;
 -- statement
 CREATE TRIGGER IF NOT EXISTS sync_stocks_delete AFTER DELETE ON product_stocks WHEN (SELECT applying FROM sync_control WHERE id=1)=0 BEGIN INSERT INTO sync_journal(op_id,kind,entity_guid,warehouse_guid,delta,group_id) VALUES(lower(hex(randomblob(16))),'stock',OLD.product_guid,OLD.warehouse_guid,-OLD.quantity,(SELECT current_group FROM sync_control WHERE id=1)); END;
+
+-- statement
+CREATE TABLE IF NOT EXISTS returns (
+ guid TEXT PRIMARY KEY, sale_guid TEXT NOT NULL, created_at INTEGER NOT NULL,
+ operator_guid TEXT NOT NULL, reason TEXT NOT NULL, status TEXT NOT NULL,
+ cash_refund REAL NOT NULL, card_refund REAL NOT NULL, fee_reversal REAL NOT NULL,
+ request_guid TEXT NOT NULL UNIQUE, authority_guid TEXT NOT NULL,
+ request_hash TEXT NOT NULL, result_json TEXT NOT NULL);
+-- statement
+CREATE INDEX IF NOT EXISTS returns_sale ON returns(sale_guid);
+-- statement
+CREATE TABLE IF NOT EXISTS return_items (
+ guid TEXT PRIMARY KEY, return_guid TEXT NOT NULL REFERENCES returns(guid), sale_item_guid TEXT NOT NULL,
+ product_guid TEXT NOT NULL, quantity REAL NOT NULL, refund_amount_uzs REAL NOT NULL,
+ cost_basis_uzs REAL NOT NULL, cost_reversal_uzs REAL NOT NULL, warehouse_guid TEXT NOT NULL,
+ disposition TEXT NOT NULL, original_usd_rate REAL NOT NULL);
+-- statement
+CREATE INDEX IF NOT EXISTS returns_line ON return_items(sale_item_guid);
+-- statement
+CREATE TABLE IF NOT EXISTS return_quarantine (
+ product_guid TEXT NOT NULL, warehouse_guid TEXT NOT NULL, quantity REAL NOT NULL,
+ PRIMARY KEY(product_guid,warehouse_guid));
+-- statement
+CREATE TABLE IF NOT EXISTS return_drafts (sale_guid TEXT PRIMARY KEY, request_guid TEXT NOT NULL UNIQUE, authority_guid TEXT NOT NULL, payload TEXT NOT NULL, result TEXT, state TEXT NOT NULL);

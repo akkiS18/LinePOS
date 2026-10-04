@@ -91,6 +91,7 @@ fun ReportsScreen(
     val summary by viewModel.summary.collectAsState()
     val salesList by viewModel.salesList.collectAsState()
     val selectedSale by viewModel.selectedSaleForDetail.collectAsState()
+    var returning by remember { mutableStateOf(false) }
     val customStart by viewModel.customStartDate.collectAsState()
     val customEnd by viewModel.customEndDate.collectAsState()
     val usdRate by viewModel.usdRate.collectAsState()
@@ -387,8 +388,10 @@ fun ReportsScreen(
 
         // Chek tafsilotlari dialogi
         selectedSale?.let { saleWithItems ->
-            SaleDetailDialog(
+            if (returning) ReturnDialog(saleWithItems, viewModel) { returning = false; viewModel.closeSaleDetail() }
+            else SaleDetailDialog(
                 saleWithItems = saleWithItems,
+                onReturn = { returning = true },
                 onDismissRequest = { viewModel.closeSaleDetail() }
             )
         }
@@ -560,6 +563,7 @@ private fun SaleHistoryCard(
 @Composable
 private fun SaleDetailDialog(
     saleWithItems: SaleWithItems,
+    onReturn: () -> Unit,
     onDismissRequest: () -> Unit
 ) {
     val numberFormat = remember { NumberFormat.getNumberInstance(Locale.US) }
@@ -665,6 +669,10 @@ private fun SaleDetailDialog(
 
                 Spacer(modifier = Modifier.height(18.dp))
 
+                if (saleWithItems.sale.paymentType != uz.pos.electro.data.model.PaymentType.BRAK &&
+                    saleWithItems.sale.paymentType != uz.pos.electro.data.model.PaymentType.RETURN) {
+                    Button(onClick = onReturn, modifier = Modifier.fillMaxWidth()) { Text("Qaytarish") }
+                }
                 Button(
                     onClick = onDismissRequest,
                     modifier = Modifier.fillMaxWidth(),

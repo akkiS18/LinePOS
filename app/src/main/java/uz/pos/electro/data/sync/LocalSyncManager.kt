@@ -117,6 +117,52 @@ class LocalSyncManager @Inject constructor(
     fun sendLiveWarehouse(warehouse: WarehouseEntity) = wake()
     fun sendLiveStockTransfer(productGuid: String, fromWarehouseGuid: String, toWarehouseGuid: String, quantity: Double) = wake()
     suspend fun syncWithDesktop(): Result<SyncSummary> = runCatching { require(!getServerUrl().isNullOrBlank() && !token().isNullOrBlank()) { "Avval kompyuter QR kodini skanerlang." }; syncOnce(); SyncSummary(0, 0, "V2 sinxron yakunlandi") }
+    suspend fun getReturnDraft(saleGuid: String): JSONObject? = withContext(Dispatchers.IO) {
+        db().query("SELECT payload,result,state FROM return_drafts WHERE sale_guid=?", arrayOf(saleGuid)).use { c ->
+            if (!c.moveToFirst()) null else JSONObject().put("payload", JSONObject(c.getString(0)))
+                .put("state", c.getString(2)).apply { if (!c.isNull(1)) put("result", JSONObject(c.getString(1))) }
+        }
+    }
+    suspend fun quoteReturn(saleGuid: String): JSONObject = withContext(Dispatchers.IO) {
+        syncOnce()
+        syncMutex.withLock {
+            request(getServerUrl() ?: error("Mahalliy kompyuterga ulang"), "/api/v2/returns/quote", JSONObject().put("SaleGuid", saleGuid))
+        }
+    }
+    suspend fun saveReturnDraft(body: JSONObject) = withContext(Dispatchers.IO) {
+        syncMutex.withLock {
+            val saleGuid = body.getString("SaleGuid")
+            val existing = getReturnDraft(saleGuid)
+            require(existing == null || existing.getString("state") == "draft") { "Yuborilgan so'rov natijasini avval tekshiring" }
+            val authority = metadata("server_id") ?: error("Avval mahalliy kompyuterga ulang")
+            db().execSQL("INSERT OR REPLACE INTO return_drafts(sale_guid,request_guid,authority_guid,payload,state) VALUES(?,?,?,?,'draft')",
+                arrayOf(saleGuid,body.getString("RequestGuid"),authority,body.toString()))
+        }
+    }
+    suspend fun confirmReturn(saleGuid: String): JSONObject = withContext(Dispatchers.IO) {
+        // Persisted payload survives process death and a lost response; never allocate another request ID on retry.
+        val result = syncMutex.withLock {
+            val draft = getReturnDraft(saleGuid) ?: error("Qaytarish loyihasi topilmadi")
+            if (draft.has("result")) return@withLock draft.getJSONObject("result")
+            val authority = db().query("SELECT authority_guid FROM return_drafts WHERE sale_guid=?",arrayOf(saleGuid)).use { it.moveToFirst(); it.getString(0) }
+            require(authority == metadata("server_id")) { "So'rov boshqa kompyuterga tegishli" }
+            db().execSQL("UPDATE return_drafts SET state='submitted' WHERE sale_guid=?",arrayOf(saleGuid))
+            try {
+                val reply = request(getServerUrl() ?: error("Mahalliy kompyuterga ulang"), "/api/v2/returns", draft.getJSONObject("payload"))
+                db().execSQL("UPDATE return_drafts SET state='confirmed',result=? WHERE sale_guid=?",arrayOf(reply.toString(),saleGuid))
+                reply
+            } catch (e: ReturnRejected) {
+                db().execSQL("UPDATE return_drafts SET state='draft' WHERE sale_guid=?",arrayOf(saleGuid))
+                throw e
+            }
+        }
+        try { syncOnce() } catch (e: CancellationException) { throw e } catch (_: Exception) { }
+        result
+    }
+    suspend fun acknowledgeReturn(saleGuid: String) = withContext(Dispatchers.IO) {
+        syncMutex.withLock { db().execSQL("DELETE FROM return_drafts WHERE sale_guid=? AND state='confirmed'",arrayOf(saleGuid)) }
+    }
+    private class ReturnRejected(message: String): IllegalArgumentException(message)
     private data class Pending(val seq: Long, val id: String, val kind: String, val guid: String, val warehouse: String, val delta: Double, val base: Long, val payload: String?, val group: String)
     private fun pending(): List<Pending> = db().query("SELECT seq,op_id,kind,entity_guid,warehouse_guid,delta,base_revision,payload,group_id FROM sync_journal WHERE acked=0 ORDER BY seq").use { c ->
         buildList { while (c.moveToNext()) add(Pending(c.getLong(0),c.getString(1),c.getString(2),c.getString(3),c.getString(4),c.getDouble(5),c.getLong(6),if(c.isNull(7)) null else c.getString(7),c.getString(8))) }
@@ -261,6 +307,17 @@ class LocalSyncManager @Inject constructor(
                 productStockDao.upsertStock(guid,wh,stock.getDouble("Quantity") + unpushed,stock.getLong("UpdatedAt"))
             }
             sql.execSQL("UPDATE products SET stock_quantity=(SELECT COALESCE(SUM(quantity),0) FROM product_stocks WHERE product_guid=products.guid)")
+            for ((table, key) in listOf("returns" to "returns", "return_items" to "returnItems", "return_quarantine" to "returnQuarantine")) {
+                val data = root.optJSONArray(key) ?: continue
+                if (table == "return_quarantine") sql.execSQL("DELETE FROM return_quarantine")
+                val columns = sql.query("PRAGMA table_info($table)").use { c -> buildList { while(c.moveToNext()) add(c.getString(1)) } }
+                for (i in 0 until data.length()) {
+                    val row = data.getJSONObject(i)
+                    require(columns.all { row.has(it) }) { "Qaytarish tarixi to'liq emas" }
+                    val values = columns.map { if(row.isNull(it)) null else row.get(it) }.toTypedArray()
+                    sql.execSQL("INSERT OR IGNORE INTO $table (${columns.joinToString(",")}) VALUES (${columns.joinToString(",") { "?" }})", values)
+                }
+            }
             putMetadata("cursor",root.getLong("cursor").toString())
         } finally { sql.execSQL("UPDATE sync_control SET applying=0 WHERE id=1") }
         // Settings are unrelated to inventory capture. Existing CBU/Firebase behavior is preserved.
@@ -308,6 +365,7 @@ class LocalSyncManager @Inject constructor(
                 _hasConflict.value=true
                 throw PendingSyncConflict(reply.getString("error"))
             }
+            if (status == 400 && path == "/api/v2/returns") throw ReturnRejected(reply.optString("error", "Qaytarish rad etildi"))
             require(status in 200..299) { reply.optString("error","HTTP $status") }
             return reply
         } finally { conn.disconnect() }

@@ -37,7 +37,8 @@ class ReportsViewModel @Inject constructor(
     private val saleRepository: SaleRepository,
     private val productRepository: ProductRepository,
     private val warehouseRepository: WarehouseRepository,
-    private val currencyRepository: CurrencyRepository
+    private val currencyRepository: CurrencyRepository,
+    val returnSync: uz.pos.electro.data.sync.LocalSyncManager
 ) : ViewModel() {
 
     private val _selectedFilter = MutableStateFlow(TimeRangeFilter.TODAY)

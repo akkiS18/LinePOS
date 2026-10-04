@@ -63,7 +63,17 @@ public sealed class WifiSyncStore
             }
             result[table=="product_stocks"?"productStocks":table]=rows;
         }
+        // Return records are immutable and their line/stock effects share this snapshot.
+        result["returns"] = RawRows(db,tx,"SELECT * FROM returns");
+        result["returnItems"] = RawRows(db,tx,"SELECT * FROM return_items");
+        result["returnQuarantine"] = RawRows(db,tx,"SELECT * FROM return_quarantine");
         tx.Commit(); return result;
+    }
+    private static JArray RawRows(SqliteConnection db, SqliteTransaction tx, string sql)
+    {
+        using var cmd=Command(db,tx,sql); using var reader=cmd.ExecuteReader(); var rows=new JArray();
+        while(reader.Read()) { var row=new JObject(); for(var i=0;i<reader.FieldCount;i++) row[reader.GetName(i)]=reader.IsDBNull(i)?JValue.CreateNull():JToken.FromObject(reader.GetValue(i)); rows.Add(row); }
+        return rows;
     }
     public JObject Push(JArray operations)
     {
