@@ -333,6 +333,7 @@ namespace PosElectro.Desktop.Data
 
             foreach (var (table, column, definition) in new[] {
                 ("sales", "usd_rate", "REAL NOT NULL DEFAULT 0"),
+                ("sale_items", "guid", "TEXT NOT NULL DEFAULT ''"),
                 ("sale_items", "category_at_sale", "TEXT NOT NULL DEFAULT ''"),
                 ("sale_items", "unit_at_sale", "TEXT NOT NULL DEFAULT ''") })
             {
@@ -343,6 +344,11 @@ namespace PosElectro.Desktop.Data
                     alter.CommandText = $"ALTER TABLE {table} ADD COLUMN {column} {definition}";
                     alter.ExecuteNonQuery();
                 }
+            }
+            using (var lineIds = conn.CreateCommand())
+            {
+                lineIds.CommandText = @"UPDATE sale_items SET guid=(SELECT guid FROM sales WHERE id=sale_items.sale_id)||':'||(SELECT COUNT(*) FROM sale_items previous WHERE previous.sale_id=sale_items.sale_id AND previous.id<=sale_items.id) WHERE guid='';";
+                lineIds.ExecuteNonQuery();
             }
             // Omborlar va Ombor qoldiqlari jadvallari
             using (var whCmd = conn.CreateCommand())
@@ -1569,9 +1575,11 @@ namespace PosElectro.Desktop.Data
                 using var itemCmd = conn.CreateCommand();
                 itemCmd.Transaction = transaction;
                 itemCmd.CommandText = @"
-                    INSERT INTO sale_items (category_at_sale, unit_at_sale, sale_id, sale_guid, product_id, product_guid, product_name, quantity, price_at_sale, cost_at_sale, cost_currency, warehouse_guid, warehouse_name)
-                    VALUES (@category_at_sale, @unit_at_sale, @sale_id, @sale_guid, @product_id, @product_guid, @product_name, @quantity, @price_at_sale, @cost_at_sale, @cost_currency, @wh_guid, @wh_name);
+                    INSERT INTO sale_items (guid, category_at_sale, unit_at_sale, sale_id, sale_guid, product_id, product_guid, product_name, quantity, price_at_sale, cost_at_sale, cost_currency, warehouse_guid, warehouse_name)
+                    VALUES (@item_guid, @category_at_sale, @unit_at_sale, @sale_id, @sale_guid, @product_id, @product_guid, @product_name, @quantity, @price_at_sale, @cost_at_sale, @cost_currency, @wh_guid, @wh_name);
                 ";
+                if (string.IsNullOrEmpty(item.Guid)) item.Guid = sale.Guid + ":" + (sale.Items.IndexOf(item) + 1).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                itemCmd.Parameters.AddWithValue("@item_guid", item.Guid);
                 itemCmd.Parameters.AddWithValue("@category_at_sale", item.CategoryAtSale);
                 itemCmd.Parameters.AddWithValue("@unit_at_sale", item.UnitAtSale);
                 itemCmd.Parameters.AddWithValue("@sale_id", sale.Id);
@@ -1670,13 +1678,14 @@ namespace PosElectro.Desktop.Data
         {
             var items = new List<SaleItem>();
             using var cmd = conn.CreateCommand();
-            cmd.CommandText = "SELECT * FROM sale_items WHERE sale_id = @saleId";
+            cmd.CommandText = "SELECT * FROM sale_items WHERE sale_id = @saleId ORDER BY id";
             cmd.Parameters.AddWithValue("@saleId", saleId);
             using var reader = cmd.ExecuteReader();
             while (reader.Read())
             {
                 items.Add(new SaleItem
                 {
+                    Guid = reader.GetString(reader.GetOrdinal("guid")),
                     Id = reader.GetInt64(reader.GetOrdinal("id")),
                     SaleId = reader.GetInt64(reader.GetOrdinal("sale_id")),
                     SaleGuid = reader.GetString(reader.GetOrdinal("sale_guid")),

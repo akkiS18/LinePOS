@@ -41,6 +41,7 @@ namespace PosElectro.Desktop.Models
 
     public class SaleItem
     {
+        public string Guid { get; set; } = string.Empty;
         public long Id { get; set; }
         public long SaleId { get; set; }
         public string SaleGuid { get; set; } = string.Empty;

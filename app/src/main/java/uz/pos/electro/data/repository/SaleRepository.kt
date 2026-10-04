@@ -209,7 +209,7 @@ class SaleRepository @Inject constructor(
                 }
             }
 
-            val saleId = saleDao.insertSaleWithItems(saleEntity, saleItems)
+            val saleId = saleDao.insertSaleWithItems(saleEntity, saleItems.mapIndexed { index, item -> item.copy(guid = "${saleEntity.guid}:${index + 1}") })
 
             database.openHelper.writableDatabase.execSQL("UPDATE sync_control SET current_group='' WHERE id=1")
             Triple(saleId, saleEntity, saleItems)

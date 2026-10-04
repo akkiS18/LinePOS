@@ -90,7 +90,7 @@ CREATE TABLE IF NOT EXISTS return_quarantine (
         var entries = new List<(ReturnSelection Selected, SaleItem Item, ReturnAccounting.Amounts Amount)>();
         foreach (var selected in canonical.Items)
         {
-            var index = sale.Items.FindIndex(i => LineGuid(sale.Guid, sale.Items.IndexOf(i) + 1) == selected.SaleItemGuid);
+            var index = sale.Items.FindIndex(i => i.Guid == selected.SaleItemGuid);
             if (index < 0) throw new ArgumentException("Asl chek qatori topilmadi");
             var item = sale.Items[index]; var line = financials[index];
             if (Convert.ToInt64(Scalar(c, tx, "SELECT COUNT(*) FROM warehouses WHERE guid=@p0 AND is_deleted=0", selected.WarehouseGuid)) != 1)
@@ -148,7 +148,7 @@ ON CONFLICT(product_guid,warehouse_guid) DO UPDATE SET quantity=quantity+exclude
         using var items = Command(c, tx, "SELECT * FROM sale_items WHERE sale_id=@p0 ORDER BY id", sale.Id);
         using var ir = items.ExecuteReader();
         while (ir.Read()) sale.Items.Add(new SaleItem {
-            Id = (long)ir["id"], ProductGuid = Convert.ToString(ir["product_guid"])!,
+            Guid = Convert.ToString(ir["guid"])!, Id = (long)ir["id"], ProductGuid = Convert.ToString(ir["product_guid"])!,
             Quantity = Convert.ToDouble(ir["quantity"]), PriceAtSale = Convert.ToDouble(ir["price_at_sale"]),
             CostAtSale = Convert.ToDouble(ir["cost_at_sale"]), CostCurrency = Convert.ToString(ir["cost_currency"])!
         });

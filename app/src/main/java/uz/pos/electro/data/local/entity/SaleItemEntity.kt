@@ -27,6 +27,9 @@ data class SaleItemEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
 
+    @ColumnInfo(name = "guid", defaultValue = "''")
+    val guid: String = "",
+
     @ColumnInfo(name = "sale_id")
     val saleId: Long,
 

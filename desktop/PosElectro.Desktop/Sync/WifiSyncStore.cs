@@ -17,6 +17,9 @@ public sealed class WifiSyncStore
         connectionString = new SqliteConnectionStringBuilder { DataSource = databasePath, DefaultTimeout = 15 }.ToString();
         using var db = Open();
         using var tx = db.BeginTransaction();
+        if (Convert.ToInt32(Scalar(db, tx, "SELECT COUNT(*) FROM pragma_table_info('sale_items') WHERE name='guid'")) == 0)
+            Exec(db, tx, "ALTER TABLE sale_items ADD COLUMN guid TEXT NOT NULL DEFAULT ''");
+        Exec(db, tx, "UPDATE sale_items SET guid=(SELECT guid FROM sales WHERE id=sale_items.sale_id)||':'||(SELECT COUNT(*) FROM sale_items previous WHERE previous.sale_id=sale_items.sale_id AND previous.id<=sale_items.id) WHERE guid=''");
         using var schema = typeof(WifiSyncStore).Assembly.GetManifestResourceStream("WifiSyncSchema")!;
         using var reader = new StreamReader(schema);
         foreach (var statement in reader.ReadToEnd().Split("-- statement")) Exec(db, tx, statement);
@@ -52,7 +55,7 @@ public sealed class WifiSyncStore
         foreach(var (kind,table,key) in new[]{("product","products","guid"),("warehouse","warehouses","guid"),("sale","sales","guid"),("stock","product_stocks","product_guid")})
         {
             var rows=Rows(db,tx,$"SELECT * FROM {table} WHERE @since=0 OR {key} IN (SELECT entity_guid FROM sync_journal WHERE seq>@since AND seq<=@high AND kind=@kind)",("@since",since),("@high",high),("@kind",kind));
-            foreach(JObject row in rows) { if(kind=="sale")row["Items"]=Rows(db,tx,"SELECT * FROM sale_items WHERE sale_id=@id",("@id",(long)row["Id"]!)); if(kind is "product" or "warehouse")row["Revision"]=Revision(db,tx,kind,(string)row["Guid"]!); }
+            foreach(JObject row in rows) { if(kind=="sale")row["Items"]=Rows(db,tx,"SELECT * FROM sale_items WHERE sale_id=@id ORDER BY id",("@id",(long)row["Id"]!)); if(kind is "product" or "warehouse")row["Revision"]=Revision(db,tx,kind,(string)row["Guid"]!); }
             if(kind=="stock")
             {
                 using var deleted=Command(db,tx,"SELECT DISTINCT entity_guid,warehouse_guid FROM sync_journal j WHERE kind='stock' AND warehouse_guid<>'' AND (@since=0 OR seq>@since) AND seq<=@high AND NOT EXISTS(SELECT 1 FROM product_stocks s WHERE s.product_guid=j.entity_guid AND s.warehouse_guid=j.warehouse_guid)",("@since",since),("@high",high));
@@ -124,13 +127,16 @@ public sealed class WifiSyncStore
         var columns=new[]{"guid","total_amount","total_cost","payment_type","cash_amount","card_amount","tax_amount","tax_rate","created_at","usd_rate"};
         Exec(db,tx,$"INSERT INTO sales({string.Join(",",columns)},user_id,is_synced) VALUES({string.Join(",",columns.Select(c=>"@"+c))},1,1)",columns.Select(c=>("@"+c,Value(data,Fields[c]) ?? (c=="usd_rate" ? (object)0.0 : null))).ToArray());
         long saleId=Convert.ToInt64(Scalar(db,tx,"SELECT last_insert_rowid()"));
-        var items=data["Items"] as JArray??throw new ArgumentException("Chek tovarlari yo'q.");
+        var items=data["Items"]?.DeepClone() as JArray??throw new ArgumentException("Chek tovarlari yo'q.");
         if(items.Count==0)throw new ArgumentException("Bo'sh chek.");
+        var ordinal = 0;
         foreach(JObject item in items)
         {
+            ordinal++;
+            if (string.IsNullOrWhiteSpace((string?)item["Guid"])) item["Guid"] = guid + ":" + ordinal.ToString(System.Globalization.CultureInfo.InvariantCulture);
             var product=Required(item,"ProductGuid"); double qty=(double?)item["Quantity"]??0; if(!double.IsFinite(qty)||qty<=0)throw new ArgumentException("Savdo miqdori noto'g'ri.");
             var productId=Scalar(db,tx,"SELECT id FROM products WHERE guid=@guid",("@guid",product))??throw new ArgumentException("Chekdagi tovar topilmadi.");
-            var itemColumns=new[]{"product_guid","product_name","quantity","price_at_sale","cost_at_sale","cost_currency","warehouse_guid","warehouse_name","category_at_sale","unit_at_sale"};
+            var itemColumns=new[]{"guid","product_guid","product_name","quantity","price_at_sale","cost_at_sale","cost_currency","warehouse_guid","warehouse_name","category_at_sale","unit_at_sale"};
             var args=itemColumns.Select(c=>("@"+c,Value(item,Fields[c]) ?? (c is "category_at_sale" or "unit_at_sale" ? (object)"" : null))).Concat(new[]{("@sale",(object?)saleId),("@sg",guid),("@pid",productId)}).ToArray();
             Exec(db,tx,$"INSERT INTO sale_items(sale_id,sale_guid,product_id,{string.Join(",",itemColumns)}) VALUES(@sale,@sg,@pid,{string.Join(",",itemColumns.Select(c=>"@"+c))})",args);
             if(legacy) { Stock(db,tx,product,(string?)item["WarehouseGuid"] is {Length:>0} wh?wh:"main-default-warehouse",-qty); Exec(db,tx,"INSERT INTO sync_journal(op_id,kind,entity_guid,acked) VALUES(lower(hex(randomblob(16))),'stock',@guid,1)",("@guid",product)); }

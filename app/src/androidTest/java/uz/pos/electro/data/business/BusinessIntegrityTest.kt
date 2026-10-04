@@ -65,7 +65,7 @@ class BusinessIntegrityTest {
                 backup.rawQuery("SELECT id,hex(payload),note FROM backup_probe", null).use { c ->
                     assertTrue(c.moveToFirst()); assertEquals(101, c.getInt(0)); assertEquals("00FF01", c.getString(1)); assertEquals("new without sales", c.getString(2))
                 }
-                assertEquals(12, backup.version)
+                assertEquals(13, backup.version)
                 backup.rawQuery("PRAGMA integrity_check", null).use { c -> c.moveToFirst(); assertEquals("ok", c.getString(0)) }
             }
         } finally { source.close(); SQLiteDatabase.deleteDatabase(sourceFile); SQLiteDatabase.deleteDatabase(destination) }

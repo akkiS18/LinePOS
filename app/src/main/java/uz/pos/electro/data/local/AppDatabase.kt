@@ -33,7 +33,7 @@ import uz.pos.electro.data.local.entity.WarehouseEntity
         WarehouseEntity::class,
         ProductStockEntity::class
     ],
-    version = 12,
+    version = 13,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -194,6 +194,12 @@ abstract class AppDatabase : RoomDatabase() {
                     db.execSQL("ALTER TABLE sales ADD COLUMN usd_rate REAL NOT NULL DEFAULT 0.0")
                     db.execSQL("ALTER TABLE sale_items ADD COLUMN category_at_sale TEXT NOT NULL DEFAULT ''")
                     db.execSQL("ALTER TABLE sale_items ADD COLUMN unit_at_sale TEXT NOT NULL DEFAULT ''")
+                }
+            })
+            .addMigrations(object : Migration(12, 13) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE sale_items ADD COLUMN guid TEXT NOT NULL DEFAULT ''")
+                    db.execSQL("UPDATE sale_items SET guid=(SELECT guid FROM sales WHERE id=sale_items.sale_id)||':'||(SELECT COUNT(*) FROM sale_items previous WHERE previous.sale_id=sale_items.sale_id AND previous.id<=sale_items.id) WHERE guid=''")
                 }
             })
             .addCallback(object : Callback() {

@@ -16,6 +16,7 @@ try {
     db.InsertSale(sale);
     Check(db.GetProductByGuid(product.Guid)!.StockQuantity == -1, "Negative stock policy changed");
     var saved = db.GetSales(DateTime.Today.AddDays(-11), DateTime.Today).Single();
+    Check(saved.Items.Single().Guid == sale.Guid + ":1", "Stable line GUID missing");
     Check(saved.UsdRate == 12000 && saved.Items.Single().CategoryAtSale == "Cable", "Snapshot not stored");
     Check(db.SearchSalesByReceiptNumber(sale.ReceiptNumber).Single().Guid == sale.Guid, "Global receipt search failed");
     Check(db.GetSales(DateTime.Today, DateTime.Today.AddDays(1)).Count == 0, "Date range ignored");

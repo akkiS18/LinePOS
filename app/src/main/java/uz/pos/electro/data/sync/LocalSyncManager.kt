@@ -365,6 +365,7 @@ class LocalSyncManager @Inject constructor(
             for (item in items) {
                 val iJson = JSONObject().apply {
                     put("Id", item.id)
+                    put("Guid", item.guid)
                     put("SaleId", item.saleId)
                     put("SaleGuid", item.saleGuid)
                     put("ProductId", item.productId)
@@ -462,6 +463,7 @@ class LocalSyncManager @Inject constructor(
                     id = 0L,
                     saleId = 0L,
                     saleGuid = saleGuid,
+                    guid = iJson.optString("Guid", "").ifBlank { "$saleGuid:${j + 1}" },
                     productId = localProdId,
                     productGuid = pGuid,
                     productName = pName,
