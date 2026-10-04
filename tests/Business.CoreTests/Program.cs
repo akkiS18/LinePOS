@@ -2,6 +2,8 @@ using PosElectro.Desktop.Data;
 using PosElectro.Desktop.Models;
 using Microsoft.Data.Sqlite;
 
+ReturnAccountingTests.Run();
+
 var path = Path.Combine(Path.GetTempPath(), "LinePOS_business_" + Guid.NewGuid() + ".db");
 void Check(bool condition, string message) { if (!condition) throw new Exception(message); }
 try {

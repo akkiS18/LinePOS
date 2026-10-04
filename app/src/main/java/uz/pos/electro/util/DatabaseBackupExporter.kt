@@ -53,7 +53,11 @@ object DatabaseBackupExporter {
                 while (c.moveToNext()) schema.add(Triple(c.getString(0), c.getString(1), c.getString(2)))
             }
             SQLiteDatabase.openOrCreateDatabase(destination, null).use { target ->
-                target.execSQL("PRAGMA journal_mode=DELETE")
+                target.rawQuery("PRAGMA journal_mode=DELETE", null).use { mode ->
+                    check(mode.moveToFirst() && mode.getString(0).equals("delete", ignoreCase = true)) {
+                        "Zaxira uchun mustaqil SQLite faylini yaratib bo'lmadi"
+                    }
+                }
                 target.beginTransaction()
                 try {
                     schema.filter { it.first == "table" }.forEach { (_, name, sql) ->
