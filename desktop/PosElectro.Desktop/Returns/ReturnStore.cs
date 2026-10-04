@@ -14,6 +14,9 @@ public sealed record ReturnSelection(string SaleItemGuid, decimal Quantity, stri
 public sealed record ReturnRequest(string RequestGuid, string SaleGuid, string Reason, decimal CashRefund,
     decimal CardRefund, decimal FeeReversal, List<ReturnSelection> Items);
 public sealed record ReturnResult(string Guid, string SaleGuid, decimal Refund, decimal CostReversal, long CreatedAt);
+public sealed record ReturnLine(string Guid, string ProductName, string WarehouseGuid, decimal Sold,
+    decimal Returned, decimal Revenue, decimal Cost, decimal Refunded, decimal CostBasis);
+public sealed record ReturnQuote(string SaleGuid, List<ReturnLine> Lines, decimal RemainingFee);
 
 /// <summary>Single LAN authority. All validation, stock, financial and idempotency writes share an immediate transaction.</summary>
 public sealed class ReturnStore
@@ -61,6 +64,26 @@ CREATE TABLE IF NOT EXISTS return_quarantine (
 
     // Ordinals refer to immutable original insertion order, never to device-local row IDs.
     public static string LineGuid(string saleGuid, int ordinal) => saleGuid + ":" + ordinal.ToString(CultureInfo.InvariantCulture);
+
+    public ReturnQuote Quote(string saleGuid)
+    {
+        using var c = Open(); using var tx = c.BeginTransaction();
+        var sale = ReadSale(c, tx, saleGuid);
+        if ((int)sale.PaymentType >= 6) throw new ArgumentException("Faqat asl savdoni qaytarish mumkin");
+        if (Convert.ToInt64(Scalar(c, tx, "SELECT COUNT(*) FROM refunds WHERE sale_id=@p0", sale.Id)) > 0)
+            throw new ArgumentException("Eski qaytarish yozuvlarini avval tekshiring");
+        var financials = SaleAccounting.Lines(sale);
+        var lines = new List<ReturnLine>();
+        for (var i = 0; i < sale.Items.Count; i++) {
+            var item = sale.Items[i];
+            using var cmd = Command(c, tx, "SELECT COALESCE(SUM(quantity),0),COALESCE(SUM(refund_amount_uzs),0),COALESCE(SUM(cost_basis_uzs),0) FROM return_items WHERE sale_item_guid=@p0", item.Guid);
+            using var r = cmd.ExecuteReader(); r.Read();
+            lines.Add(new ReturnLine(item.Guid, item.ProductName, item.WarehouseGuid, (decimal)item.Quantity,
+                r.GetDecimal(0), (decimal)financials[i].TotalPrice, (decimal)financials[i].TotalCost, r.GetDecimal(1), r.GetDecimal(2)));
+        }
+        var fee = (decimal)sale.TaxAmount - Convert.ToDecimal(Scalar(c, tx, "SELECT COALESCE(SUM(fee_reversal),0) FROM returns WHERE sale_guid=@p0", saleGuid));
+        return new ReturnQuote(saleGuid, lines, fee);
+    }
 
     public ReturnResult Commit(ReturnRequest request, string operatorGuid, string authorityGuid)
     {
@@ -168,6 +191,7 @@ SELECT @p0,@p1,@p2,product_id,product_guid,product_name,@p3,@p4,@p5,'UZS',@p6,(S
         using var ir = items.ExecuteReader();
         while (ir.Read()) sale.Items.Add(new SaleItem {
             Guid = Convert.ToString(ir["guid"])!, Id = (long)ir["id"], ProductGuid = Convert.ToString(ir["product_guid"])!,
+            ProductName = Convert.ToString(ir["product_name"])!, WarehouseGuid = Convert.ToString(ir["warehouse_guid"])!,
             Quantity = Convert.ToDouble(ir["quantity"]), PriceAtSale = Convert.ToDouble(ir["price_at_sale"]),
             CostAtSale = Convert.ToDouble(ir["cost_at_sale"]), CostCurrency = Convert.ToString(ir["cost_currency"])!
         });

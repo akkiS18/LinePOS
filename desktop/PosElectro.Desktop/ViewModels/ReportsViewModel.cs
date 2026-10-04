@@ -27,6 +27,7 @@ namespace PosElectro.Desktop.ViewModels
         private bool KindMatches(SaleReportItem item) => SelectedRecordKind switch { "Brak" => item.IsBrak, "Qaytarish" => item.IsReturn, "Savdo" => !item.IsBrak && !item.IsReturn, _ => true };
         public string BrakSummary => $"Brak: {_reportLines.Where(i => i.IsBrak).Select(i => i.SaleId).Distinct().Count()} ta • Tannarx: {_reportLines.Where(i => i.IsBrak).Sum(i => i.TotalCost):N2} so‘m";
         private readonly DatabaseContext _db;
+        public DatabaseContext Database => _db;
         private readonly CurrencyService _currencyService;
 
         private DateTime _startDate = DateTime.Today;

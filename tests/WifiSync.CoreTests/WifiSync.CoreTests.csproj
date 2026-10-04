@@ -3,6 +3,8 @@
   <ItemGroup>
     <Compile Include="../../desktop/PosElectro.Desktop/Models/Sale*.cs" Link="Models/%(Filename)%(Extension)" />
     <Compile Include="../../desktop/PosElectro.Desktop/Models/Enums.cs" Link="Models/Enums.cs" />
+    <Compile Include="../../desktop/PosElectro.Desktop/Models/ReturnAccounting.cs" Link="ReturnAccounting.cs" />
+    <Compile Include="../../desktop/PosElectro.Desktop/Returns/*.cs" Link="Returns/%(Filename)%(Extension)" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.8" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <Compile Include="../../desktop/PosElectro.Desktop/Sync/WifiSyncStore.cs" Link="WifiSyncStore.cs" />

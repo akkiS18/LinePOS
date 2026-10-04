@@ -32,7 +32,7 @@ namespace PosElectro.Desktop.Views
         {
             try
             {
-                var dialog = new SaleDetailDialog(sale)
+                var dialog = new SaleDetailDialog(sale, database: (DataContext as PosElectro.Desktop.ViewModels.ReportsViewModel)?.Database)
                 {
                     Owner = Window.GetWindow(this)
                 };

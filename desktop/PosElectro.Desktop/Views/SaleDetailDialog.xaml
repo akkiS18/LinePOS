@@ -92,12 +92,14 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
             <Button Grid.Column="0" Content="Yopish" Click="BtnClose_Click"
                     Style="{StaticResource ModernButton}" Height="40" Margin="0,0,6,0"/>
 
-            <Button x:Name="BtnPrintReceipt" Grid.Column="1" Content="🖨️ Chop etish" Click="BtnPrintReceipt_Click"
+            <Button x:Name="BtnReturn" Grid.Column="1" Content="Qaytarish" Click="BtnReturn_Click" Height="40" Margin="6,0,6,0"/>
+            <Button x:Name="BtnPrintReceipt" Grid.Column="2" Content="🖨️ Chop etish" Click="BtnPrintReceipt_Click"
                     Style="{StaticResource SuccessButton}" Height="40" Margin="6,0,0,0" FontWeight="Bold"/>
         </Grid>
     </Grid>

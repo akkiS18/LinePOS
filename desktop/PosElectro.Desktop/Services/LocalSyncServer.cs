@@ -10,6 +10,7 @@ using System.Threading;
 using System.Security.Cryptography;
 using Newtonsoft.Json.Linq;
 using PosElectro.Desktop.Sync;
+using PosElectro.Desktop.Returns;
 using Newtonsoft.Json;
 using PosElectro.Desktop.Data;
 using PosElectro.Desktop.Models;
@@ -104,7 +105,7 @@ namespace PosElectro.Desktop.Services
             lock(gate)return clients.Where(c=>(DateTime.UtcNow-c.Value.Seen).TotalSeconds<15).Select(c=>new ConnectedClientInfo { Id=c.Key, DeviceName=c.Value.Info.DeviceName, IpAddress=c.Value.Info.IpAddress, ConnectedAt=c.Value.Info.LastSeen }).ToList();
         }
         public LocalSyncServer(DatabaseContext db, CurrencyService? currencyService=null)
-        { _db=db; _currencyService=currencyService; store=new WifiSyncStore(db.DatabaseFilePath); }
+        { _db=db; _currencyService=currencyService; store=new WifiSyncStore(db.DatabaseFilePath); new ReturnStore(db.DatabaseFilePath).Install(); }
         public string NewPairingCode()
         { lock(gate) { pairingCode=RandomNumberGenerator.GetInt32(10000000,100000000).ToString(); pairingExpires=DateTime.UtcNow.AddMinutes(5); pairingAttempts=0; return pairingCode; } }
         public void RevokeDevices()
@@ -176,13 +177,22 @@ namespace PosElectro.Desktop.Services
                         var uri=new Uri("http://localhost"+request.Target);string path=uri.AbsolutePath;
                         if(path=="/api/v2/pair" && request.Method=="POST") { await Reply(stream,200,Pair(JObject.Parse(request.Body)),timeout.Token);return; }
                         // Never allow legacy unauthenticated writes to bypass V2 invariants.
-                        Authenticate(request.Headers,(client.Client.RemoteEndPoint as IPEndPoint)?.Address.ToString()??"");
+                        var deviceId = Authenticate(request.Headers,(client.Client.RemoteEndPoint as IPEndPoint)?.Address.ToString()??"");
                         if(path=="/api/ping" && request.Method=="GET")
                         {await Reply(stream,200,new JObject{["protocol"]=2,["serverId"]=store.ServerId,["name"]="Line kassa",["productsCount"]=_db.GetActiveProductsCount(),["salesCount"]=_db.GetTotalSalesCount()},timeout.Token);return;}
                         // Bind V2 requests to the paired database before any mutation occurs.
                         if(path.StartsWith("/api/v2/",StringComparison.Ordinal) &&
                            (!request.Headers.TryGetValue("X-LinePOS-Server-Id",out var expectedServer) || expectedServer!=store.ServerId))
                             throw new InvalidOperationException("Kompyuter bazasi almashgan; qayta ulash kerak. Amallar saqlanmadi.");
+                        if(path=="/api/v2/returns/quote" && request.Method=="POST")
+                        { var saleGuid = WifiSyncStore.Required(JObject.Parse(request.Body), "SaleGuid");
+                          await Reply(stream,200,JObject.FromObject(new ReturnStore(_db.DatabaseFilePath).Quote(saleGuid)),timeout.Token);return; }
+                        if(path=="/api/v2/returns" && request.Method=="POST")
+                        { var body = JsonConvert.DeserializeObject<ReturnRequest>(request.Body) ?? throw new ArgumentException("Qaytarish so'rovi yo'q");
+                          var result = new ReturnStore(_db.DatabaseFilePath).Commit(body,deviceId,store.ServerId);
+                          // A notification failure cannot turn a committed return into a failed payout.
+                          try { DataSynced?.Invoke(); } catch { }
+                          await Reply(stream,200,JObject.FromObject(result),timeout.Token);return; }
                         if(path=="/api/v2/push" && request.Method=="POST")
                         {var reply=store.Push((JArray?)JObject.Parse(request.Body)["operations"]??throw new ArgumentException("Amallar yo'q."));DataSynced?.Invoke();await Reply(stream,200,reply,timeout.Token);return;}
                         if(path=="/api/v2/pull" && request.Method=="GET")
