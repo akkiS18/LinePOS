@@ -19,7 +19,7 @@ public sealed record ReturnLine(string Guid, string ProductName, string Warehous
 public sealed record ReturnQuote(string SaleGuid, List<ReturnLine> Lines, decimal RemainingFee);
 
 /// <summary>Single LAN authority. All validation, stock, financial and idempotency writes share an immediate transaction.</summary>
-public sealed class ReturnStore
+public sealed partial class ReturnStore
 {
     readonly string path;
     public ReturnStore(string databasePath) { path = databasePath; }

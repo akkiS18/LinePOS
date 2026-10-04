@@ -58,6 +58,19 @@ static class ReturnStoreTests
             }
             Check(refunded == 100 && reversed == 33.33m, "Persisted fractional returns lost cents");
             Check(store.Quote(fractional.Guid).Lines.Single().Returned == .7m, "Persisted fractional quantity drift");
+            var reverseRequest = new ReturnReversalRequest(Guid.NewGuid().ToString(), first.Guid, "Wrong return correction");
+            var reversal = store.Reverse(reverseRequest, "cashier", "desktop");
+            Check(reversal.Refund == -50000 && store.Reverse(reverseRequest, "cashier", "desktop") == reversal, "Reversal retry changed result");
+            Check(store.Quote(sale.Guid).Lines.Single().Returned == 2, "Reversal did not restore return capacity");
+            var reversalReceipt = db.SearchSalesByReceiptNumber("RV-" + reversal.Guid.Replace("-", "").ToUpperInvariant()).Single();
+            Check(SaleAccounting.Lines(reversalReceipt).Single().Profit == 10000, "Reversal profit mismatch");
+            try { store.Reverse(reverseRequest with { RequestGuid = Guid.NewGuid().ToString() }, "cashier", "desktop"); throw new Exception("Return reversed twice"); }
+            catch (ArgumentException) { }
+            var damaged = store.Commit(Request(1, false), "cashier", "desktop");
+            Check(damaged.CostReversal == 0 && SaleAccounting.Lines(db.SearchSalesByReceiptNumber(damaged.Guid).Single()).Single().Profit == -50000, "Damaged return cost counted twice");
+            store.Reverse(new ReturnReversalRequest(Guid.NewGuid().ToString(), damaged.Guid, "Damaged reversal"), "cashier", "desktop");
+            cmd.CommandText = "SELECT COALESCE(SUM(quantity),0) FROM return_quarantine";
+            Check(Convert.ToDouble(cmd.ExecuteScalar()) == 0, "Reversal left quarantine stock");
             Console.WriteLine("PASS return transaction: historical amounts, idempotency across restart, payload mismatch, concurrent overreturn protection, inventory, immutable original");
         }
         finally { SqliteConnection.ClearAllPools(); foreach (var suffix in new[] { "", "-wal", "-shm" }) if (File.Exists(path + suffix)) File.Delete(path + suffix); }

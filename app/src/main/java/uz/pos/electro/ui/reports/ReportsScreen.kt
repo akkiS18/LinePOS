@@ -44,10 +44,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -483,6 +485,7 @@ private fun SaleHistoryCard(
         uz.pos.electro.data.model.PaymentType.CASH -> "Naqd"
         uz.pos.electro.data.model.PaymentType.CARD -> "Karta"
         uz.pos.electro.data.model.PaymentType.SPLIT -> "Aralash"
+        uz.pos.electro.data.model.PaymentType.RETURN_REVERSAL -> "Qaytarishni bekor qilish"
         uz.pos.electro.data.model.PaymentType.RETURN -> "Qaytarish"
         uz.pos.electro.data.model.PaymentType.BRAK -> "⚠️ Brak"
     }
@@ -677,8 +680,8 @@ private fun SaleDetailDialog(
 
                 if (returnHistory.isNotBlank()) Text(returnHistory, style = MaterialTheme.typography.bodySmall)
                 if (saleWithItems.sale.paymentType != uz.pos.electro.data.model.PaymentType.BRAK &&
-                    saleWithItems.sale.paymentType != uz.pos.electro.data.model.PaymentType.RETURN) {
-                    Button(onClick = onReturn, modifier = Modifier.fillMaxWidth()) { Text("Qaytarish") }
+                    saleWithItems.sale.paymentType != uz.pos.electro.data.model.PaymentType.RETURN_REVERSAL) {
+                    Button(onClick = onReturn, modifier = Modifier.fillMaxWidth()) { Text(if (saleWithItems.sale.paymentType == uz.pos.electro.data.model.PaymentType.RETURN) "Qaytarishni bekor qilish" else "Qaytarish") }
                 }
                 Button(
                     onClick = onDismissRequest,

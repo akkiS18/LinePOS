@@ -157,7 +157,7 @@ class LocalSyncManager @Inject constructor(
             require(authority == metadata("server_id")) { "So'rov boshqa kompyuterga tegishli" }
             db().execSQL("UPDATE return_drafts SET state='submitted' WHERE sale_guid=?",arrayOf(saleGuid))
             try {
-                val reply = request(getServerUrl() ?: error("Mahalliy kompyuterga ulang"), "/api/v2/returns", draft.getJSONObject("payload"))
+                val reply = request(getServerUrl() ?: error("Mahalliy kompyuterga ulang"), if (draft.getJSONObject("payload").has("ReturnGuid")) "/api/v2/returns/reverse" else "/api/v2/returns", draft.getJSONObject("payload"))
                 db().execSQL("UPDATE return_drafts SET state='confirmed',result=? WHERE sale_guid=?",arrayOf(reply.toString(),saleGuid))
                 reply
             } catch (e: ReturnRejected) {
@@ -374,7 +374,7 @@ class LocalSyncManager @Inject constructor(
                 _hasConflict.value=true
                 throw PendingSyncConflict(reply.getString("error"))
             }
-            if (status == 400 && path == "/api/v2/returns") throw ReturnRejected(reply.optString("error", "Qaytarish rad etildi"))
+            if (status == 400 && path.startsWith("/api/v2/returns")) throw ReturnRejected(reply.optString("error", "Qaytarish rad etildi"))
             require(status in 200..299) { reply.optString("error","HTTP $status") }
             return reply
         } finally { conn.disconnect() }
@@ -420,6 +420,7 @@ class LocalSyncManager @Inject constructor(
                 PaymentType.SPLIT -> 2
                 PaymentType.BRAK -> 6
                 PaymentType.RETURN -> 7
+                PaymentType.RETURN_REVERSAL -> 8
             })
             put("CashAmount", sale.cashAmount)
             put("CardAmount", sale.cardAmount)
@@ -490,6 +491,7 @@ class LocalSyncManager @Inject constructor(
                 2 -> PaymentType.SPLIT
                 6 -> PaymentType.BRAK
                 7 -> PaymentType.RETURN
+                8 -> PaymentType.RETURN_REVERSAL
                 else -> PaymentType.CASH
             }
             is String -> when (raw.uppercase()) {
@@ -497,6 +499,7 @@ class LocalSyncManager @Inject constructor(
                 "SPLIT" -> PaymentType.SPLIT
                 "BRAK" -> PaymentType.BRAK
                 "RETURN" -> PaymentType.RETURN
+                "RETURN_REVERSAL" -> PaymentType.RETURN_REVERSAL
                 else -> PaymentType.CASH
             }
             else -> PaymentType.CASH

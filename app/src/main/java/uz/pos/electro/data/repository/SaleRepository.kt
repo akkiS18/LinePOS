@@ -71,7 +71,7 @@ class SaleRepository @Inject constructor(
                 costInUzs * item.quantity
             })
 
-            require(paymentType != PaymentType.RETURN) { "Qaytarish mahalliy kompyuter orqali tasdiqlanadi" }
+            require(paymentType != PaymentType.RETURN && paymentType != PaymentType.RETURN_REVERSAL) { "Qaytarish mahalliy kompyuter orqali tasdiqlanadi" }
             val paidCash = when (paymentType) { PaymentType.CASH -> totalAmount; PaymentType.BRAK -> 0.0; else -> SaleAccounting.money(cashAmount) }
             val paidCard = when (paymentType) { PaymentType.CARD -> totalAmount; PaymentType.BRAK -> 0.0; else -> SaleAccounting.money(cardAmount) }
             require(paymentType == PaymentType.BRAK || SaleAccounting.money(paidCash + paidCard) == totalAmount) { "To‘lov jami chek summasiga teng emas" }

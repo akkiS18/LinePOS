@@ -48,7 +48,7 @@ public static class SaleAccounting
                 SellingPrice = item.PriceAtSale, TotalPrice = revenue[index], TotalCost = cost[index],
                 TaxAmount = tax[index], CashAmount = cash[index], CardAmount = card[index], Profit = profit,
                 ProfitUsd = rate.HasValue ? profit / rate.Value : null, Timestamp = sale.CreatedAt,
-                IsReturn = sale.PaymentType == PaymentType.RETURN,
+                IsReturn = sale.PaymentType is PaymentType.RETURN or PaymentType.RETURN_REVERSAL,
                 IsBrak = sale.PaymentType == PaymentType.BRAK };
         }).ToList();
     }

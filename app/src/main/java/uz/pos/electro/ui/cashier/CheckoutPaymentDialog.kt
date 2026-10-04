@@ -70,7 +70,7 @@ fun CheckoutPaymentDialog(
             val card = cardInput.toDoubleOrNull() ?: 0.0
             card * (cardTaxRate / 100.0)
         }
-        PaymentType.RETURN, PaymentType.BRAK -> 0.0
+        PaymentType.RETURN, PaymentType.RETURN_REVERSAL, PaymentType.BRAK -> 0.0
     }
 
     AlertDialog(
@@ -162,7 +162,7 @@ fun CheckoutPaymentDialog(
                 Spacer(modifier = Modifier.height(14.dp))
 
                 when (selectedType) {
-                    PaymentType.CASH, PaymentType.RETURN, PaymentType.BRAK -> {
+                    PaymentType.CASH, PaymentType.RETURN, PaymentType.RETURN_REVERSAL, PaymentType.BRAK -> {
                         Surface(
                             shape = RoundedCornerShape(10.dp),
                             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -289,7 +289,7 @@ fun CheckoutPaymentDialog(
                             }
                             Pair(cashVal, cardVal)
                         }
-                        PaymentType.RETURN, PaymentType.BRAK -> Pair(0.0, 0.0)
+                        PaymentType.RETURN, PaymentType.RETURN_REVERSAL, PaymentType.BRAK -> Pair(0.0, 0.0)
                     }
 
                     val taxAmount = card * (cardTaxRate / 100.0)

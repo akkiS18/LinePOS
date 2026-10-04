@@ -18,6 +18,9 @@ import java.math.RoundingMode
 
 @Composable
 fun ReturnDialog(receipt: SaleWithItems, viewModel: ReportsViewModel, onDismiss: () -> Unit) {
+    if (receipt.sale.paymentType == uz.pos.electro.data.model.PaymentType.RETURN) {
+        ReturnReversalDialog(receipt, viewModel, onDismiss); return
+    }
     val scope = rememberCoroutineScope()
     val warehouses by viewModel.warehouses.collectAsState()
     var quote by remember { mutableStateOf<JSONObject?>(null) }
@@ -131,4 +134,42 @@ fun ReturnDialog(receipt: SaleWithItems, viewModel: ReportsViewModel, onDismiss:
             }
         }
     }
+}
+
+@Composable
+private fun ReturnReversalDialog(receipt: SaleWithItems, viewModel: ReportsViewModel, onDismiss: () -> Unit) {
+    val scope = rememberCoroutineScope()
+    var reason by remember { mutableStateOf("") }
+    var busy by remember { mutableStateOf(true) }
+    var submitted by remember { mutableStateOf(false) }
+    var result by remember { mutableStateOf<JSONObject?>(null) }
+    var message by remember { mutableStateOf("") }
+    var id by remember { mutableStateOf(java.util.UUID.randomUUID().toString()) }
+    LaunchedEffect(receipt.sale.guid) {
+        try { viewModel.returnSync.getReturnDraft(receipt.sale.guid)?.let {
+            reason = it.getJSONObject("payload").getString("Reason"); id = it.getJSONObject("payload").getString("RequestGuid")
+            submitted = it.getString("state") != "draft"; result = it.optJSONObject("result")
+        } } finally { busy = false }
+    }
+    AlertDialog(onDismissRequest = { if(!busy) onDismiss() }, title = { Text("Qaytarishni bekor qilish") },
+        text = { Column {
+            Text("Asl qaytarish o‘chirilmaydi. Pul va ombor ta’siri qarama-qarshi yozuv bilan tiklanadi. Bankdan avtomatik pul olinmaydi.")
+            Text(receipt.sale.receiptNumber)
+            if(result != null) Text("Saqlandi: RV-" + result!!.getString("Guid").replace("-", "").uppercase())
+            else OutlinedTextField(reason, { reason = it }, enabled = !busy && !submitted, label = { Text("Bekor qilish sababi") })
+            Text(message)
+        } },
+        confirmButton = { TextButton(enabled = !busy, onClick = {
+            busy = true
+            scope.launch { try {
+                if(result != null) { viewModel.returnSync.acknowledgeReturn(receipt.sale.guid); onDismiss() }
+                else {
+                    require(reason.isNotBlank()) { "Sababni kiriting" }
+                    if(!submitted) viewModel.returnSync.saveReturnDraft(JSONObject().put("RequestGuid", id).put("SaleGuid",receipt.sale.guid).put("ReturnGuid",receipt.sale.guid).put("Reason",reason))
+                    submitted = true; result = viewModel.returnSync.confirmReturn(receipt.sale.guid)
+                }
+            } catch(e: Exception) { message = e.message ?: "Natijani qayta tekshiring" }
+            finally { busy = false } }
+        }) { Text(if(result != null) "Tushunarli" else if(submitted) "Natijani tekshirish" else "Bekor qilishni tasdiqlash") } },
+        dismissButton = { TextButton(enabled = !busy, onClick = onDismiss) { Text("Yopish") } })
 }

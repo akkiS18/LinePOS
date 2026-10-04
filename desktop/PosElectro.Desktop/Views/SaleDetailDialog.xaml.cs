@@ -15,7 +15,8 @@ namespace PosElectro.Desktop.Views
             InitializeComponent();
             _sale = sale;
             _database = database;
-            BtnReturn.Visibility = database != null && (int)sale.PaymentType < 6 ? Visibility.Visible : Visibility.Collapsed;
+            if (sale.PaymentType == PaymentType.RETURN) BtnReturn.Content = "Bekor qilish";
+            BtnReturn.Visibility = database != null && ((int)sale.PaymentType < 6 || sale.PaymentType == PaymentType.RETURN) ? Visibility.Visible : Visibility.Collapsed;
             _printerService = printerService ?? new PrinterService();
 
             TxtTitle.Text = $"Chek #{sale.ReceiptNumber} Tafsilotlari";
@@ -82,7 +83,10 @@ namespace PosElectro.Desktop.Views
         private void BtnReturn_Click(object sender, RoutedEventArgs e)
         {
             if (_database == null) return;
-            try { new ReturnDialog(_database, _sale) { Owner = this }.ShowDialog(); }
+            try {
+                if (_sale.PaymentType == PaymentType.RETURN) new ReturnReversalDialog(_database, _sale) { Owner = this }.ShowDialog();
+                else new ReturnDialog(_database, _sale) { Owner = this }.ShowDialog();
+            }
             catch (System.Exception ex) { MessageBox.Show(this, ex.Message, "Qaytarish"); }
         }
 

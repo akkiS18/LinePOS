@@ -187,6 +187,11 @@ namespace PosElectro.Desktop.Services
                         if(path=="/api/v2/returns/quote" && request.Method=="POST")
                         { var saleGuid = WifiSyncStore.Required(JObject.Parse(request.Body), "SaleGuid");
                           await Reply(stream,200,JObject.FromObject(new ReturnStore(_db.DatabaseFilePath).Quote(saleGuid)),timeout.Token);return; }
+                        if(path=="/api/v2/returns/reverse" && request.Method=="POST")
+                        { var body=JsonConvert.DeserializeObject<ReturnReversalRequest>(request.Body) ?? throw new ArgumentException("So'rov yo'q");
+                          var result=new ReturnStore(_db.DatabaseFilePath).Reverse(body,deviceId,store.ServerId);
+                          try { DataSynced?.Invoke(); } catch { }
+                          await Reply(stream,200,JObject.FromObject(result),timeout.Token);return; }
                         if(path=="/api/v2/returns" && request.Method=="POST")
                         { var body = JsonConvert.DeserializeObject<ReturnRequest>(request.Body) ?? throw new ArgumentException("Qaytarish so'rovi yo'q");
                           var result = new ReturnStore(_db.DatabaseFilePath).Commit(body,deviceId,store.ServerId);

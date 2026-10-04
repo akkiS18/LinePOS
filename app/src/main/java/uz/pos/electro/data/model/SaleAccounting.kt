@@ -50,7 +50,7 @@ object SaleAccounting {
                 warehouseGuid = item.warehouseGuid, warehouseName = item.warehouseName.ifBlank { "Ombor noma’lum" },
                 receiptNumber = sale.receiptNumber, totalCost = cost[index], taxAmount = tax[index],
                 cashAmount = cash[index], cardAmount = card[index], profitUsd = rate?.let { profit / it },
-                isReturn = sale.paymentType == PaymentType.RETURN,
+                isReturn = sale.paymentType == PaymentType.RETURN || sale.paymentType == PaymentType.RETURN_REVERSAL,
                 isBrak = sale.paymentType == PaymentType.BRAK)
         }
     }
