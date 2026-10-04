@@ -95,8 +95,8 @@ namespace PosElectro.Desktop.Services
             <td colspan=""7"" class=""kpi-val"">" + totalCost.ToString("N0") + @" so'm</td>
         </tr>
         <tr>
-            <td colspan=""5"">Sof Foyda:</td>
-            <td colspan=""7"" class=""profit-val"">+" + netProfit.ToString("N0") + @" so'm</td>
+            <td colspan=""5"">Sof Foyda (karta solig‘idan keyin):</td>
+            <td colspan=""7"" class=""profit-val"">" + netProfit.ToString("N0") + @" so'm</td>
         </tr>
         <tr>
             <td colspan=""5"">Rentabellik (Marja):</td>
@@ -137,7 +137,7 @@ namespace PosElectro.Desktop.Services
         <tr>
             <td class=""center"">{i + 1}</td>
             <td>{item.DateTime:dd.MM.yyyy HH:mm}</td>
-            <td class=""center"">#{item.SaleId}</td>
+            <td class=""center"">#{item.ReceiptNumber}</td>
             <td>{whLabel}</td>
             <td>{item.Category}</td>
             <td><b>{item.ProductName}</b></td>
@@ -146,7 +146,7 @@ namespace PosElectro.Desktop.Services
             <td class=""num"">{costLabel}</td>
             <td class=""num"">{item.SellingPrice:N0}</td>
             <td class=""num""><b>{item.TotalPrice:N0}</b></td>
-            <td class=""num"" style=""color:#10B981;""><b>+{item.Profit:N0}</b></td>
+            <td class=""num"" style=""color:#10B981;""><b>{item.Profit:N2}</b></td>
         </tr>");
                 }
 

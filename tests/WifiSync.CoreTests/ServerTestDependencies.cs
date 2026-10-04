@@ -11,4 +11,4 @@ namespace PosElectro.Desktop.Data {
     }
 }
 namespace PosElectro.Desktop.Services { public sealed class CurrencyService { public double GetCachedUsdRate()=>12850; } }
-namespace PosElectro.Desktop.Models { public sealed class Product { } public sealed class Sale { } public sealed class Warehouse { } }
+namespace PosElectro.Desktop.Models { public sealed class Product { } public sealed class Warehouse { } }

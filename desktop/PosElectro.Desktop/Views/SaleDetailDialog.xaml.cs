@@ -15,7 +15,7 @@ namespace PosElectro.Desktop.Views
             _sale = sale;
             _printerService = printerService ?? new PrinterService();
 
-            TxtTitle.Text = $"Chek #{sale.Id} Tafsilotlari";
+            TxtTitle.Text = $"Chek #{sale.ReceiptNumber} Tafsilotlari";
             TxtDate.Text = sale.CreatedDateTime.ToString("dd.MM.yyyy HH:mm");
             TxtTotalAmount.Text = $"{sale.TotalAmount:N0} SO'M";
             TxtTotalProfit.Text = $"+{sale.Profit:N0} SO'M";

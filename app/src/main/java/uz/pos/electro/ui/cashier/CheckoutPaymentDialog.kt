@@ -52,6 +52,7 @@ import java.util.Locale
 @Composable
 fun CheckoutPaymentDialog(
     totalAmount: Double,
+    isSubmitting: Boolean = false,
     cardTaxRate: Double,
     onDismissRequest: () -> Unit,
     onConfirmSale: (paymentType: PaymentType, cashAmount: Double, cardAmount: Double, taxAmount: Double, taxRate: Double) -> Unit
@@ -270,6 +271,7 @@ fun CheckoutPaymentDialog(
         },
         confirmButton = {
             Button(
+                enabled = !isSubmitting,
                 onClick = {
                     val (cash, card) = when (selectedType) {
                         PaymentType.CASH -> Pair(totalAmount, 0.0)
@@ -296,7 +298,7 @@ fun CheckoutPaymentDialog(
                 shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = LineSecondary)
             ) {
-                Text("Tasdiqlash va Sotish", fontWeight = FontWeight.Bold)
+                Text(if (isSubmitting) "Saqlanmoqda…" else "Tasdiqlash va Sotish", fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {

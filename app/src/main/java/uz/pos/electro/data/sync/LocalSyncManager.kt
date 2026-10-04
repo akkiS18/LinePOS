@@ -346,6 +346,7 @@ class LocalSyncManager @Inject constructor(
             put("Guid", sale.guid)
             put("TotalAmount", sale.totalAmount)
             put("TotalCost", sale.totalCost)
+            put("UsdRate", sale.usdRate)
             put("PaymentType", when (sale.paymentType) {
                 PaymentType.CASH -> 0
                 PaymentType.CARD -> 1
@@ -369,6 +370,8 @@ class LocalSyncManager @Inject constructor(
                     put("ProductId", item.productId)
                     put("ProductGuid", item.productGuid)
                     put("ProductName", item.productName)
+                    put("CategoryAtSale", item.categoryAtSale)
+                    put("UnitAtSale", item.unitAtSale)
                     put("Quantity", item.quantity)
                     put("PriceAtSale", item.priceAtSale)
                     put("CostAtSale", item.costAtSale)
@@ -432,6 +435,7 @@ class LocalSyncManager @Inject constructor(
             guid = sJson.optString("Guid", java.util.UUID.randomUUID().toString()),
             totalAmount = sJson.optDouble("TotalAmount", 0.0),
             totalCost = sJson.optDouble("TotalCost", 0.0),
+            usdRate = sJson.optDouble("UsdRate", 0.0),
             paymentType = paymentType,
             cashAmount = sJson.optDouble("CashAmount", 0.0),
             cardAmount = sJson.optDouble("CardAmount", 0.0),
@@ -461,6 +465,8 @@ class LocalSyncManager @Inject constructor(
                     productId = localProdId,
                     productGuid = pGuid,
                     productName = pName,
+                    categoryAtSale = iJson.optString("CategoryAtSale", ""),
+                    unitAtSale = iJson.optString("UnitAtSale", ""),
                     quantity = iJson.optDouble("Quantity", 1.0),
                     priceAtSale = iJson.optDouble("PriceAtSale", 0.0),
                     costAtSale = iJson.optDouble("CostAtSale", 0.0),

@@ -100,6 +100,7 @@ fun CashierScreen(
     val searchResults by viewModel.searchResults.collectAsState()
     val selectedItemIndex by viewModel.selectedCartItemIndex.collectAsState()
     val completedSale by viewModel.lastCompletedSale.collectAsState()
+    val isCompletingSale by viewModel.isCompletingSale.collectAsState()
     val isCheckoutDialogVisible by viewModel.isCheckoutDialogVisible.collectAsState()
     val cardTaxRate by viewModel.cardTaxRate.collectAsState()
 
@@ -591,6 +592,7 @@ fun CashierScreen(
         // To'lov turini tanlash dialogi (Naqd, Karta, Aralash)
         if (isCheckoutDialogVisible) {
             CheckoutPaymentDialog(
+                isSubmitting = isCompletingSale,
                 totalAmount = viewModel.totalAmount,
                 cardTaxRate = cardTaxRate,
                 onDismissRequest = { viewModel.closeCheckoutDialog() },

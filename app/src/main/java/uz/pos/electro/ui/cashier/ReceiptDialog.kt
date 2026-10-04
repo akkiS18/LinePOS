@@ -77,7 +77,7 @@ fun ReceiptDialog(
                 )
 
                 Text(
-                    text = "Savdo Cheki #${state.saleId}",
+                    text = "Savdo Cheki #${state.receiptNumber}",
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

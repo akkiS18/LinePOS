@@ -42,6 +42,12 @@ data class SaleItemEntity(
     @ColumnInfo(name = "product_name", defaultValue = "''")
     val productName: String = "",
 
+    @ColumnInfo(name = "category_at_sale", defaultValue = "''")
+    val categoryAtSale: String = "",
+
+    @ColumnInfo(name = "unit_at_sale", defaultValue = "''")
+    val unitAtSale: String = "",
+
     @ColumnInfo(name = "quantity")
     val quantity: Double,
 

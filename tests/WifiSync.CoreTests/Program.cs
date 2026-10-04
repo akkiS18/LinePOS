@@ -1,8 +1,10 @@
+using PosElectro.Desktop.Models;
 using Microsoft.Data.Sqlite;
 using Newtonsoft.Json.Linq;
 using PosElectro.Desktop.Sync;
 using System.Text;
 
+AccountingTests.Run();
 int passed=0;
 void Test(string name,Action run){run();passed++;Console.WriteLine("PASS "+name);}
 void Assert(bool ok,string message){if(!ok)throw new Exception(message);}
@@ -16,8 +18,8 @@ try {
     CREATE TABLE products(id INTEGER PRIMARY KEY AUTOINCREMENT,guid TEXT UNIQUE NOT NULL,barcode TEXT UNIQUE,name TEXT NOT NULL,category TEXT NOT NULL,cost_price REAL NOT NULL,cost_currency TEXT NOT NULL,selling_price REAL NOT NULL,selling_price_2 REAL,stock_quantity REAL NOT NULL,unit_type INTEGER NOT NULL,min_stock_alert REAL NOT NULL,is_deleted INTEGER NOT NULL,note TEXT,updated_at INTEGER NOT NULL);
     CREATE TABLE warehouses(id INTEGER PRIMARY KEY AUTOINCREMENT,guid TEXT UNIQUE NOT NULL,name TEXT NOT NULL,is_primary INTEGER NOT NULL,is_deleted INTEGER NOT NULL,updated_at INTEGER NOT NULL);
     CREATE TABLE product_stocks(id INTEGER PRIMARY KEY AUTOINCREMENT,product_guid TEXT NOT NULL,warehouse_guid TEXT NOT NULL,quantity REAL NOT NULL,updated_at INTEGER NOT NULL,UNIQUE(product_guid,warehouse_guid));
-    CREATE TABLE sales(id INTEGER PRIMARY KEY AUTOINCREMENT,guid TEXT UNIQUE NOT NULL,total_amount REAL,total_cost REAL,payment_type INTEGER,cash_amount REAL,card_amount REAL,tax_amount REAL,tax_rate REAL,created_at INTEGER,user_id INTEGER,is_synced INTEGER);
-    CREATE TABLE sale_items(id INTEGER PRIMARY KEY AUTOINCREMENT,sale_id INTEGER NOT NULL REFERENCES sales(id),sale_guid TEXT,product_id INTEGER,product_guid TEXT,product_name TEXT,quantity REAL,price_at_sale REAL,cost_at_sale REAL,cost_currency TEXT,warehouse_guid TEXT,warehouse_name TEXT);
+    CREATE TABLE sales(id INTEGER PRIMARY KEY AUTOINCREMENT,guid TEXT UNIQUE NOT NULL,total_amount REAL,total_cost REAL,payment_type INTEGER,cash_amount REAL,card_amount REAL,tax_amount REAL,tax_rate REAL,created_at INTEGER,user_id INTEGER,is_synced INTEGER,usd_rate REAL NOT NULL DEFAULT 0);
+    CREATE TABLE sale_items(id INTEGER PRIMARY KEY AUTOINCREMENT,sale_id INTEGER NOT NULL REFERENCES sales(id),sale_guid TEXT,product_id INTEGER,product_guid TEXT,product_name TEXT,quantity REAL,price_at_sale REAL,cost_at_sale REAL,cost_currency TEXT,warehouse_guid TEXT,warehouse_name TEXT,category_at_sale TEXT NOT NULL DEFAULT '',unit_at_sale TEXT NOT NULL DEFAULT '');
     INSERT INTO products VALUES(1,'p',NULL,'Кабель','Barchasi',5,'UZS',10,NULL,10,0,3,0,'',1);
     INSERT INTO warehouses VALUES(1,'w','Asosiy',1,0,1),(2,'w2','Ikkinchi',0,0,1);
     INSERT INTO product_stocks VALUES(1,'p','w',10,1);

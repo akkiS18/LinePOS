@@ -33,7 +33,7 @@ import uz.pos.electro.data.local.entity.WarehouseEntity
         WarehouseEntity::class,
         ProductStockEntity::class
     ],
-    version = 11,
+    version = 12,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -176,8 +176,8 @@ abstract class AppDatabase : RoomDatabase() {
         fun databaseName(context: Context): String =
             if (context.packageName.endsWith(".test")) "electro_pos_test.db" else DATABASE_NAME
 
-        fun buildDatabase(context: Context, scope: CoroutineScope): AppDatabase {
-            val dbName = databaseName(context)
+        fun buildDatabase(context: Context, scope: CoroutineScope, nameOverride: String? = null): AppDatabase {
+            val dbName = nameOverride ?: databaseName(context)
             return Room.databaseBuilder(
                 context.applicationContext,
                 AppDatabase::class.java,
@@ -187,6 +187,13 @@ abstract class AppDatabase : RoomDatabase() {
             .addMigrations(object : Migration(10, 11) {
                 override fun migrate(db: SupportSQLiteDatabase) {
                     uz.pos.electro.data.sync.WifiSyncSchema.install(db, context.assets.open("wifi-sync-schema.sql").bufferedReader().use { it.readText() })
+                }
+            })
+            .addMigrations(object : Migration(11, 12) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE sales ADD COLUMN usd_rate REAL NOT NULL DEFAULT 0.0")
+                    db.execSQL("ALTER TABLE sale_items ADD COLUMN category_at_sale TEXT NOT NULL DEFAULT ''")
+                    db.execSQL("ALTER TABLE sale_items ADD COLUMN unit_at_sale TEXT NOT NULL DEFAULT ''")
                 }
             })
             .addCallback(object : Callback() {

@@ -99,12 +99,9 @@ fun ReportsScreen(
     val isExportModalOpen by viewModel.isExportModalOpen.collectAsState()
 
     // Chek raqami bo'yicha qidiruv
-    var searchQuery by remember { androidx.compose.runtime.mutableStateOf("") }
-
-    val filteredSales = remember(salesList, searchQuery) {
-        if (searchQuery.isBlank()) salesList
-        else salesList.filter { it.sale.id.toString().contains(searchQuery.trim()) }
-    }
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val recordKind by viewModel.recordKind.collectAsState()
+    val filteredSales = salesList
 
     val infiniteTransition = rememberInfiniteTransition(label = "refreshRotation")
     val refreshRotation by infiniteTransition.animateFloat(
@@ -216,6 +213,16 @@ fun ReportsScreen(
 
             Spacer(modifier = Modifier.height(14.dp))
 
+            Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("Barchasi", "Savdo", "Brak").forEach { kind ->
+                    FilterChip(selected = recordKind == kind, onClick = { viewModel.setRecordKind(kind) }, label = { Text(kind) })
+                }
+            }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ReportChoice("Kategoriya", selectedCategory, categories.map { it to it }, viewModel::setCategoryFilter)
+                ReportChoice("Ombor", selectedWarehouseGuid, listOf("Barchasi" to "Barchasi") + warehouses.map { it.guid to it.name }, viewModel::setWarehouseFilter)
+            }
+            Text("Brak: ${summary.brakCount} ta • Tannarx: ${numberFormat.format(summary.brakCost)} so‘m", style = MaterialTheme.typography.bodySmall)
             // 2. Moliyaviy KPI Ko'rsatkichlari (Apple Rounded Cards)
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(
@@ -233,7 +240,7 @@ fun ReportsScreen(
                     )
 
                     // SOF FOYDA (So'mda va Dollarda)
-                    val formattedUsdProfit = String.format(Locale.US, "%.2f", summary.netProfitUsd)
+                    val formattedUsdProfit = if (summary.usdComplete) String.format(Locale.US, "%.2f", summary.netProfitUsd) else "— (eski kurs yo‘q)"
                     val taxSubtitle = if (summary.totalTaxAmount > 0) "Karta solig'i: -${numberFormat.format(summary.totalTaxAmount)}" else null
                     val fullSubtitle = if (taxSubtitle != null) "($${formattedUsdProfit}) • $taxSubtitle" else "($${formattedUsdProfit})"
                     val profitIsNegative = summary.netProfit < 0
@@ -308,7 +315,7 @@ fun ReportsScreen(
             // Chek raqami bo'yicha qidiruv
             androidx.compose.material3.OutlinedTextField(
                 value = searchQuery,
-                onValueChange = { searchQuery = it },
+                onValueChange = { viewModel.setSearchQuery(it) },
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = { Text("Chek № bo'yicha qidirish...", fontSize = 14.sp) },
                 leadingIcon = {
@@ -321,7 +328,7 @@ fun ReportsScreen(
                 },
                 trailingIcon = if (searchQuery.isNotEmpty()) {
                     {
-                        IconButton(onClick = { searchQuery = "" }) {
+                        IconButton(onClick = { viewModel.setSearchQuery("") }) {
                             Icon(Icons.Default.Close, contentDescription = "Tozalash")
                         }
                     }
@@ -329,7 +336,7 @@ fun ReportsScreen(
                 singleLine = true,
                 shape = RoundedCornerShape(14.dp),
                 keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Text
                 )
             )
 
@@ -489,7 +496,7 @@ private fun SaleHistoryCard(
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "Chek #${saleWithItems.sale.id}",
+                        text = "Chek #${saleWithItems.sale.receiptNumber}",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -573,7 +580,7 @@ private fun SaleDetailDialog(
                     .padding(20.dp)
             ) {
                 Text(
-                    text = "Chek #${saleWithItems.sale.id} Tafsilotlari",
+                    text = "Chek #${saleWithItems.sale.receiptNumber} Tafsilotlari",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
@@ -603,7 +610,7 @@ private fun SaleDetailDialog(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Mahsulot #${item.productId}",
+                                    text = item.productName.ifBlank { "Mahsulot #${item.productId}" },
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -952,6 +959,21 @@ fun ExportReportDialog(
                         Text("Yuklab olish (.xls)", fontWeight = FontWeight.Bold)
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReportChoice(label: String, selected: String, choices: List<Pair<String, String>>, onSelect: (String) -> Unit) {
+    var expanded by remember { androidx.compose.runtime.mutableStateOf(false) }
+    Box {
+        androidx.compose.material3.TextButton(onClick = { expanded = true }) {
+            Text("$label: ${choices.firstOrNull { it.first == selected }?.second ?: selected}", maxLines = 1)
+        }
+        androidx.compose.material3.DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            choices.forEach { (value, title) ->
+                androidx.compose.material3.DropdownMenuItem(text = { Text(title) }, onClick = { expanded = false; onSelect(value) })
             }
         }
     }

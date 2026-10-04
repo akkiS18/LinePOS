@@ -20,6 +20,12 @@ namespace PosElectro.Desktop.ViewModels
 
     public class ReportsViewModel : ViewModelBase
     {
+        private List<SaleReportItem> _reportLines = new();
+        public string[] RecordKinds { get; } = { "Barchasi", "Savdo", "Brak" };
+        private string _selectedRecordKind = "Barchasi";
+        public string SelectedRecordKind { get => _selectedRecordKind; set { if (SetProperty(ref _selectedRecordKind, value)) LoadData(); } }
+        private bool KindMatches(bool brak) => SelectedRecordKind == "Barchasi" || (SelectedRecordKind == "Brak" ? brak : !brak);
+        public string BrakSummary => $"Brak: {_reportLines.Where(i => i.IsBrak).Select(i => i.SaleId).Distinct().Count()} ta • Tannarx: {_reportLines.Where(i => i.IsBrak).Sum(i => i.TotalCost):N2} so‘m";
         private readonly DatabaseContext _db;
         private readonly CurrencyService _currencyService;
 
@@ -214,7 +220,7 @@ namespace PosElectro.Desktop.ViewModels
             Categories.Add("Barchasi");
             var prods = _db.GetAllProducts();
             var cats = prods.Select(p => p.Category).Where(c => !string.IsNullOrWhiteSpace(c) && c != "Barchasi").Distinct().OrderBy(c => c);
-            foreach (var c in cats) Categories.Add(c);
+            foreach (var c in cats.Concat(_db.GetHistoricalCategories()).Distinct().OrderBy(c => c)) Categories.Add(c);
             _selectedCategory = Categories.Contains(curCat) ? curCat : "Barchasi";
             OnPropertyChanged(nameof(SelectedCategory));
 
@@ -298,19 +304,15 @@ namespace PosElectro.Desktop.ViewModels
         }
 
         // --- 4 TA KPI KO'RSATKICHI (Mobil ilova bilan 100% bir xil) ---
-        public double TotalRevenue => Sales.Sum(s => s.TotalAmount);
-        public double TotalCashRevenue => Sales.Sum(s => s.CashAmount);
-        public double TotalCardRevenue => Sales.Sum(s => s.CardAmount);
-        public double TotalTaxAmount => Sales.Sum(s => s.TaxAmount);
-
-        public double TotalCost => Sales.Sum(s => s.Items != null && s.Items.Count > 0
-            ? s.Items.Sum(i => (i.CostCurrency == "USD" ? i.CostAtSale * UsdRate : i.CostAtSale) * i.Quantity)
-            : s.TotalCost);
-
-        public double TotalProfit => (TotalRevenue - TotalTaxAmount) - TotalCost;
-        public double TotalProfitUsd => UsdRate > 0 ? TotalProfit / UsdRate : 0.0;
-        public int TotalSalesCount => Sales.Count;
-        public double TotalItemsCount => Sales.Sum(s => s.Items?.Sum(i => i.Quantity) ?? 0.0);
+        public double TotalRevenue => _reportLines.Sum(i => i.TotalPrice);
+        public double TotalCashRevenue => _reportLines.Sum(i => i.CashAmount);
+        public double TotalCardRevenue => _reportLines.Sum(i => i.CardAmount);
+        public double TotalTaxAmount => _reportLines.Sum(i => i.TaxAmount);
+        public double TotalCost => _reportLines.Sum(i => i.TotalCost);
+        public double TotalProfit => _reportLines.Sum(i => i.Profit);
+        public double TotalProfitUsd => _reportLines.Sum(i => i.ProfitUsd ?? 0);
+        public int TotalSalesCount => _reportLines.Where(i => !i.IsBrak).Select(i => i.SaleId).Distinct().Count();
+        public double TotalItemsCount => _reportLines.Where(i => !i.IsBrak).Sum(i => i.Quantity);
 
         public string TotalRevenueText => $"{TotalRevenue:N0} so'm";
         public string TotalCashRevenueText => $"{TotalCashRevenue:N0} so'm";
@@ -319,7 +321,7 @@ namespace PosElectro.Desktop.ViewModels
         public string TotalProfitText => TotalProfit < 0
             ? $"{TotalProfit:N0} so'm"
             : $"+{TotalProfit:N0} so'm";
-        public string TotalProfitUsdText => $"(${TotalProfitUsd:N2})";
+        public string TotalProfitUsdText => _reportLines.All(i => i.ProfitUsd.HasValue) ? $"(${TotalProfitUsd:N2})" : "$ — (eski kurs yo‘q)";
         public bool IsProfitNegative => TotalProfit < 0;
         public string TotalSalesCountText => $"{TotalSalesCount} ta chek";
         public string TotalItemsCountText => $"{TotalItemsCount:0.##} ta/m";
@@ -396,31 +398,19 @@ namespace PosElectro.Desktop.ViewModels
             string? catFilter = (SelectedCategory == "Barchasi") ? null : SelectedCategory;
             string? whGuidFilter = (_selectedWarehouse == null || _selectedWarehouse.Guid == "all") ? null : _selectedWarehouse.Guid;
 
-            var allProds = _db.GetAllProducts(includeDeleted: true).ToDictionary(p => p.Id, p => p);
-
-            foreach (var s in rawSales)
-            {
-                if (catFilter == null && whGuidFilter == null)
-                {
-                    Sales.Add(s);
-                }
-                else
-                {
-                    bool match = s.Items.Any(item =>
-                    {
-                        bool catMatch = catFilter == null || (allProds.TryGetValue(item.ProductId, out var prod) && string.Equals(prod.Category, catFilter, StringComparison.OrdinalIgnoreCase));
-                        bool whMatch = whGuidFilter == null || item.WarehouseGuid == whGuidFilter;
-                        return catMatch && whMatch;
-                    });
-                    if (match) Sales.Add(s);
-                }
-            }
+            _reportLines = rawSales.SelectMany(SaleAccounting.Lines).Where(item =>
+                KindMatches(item.IsBrak) &&
+                (catFilter == null || string.Equals(item.Category, catFilter, StringComparison.OrdinalIgnoreCase)) &&
+                (whGuidFilter == null || item.WarehouseGuid == whGuidFilter)).ToList();
+            var ids = _reportLines.Select(i => i.SaleId).ToHashSet();
+            foreach (var sale in rawSales.Where(s => ids.Contains(s.Id))) Sales.Add(sale);
 
             RecalculateSummary();
         }
 
         public void RecalculateSummary()
         {
+            OnPropertyChanged(nameof(BrakSummary));
             OnPropertyChanged(nameof(TotalRevenue));
             OnPropertyChanged(nameof(TotalCost));
             OnPropertyChanged(nameof(TotalProfit));
@@ -485,7 +475,8 @@ namespace PosElectro.Desktop.ViewModels
             string? whGuidFilter = (ExportSelectedWarehouse == null || ExportSelectedWarehouse.Guid == "all") ? null : ExportSelectedWarehouse.Guid;
             string whTitle = ExportSelectedWarehouse?.Name ?? "Barcha omborlar";
 
-            var detailedItems = _db.GetDetailedReportItems(start, end, UsdRate, catFilter, whGuidFilter);
+            var detailedItems = _db.GetDetailedReportItems(start, end, UsdRate, catFilter, whGuidFilter).Where(i => KindMatches(i.IsBrak)).ToList();
+            periodTitle += " | " + SelectedRecordKind;
 
             double rev = 0;
             double cost = 0;
@@ -493,13 +484,14 @@ namespace PosElectro.Desktop.ViewModels
             foreach (var it in detailedItems)
             {
                 rev += it.TotalPrice;
-                cost += it.CostPrice * it.Quantity;
+                cost += it.TotalCost;
                 prof += it.Profit;
             }
 
-            var rawSales = _db.GetSales(start, end);
-            int salesCount = rawSales.Count;
+            int salesCount = detailedItems.Where(i => !i.IsBrak).Select(i => i.SaleId).Distinct().Count();
 
+            periodTitle += $" | Brak: {detailedItems.Where(i => i.IsBrak).Select(i => i.SaleId).Distinct().Count()} ta, {detailedItems.Where(i => i.IsBrak).Sum(i => i.TotalCost):N2} so‘m";
+            periodTitle += detailedItems.All(i => i.ProfitUsd.HasValue) ? $" | USD foyda: ${detailedItems.Sum(i => i.ProfitUsd ?? 0):N2}" : " | USD foyda: noma’lum (eski kurs saqlanmagan)";
             bool exported = ExcelExportService.ExportReport(periodTitle, rev, cost, prof, salesCount, detailedItems, catFilter, whTitle);
             if (exported)
             {

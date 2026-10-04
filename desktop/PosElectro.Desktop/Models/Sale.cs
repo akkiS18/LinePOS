@@ -7,6 +7,8 @@ namespace PosElectro.Desktop.Models
     {
         public long Id { get; set; }
         public string Guid { get; set; } = System.Guid.NewGuid().ToString();
+        public string ReceiptNumber => "LP-" + Guid.Replace("-", "").ToUpperInvariant();
+        public double UsdRate { get; set; }
         public double TotalAmount { get; set; }
         public double TotalCost { get; set; }
         public PaymentType PaymentType { get; set; } = PaymentType.CASH;
@@ -45,6 +47,8 @@ namespace PosElectro.Desktop.Models
         public long ProductId { get; set; }
         public string ProductGuid { get; set; } = string.Empty;
         public string ProductName { get; set; } = string.Empty;
+        public string CategoryAtSale { get; set; } = string.Empty;
+        public string UnitAtSale { get; set; } = string.Empty;
         public double Quantity { get; set; }
         public double PriceAtSale { get; set; }
         public double CostAtSale { get; set; }

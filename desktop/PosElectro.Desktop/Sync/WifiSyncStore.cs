@@ -34,7 +34,7 @@ public sealed class WifiSyncStore
     { var cmd=db.CreateCommand(); cmd.Transaction=tx; cmd.CommandText=sql; foreach(var (key,value) in args)cmd.Parameters.AddWithValue(key,value??DBNull.Value); return cmd; }
     public static readonly Dictionary<string,string> Fields = new()
     {
-        ["id"]="Id",["guid"]="Guid",["barcode"]="Barcode",["name"]="Name",["category"]="Category",["cost_price"]="CostPrice",["cost_currency"]="CostCurrency",["selling_price"]="SellingPrice",["selling_price_2"]="SellingPrice2",["stock_quantity"]="StockQuantity",["unit_type"]="UnitType",["min_stock_alert"]="MinStockAlert",["is_deleted"]="IsDeleted",["note"]="Note",["updated_at"]="UpdatedAt",["is_primary"]="IsPrimary",["product_guid"]="ProductGuid",["warehouse_guid"]="WarehouseGuid",["quantity"]="Quantity",["sale_id"]="SaleId",["sale_guid"]="SaleGuid",["product_id"]="ProductId",["product_name"]="ProductName",["price_at_sale"]="PriceAtSale",["cost_at_sale"]="CostAtSale",["warehouse_name"]="WarehouseName",["total_amount"]="TotalAmount",["total_cost"]="TotalCost",["payment_type"]="PaymentType",["cash_amount"]="CashAmount",["card_amount"]="CardAmount",["tax_amount"]="TaxAmount",["tax_rate"]="TaxRate",["created_at"]="CreatedAt",["user_id"]="UserId",["is_synced"]="IsSynced"
+        ["id"]="Id",["guid"]="Guid",["barcode"]="Barcode",["name"]="Name",["category"]="Category",["cost_price"]="CostPrice",["cost_currency"]="CostCurrency",["selling_price"]="SellingPrice",["selling_price_2"]="SellingPrice2",["stock_quantity"]="StockQuantity",["unit_type"]="UnitType",["min_stock_alert"]="MinStockAlert",["is_deleted"]="IsDeleted",["note"]="Note",["updated_at"]="UpdatedAt",["is_primary"]="IsPrimary",["product_guid"]="ProductGuid",["warehouse_guid"]="WarehouseGuid",["quantity"]="Quantity",["sale_id"]="SaleId",["sale_guid"]="SaleGuid",["product_id"]="ProductId",["product_name"]="ProductName",["price_at_sale"]="PriceAtSale",["cost_at_sale"]="CostAtSale",["warehouse_name"]="WarehouseName",["total_amount"]="TotalAmount",["total_cost"]="TotalCost",["usd_rate"]="UsdRate",["category_at_sale"]="CategoryAtSale",["unit_at_sale"]="UnitAtSale",["payment_type"]="PaymentType",["cash_amount"]="CashAmount",["card_amount"]="CardAmount",["tax_amount"]="TaxAmount",["tax_rate"]="TaxRate",["created_at"]="CreatedAt",["user_id"]="UserId",["is_synced"]="IsSynced"
     };
     private static JArray Rows(SqliteConnection db, SqliteTransaction tx, string sql, params (string,object?)[] args)
     {
@@ -121,8 +121,8 @@ public sealed class WifiSyncStore
     {
         if((string?)data["Guid"]!=guid)throw new ArgumentException("Chek GUIDsi mos emas.");
         if(Scalar(db,tx,"SELECT 1 FROM sales WHERE guid=@guid",("@guid",guid))!=null)return;
-        var columns=new[]{"guid","total_amount","total_cost","payment_type","cash_amount","card_amount","tax_amount","tax_rate","created_at"};
-        Exec(db,tx,$"INSERT INTO sales({string.Join(",",columns)},user_id,is_synced) VALUES({string.Join(",",columns.Select(c=>"@"+c))},1,1)",columns.Select(c=>("@"+c,Value(data,Fields[c]))).ToArray());
+        var columns=new[]{"guid","total_amount","total_cost","payment_type","cash_amount","card_amount","tax_amount","tax_rate","created_at","usd_rate"};
+        Exec(db,tx,$"INSERT INTO sales({string.Join(",",columns)},user_id,is_synced) VALUES({string.Join(",",columns.Select(c=>"@"+c))},1,1)",columns.Select(c=>("@"+c,Value(data,Fields[c]) ?? (c=="usd_rate" ? (object)0.0 : null))).ToArray());
         long saleId=Convert.ToInt64(Scalar(db,tx,"SELECT last_insert_rowid()"));
         var items=data["Items"] as JArray??throw new ArgumentException("Chek tovarlari yo'q.");
         if(items.Count==0)throw new ArgumentException("Bo'sh chek.");
@@ -130,8 +130,8 @@ public sealed class WifiSyncStore
         {
             var product=Required(item,"ProductGuid"); double qty=(double?)item["Quantity"]??0; if(!double.IsFinite(qty)||qty<=0)throw new ArgumentException("Savdo miqdori noto'g'ri.");
             var productId=Scalar(db,tx,"SELECT id FROM products WHERE guid=@guid",("@guid",product))??throw new ArgumentException("Chekdagi tovar topilmadi.");
-            var itemColumns=new[]{"product_guid","product_name","quantity","price_at_sale","cost_at_sale","cost_currency","warehouse_guid","warehouse_name"};
-            var args=itemColumns.Select(c=>("@"+c,Value(item,Fields[c]))).Concat(new[]{("@sale",(object?)saleId),("@sg",guid),("@pid",productId)}).ToArray();
+            var itemColumns=new[]{"product_guid","product_name","quantity","price_at_sale","cost_at_sale","cost_currency","warehouse_guid","warehouse_name","category_at_sale","unit_at_sale"};
+            var args=itemColumns.Select(c=>("@"+c,Value(item,Fields[c]) ?? (c is "category_at_sale" or "unit_at_sale" ? (object)"" : null))).Concat(new[]{("@sale",(object?)saleId),("@sg",guid),("@pid",productId)}).ToArray();
             Exec(db,tx,$"INSERT INTO sale_items(sale_id,sale_guid,product_id,{string.Join(",",itemColumns)}) VALUES(@sale,@sg,@pid,{string.Join(",",itemColumns.Select(c=>"@"+c))})",args);
             if(legacy) { Stock(db,tx,product,(string?)item["WarehouseGuid"] is {Length:>0} wh?wh:"main-default-warehouse",-qty); Exec(db,tx,"INSERT INTO sync_journal(op_id,kind,entity_guid,acked) VALUES(lower(hex(randomblob(16))),'stock',@guid,1)",("@guid",product)); }
         }
