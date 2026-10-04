@@ -35,6 +35,10 @@ public sealed class ReturnStore
     public void Install()
     {
         using var c = Open(); using var tx = c.BeginTransaction();
+        using var schema = typeof(ReturnStore).Assembly.GetManifestResourceStream("WifiSyncSchema")
+            ?? throw new InvalidOperationException("Sinxron sxemasi topilmadi");
+        using var schemaReader = new System.IO.StreamReader(schema);
+        foreach (var statement in schemaReader.ReadToEnd().Split("-- statement")) Exec(c, tx, statement);
         Exec(c, tx, @"
 CREATE TABLE IF NOT EXISTS returns (
  guid TEXT PRIMARY KEY, sale_guid TEXT NOT NULL, created_at INTEGER NOT NULL,
