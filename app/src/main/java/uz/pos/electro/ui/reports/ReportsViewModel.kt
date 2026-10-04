@@ -107,15 +107,15 @@ class ReportsViewModel @Inject constructor(
     private var rangeEnd = Long.MAX_VALUE
     fun setSearchQuery(value: String) { _searchQuery.value = value; loadCustomReportData(rangeStart, rangeEnd) }
     fun setRecordKind(value: String) { _recordKind.value = value; applyFilters() }
-    private fun kindMatches(brak: Boolean) = when (_recordKind.value) {
-        "Savdo" -> !brak; "Brak" -> brak; else -> true
+    private fun kindMatches(item: uz.pos.electro.data.model.SaleReportItem) = when (_recordKind.value) {
+        "Savdo" -> !item.isBrak && !item.isReturn; "Brak" -> item.isBrak; "Qaytarish" -> item.isReturn; else -> true
     }
     private fun applyFilters() {
         val query = _searchQuery.value.trim().removePrefix("#").uppercase(java.util.Locale.ROOT)
         val matched = rawSales.filter { query.isBlank() || it.sale.receiptNumber.contains(query) ||
             it.sale.guid.replace("-", "").contains(query.removePrefix("LP-").replace("-", ""), true) || it.sale.id.toString().contains(query) }
         val lines = matched.flatMap { uz.pos.electro.data.model.SaleAccounting.lines(it) }.filter {
-            kindMatches(it.isBrak) && (_selectedCategory.value == "Barchasi" || it.category.equals(_selectedCategory.value, true)) &&
+            kindMatches(it) && (_selectedCategory.value == "Barchasi" || it.category.equals(_selectedCategory.value, true)) &&
             (_selectedWarehouseGuid.value == "Barchasi" || it.warehouseGuid == _selectedWarehouseGuid.value)
         }
         val ids = lines.map { it.saleId }.toSet()
@@ -256,7 +256,7 @@ class ReportsViewModel @Inject constructor(
                 endTimestamp = end,
                 categoryFilter = catFilter,
                 warehouseGuidFilter = whFilter
-            ).filter { kindMatches(it.isBrak) }
+            ).filter { kindMatches(it) }
 
             var periodTitle = when (_exportFilter.value) {
                 TimeRangeFilter.TODAY -> "Bugun"

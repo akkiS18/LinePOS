@@ -87,6 +87,12 @@ CREATE TABLE IF NOT EXISTS return_quarantine (
         if (Convert.ToInt64(Scalar(c, tx, "SELECT COUNT(*) FROM refunds WHERE sale_id=@p0", sale.Id)) > 0)
             throw new ArgumentException("Ushbu chekda eski qaytarish yozuvlari bor. Avval tarixni tekshiring");
         var financials = SaleAccounting.Lines(sale);
+        if (sale.UsdRate <= 0) {
+            var usd = sale.Items.Where(i => i.CostCurrency == "USD").Sum(i => i.CostAtSale * i.Quantity);
+            var uzs = sale.Items.Where(i => i.CostCurrency != "USD").Sum(i => i.CostAtSale * i.Quantity);
+            var inferred = usd > 0 ? (sale.TotalCost - uzs) / usd : 0;
+            sale.UsdRate = double.IsFinite(inferred) && inferred > 0 ? inferred : 0;
+        }
         var entries = new List<(ReturnSelection Selected, SaleItem Item, ReturnAccounting.Amounts Amount)>();
         foreach (var selected in canonical.Items)
         {
@@ -127,6 +133,19 @@ ON CONFLICT(product_guid,warehouse_guid) DO UPDATE SET quantity=quantity+exclude
             }
             else Exec(c, tx, @"INSERT INTO return_quarantine VALUES(@p0,@p1,@p2)
 ON CONFLICT(product_guid,warehouse_guid) DO UPDATE SET quantity=quantity+excluded.quantity", item.ProductGuid, s.WarehouseGuid, (double)a.Quantity);
+        }
+        Exec(c, tx, @"INSERT INTO sales(guid,total_amount,total_cost,payment_type,cash_amount,card_amount,tax_amount,tax_rate,created_at,user_id,is_synced,usd_rate)
+VALUES(@p0,@p1,@p2,7,@p3,@p4,@p5,0,@p6,1,0,@p7)", guid, -(double)total, -(double)cost,
+            -(double)request.CashRefund, -(double)request.CardRefund, -(double)request.FeeReversal, now, sale.UsdRate);
+        var receiptId = Convert.ToInt64(Scalar(c, tx, "SELECT last_insert_rowid()"));
+        var ordinal = 0;
+        foreach (var entry in entries) {
+            ordinal++;
+            Exec(c, tx, @"INSERT INTO sale_items(guid,sale_id,sale_guid,product_id,product_guid,product_name,quantity,price_at_sale,cost_at_sale,cost_currency,warehouse_guid,warehouse_name,category_at_sale,unit_at_sale)
+SELECT @p0,@p1,@p2,product_id,product_guid,product_name,@p3,@p4,@p5,'UZS',@p6,(SELECT name FROM warehouses WHERE guid=@p6),category_at_sale,unit_at_sale FROM sale_items WHERE id=@p7",
+                LineGuid(guid, ordinal), receiptId, guid, (double)entry.Amount.Quantity,
+                -(double)(entry.Amount.Refund / entry.Amount.Quantity), -(double)(entry.Amount.CostReversal / entry.Amount.Quantity),
+                entry.Selected.WarehouseGuid, entry.Item.Id);
         }
         // The immutable return event is delivered with the same journal as its stock changes.
         Exec(c, tx, "INSERT INTO sync_journal(op_id,kind,entity_guid,payload,group_id) VALUES(@p0,'return',@p1,@p2,@p1)",

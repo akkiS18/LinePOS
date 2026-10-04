@@ -21,10 +21,10 @@ namespace PosElectro.Desktop.ViewModels
     public class ReportsViewModel : ViewModelBase
     {
         private List<SaleReportItem> _reportLines = new();
-        public string[] RecordKinds { get; } = { "Barchasi", "Savdo", "Brak" };
+        public string[] RecordKinds { get; } = { "Barchasi", "Savdo", "Qaytarish", "Brak" };
         private string _selectedRecordKind = "Barchasi";
         public string SelectedRecordKind { get => _selectedRecordKind; set { if (SetProperty(ref _selectedRecordKind, value)) LoadData(); } }
-        private bool KindMatches(bool brak) => SelectedRecordKind == "Barchasi" || (SelectedRecordKind == "Brak" ? brak : !brak);
+        private bool KindMatches(SaleReportItem item) => SelectedRecordKind switch { "Brak" => item.IsBrak, "Qaytarish" => item.IsReturn, "Savdo" => !item.IsBrak && !item.IsReturn, _ => true };
         public string BrakSummary => $"Brak: {_reportLines.Where(i => i.IsBrak).Select(i => i.SaleId).Distinct().Count()} ta • Tannarx: {_reportLines.Where(i => i.IsBrak).Sum(i => i.TotalCost):N2} so‘m";
         private readonly DatabaseContext _db;
         private readonly CurrencyService _currencyService;
@@ -311,8 +311,8 @@ namespace PosElectro.Desktop.ViewModels
         public double TotalCost => _reportLines.Sum(i => i.TotalCost);
         public double TotalProfit => _reportLines.Sum(i => i.Profit);
         public double TotalProfitUsd => _reportLines.Sum(i => i.ProfitUsd ?? 0);
-        public int TotalSalesCount => _reportLines.Where(i => !i.IsBrak).Select(i => i.SaleId).Distinct().Count();
-        public double TotalItemsCount => _reportLines.Where(i => !i.IsBrak).Sum(i => i.Quantity);
+        public int TotalSalesCount => _reportLines.Where(i => !i.IsBrak && !i.IsReturn).Select(i => i.SaleId).Distinct().Count();
+        public double TotalItemsCount => _reportLines.Where(i => !i.IsBrak && !i.IsReturn).Sum(i => i.Quantity);
 
         public string TotalRevenueText => $"{TotalRevenue:N0} so'm";
         public string TotalCashRevenueText => $"{TotalCashRevenue:N0} so'm";
@@ -399,7 +399,7 @@ namespace PosElectro.Desktop.ViewModels
             string? whGuidFilter = (_selectedWarehouse == null || _selectedWarehouse.Guid == "all") ? null : _selectedWarehouse.Guid;
 
             _reportLines = rawSales.SelectMany(SaleAccounting.Lines).Where(item =>
-                KindMatches(item.IsBrak) &&
+                KindMatches(item) &&
                 (catFilter == null || string.Equals(item.Category, catFilter, StringComparison.OrdinalIgnoreCase)) &&
                 (whGuidFilter == null || item.WarehouseGuid == whGuidFilter)).ToList();
             var ids = _reportLines.Select(i => i.SaleId).ToHashSet();
@@ -475,7 +475,7 @@ namespace PosElectro.Desktop.ViewModels
             string? whGuidFilter = (ExportSelectedWarehouse == null || ExportSelectedWarehouse.Guid == "all") ? null : ExportSelectedWarehouse.Guid;
             string whTitle = ExportSelectedWarehouse?.Name ?? "Barcha omborlar";
 
-            var detailedItems = _db.GetDetailedReportItems(start, end, UsdRate, catFilter, whGuidFilter).Where(i => KindMatches(i.IsBrak)).ToList();
+            var detailedItems = _db.GetDetailedReportItems(start, end, UsdRate, catFilter, whGuidFilter).Where(i => KindMatches(i)).ToList();
             periodTitle += " | " + SelectedRecordKind;
 
             double rev = 0;
@@ -488,7 +488,7 @@ namespace PosElectro.Desktop.ViewModels
                 prof += it.Profit;
             }
 
-            int salesCount = detailedItems.Where(i => !i.IsBrak).Select(i => i.SaleId).Distinct().Count();
+            int salesCount = detailedItems.Where(i => !i.IsBrak && !i.IsReturn).Select(i => i.SaleId).Distinct().Count();
 
             periodTitle += $" | Brak: {detailedItems.Where(i => i.IsBrak).Select(i => i.SaleId).Distinct().Count()} ta, {detailedItems.Where(i => i.IsBrak).Sum(i => i.TotalCost):N2} so‘m";
             periodTitle += detailedItems.All(i => i.ProfitUsd.HasValue) ? $" | USD foyda: ${detailedItems.Sum(i => i.ProfitUsd ?? 0):N2}" : " | USD foyda: noma’lum (eski kurs saqlanmagan)";

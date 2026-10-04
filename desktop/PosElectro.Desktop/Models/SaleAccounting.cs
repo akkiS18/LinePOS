@@ -9,7 +9,7 @@ public static class SaleAccounting
     public static double[] Allocate(double total, double[] weights)
     {
         if (weights.Length == 0) return Array.Empty<double>();
-        var positive = weights.Select(w => (decimal)Math.Max(0, w)).ToArray();
+        var positive = weights.Select(w => (decimal)Math.Abs(w)).ToArray();
         var sum = positive.Sum();
         var cents = decimal.ToInt64(Math.Round((decimal)total * 100, 0, MidpointRounding.AwayFromZero));
         var raw = positive.Select(w => sum == 0 ? (decimal)Math.Abs(cents) / weights.Length : Math.Abs(cents) * w / sum).ToArray();
@@ -48,6 +48,7 @@ public static class SaleAccounting
                 SellingPrice = item.PriceAtSale, TotalPrice = revenue[index], TotalCost = cost[index],
                 TaxAmount = tax[index], CashAmount = cash[index], CardAmount = card[index], Profit = profit,
                 ProfitUsd = rate.HasValue ? profit / rate.Value : null, Timestamp = sale.CreatedAt,
+                IsReturn = sale.PaymentType == PaymentType.RETURN,
                 IsBrak = sale.PaymentType == PaymentType.BRAK };
         }).ToList();
     }

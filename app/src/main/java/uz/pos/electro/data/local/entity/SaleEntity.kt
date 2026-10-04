@@ -56,5 +56,5 @@ data class SaleEntity(
     val isSynced: Boolean = false
 ) {
     @get:androidx.room.Ignore
-    val receiptNumber: String get() = "LP-" + guid.replace("-", "").uppercase(java.util.Locale.ROOT)
+    val receiptNumber: String get() = (if (paymentType == PaymentType.RETURN) "RT-" else "LP-") + guid.replace("-", "").uppercase(java.util.Locale.ROOT)
 }

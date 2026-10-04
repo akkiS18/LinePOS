@@ -1648,7 +1648,7 @@ namespace PosElectro.Desktop.Data
             var list = new List<Sale>();
             if (string.IsNullOrWhiteSpace(query)) return list;
             var clean = query.Trim().TrimStart('#').ToUpperInvariant();
-            if (clean.StartsWith("LP-")) clean = clean.Substring(3);
+            if (clean.StartsWith("LP-") || clean.StartsWith("RT-")) clean = clean.Substring(3);
             clean = clean.Replace("-", "");
 
             using var conn = CreateConnection();

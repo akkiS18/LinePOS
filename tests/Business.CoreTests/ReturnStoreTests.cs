@@ -23,6 +23,9 @@ static class ReturnStoreTests
                 new() { new(ReturnStore.LineGuid(sale.Guid, 1), qty, "main-default-warehouse", good) });
             var request = Request(1);
             var first = store.Commit(request, "cashier", "desktop");
+            var returnReceipt = db.SearchSalesByReceiptNumber("RT-" + first.Guid.Replace("-", "").ToUpperInvariant()).Single();
+            Check(returnReceipt.ReceiptNumber.StartsWith("RT-") && SaleAccounting.Lines(returnReceipt).Single().Profit == -10000,
+                "Return financial event mismatch");
             Check(first.Refund == 50000 && first.CostReversal == 40000, "Wrong historical refund");
             var retry = new ReturnStore(path).Commit(request, "cashier", "desktop");
             Check(first == retry, "Lost ACK retry created a new return");

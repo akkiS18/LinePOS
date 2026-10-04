@@ -20,6 +20,7 @@ data class SaleReportItem(
     val cashAmount: Double = 0.0,
     val cardAmount: Double = 0.0,
     val profitUsd: Double? = null,
+    val isReturn: Boolean = false,
     val isBrak: Boolean = false
 )
 

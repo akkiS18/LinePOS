@@ -352,6 +352,7 @@ class LocalSyncManager @Inject constructor(
                 PaymentType.CARD -> 1
                 PaymentType.SPLIT -> 2
                 PaymentType.BRAK -> 6
+                PaymentType.RETURN -> 7
             })
             put("CashAmount", sale.cashAmount)
             put("CardAmount", sale.cardAmount)
@@ -421,12 +422,14 @@ class LocalSyncManager @Inject constructor(
                 1 -> PaymentType.CARD
                 2 -> PaymentType.SPLIT
                 6 -> PaymentType.BRAK
+                7 -> PaymentType.RETURN
                 else -> PaymentType.CASH
             }
             is String -> when (raw.uppercase()) {
                 "CARD" -> PaymentType.CARD
                 "SPLIT" -> PaymentType.SPLIT
                 "BRAK" -> PaymentType.BRAK
+                "RETURN" -> PaymentType.RETURN
                 else -> PaymentType.CASH
             }
             else -> PaymentType.CASH

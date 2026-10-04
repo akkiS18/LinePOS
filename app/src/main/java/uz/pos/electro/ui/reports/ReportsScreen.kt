@@ -214,7 +214,7 @@ fun ReportsScreen(
             Spacer(modifier = Modifier.height(14.dp))
 
             Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("Barchasi", "Savdo", "Brak").forEach { kind ->
+                listOf("Barchasi", "Savdo", "Qaytarish", "Brak").forEach { kind ->
                     FilterChip(selected = recordKind == kind, onClick = { viewModel.setRecordKind(kind) }, label = { Text(kind) })
                 }
             }
@@ -475,6 +475,7 @@ private fun SaleHistoryCard(
         uz.pos.electro.data.model.PaymentType.CASH -> "Naqd"
         uz.pos.electro.data.model.PaymentType.CARD -> "Karta"
         uz.pos.electro.data.model.PaymentType.SPLIT -> "Aralash"
+        uz.pos.electro.data.model.PaymentType.RETURN -> "Qaytarish"
         uz.pos.electro.data.model.PaymentType.BRAK -> "⚠️ Brak"
     }
 

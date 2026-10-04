@@ -123,6 +123,7 @@ public sealed class WifiSyncStore
     private static void InsertSale(SqliteConnection db,SqliteTransaction tx,JObject data,string guid,bool legacy)
     {
         if((string?)data["Guid"]!=guid)throw new ArgumentException("Chek GUIDsi mos emas.");
+        if ((int?)data["PaymentType"] >= 7) throw new ArgumentException("Qaytarish faqat vakolatli lokal serverda yaratiladi.");
         if(Scalar(db,tx,"SELECT 1 FROM sales WHERE guid=@guid",("@guid",guid))!=null)return;
         var columns=new[]{"guid","total_amount","total_cost","payment_type","cash_amount","card_amount","tax_amount","tax_rate","created_at","usd_rate"};
         Exec(db,tx,$"INSERT INTO sales({string.Join(",",columns)},user_id,is_synced) VALUES({string.Join(",",columns.Select(c=>"@"+c))},1,1)",columns.Select(c=>("@"+c,Value(data,Fields[c]) ?? (c=="usd_rate" ? (object)0.0 : null))).ToArray());

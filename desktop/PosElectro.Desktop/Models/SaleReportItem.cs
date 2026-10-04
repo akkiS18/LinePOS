@@ -11,6 +11,7 @@ namespace PosElectro.Desktop.Models
         public double CashAmount { get; set; }
         public double CardAmount { get; set; }
         public double? ProfitUsd { get; set; }
+        public bool IsReturn { get; set; }
         public bool IsBrak { get; set; }
         public long SaleId { get; set; }
         public long ProductId { get; set; }

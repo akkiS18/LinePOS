@@ -7,7 +7,7 @@ namespace PosElectro.Desktop.Models
     {
         public long Id { get; set; }
         public string Guid { get; set; } = System.Guid.NewGuid().ToString();
-        public string ReceiptNumber => "LP-" + Guid.Replace("-", "").ToUpperInvariant();
+        public string ReceiptNumber => (PaymentType == PaymentType.RETURN ? "RT-" : "LP-") + Guid.Replace("-", "").ToUpperInvariant();
         public double UsdRate { get; set; }
         public double TotalAmount { get; set; }
         public double TotalCost { get; set; }
@@ -34,6 +34,7 @@ namespace PosElectro.Desktop.Models
             PaymentType.CASH => "Naqd",
             PaymentType.CARD => "Karta",
             PaymentType.SPLIT => $"Aralash (N: {CashAmount:N0} / K: {CardAmount:N0})",
+            PaymentType.RETURN => "Qaytarish",
             PaymentType.BRAK => "⚠️ Brak (Spisanie)",
             _ => PaymentType.ToString()
         };

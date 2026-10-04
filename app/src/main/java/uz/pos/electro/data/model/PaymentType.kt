@@ -4,5 +4,6 @@ enum class PaymentType {
     CASH,
     CARD,
     SPLIT,
+    RETURN,
     BRAK
 }

@@ -9,7 +9,7 @@ object SaleAccounting {
     fun money(value: Double): Double = BigDecimal.valueOf(value).setScale(2, RoundingMode.HALF_UP).toDouble()
     fun allocate(total: Double, weights: List<Double>): List<Double> {
         if (weights.isEmpty()) return emptyList()
-        val positive = weights.map { BigDecimal.valueOf(it.coerceAtLeast(0.0)) }
+        val positive = weights.map { BigDecimal.valueOf(kotlin.math.abs(it)) }
         val sum = positive.fold(BigDecimal.ZERO, BigDecimal::add)
         val cents = BigDecimal.valueOf(total).movePointRight(2).setScale(0, RoundingMode.HALF_UP).longValueExact()
         val raw = positive.map { if (sum.signum() == 0) BigDecimal.valueOf(kotlin.math.abs(cents)).divide(BigDecimal(weights.size), 16, RoundingMode.DOWN)
@@ -50,6 +50,7 @@ object SaleAccounting {
                 warehouseGuid = item.warehouseGuid, warehouseName = item.warehouseName.ifBlank { "Ombor noma’lum" },
                 receiptNumber = sale.receiptNumber, totalCost = cost[index], taxAmount = tax[index],
                 cashAmount = cash[index], cardAmount = card[index], profitUsd = rate?.let { profit / it },
+                isReturn = sale.paymentType == PaymentType.RETURN,
                 isBrak = sale.paymentType == PaymentType.BRAK)
         }
     }
@@ -58,10 +59,10 @@ object SaleAccounting {
         totalRevenue = lines.sumOf { it.totalPrice }, totalCost = lines.sumOf { it.totalCost },
         netProfit = lines.sumOf { it.profit }, netProfitUsd = lines.sumOf { it.profitUsd ?: 0.0 },
         usdComplete = lines.all { it.profitUsd != null },
-        salesCount = lines.filterNot { it.isBrak }.map { it.saleId }.distinct().size,
+        salesCount = lines.filterNot { it.isBrak || it.isReturn }.map { it.saleId }.distinct().size,
         brakCount = lines.filter { it.isBrak }.map { it.saleId }.distinct().size,
         brakCost = lines.filter { it.isBrak }.sumOf { it.totalCost },
-        totalItemsCount = lines.filterNot { it.isBrak }.sumOf { it.quantity }, usdRate = displayRate,
+        totalItemsCount = lines.filterNot { it.isBrak || it.isReturn }.sumOf { it.quantity }, usdRate = displayRate,
         totalCashAmount = lines.sumOf { it.cashAmount }, totalCardAmount = lines.sumOf { it.cardAmount },
         totalTaxAmount = lines.sumOf { it.taxAmount })
 }

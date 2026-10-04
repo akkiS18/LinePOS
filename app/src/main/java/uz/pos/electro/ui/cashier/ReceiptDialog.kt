@@ -140,6 +140,7 @@ fun ReceiptDialog(
                     uz.pos.electro.data.model.PaymentType.CASH -> "Naqd"
                     uz.pos.electro.data.model.PaymentType.CARD -> "Karta"
                     uz.pos.electro.data.model.PaymentType.SPLIT -> "Aralash (Naqd + Karta)"
+                    uz.pos.electro.data.model.PaymentType.RETURN -> "Qaytarish"
                     uz.pos.electro.data.model.PaymentType.BRAK -> "⚠️ Brak (Spisanie)"
                 }
                 Row(
