@@ -92,7 +92,7 @@ object ExcelExporter {
                         </tr>
                         <tr>
                             <td colspan="5">Jami Cheklar Soni:</td>
-                            <td colspan="8" class="kpi-val">${summary.salesCount} ta savdo; ${summary.brakCount} ta brak (${numberFormat.format(summary.brakCost)} so‘m). USD foyda: ${if (summary.usdComplete) String.format(Locale.US, "%.2f", summary.netProfitUsd) else "noma’lum: eski kurs saqlanmagan"}</td>
+                            <td colspan="8" class="kpi-val">${summary.salesCount} ta savdo; Qaytarish amallari: ${summary.returnCount}, sof qaytarilgan: ${numberFormat.format(summary.refundedAmount)}, tannarx tiklanishi: ${numberFormat.format(summary.costReversal)} so‘m; ${summary.brakCount} ta brak (${numberFormat.format(summary.brakCost)} so‘m). USD foyda: ${if (summary.usdComplete) String.format(Locale.US, "%.2f", summary.netProfitUsd) else "noma’lum: eski kurs saqlanmagan"}</td>
                         </tr>
                         <tr><td colspan="13" style="border:none;"></td></tr>
 

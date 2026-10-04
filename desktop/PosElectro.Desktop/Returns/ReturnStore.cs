@@ -55,15 +55,51 @@ public sealed partial class ReturnStore
         while(r.Read()) { qty += r.GetDecimal(0); refund += r.GetDecimal(1); cost += r.GetDecimal(2); }
         return new(qty,refund,cost);
     }
+    public (ReturnRequest? Request, ReturnResult? Result) DesktopDraft(string saleGuid)
+    {
+        using var c=Open(); using var tx=c.BeginTransaction();
+        using var cmd=Command(c,tx,"SELECT payload,result FROM return_drafts WHERE sale_guid=@p0",saleGuid);
+        using var r=cmd.ExecuteReader();
+        return r.Read() ? (JsonSerializer.Deserialize<ReturnRequest>(r.GetString(0)), r.IsDBNull(1) ? null : JsonSerializer.Deserialize<ReturnResult>(r.GetString(1))) : (null,null);
+    }
+    public void SaveDesktopDraft(ReturnRequest request, string authority)
+    {
+        var payload=JsonSerializer.Serialize(request);
+        using var c=Open(); using var tx=c.BeginTransaction();
+        var existing=Convert.ToString(Scalar(c,tx,"SELECT payload FROM return_drafts WHERE sale_guid=@p0",request.SaleGuid));
+        if(!string.IsNullOrEmpty(existing) && existing!=payload) throw new InvalidOperationException("Bu chek uchun oldingi so'rov natijasini avval tekshiring");
+        Exec(c,tx,"INSERT OR IGNORE INTO return_drafts(sale_guid,request_guid,authority_guid,payload,state) VALUES(@p0,@p1,@p2,@p3,'submitted')",request.SaleGuid,request.RequestGuid,authority,payload);
+        tx.Commit();
+    }
+    public void FinishDesktopDraft(string requestGuid, ReturnResult? result)
+    {
+        using var c=Open(); using var tx=c.BeginTransaction();
+        if(result==null) Exec(c,tx,"DELETE FROM return_drafts WHERE request_guid=@p0",requestGuid);
+        else Exec(c,tx,"UPDATE return_drafts SET result=@p1,state='confirmed' WHERE request_guid=@p0",requestGuid,JsonSerializer.Serialize(result));
+        tx.Commit();
+    }
+    public string OriginalReceipt(string receiptGuid)
+    {
+        using var c=Open(); using var tx=c.BeginTransaction();
+        var original=Convert.ToString(Scalar(c,tx,"SELECT sale_guid FROM returns WHERE guid=@p0",receiptGuid));
+        return string.IsNullOrEmpty(original) ? "" : "LP-"+original.Replace("-", "").ToUpperInvariant();
+    }
     public string History(string receiptGuid)
     {
         using var c = Open(); using var tx = c.BeginTransaction();
         var original = Convert.ToString(Scalar(c, tx, "SELECT sale_guid FROM returns WHERE guid=@p0", receiptGuid));
         var saleGuid = string.IsNullOrEmpty(original) ? receiptGuid : original;
-        using var cmd = Command(c, tx, "SELECT guid,created_at,cash_refund+card_refund,reason FROM returns WHERE sale_guid=@p0 ORDER BY created_at,guid", saleGuid);
+        using var cmd = Command(c, tx, "SELECT guid,created_at,cash_refund+card_refund,reason,status FROM returns WHERE sale_guid=@p0 ORDER BY created_at,guid", saleGuid);
         using var r = cmd.ExecuteReader(); var lines = new List<string>();
         if (!string.IsNullOrEmpty(original)) lines.Add("Asl chek: LP-" + original.Replace("-", "").ToUpperInvariant());
-        while (r.Read()) lines.Add($"RT-{r.GetString(0).Replace("-", "").ToUpperInvariant()} • {DateTimeOffset.FromUnixTimeMilliseconds(r.GetInt64(1)).LocalDateTime:dd.MM.yyyy HH:mm} • {r.GetDecimal(2):N2} so‘m • {r.GetString(3)}");
+        while (r.Read()) lines.Add($"{(r.GetString(4).StartsWith("reversal:") ? "RV" : "RT")}-{r.GetString(0).Replace("-", "").ToUpperInvariant()} • {DateTimeOffset.FromUnixTimeMilliseconds(r.GetInt64(1)).LocalDateTime:dd.MM.yyyy HH:mm} • {r.GetDecimal(2):N2} so‘m • {r.GetString(3)}");
+        r.Close();
+        if (string.IsNullOrEmpty(original) && lines.Count > 0) {
+            var sale=ReadSale(c,tx,saleGuid);
+            var returned=sale.Items.Select(i=>PriorAmounts(c,tx,i.Guid).Quantity).ToArray();
+            lines.Insert(0, returned.All(q=>q==0) ? "Qaytarilmagan (bekor qilingan qaytarishlar bor)" :
+                sale.Items.Select((item,i)=>(decimal)item.Quantity==returned[i]).All(v=>v) ? "To‘liq qaytarilgan" : "Qisman qaytarilgan");
+        }
         return string.Join(Environment.NewLine, lines);
     }
     public ReturnQuote Quote(string saleGuid)

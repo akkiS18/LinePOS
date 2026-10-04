@@ -229,6 +229,7 @@ fun ReportsScreen(
                 ReportChoice("Kategoriya", selectedCategory, categories.map { it to it }, viewModel::setCategoryFilter)
                 ReportChoice("Ombor", selectedWarehouseGuid, listOf("Barchasi" to "Barchasi") + warehouses.map { it.guid to it.name }, viewModel::setWarehouseFilter)
             }
+            Text("Savdo tushumi: ${numberFormat.format(summary.grossSales)} • Qaytarilgan (sof): ${numberFormat.format(summary.refundedAmount)} • Tannarx tiklanishi: ${numberFormat.format(summary.costReversal)} so‘m", style = MaterialTheme.typography.bodySmall)
             Text("Brak: ${summary.brakCount} ta • Tannarx: ${numberFormat.format(summary.brakCost)} so‘m", style = MaterialTheme.typography.bodySmall)
             // 2. Moliyaviy KPI Ko'rsatkichlari (Apple Rounded Cards)
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {

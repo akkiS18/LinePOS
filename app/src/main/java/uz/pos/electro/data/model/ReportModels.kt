@@ -37,6 +37,10 @@ data class ReportsSummary(
     val totalTaxAmount: Double = 0.0,
     val usdComplete: Boolean = true,
     val brakCount: Int = 0,
+    val returnCount: Int = 0,
+    val refundedAmount: Double = 0.0,
+    val costReversal: Double = 0.0,
+    val grossSales: Double = 0.0,
     val brakCost: Double = 0.0
 )
 

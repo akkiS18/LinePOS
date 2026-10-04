@@ -64,8 +64,8 @@ public sealed class WifiSyncStore
             result[table=="product_stocks"?"productStocks":table]=rows;
         }
         // Return records are immutable and their line/stock effects share this snapshot.
-        result["returns"] = RawRows(db,tx,"SELECT * FROM returns");
-        result["returnItems"] = RawRows(db,tx,"SELECT * FROM return_items");
+        result["returns"] = RawRows(db,tx,$"SELECT * FROM returns WHERE {since}=0 OR guid IN (SELECT entity_guid FROM sync_journal WHERE kind='return' AND seq>{since} AND seq<={high})");
+        result["returnItems"] = RawRows(db,tx,$"SELECT * FROM return_items WHERE {since}=0 OR return_guid IN (SELECT entity_guid FROM sync_journal WHERE kind='return' AND seq>{since} AND seq<={high})");
         result["returnQuarantine"] = RawRows(db,tx,"SELECT * FROM return_quarantine");
         tx.Commit(); return result;
     }

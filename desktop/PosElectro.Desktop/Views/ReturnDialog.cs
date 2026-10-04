@@ -20,7 +20,7 @@ public sealed class ReturnDialog : Window
     readonly TextBox reason = new(), cash = new(), card = new(), fee = new() { Text = "0" };
     readonly TextBlock total = new() { Margin = new Thickness(0, 12, 0, 12) };
     readonly Button confirm = new() { Content = "Qaytarishni tasdiqlash", Height = 40 };
-    readonly string requestId = Guid.NewGuid().ToString();
+    string requestId = Guid.NewGuid().ToString();
     ReturnRequest? submitted;
     bool saved;
 
@@ -49,6 +49,22 @@ public sealed class ReturnDialog : Window
         Field("Haqiqatan qaytarilgan karta xarajati (odatda 0)", fee);
         panel.Children.Add(new TextBlock { Text = "Tasdiqlash bank orqali avtomatik pul o‘tkazmaydi.", Margin = new Thickness(0, 12, 0, 12) });
         panel.Children.Add(confirm); confirm.Click += Confirm; Preview();
+        var draft=store.DesktopDraft(sale.Guid);
+        if(draft.Request != null) {
+            submitted=draft.Request; requestId=submitted.RequestGuid;
+            reason.Text=submitted.Reason; fee.Text=submitted.FeeReversal.ToString(CultureInfo.InvariantCulture);
+            foreach(var row in rows) {
+                var selected=submitted.Items.Find(i=>i.SaleItemGuid==row.Line.Guid);
+                if(selected!=null) { row.Quantity.Text=selected.Quantity.ToString(CultureInfo.InvariantCulture); row.Warehouse.SelectedValue=selected.WarehouseGuid; row.Damaged.IsChecked=!selected.Resellable; }
+                row.Quantity.IsEnabled=false; row.Warehouse.IsEnabled=false; row.Damaged.IsEnabled=false;
+            }
+            cash.Text=submitted.CashRefund.ToString(CultureInfo.InvariantCulture); card.Text=submitted.CardRefund.ToString(CultureInfo.InvariantCulture);
+            reason.IsEnabled=cash.IsEnabled=card.IsEnabled=fee.IsEnabled=false; confirm.Content="Oldingi so‘rov natijasini tekshirish";
+            if(draft.Result != null) Loaded += (_,_) => {
+                saved=true; MessageBox.Show(this,"Avval saqlangan: RT-"+draft.Result.Guid.Replace("-", "").ToUpperInvariant(),"Qaytarish");
+                store.FinishDesktopDraft(requestId,null); DialogResult=true;
+            };
+        }
     }
     static decimal Number(string text) => decimal.Parse(text.Replace(',', '.'), NumberStyles.AllowDecimalPoint | NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture);
     void Preview()
@@ -70,13 +86,17 @@ public sealed class ReturnDialog : Window
             submitted ??= new ReturnRequest(requestId, quote.SaleGuid, reason.Text.Trim(), Number(cash.Text), Number(card.Text), Number(fee.Text),
                 rows.Where(r => Number(r.Quantity.Text) != 0).Select(r => new ReturnSelection(r.Line.Guid, Number(r.Quantity.Text),
                     (string?)r.Warehouse.SelectedValue ?? "", r.Damaged.IsChecked != true)).ToList());
-            var result = store.Commit(submitted, "desktop-local", new WifiSyncStore(db.DatabaseFilePath).ServerId);
+            var authority=new WifiSyncStore(db.DatabaseFilePath).ServerId;
+            store.SaveDesktopDraft(submitted,authority);
+            var result = store.Commit(submitted, "desktop-local", authority);
+            store.FinishDesktopDraft(requestId,result);
             saved = true;
             try { db.RaiseProductsChanged(); } catch { }
             MessageBox.Show(this, $"Qaytarish saqlandi: RT-{result.Guid.Replace("-", "").ToUpperInvariant()}\nSumma: {result.Refund:N2} so‘m", "Qaytarish");
+            store.FinishDesktopDraft(requestId,null);
             DialogResult = true;
         } catch (ArgumentException e) {
-            submitted = null; MessageBox.Show(this, e.Message, "Ma’lumotni tekshiring");
+            store.FinishDesktopDraft(requestId,null); submitted = null; MessageBox.Show(this, e.Message, "Ma’lumotni tekshiring");
         } catch (Exception e) {
             MessageBox.Show(this, "Natijani tekshirish uchun aynan shu so‘rovni qayta tasdiqlang. " + e.Message, "Qaytarish");
         } finally { if (!saved) confirm.IsEnabled = true; }

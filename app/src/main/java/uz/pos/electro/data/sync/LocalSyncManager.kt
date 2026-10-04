@@ -117,12 +117,25 @@ class LocalSyncManager @Inject constructor(
     fun sendLiveWarehouse(warehouse: WarehouseEntity) = wake()
     fun sendLiveStockTransfer(productGuid: String, fromWarehouseGuid: String, toWarehouseGuid: String, quantity: Double) = wake()
     suspend fun syncWithDesktop(): Result<SyncSummary> = runCatching { require(!getServerUrl().isNullOrBlank() && !token().isNullOrBlank()) { "Avval kompyuter QR kodini skanerlang." }; syncOnce(); SyncSummary(0, 0, "V2 sinxron yakunlandi") }
+    suspend fun localReturnQuote(receipt: uz.pos.electro.data.local.relation.SaleWithItems): JSONObject = withContext(Dispatchers.IO) {
+        val financials=uz.pos.electro.data.model.SaleAccounting.lines(receipt)
+        val lines=JSONArray()
+        receipt.items.sortedBy { it.id }.forEachIndexed { i,item ->
+            var quantity=java.math.BigDecimal.ZERO; var refunded=java.math.BigDecimal.ZERO
+            db().query("SELECT quantity,refund_amount_uzs FROM return_items WHERE sale_item_guid=?",arrayOf(item.guid)).use { c ->
+                while(c.moveToNext()) { quantity+=c.getString(0).toBigDecimal(); refunded+=c.getString(1).toBigDecimal() }
+            }
+            lines.put(JSONObject().put("Guid",item.guid).put("ProductName",item.productName).put("WarehouseGuid",item.warehouseGuid)
+                .put("Sold",item.quantity).put("Returned",quantity.toPlainString()).put("Refunded",refunded.toPlainString()).put("Revenue",financials[i].totalPrice))
+        }
+        JSONObject().put("SaleGuid",receipt.sale.guid).put("Lines",lines)
+    }
     suspend fun returnHistory(receiptGuid: String): String = withContext(Dispatchers.IO) {
         val original = db().query("SELECT sale_guid FROM returns WHERE guid=?",arrayOf(receiptGuid)).use { if(it.moveToFirst()) it.getString(0) else null }
         val lines = mutableListOf<String>()
         if (original != null) lines.add("Asl chek: LP-" + original.replace("-", "").uppercase())
-        db().query("SELECT guid,cash_refund+card_refund,reason FROM returns WHERE sale_guid=? ORDER BY created_at,guid",arrayOf(original ?: receiptGuid)).use { c ->
-            while(c.moveToNext()) lines.add("RT-" + c.getString(0).replace("-", "").uppercase() + " • " + c.getDouble(1) + " so‘m • " + c.getString(2))
+        db().query("SELECT guid,cash_refund+card_refund,reason,status FROM returns WHERE sale_guid=? ORDER BY created_at,guid",arrayOf(original ?: receiptGuid)).use { c ->
+            while(c.moveToNext()) lines.add((if(c.getString(3).startsWith("reversal:")) "RV-" else "RT-") + c.getString(0).replace("-", "").uppercase() + " • " + c.getDouble(1) + " so‘m • " + c.getString(2))
         }
         lines.joinToString("\n")
     }

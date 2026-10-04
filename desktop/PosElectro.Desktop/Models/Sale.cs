@@ -8,6 +8,7 @@ namespace PosElectro.Desktop.Models
         public long Id { get; set; }
         public string Guid { get; set; } = System.Guid.NewGuid().ToString();
         public string ReceiptNumber => (PaymentType == PaymentType.RETURN ? "RT-" : PaymentType == PaymentType.RETURN_REVERSAL ? "RV-" : "LP-") + Guid.Replace("-", "").ToUpperInvariant();
+        public string OriginalReceiptNumber { get; set; } = string.Empty;
         public double UsdRate { get; set; }
         public double TotalAmount { get; set; }
         public double TotalCost { get; set; }

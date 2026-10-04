@@ -25,7 +25,7 @@ namespace PosElectro.Desktop.ViewModels
         private string _selectedRecordKind = "Barchasi";
         public string SelectedRecordKind { get => _selectedRecordKind; set { if (SetProperty(ref _selectedRecordKind, value)) LoadData(); } }
         private bool KindMatches(SaleReportItem item) => SelectedRecordKind switch { "Brak" => item.IsBrak, "Qaytarish" => item.IsReturn, "Savdo" => !item.IsBrak && !item.IsReturn, _ => true };
-        public string BrakSummary => $"Brak: {_reportLines.Where(i => i.IsBrak).Select(i => i.SaleId).Distinct().Count()} ta • Tannarx: {_reportLines.Where(i => i.IsBrak).Sum(i => i.TotalCost):N2} so‘m";
+        public string BrakSummary => $"Qaytarilgan (sof): {-_reportLines.Where(i => i.IsReturn).Sum(i => i.TotalPrice):N2} so‘m • Tannarx tiklanishi: {-_reportLines.Where(i => i.IsReturn).Sum(i => i.TotalCost):N2} so‘m\nBrak: {_reportLines.Where(i => i.IsBrak).Select(i => i.SaleId).Distinct().Count()} ta • Tannarx: {_reportLines.Where(i => i.IsBrak).Sum(i => i.TotalCost):N2} so‘m";
         private readonly DatabaseContext _db;
         public DatabaseContext Database => _db;
         private readonly CurrencyService _currencyService;
@@ -478,6 +478,7 @@ namespace PosElectro.Desktop.ViewModels
 
             var detailedItems = _db.GetDetailedReportItems(start, end, UsdRate, catFilter, whGuidFilter).Where(i => KindMatches(i)).ToList();
             periodTitle += " | " + SelectedRecordKind;
+            periodTitle += $" | Qaytarilgan (sof): {-detailedItems.Where(i => i.IsReturn).Sum(i => i.TotalPrice):N2}; Tannarx tiklanishi: {-detailedItems.Where(i => i.IsReturn).Sum(i => i.TotalCost):N2}";
 
             double rev = 0;
             double cost = 0;

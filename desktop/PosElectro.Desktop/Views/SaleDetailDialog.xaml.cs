@@ -27,6 +27,7 @@ namespace PosElectro.Desktop.Views
             GridItems.ItemsSource = sale.Items;
             if (database != null) {
                 var returns = new PosElectro.Desktop.Returns.ReturnStore(database.DatabaseFilePath); returns.Install();
+                sale.OriginalReceiptNumber = returns.OriginalReceipt(sale.Guid);
                 var history = returns.History(sale.Guid);
                 if (!string.IsNullOrEmpty(history)) { TxtStatus.Text = history; TxtStatus.Visibility = Visibility.Visible; }
             }

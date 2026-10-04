@@ -64,12 +64,7 @@ fun ReturnDialog(receipt: SaleWithItems, viewModel: ReportsViewModel, onDismiss:
     }
     LaunchedEffect(receipt.sale.guid) {
         // Offline preparation uses immutable local amounts; the authority rechecks every quantity.
-        val localLines = JSONArray()
-        val financials = SaleAccounting.lines(receipt)
-        receipt.items.sortedBy { it.id }.forEachIndexed { i, item -> localLines.put(JSONObject()
-            .put("Guid", item.guid).put("ProductName", item.productName).put("WarehouseGuid", item.warehouseGuid)
-            .put("Sold", item.quantity).put("Returned", 0).put("Refunded", 0).put("Revenue", financials[i].totalPrice)) }
-        quote = JSONObject().put("Lines", localLines)
+        quote = viewModel.returnSync.localReturnQuote(receipt)
         try { quote = viewModel.returnSync.quoteReturn(receipt.sale.guid) }
         catch (e: Exception) { message = "Oflayn loyiha. Yakuniy tasdiq uchun mahalliy kompyuter kerak. ${e.message}" }
         val lines = quote!!.getJSONArray("Lines")
@@ -97,6 +92,10 @@ fun ReturnDialog(receipt: SaleWithItems, viewModel: ReportsViewModel, onDismiss:
                     Button(enabled = !busy, onClick = { busy = true; scope.launch { try { viewModel.returnSync.acknowledgeReturn(receipt.sale.guid); onDismiss() } finally { busy = false } } }) { Text("Tushunarli") }
                 } else {
                     val lines = quote?.optJSONArray("Lines") ?: JSONArray()
+                    TextButton(enabled = editable, onClick = {
+                        for (i in 0 until lines.length()) { val line=lines.getJSONObject(i)
+                            quantities[line.getString("Guid")]=(number(line.get("Sold").toString())-number(line.get("Returned").toString())).toPlainString() }
+                    }) { Text("Qolgan barchasini qaytarish") }
                     for (i in 0 until lines.length()) {
                         val line = lines.getJSONObject(i); val id = line.getString("Guid")
                         Text(line.getString("ProductName"), modifier = Modifier.padding(top = 12.dp))
@@ -168,7 +167,7 @@ private fun ReturnReversalDialog(receipt: SaleWithItems, viewModel: ReportsViewM
                     if(!submitted) viewModel.returnSync.saveReturnDraft(JSONObject().put("RequestGuid", id).put("SaleGuid",receipt.sale.guid).put("ReturnGuid",receipt.sale.guid).put("Reason",reason))
                     submitted = true; result = viewModel.returnSync.confirmReturn(receipt.sale.guid)
                 }
-            } catch(e: Exception) { message = e.message ?: "Natijani qayta tekshiring" }
+            } catch(e: Exception) { message = e.message ?: "Natijani qayta tekshiring"; submitted = viewModel.returnSync.getReturnDraft(receipt.sale.guid)?.optString("state") == "submitted" }
             finally { busy = false } }
         }) { Text(if(result != null) "Tushunarli" else if(submitted) "Natijani tekshirish" else "Bekor qilishni tasdiqlash") } },
         dismissButton = { TextButton(enabled = !busy, onClick = onDismiss) { Text("Yopish") } })

@@ -219,6 +219,7 @@ namespace PosElectro.Desktop.Services
             // Chek ma'lumotlari (Chap tomondan)
             bw.Write(new byte[] { 0x1B, 0x61, 0x00 }); // Chapga
             WriteCp866(bw, $"Chek: #{sale.ReceiptNumber}\n");
+            if (!string.IsNullOrEmpty(sale.OriginalReceiptNumber)) WriteCp866(bw, $"Asl chek: {sale.OriginalReceiptNumber}\n");
             WriteCp866(bw, $"Sana: {sale.CreatedDateTime:dd.MM.yyyy HH:mm}\n");
             WriteCp866(bw, $"To'lov: {sale.PaymentTypeDisplay}\n");
             WriteCp866(bw, "--------------------------------\n");
@@ -312,6 +313,7 @@ namespace PosElectro.Desktop.Services
             sb.AppendLine("    Elektr jihozlari do'koni    ");
             sb.AppendLine("--------------------------------");
             sb.AppendLine($"Chek: #{sale.ReceiptNumber}");
+            if (!string.IsNullOrEmpty(sale.OriginalReceiptNumber)) sb.AppendLine($"Asl chek: {sale.OriginalReceiptNumber}");
             sb.AppendLine($"Sana: {sale.CreatedDateTime:dd.MM.yyyy HH:mm}");
             sb.AppendLine($"To'lov turi: {sale.PaymentTypeDisplay}");
             sb.AppendLine("--------------------------------");
@@ -423,7 +425,7 @@ namespace PosElectro.Desktop.Services
 
             var metaRow = new System.Windows.Documents.TableRow();
             var metaCell1 = new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(
-                new System.Windows.Documents.Run($"Hujjat raqami: Chek #{sale.ReceiptNumber}\nSana: {sale.CreatedDateTime:dd.MM.yyyy HH:mm}")));
+                new System.Windows.Documents.Run($"Hujjat raqami: Chek #{sale.ReceiptNumber}\n{(string.IsNullOrEmpty(sale.OriginalReceiptNumber) ? "" : "Asl chek: " + sale.OriginalReceiptNumber + "\n")}Sana: {sale.CreatedDateTime:dd.MM.yyyy HH:mm}")));
             var metaCell2 = new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(
                 new System.Windows.Documents.Run($"To'lov usuli: {sale.PaymentTypeDisplay}\nHolati: To'langan")));
             metaCell2.TextAlignment = TextAlignment.Right;
