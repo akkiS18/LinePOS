@@ -203,6 +203,7 @@ abstract class AppDatabase : RoomDatabase() {
                         java.io.File(backupDir, "before-returns-${System.currentTimeMillis()}-${java.util.UUID.randomUUID()}.db"))
                     db.execSQL("ALTER TABLE sale_items ADD COLUMN guid TEXT NOT NULL DEFAULT ''")
                     db.execSQL("UPDATE sale_items SET guid=(SELECT guid FROM sales WHERE id=sale_items.sale_id)||':'||(SELECT COUNT(*) FROM sale_items previous WHERE previous.sale_id=sale_items.sale_id AND previous.id<=sale_items.id) WHERE guid=''")
+                    db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_sale_items_guid ON sale_items(guid)")
                 }
             })
             .addCallback(object : Callback() {

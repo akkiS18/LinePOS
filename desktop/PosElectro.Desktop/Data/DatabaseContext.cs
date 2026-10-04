@@ -361,7 +361,7 @@ namespace PosElectro.Desktop.Data
             }
             using (var lineIds = conn.CreateCommand())
             {
-                lineIds.CommandText = @"UPDATE sale_items SET guid=(SELECT guid FROM sales WHERE id=sale_items.sale_id)||':'||(SELECT COUNT(*) FROM sale_items previous WHERE previous.sale_id=sale_items.sale_id AND previous.id<=sale_items.id) WHERE guid='';";
+                lineIds.CommandText = @"UPDATE sale_items SET guid=(SELECT guid FROM sales WHERE id=sale_items.sale_id)||':'||(SELECT COUNT(*) FROM sale_items previous WHERE previous.sale_id=sale_items.sale_id AND previous.id<=sale_items.id) WHERE guid=''; CREATE UNIQUE INDEX IF NOT EXISTS index_sale_items_guid ON sale_items(guid);";
                 lineIds.ExecuteNonQuery();
             }
             // Omborlar va Ombor qoldiqlari jadvallari

@@ -47,6 +47,24 @@ class BusinessIntegrityTest {
         assertEquals(0, summary.salesCount); assertEquals(1, summary.brakCount)
         assertEquals(-120000.0, summary.netProfit, .000001)
     }
+    @Test fun returnAndReversalUseHistoricalRateAndDoNotCountAsNewSales() {
+        val original=receipt()
+        val returned=original.copy(sale=original.sale.copy(id=2,guid="returned",paymentType=PaymentType.RETURN,
+            totalAmount=-150000.0,totalCost=-120000.0,cashAmount=-150000.0,cardAmount=0.0,taxAmount=0.0),
+            items=original.items.map { it.copy(id=2,saleId=2,priceAtSale=-150000.0,costAtSale=-120000.0,costCurrency="UZS") })
+        val summary=SaleAccounting.summary(SaleAccounting.lines(original)+SaleAccounting.lines(returned),99999.0)
+        assertEquals(-2700.0,summary.netProfit,0.000001)
+        assertEquals(-0.225,summary.netProfitUsd,0.000001)
+        assertEquals(1,summary.salesCount)
+        assertEquals(150000.0,summary.refundedAmount,0.0)
+        assertEquals(120000.0,summary.costReversal,0.0)
+        assertEquals("RT-RETURNED",returned.sale.receiptNumber)
+        val reversal=returned.copy(sale=returned.sale.copy(id=3,guid="reversal",paymentType=PaymentType.RETURN_REVERSAL,
+            totalAmount=150000.0,totalCost=120000.0,cashAmount=150000.0),
+            items=returned.items.map { it.copy(id=3,saleId=3,priceAtSale=150000.0,costAtSale=120000.0) })
+        assertEquals("RV-REVERSAL",reversal.sale.receiptNumber)
+        assertEquals(27300.0,SaleAccounting.summary(SaleAccounting.lines(original)+SaleAccounting.lines(returned)+SaleAccounting.lines(reversal),99999.0).netProfit,0.000001)
+    }
     @Test fun snapshotContainsUncheckpointedChangesAndDoesNotFireSyncTriggers() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val sourceFile = context.getDatabasePath("snapshot-test.db")
@@ -56,6 +74,8 @@ class BusinessIntegrityTest {
         SQLiteDatabase.deleteDatabase(destination)
         try {
             val db = source.openHelper.writableDatabase
+            uz.pos.electro.data.sync.WifiSyncSchema.install(db,context.assets.open("wifi-sync-schema.sql").bufferedReader().use { it.readText() })
+            db.execSQL("INSERT INTO return_drafts(sale_guid,request_guid,authority_guid,payload,state) VALUES('sale','request','desktop','{}','submitted')")
             db.execSQL("CREATE TABLE backup_probe(id INTEGER PRIMARY KEY AUTOINCREMENT, payload BLOB, note TEXT)")
             db.execSQL("INSERT INTO backup_probe VALUES(100, X'00FF01', 'old')")
             db.execSQL("DELETE FROM backup_probe")
@@ -64,6 +84,9 @@ class BusinessIntegrityTest {
             SQLiteDatabase.openDatabase(destination.path, null, SQLiteDatabase.OPEN_READONLY).use { backup ->
                 backup.rawQuery("SELECT id,hex(payload),note FROM backup_probe", null).use { c ->
                     assertTrue(c.moveToFirst()); assertEquals(101, c.getInt(0)); assertEquals("00FF01", c.getString(1)); assertEquals("new without sales", c.getString(2))
+                }
+                backup.rawQuery("SELECT request_guid,state FROM return_drafts",null).use { c ->
+                    assertTrue(c.moveToFirst()); assertEquals("request",c.getString(0)); assertEquals("submitted",c.getString(1))
                 }
                 assertEquals(13, backup.version)
                 backup.rawQuery("PRAGMA integrity_check", null).use { c -> c.moveToFirst(); assertEquals("ok", c.getString(0)) }
@@ -80,7 +103,7 @@ class BusinessIntegrityTest {
         SQLiteDatabase.openDatabase(file.path, null, SQLiteDatabase.OPEN_READWRITE).use { old ->
             val tableSql = old.rawQuery("SELECT sql FROM sqlite_master WHERE name='sale_items'", null).use { it.moveToFirst(); it.getString(0) }
             val indexes = mutableListOf<String>()
-            old.rawQuery("SELECT sql FROM sqlite_master WHERE type='index' AND tbl_name='sale_items' AND sql IS NOT NULL", null).use { while(it.moveToNext()) indexes.add(it.getString(0)) }
+            old.rawQuery("SELECT sql FROM sqlite_master WHERE type='index' AND tbl_name='sale_items' AND name!='index_sale_items_guid' AND sql IS NOT NULL", null).use { while(it.moveToNext()) indexes.add(it.getString(0)) }
             val legacySql = tableSql.replace(Regex("`guid` TEXT NOT NULL DEFAULT '',\\s*"), "")
             assertNotEquals(tableSql, legacySql)
             old.execSQL("DROP TABLE sale_items")

@@ -33,4 +33,28 @@ Telegramga real jo‘natish internetni talab qiladi. Wi-Fi savdo sinxroni intern
 - `bash gradlew :app:assembleDebug :app:assembleDebugAndroidTest`: Android kompilyatsiyasi.
 - `bash gradlew :app:connectedDebugAndroidTest`: Room, moliyaviy hisob va nusxa olish sinovlari; API 26 va 35.
 
-Qaytarish funksiyasi hozircha reja: [RETURNS_PLAN_UZ.md](RETURNS_PLAN_UZ.md).
+## Qaytarish va bekor qilish
+
+Hisobotdan `LP-…` chekni oching → **Qaytarish**. Miqdor, qabul ombori, yaroqli/nuqsonli holat, sabab va naqd/karta summasini kiriting. Karta xarajati faqat haqiqatan qaytarilgan bo‘lsa yoziladi; odatiy qiymat `0`.
+
+Telefonda **Loyihani saqlash** oflayn ishlaydi (oldin desktopga juftlangan bo‘lishi kerak). Yakuniy tasdiq mahalliy desktopdan olinadi. Internet kerak emas, desktop yoqilgan va bir LAN tarmog‘ida bo‘lishi kerak. Oflayn miqdor oxirgi sinxron holatini ko‘rsatadi; desktop yakuniy tekshiradi.
+
+Tasdiq uzilib qolsa yangi so‘rov yaratmang: **Natijani qayta tekshirish** ni bosing. Bir xil so‘rov yana yuborilganda yangi pul/ombor yozuvi yaratilmaydi. Telefon yoki desktop qayta ishga tushganda loyiha/so‘rov saqlanadi. Tasdiq oynasi bankdan avtomatik pul o‘tkazmaydi.
+
+Tasdiqlanganda `RT-…` chek yaratiladi. Asl savdo o‘z sanasi bilan qoladi; qaytarish qaytarilgan sananing foydasiga ta’sir qiladi. Xato qaytarishni `RT-…` tafsilotidagi **Qaytarishni bekor qilish** orqali bekor qiling. `RV-…` teskari yozuv yaratiladi; asl tarix o‘chirilmaydi. Jismoniy tovar va pulni ham mos ravishda kelishtiring.
+
+### Ikki qurilmada qabul sinovi
+
+1. Kurs 12 000, sotuv 150 000, tannarx $10, karta xarajati 2 700: foyda 27 300. To‘liq yaroqli qaytish, komissiya qaytmasa: savdo+qaytarish foydasi **−2 700**. Nuqsonli qaytishda **−122 700**; sotiladigan qoldiq oshmasin.
+2. 0,7 metr, jami 100 so‘m, jami tannarx 33,33 so‘m: yetti marta 0,1 metrdan yaroqli qaytaring. Jami qaytarish 100, tannarx tiklanishi 33,33; sakkizinchi qaytarish rad etilsin.
+3. Bir mahsulotni bir chekda ikki narx/ombor bilan soting. Faqat tanlangan qator qaytsin. Kurs, nom va narxni o‘zgartirib qaytaring — eski qiymatlar ishlasin.
+4. Telefon va desktopdan bir chekning qolgan miqdorini bir paytda qaytaring. Tasdiqlangan jami miqdor sotilgandan oshmasin.
+5. Telefon tasdiqlash paytida Wi‑Fi’ni uzing, ilovani qayta oching va natijani qayta tekshiring. Bitta `RT-…`, bitta qoldiq o‘zgarishi bo‘lsin.
+6. `RT-…` ni bekor qiling; bitta `RV-…`, teskari ombor va foyda ta’siri bo‘lsin. Qayta bekor qilish yangi operatsiya yaratmasin.
+7. Barchasi/Savdo/Qaytarish/Brak filtrlari va Excel summalari teng bo‘lsin. Qaytarish va bekor qilish oddiy savdo soniga kirmasin. Boshqa kunda qaytarganda asl sana qayta yozilmasin.
+8. Yuborilgan, ammo javobi olinmagan qaytarish bilan backup oling, test qurilmaga tiklang va o‘sha desktopga ulang. So‘rov raqami saqlansin; qayta tekshirish yangi qaytarish yaratmasin.
+9. `LP-…`, `RT-…`, `RV-…` raqamlarini ikkala qurilmada qidiring; bir xil hodisa topilsin. Qaytarish chekini chop etishda asl `LP-…` raqami ko‘rinsin.
+
+Migratsiyadan oldingi nusxa telefonda ichki `migration-backups`, desktopda baza yonidagi `Backups` papkasida saqlanadi. Eski `refunds` yozuvi bor cheklar taxminiy hisobdan saqlash uchun qo‘lda tarix tekshiruvi talab qiladi.
+
+GitHub CI Android API 26/35 emulyatorlarini, desktop build, haqiqiy SQLite va lokal HTTP sinovlarini ishlatadi. Yuqoridagi jismoniy telefon–Windows/printer/Telegram qabul sinovlari avtomatik CI bilan bir xil tekshiruv emas.

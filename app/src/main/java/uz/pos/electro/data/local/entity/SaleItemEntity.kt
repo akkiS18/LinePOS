@@ -17,6 +17,7 @@ import androidx.room.PrimaryKey
         )
     ],
     indices = [
+        Index(value = ["guid"], unique = true),
         Index(value = ["sale_id"]),
         Index(value = ["product_id"]),
         Index(value = ["sale_guid"]),

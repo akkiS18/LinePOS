@@ -1,6 +1,6 @@
 # LinePOS: mahsulotni qaytarish funksiyasi rejasi
 
-Holat: reja. Bu branch qaytarish funksiyasini ishga tushirmaydi; avval foyda, chek identifikatori, filtr va backup tuzatishlari tekshiriladi.
+Holat: `fix/business-integrity` branchda amalga oshirilgan; PR #2 orqali tekshiriladi. Qaytarish `RT-…`, uni bekor qilish `RV-…` yozuvi bilan saqlanadi. Ishlatish va qurilmada sinash: [BUSINESS_FIXES_TEST_GUIDE_UZ.md](BUSINESS_FIXES_TEST_GUIDE_UZ.md).
 
 ## 1. Foydalanuvchi yo‘li
 
@@ -19,7 +19,7 @@ Android Room va desktop SQLite bir xil maydonlarga ega bo‘ladi:
 - `returns`: `guid`, `sale_guid`, `created_at`, `operator_guid`, `reason`, `status`, `cash_refund`, `card_refund`, `fee_reversal`, `request_guid`, `authority_guid`.
 - `return_items`: `guid`, `return_guid`, `sale_item_guid`, `product_guid`, `quantity`, `refund_amount_uzs`, `cost_reversal_uzs`, `warehouse_guid`, `disposition`, `original_usd_rate`.
 - `sale_items`ga o‘zgarmas qator GUID’i: bir mahsulot bir chekda turli narx yoki ombordan kelgan bo‘lsa, qaytarish aynan kerakli qatorga bog‘lanadi.
-- Avvaldan mavjud Android `refunds` jadvali tashlab yuborilmaydi. Undagi yozuvlar inventarizatsiya qilinib, migratsiya bilan yangi modelga ko‘chiriladi; aniqlanmagan tarixiy bog‘lanishlar alohida belgilab qo‘yiladi.
+- Avvaldan mavjud Android `refunds` jadvali tashlab yuborilmaydi. Eski jadval va summalar saqlanadi. Qator identifikatori va pul taqsimotini ishonchli tiklab bo‘lmaydigan eski qaytarish bor cheklar yangi qaytarishdan bloklanadi va tarixni qo‘lda tekshirish xabari chiqadi; ularni taxmin bilan yangi moliyaviy yozuvga aylantirish bajarilmaydi.
 - Original chek va qaytarishlar tahrirlanmaydigan tarix bo‘ladi. Xato qaytarish keyingi qarama-qarshi operatsiya bilan bekor qilinadi; DELETE ishlatilmaydi.
 
 ## 3. Miqdor va ombor qoidalari

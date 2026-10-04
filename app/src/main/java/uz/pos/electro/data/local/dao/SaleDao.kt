@@ -25,7 +25,7 @@ interface SaleDao {
         items: List<SaleItemEntity>
     ): Long {
         val saleId = insertSale(sale)
-        val itemsWithSaleId = items.map { it.copy(saleId = saleId) }
+        val itemsWithSaleId = items.mapIndexed { index, item -> item.copy(saleId = saleId, saleGuid = sale.guid, guid = item.guid.ifBlank { "${sale.guid}:${index + 1}" }) }
         insertSaleItems(itemsWithSaleId)
         return saleId
     }

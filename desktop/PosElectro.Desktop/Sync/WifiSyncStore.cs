@@ -20,6 +20,7 @@ public sealed class WifiSyncStore
         if (Convert.ToInt32(Scalar(db, tx, "SELECT COUNT(*) FROM pragma_table_info('sale_items') WHERE name='guid'")) == 0)
             Exec(db, tx, "ALTER TABLE sale_items ADD COLUMN guid TEXT NOT NULL DEFAULT ''");
         Exec(db, tx, "UPDATE sale_items SET guid=(SELECT guid FROM sales WHERE id=sale_items.sale_id)||':'||(SELECT COUNT(*) FROM sale_items previous WHERE previous.sale_id=sale_items.sale_id AND previous.id<=sale_items.id) WHERE guid=''");
+        Exec(db, tx, "CREATE UNIQUE INDEX IF NOT EXISTS index_sale_items_guid ON sale_items(guid)");
         using var schema = typeof(WifiSyncStore).Assembly.GetManifestResourceStream("WifiSyncSchema")!;
         using var reader = new StreamReader(schema);
         foreach (var statement in reader.ReadToEnd().Split("-- statement")) Exec(db, tx, statement);
