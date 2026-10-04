@@ -1,6 +1,7 @@
 package uz.pos.electro.data.repository
 
 import androidx.room.withTransaction
+import uz.pos.electro.data.model.SaleAccounting
 import kotlinx.coroutines.flow.Flow
 import uz.pos.electro.data.local.AppDatabase
 import uz.pos.electro.data.local.dao.ProductDao
@@ -30,6 +31,8 @@ class SaleRepository @Inject constructor(
     private val currencyRepository: CurrencyRepository,
     private val localSyncManager: LocalSyncManager
 ) {
+    fun getHistoricalCategories() = saleDao.getHistoricalCategories()
+
     fun getAllSales(): Flow<List<SaleWithItems>> = saleDao.getAllSalesWithItems()
 
     fun getSalesBetween(startTimestamp: Long, endTimestamp: Long): Flow<List<SaleWithItems>> =
@@ -49,32 +52,40 @@ class SaleRepository @Inject constructor(
         cashAmount: Double = 0.0,
         cardAmount: Double = 0.0,
         taxAmount: Double = 0.0,
-        taxRate: Double = 0.0
+        taxRate: Double = 0.0,
+        saleGuid: String = java.util.UUID.randomUUID().toString()
     ): Long {
+        require(items.isNotEmpty() && items.all { it.quantity.isFinite() && it.quantity > 0 && it.priceAtSale.isFinite() && it.priceAtSale >= 0 && it.product.costPrice.isFinite() && it.product.costPrice >= 0 }) { "Miqdor yoki narx noto‘g‘ri" }
+        require(taxRate.isFinite() && taxRate in 0.0..100.0 && cashAmount.isFinite() && cardAmount.isFinite() && cashAmount >= 0 && cardAmount >= 0) { "To‘lov summasi noto‘g‘ri" }
         val (saleId, savedEntity, savedItems) = database.withTransaction {
             database.openHelper.writableDatabase.execSQL("UPDATE sync_control SET current_group=? WHERE id=1", arrayOf(java.util.UUID.randomUUID().toString()))
             val currentUsdRate = currencyRepository.getCachedUsdRate()
-            val totalAmount = items.sumOf { it.priceAtSale * it.quantity }
-            val totalCost = items.sumOf { item ->
+            require(currentUsdRate.isFinite() && currentUsdRate > 0) { "Dollar kursi noto‘g‘ri" }
+            val totalAmount = SaleAccounting.money(items.sumOf { it.totalPrice })
+            val totalCost = SaleAccounting.money(items.sumOf { item ->
                 val costInUzs = if (item.product.costCurrency == "USD") {
                     item.product.costPrice * currentUsdRate
                 } else {
                     item.product.costPrice
                 }
                 costInUzs * item.quantity
-            }
+            })
 
-            val saleGuid = java.util.UUID.randomUUID().toString()
+            require(paymentType != PaymentType.RETURN && paymentType != PaymentType.RETURN_REVERSAL) { "Qaytarish mahalliy kompyuter orqali tasdiqlanadi" }
+            val paidCash = when (paymentType) { PaymentType.CASH -> totalAmount; PaymentType.BRAK -> 0.0; else -> SaleAccounting.money(cashAmount) }
+            val paidCard = when (paymentType) { PaymentType.CARD -> totalAmount; PaymentType.BRAK -> 0.0; else -> SaleAccounting.money(cardAmount) }
+            require(paymentType == PaymentType.BRAK || SaleAccounting.money(paidCash + paidCard) == totalAmount) { "To‘lov jami chek summasiga teng emas" }
             val now = System.currentTimeMillis()
 
             val saleEntity = SaleEntity(
                 guid = saleGuid,
+                usdRate = currentUsdRate,
                 totalAmount = totalAmount,
                 totalCost = totalCost,
                 paymentType = paymentType,
-                cashAmount = if (cashAmount == 0.0 && cardAmount == 0.0 && paymentType == PaymentType.CASH) totalAmount else cashAmount,
-                cardAmount = if (cashAmount == 0.0 && cardAmount == 0.0 && paymentType == PaymentType.CARD) totalAmount else cardAmount,
-                taxAmount = taxAmount,
+                cashAmount = paidCash,
+                cardAmount = paidCard,
+                taxAmount = SaleAccounting.money(paidCard * taxRate / 100.0),
                 taxRate = taxRate,
                 createdAt = now,
                 userId = userId,
@@ -104,6 +115,8 @@ class SaleRepository @Inject constructor(
                             productId = item.product.id,
                             productGuid = item.product.guid,
                             productName = item.product.name,
+                            categoryAtSale = item.product.category,
+                            unitAtSale = item.product.unitType.name,
                             quantity = remainingNeeded,
                             priceAtSale = item.priceAtSale,
                             costAtSale = item.product.costPrice,
@@ -123,6 +136,8 @@ class SaleRepository @Inject constructor(
                                 productId = item.product.id,
                                 productGuid = item.product.guid,
                                 productName = item.product.name,
+                            categoryAtSale = item.product.category,
+                            unitAtSale = item.product.unitType.name,
                                 quantity = primaryStock,
                                 priceAtSale = item.priceAtSale,
                                 costAtSale = item.product.costPrice,
@@ -149,6 +164,8 @@ class SaleRepository @Inject constructor(
                                     productId = item.product.id,
                                     productGuid = item.product.guid,
                                     productName = item.product.name,
+                            categoryAtSale = item.product.category,
+                            unitAtSale = item.product.unitType.name,
                                     quantity = take,
                                     priceAtSale = item.priceAtSale,
                                     costAtSale = item.product.costPrice,
@@ -171,6 +188,8 @@ class SaleRepository @Inject constructor(
                                 productId = item.product.id,
                                 productGuid = item.product.guid,
                                 productName = item.product.name,
+                            categoryAtSale = item.product.category,
+                            unitAtSale = item.product.unitType.name,
                                 quantity = remainingNeeded,
                                 priceAtSale = item.priceAtSale,
                                 costAtSale = item.product.costPrice,
@@ -191,14 +210,14 @@ class SaleRepository @Inject constructor(
                 }
             }
 
-            val saleId = saleDao.insertSaleWithItems(saleEntity, saleItems)
+            val saleId = saleDao.insertSaleWithItems(saleEntity, saleItems.mapIndexed { index, item -> item.copy(guid = "${saleEntity.guid}:${index + 1}") })
 
             database.openHelper.writableDatabase.execSQL("UPDATE sync_control SET current_group='' WHERE id=1")
             Triple(saleId, saleEntity, saleItems)
         }
 
         // Kompyuterga zudlik bilan jonli uzatish (fonda)
-        localSyncManager.sendLiveSale(savedEntity, savedItems)
+        runCatching { localSyncManager.sendLiveSale(savedEntity, savedItems) }
 
         return saleId
     }
@@ -213,61 +232,9 @@ class SaleRepository @Inject constructor(
         warehouseGuidFilter: String? = null
     ): List<SaleReportItem> {
         val sales = saleDao.getSalesListBetween(startTimestamp, endTimestamp)
-        val productsMap = productDao.getAllProductsList().associateBy { it.id }
-        val currentUsdRate = currencyRepository.getCachedUsdRate()
-
-        val reportItems = mutableListOf<SaleReportItem>()
-
-        for (saleWithItems in sales) {
-            val sale = saleWithItems.sale
-            for (saleItem in saleWithItems.items) {
-                val product = productsMap[saleItem.productId]
-                val category = product?.category ?: "Boshqa"
-                val whName = saleItem.warehouseName.ifBlank { "Asosiy ombor" }
-                val whGuid = saleItem.warehouseGuid
-
-                // Filtrlash: Kategoriya
-                if (!categoryFilter.isNullOrBlank() && categoryFilter != "Barchasi" && !category.equals(categoryFilter, ignoreCase = true)) {
-                    continue
-                }
-                // Filtrlash: Ombor
-                if (!warehouseGuidFilter.isNullOrBlank() && warehouseGuidFilter != "Barchasi" && whGuid.isNotBlank() && whGuid != warehouseGuidFilter) {
-                    continue
-                }
-
-                val productName = product?.name ?: saleItem.productName.ifBlank { "Mahsulot #${saleItem.productId}" }
-                val unitType = product?.unitType ?: UnitType.DONA
-
-                val costInUzs = if (saleItem.costCurrency == "USD") {
-                    saleItem.costAtSale * currentUsdRate
-                } else {
-                    saleItem.costAtSale
-                }
-
-                val totalPrice = saleItem.priceAtSale * saleItem.quantity
-                val totalCost = costInUzs * saleItem.quantity
-                val profit = totalPrice - totalCost
-
-                reportItems.add(
-                    SaleReportItem(
-                        saleId = sale.id,
-                        productId = saleItem.productId,
-                        productName = productName,
-                        quantity = saleItem.quantity,
-                        unitType = unitType,
-                        costPrice = costInUzs,
-                        sellingPrice = saleItem.priceAtSale,
-                        totalPrice = totalPrice,
-                        profit = profit,
-                        category = category,
-                        warehouseName = whName,
-                        warehouseGuid = whGuid,
-                        timestamp = sale.createdAt
-                    )
-                )
-            }
+        return sales.flatMap { uz.pos.electro.data.model.SaleAccounting.lines(it) }.filter { item ->
+            (categoryFilter.isNullOrBlank() || categoryFilter == "Barchasi" || item.category.equals(categoryFilter, true)) &&
+            (warehouseGuidFilter.isNullOrBlank() || warehouseGuidFilter == "Barchasi" || item.warehouseGuid == warehouseGuidFilter)
         }
-
-        return reportItems
     }
 }

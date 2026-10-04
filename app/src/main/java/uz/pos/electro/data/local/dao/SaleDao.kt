@@ -25,7 +25,7 @@ interface SaleDao {
         items: List<SaleItemEntity>
     ): Long {
         val saleId = insertSale(sale)
-        val itemsWithSaleId = items.map { it.copy(saleId = saleId) }
+        val itemsWithSaleId = items.mapIndexed { index, item -> item.copy(saleId = saleId, saleGuid = sale.guid, guid = item.guid.ifBlank { "${sale.guid}:${index + 1}" }) }
         insertSaleItems(itemsWithSaleId)
         return saleId
     }
@@ -50,11 +50,14 @@ interface SaleDao {
 
     fun getTotalSalesAmountBetween(startTimestamp: Long, endTimestamp: Long): Flow<Double?>
 
-    @Query("SELECT (SUM(total_amount) - SUM(total_cost)) FROM sales WHERE created_at BETWEEN :startTimestamp AND :endTimestamp")
+    @Query("SELECT (SUM(total_amount) - SUM(total_cost) - SUM(tax_amount)) FROM sales WHERE created_at BETWEEN :startTimestamp AND :endTimestamp")
     fun getTotalProfitBetween(startTimestamp: Long, endTimestamp: Long): Flow<Double?>
 
     @Query("SELECT COUNT(*) FROM sales WHERE created_at BETWEEN :startTimestamp AND :endTimestamp")
     fun getSalesCountBetween(startTimestamp: Long, endTimestamp: Long): Flow<Int>
+
+    @Query("SELECT DISTINCT CASE WHEN category_at_sale = '' THEN 'Tarixiy kategoriya noma’lum' ELSE category_at_sale END FROM sale_items")
+    fun getHistoricalCategories(): Flow<List<String>>
 
     @Query("SELECT COUNT(*) FROM sales")
     suspend fun getAllSalesCount(): Int

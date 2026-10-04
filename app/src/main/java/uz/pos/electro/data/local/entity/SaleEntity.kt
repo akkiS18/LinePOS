@@ -22,6 +22,9 @@ data class SaleEntity(
     @ColumnInfo(name = "guid")
     val guid: String = UUID.randomUUID().toString(),
 
+    @ColumnInfo(name = "usd_rate", defaultValue = "0.0")
+    val usdRate: Double = 0.0,
+
     @ColumnInfo(name = "total_amount")
     val totalAmount: Double,
 
@@ -51,5 +54,7 @@ data class SaleEntity(
 
     @ColumnInfo(name = "is_synced", defaultValue = "0")
     val isSynced: Boolean = false
-)
-
+) {
+    @get:androidx.room.Ignore
+    val receiptNumber: String get() = (if (paymentType == PaymentType.RETURN) "RT-" else if (paymentType == PaymentType.RETURN_REVERSAL) "RV-" else "LP-") + guid.replace("-", "").uppercase(java.util.Locale.ROOT)
+}

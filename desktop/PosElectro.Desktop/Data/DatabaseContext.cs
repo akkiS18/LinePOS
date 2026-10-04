@@ -50,6 +50,20 @@ namespace PosElectro.Desktop.Data
 
             _connectionString = $"Data Source={DatabaseFilePath}";
 
+            if (File.Exists(DatabaseFilePath) && new FileInfo(DatabaseFilePath).Length > 0)
+            {
+                using var source = new SqliteConnection(_connectionString); source.Open();
+                using var check = source.CreateCommand();
+                check.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE name='sale_items' AND type='table'";
+                if (Convert.ToInt32(check.ExecuteScalar()) > 0) {
+                    check.CommandText = "SELECT COUNT(*) FROM pragma_table_info('sale_items') WHERE name='guid'";
+                    if (Convert.ToInt32(check.ExecuteScalar()) == 0) {
+                        var backupDir = Path.Combine(Path.GetDirectoryName(DatabaseFilePath)!, "Backups"); Directory.CreateDirectory(backupDir);
+                        using var backup = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = Path.Combine(backupDir, $"before-returns-{DateTime.UtcNow:yyyyMMdd-HHmmss}-{Guid.NewGuid():N}.db") }.ToString());
+                        backup.Open(); source.BackupDatabase(backup);
+                    }
+                }
+            }
             InitializeDatabase();
         }
 
@@ -331,6 +345,25 @@ namespace PosElectro.Desktop.Data
                 catch { }
             }
 
+            foreach (var (table, column, definition) in new[] {
+                ("sales", "usd_rate", "REAL NOT NULL DEFAULT 0"),
+                ("sale_items", "guid", "TEXT NOT NULL DEFAULT ''"),
+                ("sale_items", "category_at_sale", "TEXT NOT NULL DEFAULT ''"),
+                ("sale_items", "unit_at_sale", "TEXT NOT NULL DEFAULT ''") })
+            {
+                using var check = conn.CreateCommand();
+                check.CommandText = $"SELECT COUNT(*) FROM pragma_table_info('{table}') WHERE name='{column}'";
+                if (Convert.ToInt32(check.ExecuteScalar()) == 0) {
+                    using var alter = conn.CreateCommand();
+                    alter.CommandText = $"ALTER TABLE {table} ADD COLUMN {column} {definition}";
+                    alter.ExecuteNonQuery();
+                }
+            }
+            using (var lineIds = conn.CreateCommand())
+            {
+                lineIds.CommandText = @"UPDATE sale_items SET guid=(SELECT guid FROM sales WHERE id=sale_items.sale_id)||':'||(SELECT COUNT(*) FROM sale_items previous WHERE previous.sale_id=sale_items.sale_id AND previous.id<=sale_items.id) WHERE guid=''; CREATE UNIQUE INDEX IF NOT EXISTS index_sale_items_guid ON sale_items(guid);";
+                lineIds.ExecuteNonQuery();
+            }
             // Omborlar va Ombor qoldiqlari jadvallari
             using (var whCmd = conn.CreateCommand())
             {
@@ -1367,13 +1400,14 @@ namespace PosElectro.Desktop.Data
             using var cmd = conn.CreateCommand();
             cmd.Transaction = transaction;
             cmd.CommandText = @"
-                INSERT INTO sales (guid, total_amount, total_cost, payment_type, cash_amount, card_amount, tax_amount, tax_rate, created_at, user_id, is_synced)
-                VALUES (@guid, @total_amount, @total_cost, @payment_type, @cash_amount, @card_amount, @tax_amount, @tax_rate, @created_at, @user_id, @is_synced);
+                INSERT INTO sales (usd_rate, guid, total_amount, total_cost, payment_type, cash_amount, card_amount, tax_amount, tax_rate, created_at, user_id, is_synced)
+                VALUES (@usd_rate, @guid, @total_amount, @total_cost, @payment_type, @cash_amount, @card_amount, @tax_amount, @tax_rate, @created_at, @user_id, @is_synced);
                 SELECT last_insert_rowid();
             ";
             cmd.Parameters.AddWithValue("@guid", sale.Guid);
             cmd.Parameters.AddWithValue("@total_amount", sale.TotalAmount);
             cmd.Parameters.AddWithValue("@total_cost", sale.TotalCost);
+            cmd.Parameters.AddWithValue("@usd_rate", sale.UsdRate);
             cmd.Parameters.AddWithValue("@payment_type", (int)sale.PaymentType);
             cmd.Parameters.AddWithValue("@cash_amount", sale.CashAmount);
             cmd.Parameters.AddWithValue("@card_amount", sale.CardAmount);
@@ -1555,9 +1589,13 @@ namespace PosElectro.Desktop.Data
                 using var itemCmd = conn.CreateCommand();
                 itemCmd.Transaction = transaction;
                 itemCmd.CommandText = @"
-                    INSERT INTO sale_items (sale_id, sale_guid, product_id, product_guid, product_name, quantity, price_at_sale, cost_at_sale, cost_currency, warehouse_guid, warehouse_name)
-                    VALUES (@sale_id, @sale_guid, @product_id, @product_guid, @product_name, @quantity, @price_at_sale, @cost_at_sale, @cost_currency, @wh_guid, @wh_name);
+                    INSERT INTO sale_items (guid, category_at_sale, unit_at_sale, sale_id, sale_guid, product_id, product_guid, product_name, quantity, price_at_sale, cost_at_sale, cost_currency, warehouse_guid, warehouse_name)
+                    VALUES (@item_guid, @category_at_sale, @unit_at_sale, @sale_id, @sale_guid, @product_id, @product_guid, @product_name, @quantity, @price_at_sale, @cost_at_sale, @cost_currency, @wh_guid, @wh_name);
                 ";
+                if (string.IsNullOrEmpty(item.Guid)) item.Guid = sale.Guid + ":" + (sale.Items.IndexOf(item) + 1).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                itemCmd.Parameters.AddWithValue("@item_guid", item.Guid);
+                itemCmd.Parameters.AddWithValue("@category_at_sale", item.CategoryAtSale);
+                itemCmd.Parameters.AddWithValue("@unit_at_sale", item.UnitAtSale);
                 itemCmd.Parameters.AddWithValue("@sale_id", sale.Id);
                 itemCmd.Parameters.AddWithValue("@sale_guid", sale.Guid ?? "");
                 itemCmd.Parameters.AddWithValue("@product_id", targetProductId);
@@ -1579,6 +1617,15 @@ namespace PosElectro.Desktop.Data
                 RaiseLocalSaleCompleted(sale);
             }
             return sale.Id;
+        }
+
+        public List<string> GetHistoricalCategories()
+        {
+            using var conn = CreateConnection(); using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT DISTINCT CASE WHEN category_at_sale='' THEN 'Tarixiy kategoriya noma’lum' ELSE category_at_sale END FROM sale_items";
+            using var reader = cmd.ExecuteReader(); var result = new List<string>();
+            while (reader.Read()) result.Add(reader.GetString(0));
+            return result;
         }
 
         public List<Sale> GetSales(DateTime from, DateTime to)
@@ -1610,21 +1657,23 @@ namespace PosElectro.Desktop.Data
             return list;
         }
 
-        public List<Sale> SearchSalesByReceiptNumber(string query, int limit = 50)
+        public List<Sale> SearchSalesByReceiptNumber(string query, int limit = 1000000)
         {
             var list = new List<Sale>();
             if (string.IsNullOrWhiteSpace(query)) return list;
-            var clean = query.Trim().TrimStart('#');
+            var clean = query.Trim().TrimStart('#').ToUpperInvariant();
+            if (clean.StartsWith("LP-") || clean.StartsWith("RT-") || clean.StartsWith("RV-")) clean = clean.Substring(3);
+            clean = clean.Replace("-", "");
 
             using var conn = CreateConnection();
             using var cmd = conn.CreateCommand();
             cmd.CommandText = @"
                 SELECT * FROM sales 
-                WHERE CAST(id AS TEXT) LIKE @pattern 
+                WHERE instr(upper(replace(guid, '-', '')), @pattern) > 0 OR instr(CAST(id AS TEXT), @pattern) > 0
                 ORDER BY id DESC 
                 LIMIT @limit;
             ";
-            cmd.Parameters.AddWithValue("@pattern", $"%{clean}%");
+            cmd.Parameters.AddWithValue("@pattern", clean.ToUpperInvariant());
             cmd.Parameters.AddWithValue("@limit", limit);
             using var reader = cmd.ExecuteReader();
             while (reader.Read())
@@ -1643,19 +1692,22 @@ namespace PosElectro.Desktop.Data
         {
             var items = new List<SaleItem>();
             using var cmd = conn.CreateCommand();
-            cmd.CommandText = "SELECT * FROM sale_items WHERE sale_id = @saleId";
+            cmd.CommandText = "SELECT * FROM sale_items WHERE sale_id = @saleId ORDER BY id";
             cmd.Parameters.AddWithValue("@saleId", saleId);
             using var reader = cmd.ExecuteReader();
             while (reader.Read())
             {
                 items.Add(new SaleItem
                 {
+                    Guid = reader.GetString(reader.GetOrdinal("guid")),
                     Id = reader.GetInt64(reader.GetOrdinal("id")),
                     SaleId = reader.GetInt64(reader.GetOrdinal("sale_id")),
                     SaleGuid = reader.GetString(reader.GetOrdinal("sale_guid")),
                     ProductId = reader.GetInt64(reader.GetOrdinal("product_id")),
                     ProductGuid = reader.GetString(reader.GetOrdinal("product_guid")),
                     ProductName = reader.GetString(reader.GetOrdinal("product_name")),
+                    CategoryAtSale = reader.GetString(reader.GetOrdinal("category_at_sale")),
+                    UnitAtSale = reader.GetString(reader.GetOrdinal("unit_at_sale")),
                     Quantity = reader.GetDouble(reader.GetOrdinal("quantity")),
                     PriceAtSale = reader.GetDouble(reader.GetOrdinal("price_at_sale")),
                     CostAtSale = reader.GetDouble(reader.GetOrdinal("cost_at_sale")),
@@ -1669,89 +1721,9 @@ namespace PosElectro.Desktop.Data
 
         public List<SaleReportItem> GetDetailedReportItems(DateTime from, DateTime to, double usdRate, string? categoryFilter = null, string? warehouseGuidFilter = null)
         {
-            var list = new List<SaleReportItem>();
-            var fromMs = new DateTimeOffset(from).ToUnixTimeMilliseconds();
-            var toMs = new DateTimeOffset(to).ToUnixTimeMilliseconds();
-
-            var products = new Dictionary<long, Product>();
-            foreach (var p in GetAllProducts(includeDeleted: true))
-            {
-                products[p.Id] = p;
-            }
-
-            using var conn = CreateConnection();
-            using var cmd = conn.CreateCommand();
-            cmd.CommandText = @"
-                SELECT s.id as sale_id, s.created_at, si.product_id, si.product_name, si.quantity, si.price_at_sale, si.cost_at_sale, si.cost_currency, si.warehouse_guid, si.warehouse_name
-                FROM sales s
-                JOIN sale_items si ON s.id = si.sale_id
-                WHERE s.created_at >= @fromMs AND s.created_at <= @toMs
-                ORDER BY s.created_at DESC, si.id ASC
-            ";
-            cmd.Parameters.AddWithValue("@fromMs", fromMs);
-            cmd.Parameters.AddWithValue("@toMs", toMs);
-
-            using var reader = cmd.ExecuteReader();
-            while (reader.Read())
-            {
-                var saleId = reader.GetInt64(reader.GetOrdinal("sale_id"));
-                var createdAt = reader.GetInt64(reader.GetOrdinal("created_at"));
-                var productId = reader.GetInt64(reader.GetOrdinal("product_id"));
-                var productName = reader.GetString(reader.GetOrdinal("product_name"));
-                var quantity = reader.GetDouble(reader.GetOrdinal("quantity"));
-                var priceAtSale = reader.GetDouble(reader.GetOrdinal("price_at_sale"));
-                var costAtSale = reader.GetDouble(reader.GetOrdinal("cost_at_sale"));
-                var costCurrency = reader.GetString(reader.GetOrdinal("cost_currency"));
-                var whGuid = reader.IsDBNull(reader.GetOrdinal("warehouse_guid")) ? string.Empty : reader.GetString(reader.GetOrdinal("warehouse_guid"));
-                var whName = reader.IsDBNull(reader.GetOrdinal("warehouse_name")) ? string.Empty : reader.GetString(reader.GetOrdinal("warehouse_name"));
-
-                products.TryGetValue(productId, out var prod);
-                var category = prod?.Category ?? "Barchasi";
-                var unitType = prod?.UnitType ?? UnitType.DONA;
-
-                // Kategoriya bo'yicha filtr
-                if (!string.IsNullOrWhiteSpace(categoryFilter) && categoryFilter != "Barchasi")
-                {
-                    if (!string.Equals(category, categoryFilter, StringComparison.OrdinalIgnoreCase))
-                    {
-                        continue;
-                    }
-                }
-
-                // Ombor bo'yicha filtr
-                if (!string.IsNullOrWhiteSpace(warehouseGuidFilter) && warehouseGuidFilter != "all")
-                {
-                    if (whGuid != warehouseGuidFilter)
-                    {
-                        continue;
-                    }
-                }
-
-                double costInUzs = costCurrency == "USD" ? costAtSale * usdRate : costAtSale;
-                double totalPrice = priceAtSale * quantity;
-                double totalCost = costInUzs * quantity;
-                double profit = totalPrice - totalCost;
-
-                list.Add(new SaleReportItem
-                {
-                    SaleId = saleId,
-                    ProductId = productId,
-                    ProductName = productName,
-                    Category = category,
-                    WarehouseName = whName,
-                    Quantity = quantity,
-                    UnitType = unitType,
-                    CostPrice = costInUzs,
-                    CostCurrency = costCurrency,
-                    OriginalCost = costAtSale,
-                    SellingPrice = priceAtSale,
-                    TotalPrice = totalPrice,
-                    Profit = profit,
-                    Timestamp = createdAt
-                });
-            }
-
-            return list;
+            return GetSales(from, to).SelectMany(SaleAccounting.Lines).Where(item =>
+                (string.IsNullOrWhiteSpace(categoryFilter) || categoryFilter == "Barchasi" || string.Equals(item.Category, categoryFilter, StringComparison.OrdinalIgnoreCase)) &&
+                (string.IsNullOrWhiteSpace(warehouseGuidFilter) || warehouseGuidFilter == "all" || item.WarehouseGuid == warehouseGuidFilter)).ToList();
         }
 
         private static Product ReadProduct(SqliteDataReader r) => new()
@@ -1781,6 +1753,7 @@ namespace PosElectro.Desktop.Data
                 Guid = r.GetString(r.GetOrdinal("guid")),
                 TotalAmount = r.GetDouble(r.GetOrdinal("total_amount")),
                 TotalCost = r.GetDouble(r.GetOrdinal("total_cost")),
+                UsdRate = r.GetDouble(r.GetOrdinal("usd_rate")),
                 PaymentType = (PaymentType)r.GetInt32(r.GetOrdinal("payment_type")),
                 CreatedAt = r.GetInt64(r.GetOrdinal("created_at")),
                 UserId = r.GetInt64(r.GetOrdinal("user_id")),

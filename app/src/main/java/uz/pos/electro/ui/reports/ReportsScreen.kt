@@ -44,10 +44,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -91,6 +93,11 @@ fun ReportsScreen(
     val summary by viewModel.summary.collectAsState()
     val salesList by viewModel.salesList.collectAsState()
     val selectedSale by viewModel.selectedSaleForDetail.collectAsState()
+    var returning by remember { mutableStateOf(false) }
+    var returnHistory by remember { mutableStateOf("") }
+    LaunchedEffect(selectedSale?.sale?.guid) {
+        returnHistory = selectedSale?.let { viewModel.returnSync.returnHistory(it.sale.guid) } ?: ""
+    }
     val customStart by viewModel.customStartDate.collectAsState()
     val customEnd by viewModel.customEndDate.collectAsState()
     val usdRate by viewModel.usdRate.collectAsState()
@@ -99,12 +106,9 @@ fun ReportsScreen(
     val isExportModalOpen by viewModel.isExportModalOpen.collectAsState()
 
     // Chek raqami bo'yicha qidiruv
-    var searchQuery by remember { androidx.compose.runtime.mutableStateOf("") }
-
-    val filteredSales = remember(salesList, searchQuery) {
-        if (searchQuery.isBlank()) salesList
-        else salesList.filter { it.sale.id.toString().contains(searchQuery.trim()) }
-    }
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val recordKind by viewModel.recordKind.collectAsState()
+    val filteredSales = salesList
 
     val infiniteTransition = rememberInfiniteTransition(label = "refreshRotation")
     val refreshRotation by infiniteTransition.animateFloat(
@@ -216,6 +220,17 @@ fun ReportsScreen(
 
             Spacer(modifier = Modifier.height(14.dp))
 
+            Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("Barchasi", "Savdo", "Qaytarish", "Brak").forEach { kind ->
+                    FilterChip(selected = recordKind == kind, onClick = { viewModel.setRecordKind(kind) }, label = { Text(kind) })
+                }
+            }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ReportChoice("Kategoriya", selectedCategory, categories.map { it to it }, viewModel::setCategoryFilter)
+                ReportChoice("Ombor", selectedWarehouseGuid, listOf("Barchasi" to "Barchasi") + warehouses.map { it.guid to it.name }, viewModel::setWarehouseFilter)
+            }
+            Text("Savdo tushumi: ${numberFormat.format(summary.grossSales)} • Qaytarilgan (sof): ${numberFormat.format(summary.refundedAmount)} • Tannarx tiklanishi: ${numberFormat.format(summary.costReversal)} so‘m", style = MaterialTheme.typography.bodySmall)
+            Text("Brak: ${summary.brakCount} ta • Tannarx: ${numberFormat.format(summary.brakCost)} so‘m", style = MaterialTheme.typography.bodySmall)
             // 2. Moliyaviy KPI Ko'rsatkichlari (Apple Rounded Cards)
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(
@@ -233,7 +248,7 @@ fun ReportsScreen(
                     )
 
                     // SOF FOYDA (So'mda va Dollarda)
-                    val formattedUsdProfit = String.format(Locale.US, "%.2f", summary.netProfitUsd)
+                    val formattedUsdProfit = if (summary.usdComplete) String.format(Locale.US, "%.2f", summary.netProfitUsd) else "— (eski kurs yo‘q)"
                     val taxSubtitle = if (summary.totalTaxAmount > 0) "Karta solig'i: -${numberFormat.format(summary.totalTaxAmount)}" else null
                     val fullSubtitle = if (taxSubtitle != null) "($${formattedUsdProfit}) • $taxSubtitle" else "($${formattedUsdProfit})"
                     val profitIsNegative = summary.netProfit < 0
@@ -308,7 +323,7 @@ fun ReportsScreen(
             // Chek raqami bo'yicha qidiruv
             androidx.compose.material3.OutlinedTextField(
                 value = searchQuery,
-                onValueChange = { searchQuery = it },
+                onValueChange = { viewModel.setSearchQuery(it) },
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = { Text("Chek № bo'yicha qidirish...", fontSize = 14.sp) },
                 leadingIcon = {
@@ -321,7 +336,7 @@ fun ReportsScreen(
                 },
                 trailingIcon = if (searchQuery.isNotEmpty()) {
                     {
-                        IconButton(onClick = { searchQuery = "" }) {
+                        IconButton(onClick = { viewModel.setSearchQuery("") }) {
                             Icon(Icons.Default.Close, contentDescription = "Tozalash")
                         }
                     }
@@ -329,7 +344,7 @@ fun ReportsScreen(
                 singleLine = true,
                 shape = RoundedCornerShape(14.dp),
                 keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Text
                 )
             )
 
@@ -380,8 +395,11 @@ fun ReportsScreen(
 
         // Chek tafsilotlari dialogi
         selectedSale?.let { saleWithItems ->
-            SaleDetailDialog(
+            if (returning) ReturnDialog(saleWithItems, viewModel) { returning = false; viewModel.closeSaleDetail() }
+            else SaleDetailDialog(
                 saleWithItems = saleWithItems,
+                onReturn = { returning = true },
+                returnHistory = returnHistory,
                 onDismissRequest = { viewModel.closeSaleDetail() }
             )
         }
@@ -468,6 +486,8 @@ private fun SaleHistoryCard(
         uz.pos.electro.data.model.PaymentType.CASH -> "Naqd"
         uz.pos.electro.data.model.PaymentType.CARD -> "Karta"
         uz.pos.electro.data.model.PaymentType.SPLIT -> "Aralash"
+        uz.pos.electro.data.model.PaymentType.RETURN_REVERSAL -> "Qaytarishni bekor qilish"
+        uz.pos.electro.data.model.PaymentType.RETURN -> "Qaytarish"
         uz.pos.electro.data.model.PaymentType.BRAK -> "⚠️ Brak"
     }
 
@@ -489,7 +509,7 @@ private fun SaleHistoryCard(
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "Chek #${saleWithItems.sale.id}",
+                        text = "Chek #${saleWithItems.sale.receiptNumber}",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -552,6 +572,8 @@ private fun SaleHistoryCard(
 @Composable
 private fun SaleDetailDialog(
     saleWithItems: SaleWithItems,
+    onReturn: () -> Unit,
+    returnHistory: String,
     onDismissRequest: () -> Unit
 ) {
     val numberFormat = remember { NumberFormat.getNumberInstance(Locale.US) }
@@ -573,7 +595,7 @@ private fun SaleDetailDialog(
                     .padding(20.dp)
             ) {
                 Text(
-                    text = "Chek #${saleWithItems.sale.id} Tafsilotlari",
+                    text = "Chek #${saleWithItems.sale.receiptNumber} Tafsilotlari",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
@@ -603,7 +625,7 @@ private fun SaleDetailDialog(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Mahsulot #${item.productId}",
+                                    text = item.productName.ifBlank { "Mahsulot #${item.productId}" },
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -657,6 +679,11 @@ private fun SaleDetailDialog(
 
                 Spacer(modifier = Modifier.height(18.dp))
 
+                if (returnHistory.isNotBlank()) Text(returnHistory, style = MaterialTheme.typography.bodySmall)
+                if (saleWithItems.sale.paymentType != uz.pos.electro.data.model.PaymentType.BRAK &&
+                    saleWithItems.sale.paymentType != uz.pos.electro.data.model.PaymentType.RETURN_REVERSAL) {
+                    Button(onClick = onReturn, modifier = Modifier.fillMaxWidth()) { Text(if (saleWithItems.sale.paymentType == uz.pos.electro.data.model.PaymentType.RETURN) "Qaytarishni bekor qilish" else "Qaytarish") }
+                }
                 Button(
                     onClick = onDismissRequest,
                     modifier = Modifier.fillMaxWidth(),
@@ -952,6 +979,21 @@ fun ExportReportDialog(
                         Text("Yuklab olish (.xls)", fontWeight = FontWeight.Bold)
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReportChoice(label: String, selected: String, choices: List<Pair<String, String>>, onSelect: (String) -> Unit) {
+    var expanded by remember { androidx.compose.runtime.mutableStateOf(false) }
+    Box {
+        androidx.compose.material3.TextButton(onClick = { expanded = true }) {
+            Text("$label: ${choices.firstOrNull { it.first == selected }?.second ?: selected}", maxLines = 1)
+        }
+        androidx.compose.material3.DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            choices.forEach { (value, title) ->
+                androidx.compose.material3.DropdownMenuItem(text = { Text(title) }, onClick = { expanded = false; onSelect(value) })
             }
         }
     }

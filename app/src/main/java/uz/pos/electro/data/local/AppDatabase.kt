@@ -33,7 +33,7 @@ import uz.pos.electro.data.local.entity.WarehouseEntity
         WarehouseEntity::class,
         ProductStockEntity::class
     ],
-    version = 11,
+    version = 13,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -176,8 +176,8 @@ abstract class AppDatabase : RoomDatabase() {
         fun databaseName(context: Context): String =
             if (context.packageName.endsWith(".test")) "electro_pos_test.db" else DATABASE_NAME
 
-        fun buildDatabase(context: Context, scope: CoroutineScope): AppDatabase {
-            val dbName = databaseName(context)
+        fun buildDatabase(context: Context, scope: CoroutineScope, nameOverride: String? = null): AppDatabase {
+            val dbName = nameOverride ?: databaseName(context)
             return Room.databaseBuilder(
                 context.applicationContext,
                 AppDatabase::class.java,
@@ -187,6 +187,23 @@ abstract class AppDatabase : RoomDatabase() {
             .addMigrations(object : Migration(10, 11) {
                 override fun migrate(db: SupportSQLiteDatabase) {
                     uz.pos.electro.data.sync.WifiSyncSchema.install(db, context.assets.open("wifi-sync-schema.sql").bufferedReader().use { it.readText() })
+                }
+            })
+            .addMigrations(object : Migration(11, 12) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE sales ADD COLUMN usd_rate REAL NOT NULL DEFAULT 0.0")
+                    db.execSQL("ALTER TABLE sale_items ADD COLUMN category_at_sale TEXT NOT NULL DEFAULT ''")
+                    db.execSQL("ALTER TABLE sale_items ADD COLUMN unit_at_sale TEXT NOT NULL DEFAULT ''")
+                }
+            })
+            .addMigrations(object : Migration(12, 13) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    val backupDir = java.io.File(context.filesDir, "migration-backups").apply { mkdirs() }
+                    uz.pos.electro.util.DatabaseBackupExporter.copySnapshot(db,
+                        java.io.File(backupDir, "before-returns-${System.currentTimeMillis()}-${java.util.UUID.randomUUID()}.db"))
+                    db.execSQL("ALTER TABLE sale_items ADD COLUMN guid TEXT NOT NULL DEFAULT ''")
+                    db.execSQL("UPDATE sale_items SET guid=(SELECT guid FROM sales WHERE id=sale_items.sale_id)||':'||(SELECT COUNT(*) FROM sale_items previous WHERE previous.sale_id=sale_items.sale_id AND previous.id<=sale_items.id) WHERE guid=''")
+                    db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_sale_items_guid ON sale_items(guid)")
                 }
             })
             .addCallback(object : Callback() {

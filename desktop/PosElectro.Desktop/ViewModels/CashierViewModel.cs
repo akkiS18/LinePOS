@@ -92,7 +92,7 @@ namespace PosElectro.Desktop.ViewModels
         public double Cost => Product.CostCurrency == "USD" ? Product.CostPrice * _usdRate : Product.CostPrice;
         public bool IsDiscounted => Math.Abs(PriceAtSale - OriginalPrice) > 0.01;
         public double DiscountAmount => OriginalPrice - PriceAtSale;
-        public double TotalPrice => Quantity * PriceAtSale;
+        public double TotalPrice => SaleAccounting.Money(Quantity * PriceAtSale);
         public double TotalCost => Quantity * Cost;
         public string UnitDisplay => Product.UnitDisplay;
 
@@ -593,7 +593,7 @@ namespace PosElectro.Desktop.ViewModels
             set => SetProperty(ref _statusMessage, value);
         }
 
-        public double TotalAmount => CartItems.Sum(i => i.TotalPrice);
+        public double TotalAmount => SaleAccounting.Money(CartItems.Sum(i => i.TotalPrice));
         public double TotalCost => CartItems.Sum(i => i.TotalCost);
         public int TotalItemsCount => CartItems.Count;
         public bool HasHeldCarts => HeldCarts.Count > 0;
@@ -1085,6 +1085,7 @@ namespace PosElectro.Desktop.ViewModels
 
             var sale = BuildCurrentCartSale();
             _db.InsertSale(sale);
+            _checkoutGuid = Guid.NewGuid().ToString();
 
             if (SelectedReceiptPrintOption == 1)
             {
@@ -1137,7 +1138,8 @@ namespace PosElectro.Desktop.ViewModels
                 return;
             }
 
-            var totalCost = CartItems.Sum(i => i.TotalCost);
+            var brakRate = _currencyService.GetCachedUsdRate();
+            var totalCost = SaleAccounting.Money(CartItems.Sum(i => i.Quantity * i.Product.CostPrice * (i.Product.CostCurrency == "USD" ? brakRate : 1)));
             var itemsCount = CartItems.Count;
 
             var sale = new Sale
@@ -1145,6 +1147,7 @@ namespace PosElectro.Desktop.ViewModels
                 Id = _db.GetTotalSalesCount() + 1,
                 TotalAmount = 0.0,
                 TotalCost = totalCost,
+                UsdRate = brakRate,
                 PaymentType = PaymentType.BRAK,
                 CashAmount = 0.0,
                 CardAmount = 0.0,
@@ -1161,6 +1164,8 @@ namespace PosElectro.Desktop.ViewModels
                     ProductId = item.Product.Id,
                     ProductGuid = item.Product.Guid,
                     ProductName = item.Product.Name,
+                    CategoryAtSale = item.Product.Category,
+                    UnitAtSale = item.Product.UnitType.ToString(),
                     WarehouseGuid = item.WarehouseGuid,
                     WarehouseName = item.WarehouseName,
                     Quantity = item.Quantity,
@@ -1171,6 +1176,7 @@ namespace PosElectro.Desktop.ViewModels
             }
 
             _db.InsertSale(sale);
+            _checkoutGuid = Guid.NewGuid().ToString();
 
             IsBrakModalOpen = false;
             ClearCart();
@@ -1199,6 +1205,8 @@ namespace PosElectro.Desktop.ViewModels
             _toastTimer.Start();
         }
 
+        private string _checkoutGuid = Guid.NewGuid().ToString();
+
         public Sale BuildCurrentCartSale()
         {
             double cash = 0;
@@ -1220,6 +1228,8 @@ namespace PosElectro.Desktop.ViewModels
                 var cleanCard = (CardAmountInput ?? "").Replace(" ", "").Replace("\u00A0", "").Replace(',', '.');
                 double.TryParse(cleanCash, NumberStyles.Any, CultureInfo.InvariantCulture, out cash);
                 double.TryParse(cleanCard, NumberStyles.Any, CultureInfo.InvariantCulture, out card);
+                cash = SaleAccounting.Money(Math.Clamp(double.IsFinite(cash) ? cash : 0, 0, TotalAmount));
+                card = SaleAccounting.Money(TotalAmount - cash);
                 if (cash + card != TotalAmount)
                 {
                     if (cash <= TotalAmount) card = TotalAmount - cash;
@@ -1227,14 +1237,17 @@ namespace PosElectro.Desktop.ViewModels
                 }
             }
 
+            var saleRate = _currencyService.GetCachedUsdRate();
             var taxRate = CurrentCardTaxRate;
-            var taxAmount = card * (taxRate / 100.0);
+            var taxAmount = SaleAccounting.Money(card * (taxRate / 100.0));
 
             var sale = new Sale
             {
                 Id = _db.GetTotalSalesCount() + 1,
                 TotalAmount = TotalAmount,
-                TotalCost = TotalCost,
+                Guid = _checkoutGuid,
+                TotalCost = SaleAccounting.Money(CartItems.Sum(i => i.Quantity * i.Product.CostPrice * (i.Product.CostCurrency == "USD" ? saleRate : 1))),
+                UsdRate = saleRate,
                 PaymentType = SelectedPaymentType switch
                 {
                     1 => PaymentType.CARD,
@@ -1256,6 +1269,8 @@ namespace PosElectro.Desktop.ViewModels
                     ProductId = item.Product.Id,
                     ProductGuid = item.Product.Guid,
                     ProductName = item.Product.Name,
+                    CategoryAtSale = item.Product.Category,
+                    UnitAtSale = item.Product.UnitType.ToString(),
                     WarehouseGuid = item.WarehouseGuid,
                     WarehouseName = item.WarehouseName,
                     Quantity = item.Quantity,

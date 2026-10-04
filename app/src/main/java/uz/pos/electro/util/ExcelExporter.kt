@@ -87,12 +87,12 @@ object ExcelExporter {
                             <td colspan="8" class="kpi-val">${numberFormat.format(summary.totalCost)} so'm</td>
                         </tr>
                         <tr>
-                            <td colspan="5">Sof Foyda:</td>
-                            <td colspan="8" class="profit-val">+${numberFormat.format(summary.netProfit)} so'm</td>
+                            <td colspan="5">Sof Foyda (karta solig‘idan keyin):</td>
+                            <td colspan="8" class="profit-val">${numberFormat.format(summary.netProfit)} so'm</td>
                         </tr>
                         <tr>
                             <td colspan="5">Jami Cheklar Soni:</td>
-                            <td colspan="8" class="kpi-val">${summary.salesCount} ta chek</td>
+                            <td colspan="8" class="kpi-val">${summary.salesCount} ta savdo; Qaytarish amallari: ${summary.returnCount}, sof qaytarilgan: ${numberFormat.format(summary.refundedAmount)}, tannarx tiklanishi: ${numberFormat.format(summary.costReversal)} so‘m; ${summary.brakCount} ta brak (${numberFormat.format(summary.brakCost)} so‘m). USD foyda: ${if (summary.usdComplete) String.format(Locale.US, "%.2f", summary.netProfitUsd) else "noma’lum: eski kurs saqlanmagan"}</td>
                         </tr>
                         <tr><td colspan="13" style="border:none;"></td></tr>
 
@@ -128,7 +128,7 @@ object ExcelExporter {
                     <tr>
                         <td class="center">${index + 1}</td>
                         <td>${dateFormat.format(Date(item.timestamp))}</td>
-                        <td class="center">#${item.saleId}</td>
+                        <td class="center">#${item.receiptNumber}</td>
                         <td>${item.category.ifBlank { "Boshqa" }}</td>
                         <td>${item.warehouseName.ifBlank { "Asosiy ombor" }}</td>
                         <td><b>${item.productName}</b></td>
@@ -137,7 +137,7 @@ object ExcelExporter {
                         <td class="num">${numberFormat.format(item.costPrice)}</td>
                         <td class="num">${numberFormat.format(item.sellingPrice)}</td>
                         <td class="num"><b>${numberFormat.format(item.totalPrice)}</b></td>
-                        <td class="num" style="color:#15803D;"><b>+${numberFormat.format(item.profit)}</b></td>
+                        <td class="num" style="color:#15803D;"><b>${numberFormat.format(item.profit)}</b></td>
                         <td class="num" style="font-weight:bold; color: #2563EB;">$marginStr</td>
                     </tr>
                 """.trimIndent())

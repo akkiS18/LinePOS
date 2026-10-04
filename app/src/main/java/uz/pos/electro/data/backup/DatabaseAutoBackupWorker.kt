@@ -67,28 +67,6 @@ class DatabaseAutoBackupWorker(
         } catch (_: Throwable) {
             -1
         }
-        val lastSalesCount = BackupPreferences.getLastBackupSalesCount(context)
-
-        // Agar oldin zaxira olingan bo'lsa va hozirgi savdolar soni oshmagan bo'lsa:
-        if (lastSalesCount >= 0 && currentSalesCount >= 0 && currentSalesCount <= lastSalesCount) {
-            val tashkentFormatter = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault()).apply {
-                timeZone = TimeZone.getTimeZone("Asia/Tashkent")
-            }
-            val timeStr = tashkentFormatter.format(Date())
-            val noSalesMessage = """
-                ℹ️ <b>SMART Kassa — Kunlik Xabarnoma</b>
-                
-                📅 <b>Vaqt:</b> $timeStr (Toshkent UTC+5)
-                📊 <b>Holat:</b> Oxirgi zaxiradan buyon yangi savdo amalga oshirilmadi (Jami savdolar: $currentSalesCount ta).
-                
-                📁 <i>Baza hajmini tejash maqsadida fayl qayta yuborilmadi.</i>
-            """.trimIndent()
-
-            TelegramBackupService.sendTextMessage(botToken, chatId, noSalesMessage)
-            BackupPreferences.recordNoSalesBackup(context, currentSalesCount)
-            return Result.success()
-        }
-
         var backupFile: File? = null
         return try {
             // 3. Baza nusxasini xavfsiz (WAL checkpoint bilan) yaratish

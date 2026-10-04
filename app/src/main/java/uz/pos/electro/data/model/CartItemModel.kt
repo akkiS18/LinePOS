@@ -10,7 +10,7 @@ data class CartItemModel(
     val warehouseName: String? = null
 ) {
     val totalPrice: Double
-        get() = quantity * priceAtSale
+        get() = SaleAccounting.money(quantity * priceAtSale)
 
     val hasSellingPrice2: Boolean
         get() = product.sellingPrice2 != null && product.sellingPrice2 > 0

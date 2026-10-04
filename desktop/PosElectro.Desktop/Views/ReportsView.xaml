@@ -302,6 +302,8 @@
                         <TextBlock Text="🧾" HorizontalAlignment="Right" FontSize="14"/>
                     </Grid>
                     <TextBlock Text="{Binding TotalSalesCountText}" Foreground="#F8FAFC" FontSize="22" FontWeight="Bold" Margin="0,6,0,0"/>
+                    <ComboBox ItemsSource="{Binding RecordKinds}" SelectedItem="{Binding SelectedRecordKind}" Margin="0,6,0,0"/>
+                    <TextBlock Text="{Binding BrakSummary}" FontSize="11" TextWrapping="Wrap" Foreground="#94A3B8"/>
                 </StackPanel>
             </Border>
 
@@ -395,7 +397,7 @@
                 </DataGrid.RowStyle>
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Vaqt" Binding="{Binding CreatedDateTime, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}" Width="140"/>
-                    <DataGridTextColumn Header="Chek №" Binding="{Binding Id, StringFormat='{}#{0}'}" Width="80"/>
+                    <DataGridTextColumn Header="Chek №" Binding="{Binding ReceiptNumber}" Width="280"/>
                     <DataGridTextColumn Header="To'lov turi" Binding="{Binding PaymentTypeDisplay}" Width="90"/>
                     <DataGridTextColumn Header="Tovarlar soni" Binding="{Binding Items.Count, StringFormat='{}{0} xil'}" Width="110"/>
                     <DataGridTextColumn Header="Jami summa" Binding="{Binding TotalAmount, StringFormat='{}{0:N0} so\'m'}" Width="*" FontWeight="Bold"/>

@@ -52,6 +52,7 @@ import java.util.Locale
 @Composable
 fun CheckoutPaymentDialog(
     totalAmount: Double,
+    isSubmitting: Boolean = false,
     cardTaxRate: Double,
     onDismissRequest: () -> Unit,
     onConfirmSale: (paymentType: PaymentType, cashAmount: Double, cardAmount: Double, taxAmount: Double, taxRate: Double) -> Unit
@@ -69,7 +70,7 @@ fun CheckoutPaymentDialog(
             val card = cardInput.toDoubleOrNull() ?: 0.0
             card * (cardTaxRate / 100.0)
         }
-        PaymentType.BRAK -> 0.0
+        PaymentType.RETURN, PaymentType.RETURN_REVERSAL, PaymentType.BRAK -> 0.0
     }
 
     AlertDialog(
@@ -161,7 +162,7 @@ fun CheckoutPaymentDialog(
                 Spacer(modifier = Modifier.height(14.dp))
 
                 when (selectedType) {
-                    PaymentType.CASH, PaymentType.BRAK -> {
+                    PaymentType.CASH, PaymentType.RETURN, PaymentType.RETURN_REVERSAL, PaymentType.BRAK -> {
                         Surface(
                             shape = RoundedCornerShape(10.dp),
                             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -270,6 +271,7 @@ fun CheckoutPaymentDialog(
         },
         confirmButton = {
             Button(
+                enabled = !isSubmitting,
                 onClick = {
                     val (cash, card) = when (selectedType) {
                         PaymentType.CASH -> Pair(totalAmount, 0.0)
@@ -287,7 +289,7 @@ fun CheckoutPaymentDialog(
                             }
                             Pair(cashVal, cardVal)
                         }
-                        PaymentType.BRAK -> Pair(0.0, 0.0)
+                        PaymentType.RETURN, PaymentType.RETURN_REVERSAL, PaymentType.BRAK -> Pair(0.0, 0.0)
                     }
 
                     val taxAmount = card * (cardTaxRate / 100.0)
@@ -296,7 +298,7 @@ fun CheckoutPaymentDialog(
                 shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = LineSecondary)
             ) {
-                Text("Tasdiqlash va Sotish", fontWeight = FontWeight.Bold)
+                Text(if (isSubmitting) "Saqlanmoqda…" else "Tasdiqlash va Sotish", fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {

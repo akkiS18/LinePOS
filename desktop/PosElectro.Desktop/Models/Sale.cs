@@ -7,6 +7,9 @@ namespace PosElectro.Desktop.Models
     {
         public long Id { get; set; }
         public string Guid { get; set; } = System.Guid.NewGuid().ToString();
+        public string ReceiptNumber => (PaymentType == PaymentType.RETURN ? "RT-" : PaymentType == PaymentType.RETURN_REVERSAL ? "RV-" : "LP-") + Guid.Replace("-", "").ToUpperInvariant();
+        public string OriginalReceiptNumber { get; set; } = string.Empty;
+        public double UsdRate { get; set; }
         public double TotalAmount { get; set; }
         public double TotalCost { get; set; }
         public PaymentType PaymentType { get; set; } = PaymentType.CASH;
@@ -32,6 +35,8 @@ namespace PosElectro.Desktop.Models
             PaymentType.CASH => "Naqd",
             PaymentType.CARD => "Karta",
             PaymentType.SPLIT => $"Aralash (N: {CashAmount:N0} / K: {CardAmount:N0})",
+            PaymentType.RETURN => "Qaytarish",
+            PaymentType.RETURN_REVERSAL => "Qaytarishni bekor qilish",
             PaymentType.BRAK => "⚠️ Brak (Spisanie)",
             _ => PaymentType.ToString()
         };
@@ -39,12 +44,15 @@ namespace PosElectro.Desktop.Models
 
     public class SaleItem
     {
+        public string Guid { get; set; } = string.Empty;
         public long Id { get; set; }
         public long SaleId { get; set; }
         public string SaleGuid { get; set; } = string.Empty;
         public long ProductId { get; set; }
         public string ProductGuid { get; set; } = string.Empty;
         public string ProductName { get; set; } = string.Empty;
+        public string CategoryAtSale { get; set; } = string.Empty;
+        public string UnitAtSale { get; set; } = string.Empty;
         public double Quantity { get; set; }
         public double PriceAtSale { get; set; }
         public double CostAtSale { get; set; }
