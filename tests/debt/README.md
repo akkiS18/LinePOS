@@ -55,3 +55,5 @@ on .NET 8.0.15. CI uses the normal project command above.
 
 No database, LAN, UI, Windows application or Android application integration has
 been tested in this stage. The full D01–D27 acceptance matrix is not yet complete.
+
+GitHub Actions also passed with the normal project build: [run 37285212424](https://github.com/akkiS18/LinePOS/actions/runs/37285212424), tested code commit `62150310d30a6fe27020194758eba86b76eb3fa6`. Both implementations passed 97/97 and the parity comparison.
