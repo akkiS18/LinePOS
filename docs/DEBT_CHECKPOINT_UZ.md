@@ -1,6 +1,6 @@
 # Qarz daftari — davom ettirish nuqtasi
 
-Sana: 2026-10-05. Holat: **2B-1: sxema va migratsiya yozildi; platforma CI tekshiruvi kutilmoqda**.
+Sana: 2026-10-05. Holat: **2B-1 yakunlandi — sxema va xavfsiz migratsiya; repository hali yo‘q**.
 
 ## Asos va branch
 
@@ -35,10 +35,14 @@ Foydalanuvchining kichik tugallangan bosqichlarda ishlash talabi sabab 2B ikkiga
 - `debt/schema.sql`, desktop resource va Android asset aynan bir xil. Auxiliary SQLite tables: schema/scope/customers/events/accounts/event_lines/command_receipts/sync_inbox.
 - Room 13→14 migration oldindan `before-debt` snapshot oladi. Fresh/open callback bir xil sxemani o‘rnatadi. Room entitylari o‘zgarmadi; debt sxemasi installer tomonidan sqlite_master definitsiyasi va FK orqali tekshiriladi.
 - Desktop old bazani yangi debt sxemasidan oldin snapshot qiladi; qayta ochishda takror backup yo‘q. Debt schema o‘zining version=1 markeriga ega; Android user_version=14, desktopning mavjud user_version qiymatini majburan o‘zgartirmaydi.
-- Installer FKlarni talab qiladi; schema o‘rnatish atomik. Noma’lum versiya, partial/mismatched schema yoki broken FK bo‘lsa jim tuzatish yo‘q.
+- Installer odatiy ochilishda writer tranzaksiyasidagi FK nazoratini talab qiladi; Room migratsiya davrida DDL/FK integrity check bajarilib, onOpen’da qat’iy tekshiriladi. Schema o‘rnatish atomik. Noma’lum versiya, partial/mismatched schema yoki broken FK bo‘lsa jim tuzatish yo‘q.
 - Composite FK customer/store tegishliligini saqlaydi; request/device-sequence unique; signed integer pul, o‘zgarmas financial history va bir targetga yagona reversal cheklovlari.
 - Lokal Python SQLite: 14 yangi debt schema + 7 mavjud sync test = 21/21 PASS. Bu repository testlari emas.
-- C# migration testlari va Android API26/35 migration testlari qo‘shildi; CI natijasi tekshirilgach alohida qayd etiladi.
+- Tekshirilgan kod commit: `a0b7060b917825510faec18068dd1d373146f689`.
+- [CI 37332080525](https://github.com/akkiS18/LinePOS/actions/runs/37332080525): core (Wi-Fi/business/migration/Python), Windows desktop build, Android build, API26 va API35 Room instrumentatsiya — hammasi SUCCESS.
+- [Debt core CI 37332080765](https://github.com/akkiS18/LinePOS/actions/runs/37332080765): C# 97/97, Kotlin 97/97 va natijalar pariteti SUCCESS.
+- Tekshiruvda Room migration→onOpen FK lifecycle va API35 WAL reader/writer PRAGMA farqi hisobga olindi. Oldingi `035f7dc` runida API35’dagi tranzaksiyadan tashqari FK assertion yiqilgan edi; writer tranzaksiyasi va real orphan INSERT rad etilishi bilan test kuchaytirildi, yakuniy run o‘tdi.
+- Fizik Windows/telefon/printer/Telegram sinovi bajarilmadi. Bu bosqichda yangi qarz UI yoki release binari yo‘q. Sxema va keyingi qatlam chegaralari: `docs/DEBT_SCHEMA.md`.
 - UI, repository, qarz journal capture/push/pull hali yo‘q. Sxema hech qanday eski DEBT chekdan avtomatik qarz yaratmaydi.
 
 ## Keyingi sessiya — faqat 2B-2
@@ -59,7 +63,7 @@ Foydalanuvchining kichik tugallangan bosqichlarda ishlash talabi sabab 2B ikkiga
 - Ikki uzilgan qurilmada ortiqcha undirishni to‘liq bloklash mumkin emas; pul yozuvlari yo‘qolmasin, excess alohida ko‘rinsin.
 - Sale profitni debt collection bilan ikki marta hisoblama. Cashflow, receivable va revenue alohida.
 - Eski qog‘oz qarz import qilinmaydi; legacy DEBT enumdan taxminiy mijoz qarzi yaratma.
-- To‘liq D01–D27 reja testlari o‘tgan deb yozma: faqat 2A arifmetika fixturelari o‘tdi; 2B–7 bajarilmagan.
+- To‘liq D01–D27 reja testlari o‘tgan deb yozma: 2A arifmetika va 2B-1 migratsiya/sxema testlari o‘tdi; 2B-2 va 3–7 bajarilmagan.
 - UI 4/5 tugashi release tayyor degani emas; returns/report/backup integratsiyasi va regressiya gates kerak.
 
 ## Lokal nusxa haqida
