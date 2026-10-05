@@ -211,7 +211,7 @@ abstract class AppDatabase : RoomDatabase() {
                     val backupDir = java.io.File(context.filesDir, "migration-backups").apply { mkdirs() }
                     uz.pos.electro.util.DatabaseBackupExporter.copySnapshot(db,
                         java.io.File(backupDir, "before-debt-${System.currentTimeMillis()}-${java.util.UUID.randomUUID()}.db"))
-                    uz.pos.electro.data.debt.DebtSchema.install(db,
+                    uz.pos.electro.data.debt.DebtSchema.installDuringMigration(db,
                         context.assets.open("debt-schema.sql").bufferedReader().use { it.readText() })
                 }
             })

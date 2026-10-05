@@ -7,8 +7,20 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 object DebtSchema {
     val tables = listOf("debt_schema", "debt_scope", "debt_customers", "debt_events", "debt_accounts", "debt_event_lines", "debt_command_receipts", "debt_sync_inbox")
 
-    fun install(db: SupportSQLiteDatabase, schema: String) {
-        db.query("PRAGMA foreign_keys").use { check(it.moveToFirst() && it.getInt(0) == 1) { "Debt ledger requires foreign keys" } }
+    fun install(db: SupportSQLiteDatabase, schema: String) = installSchema(db, schema, true)
+
+    // Room enables foreign keys in generated onOpen, AFTER migrations. Its upgrade
+    // transaction cannot change this pragma. DDL still gets foreign_key_check below;
+    // onOpen must subsequently pass the strict connection check before any business use.
+    fun installDuringMigration(db: SupportSQLiteDatabase, schema: String) {
+        check(db.inTransaction()) { "Room migration transaction required" }
+        installSchema(db, schema, false)
+    }
+
+    private fun installSchema(db: SupportSQLiteDatabase, schema: String, requireForeignKeys: Boolean) {
+        if (requireForeignKeys) {
+            db.query("PRAGMA foreign_keys").use { check(it.moveToFirst() && it.getInt(0) == 1) { "Debt ledger requires foreign keys" } }
+        }
         db.beginTransaction()
         try {
             val existing = db.query("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name GLOB 'debt_*'").use { it.moveToFirst(); it.getInt(0) }
