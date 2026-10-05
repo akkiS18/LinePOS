@@ -1,6 +1,6 @@
 # Qarz daftari — texnik va frontend reja
 
-Holat: 1-bosqich, faqat reja. Funksiya hali amalga oshirilmagan.
+Holat: 1-bosqich reja va 2A hisoblash yadrosi yakunlangan. Ilovaga integratsiya hali amalga oshirilmagan; joriy holat DEBT_CHECKPOINT_UZ.md da.
 Sana: 2026-10-05 (Asia/Tashkent).
 Tekshirilgan asos: main `b631a27241a5eb25501a6e4ab316c4aebdae4460`.
 Ish branchi: `feature/customer-debt`.
@@ -164,7 +164,7 @@ Har sessiya: kichik yakun → tegishli tekshiruv → commit/push → checkpoint.
 | 6B | Hisobot, fee, Excel, receipt/statement | Davr/filtr/UZS/USD, double counting yo‘q |
 | 7 | To‘liq backup/restore, regressiya va manual guide | Avtomatik suite + haqiqiy desktop/telefon sinovi |
 
-Bosqich 4/5dagi UI development branchda; 6/7 bitmasdan productionga chiqmaydi. Mavjud nasiya hisobini yarim integratsiya bilan main’ga merge qilish yo‘q. Joriy ruxsat 1-bosqichni yakunlash; keyingi ishni alohida sessiyada davom ettirish. Release tayyorlanganda AGENT.md bo‘yicha PROD joylashuvi qo‘llanadi; bu bosqich release yaratmaydi.
+Bosqich 4/5dagi UI development branchda; 6/7 bitmasdan productionga chiqmaydi. Mavjud nasiya hisobini yarim integratsiya bilan main’ga merge qilish yo‘q. 1-bosqichdan keyin foydalanuvchi 2A bosqichini davom ettirishga ruxsat berdi. Keyingi bosqichlar alohida sessiyalarda davom ettiriladi. Release tayyorlanganda AGENT.md bo‘yicha PROD joylashuvi qo‘llanadi; bu bosqich release yaratmaydi.
 
 ## 10. Qabul testlari
 
