@@ -68,7 +68,13 @@ class DebtMigrationTest {
         val db=AppDatabase.buildDatabase(context,scope,name)
         try {
             val sql=db.openHelper.writableDatabase
-            sql.query("PRAGMA foreign_keys").use { it.moveToFirst();assertEquals(1,it.getInt(0)) }
+            // A WAL read connection's PRAGMA does not describe the connection that writes.
+            sql.beginTransaction()
+            try {
+                sql.query("PRAGMA foreign_keys").use { it.moveToFirst();assertEquals(1,it.getInt(0)) }
+                sql.setTransactionSuccessful()
+            } finally { sql.endTransaction() }
+            DebtSchema.install(sql,context.assets.open("debt-schema.sql").bufferedReader().use { it.readText() })
             sql.query("SELECT COUNT(*) FROM debt_events").use { it.moveToFirst();assertEquals(0,it.getInt(0)) }
             try {
                 sql.execSQL("INSERT INTO debt_customers(guid,store_guid,name,created_at,device_guid) VALUES('c','missing','Ali',1,'device')")

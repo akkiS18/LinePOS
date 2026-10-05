@@ -18,11 +18,13 @@ object DebtSchema {
     }
 
     private fun installSchema(db: SupportSQLiteDatabase, schema: String, requireForeignKeys: Boolean) {
-        if (requireForeignKeys) {
-            db.query("PRAGMA foreign_keys").use { check(it.moveToFirst() && it.getInt(0) == 1) { "Debt ledger requires foreign keys" } }
-        }
         db.beginTransaction()
         try {
+            // Pin the writer connection. On API 35 a query outside a transaction can
+            // use a WAL reader with different connection-local PRAGMA settings.
+            if (requireForeignKeys) {
+                db.query("PRAGMA foreign_keys").use { check(it.moveToFirst() && it.getInt(0) == 1) { "Debt ledger requires foreign keys" } }
+            }
             val existing = db.query("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name GLOB 'debt_*'").use { it.moveToFirst(); it.getInt(0) }
             if (existing != 0) {
                 check(existing == tables.size) { "Incomplete or unsupported debt schema" }
