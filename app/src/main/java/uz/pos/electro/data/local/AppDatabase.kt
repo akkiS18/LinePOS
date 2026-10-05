@@ -33,7 +33,7 @@ import uz.pos.electro.data.local.entity.WarehouseEntity
         WarehouseEntity::class,
         ProductStockEntity::class
     ],
-    version = 13,
+    version = 14,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -206,9 +206,20 @@ abstract class AppDatabase : RoomDatabase() {
                     db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_sale_items_guid ON sale_items(guid)")
                 }
             })
+            .addMigrations(object : Migration(13, 14) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    val backupDir = java.io.File(context.filesDir, "migration-backups").apply { mkdirs() }
+                    uz.pos.electro.util.DatabaseBackupExporter.copySnapshot(db,
+                        java.io.File(backupDir, "before-debt-${System.currentTimeMillis()}-${java.util.UUID.randomUUID()}.db"))
+                    uz.pos.electro.data.debt.DebtSchema.install(db,
+                        context.assets.open("debt-schema.sql").bufferedReader().use { it.readText() })
+                }
+            })
             .addCallback(object : Callback() {
                 override fun onOpen(db: SupportSQLiteDatabase) {
                     super.onOpen(db)
+                    uz.pos.electro.data.debt.DebtSchema.install(db,
+                        context.assets.open("debt-schema.sql").bufferedReader().use { it.readText() })
                     uz.pos.electro.data.sync.WifiSyncSchema.install(db, context.assets.open("wifi-sync-schema.sql").bufferedReader().use { it.readText() })
                 }
                 private fun seedDefaults(db: SupportSQLiteDatabase) {

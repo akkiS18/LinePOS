@@ -53,6 +53,13 @@ namespace PosElectro.Desktop.Data
             if (File.Exists(DatabaseFilePath) && new FileInfo(DatabaseFilePath).Length > 0)
             {
                 using var source = new SqliteConnection(_connectionString); source.Open();
+                using var debtCheck = source.CreateCommand();
+                debtCheck.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='sales'";
+                if (Convert.ToInt32(debtCheck.ExecuteScalar()) > 0 && !Debt.DebtSchema.IsInstalled(source)) {
+                    var backupDir = Path.Combine(Path.GetDirectoryName(DatabaseFilePath)!, "Backups"); Directory.CreateDirectory(backupDir);
+                    using var backup = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = Path.Combine(backupDir, $"before-debt-{DateTime.UtcNow:yyyyMMdd-HHmmss}-{Guid.NewGuid():N}.db") }.ToString());
+                    backup.Open(); source.BackupDatabase(backup);
+                }
                 using var check = source.CreateCommand();
                 check.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE name='sale_items' AND type='table'";
                 if (Convert.ToInt32(check.ExecuteScalar()) > 0) {
@@ -65,6 +72,8 @@ namespace PosElectro.Desktop.Data
                 }
             }
             InitializeDatabase();
+            using var debtConnection = CreateConnection();
+            Debt.DebtSchema.Install(debtConnection);
         }
 
         public void BackupDatabase(string destinationPath)

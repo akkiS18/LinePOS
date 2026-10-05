@@ -155,7 +155,8 @@ Har sessiya: kichik yakun → tegishli tekshiruv → commit/push → checkpoint.
 |---|---|---|
 | 1 — joriy | Shu reja, test matritsasi, checkpoint | Hujjatlar main asosida alohida branchda, runtime kodi o‘zgarmagan |
 | 2A — keyingi | Kotlin/C# sof pul va ledger hisob kontrakti + umumiy fixturelar | Rounding, allocation, excess, reversal arifmetikasi platformalarda bir xil |
-| 2B | Jadvallar, migratsiya, transactional repository/outbox | Fresh/upgrade, FK, rollback, replay testlari |
+| 2B-1 | Jadvallar va xavfsiz migratsiya | Fresh/upgrade, FK, snapshot, schema rollback |
+| 2B-2 | Transactional repository/outbox | Request replay/hash, ownership, atomik sale/payment rollback |
 | 3A | Protocol capability, push/pull va atomik guruhlar | Reorder/replay/ACK yo‘qolishi, eski peer |
 | 3B | Parallel qurilmalar, restore epoch, kontakt konflikti | Convergence va restart/restore testlari |
 | 4 | Desktop UI va cashier/payment integratsiyasi | Windows build + jarayon testlari |

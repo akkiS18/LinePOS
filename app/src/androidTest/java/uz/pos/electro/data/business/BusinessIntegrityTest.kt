@@ -88,7 +88,7 @@ class BusinessIntegrityTest {
                 backup.rawQuery("SELECT request_guid,state FROM return_drafts",null).use { c ->
                     assertTrue(c.moveToFirst()); assertEquals("request",c.getString(0)); assertEquals("submitted",c.getString(1))
                 }
-                assertEquals(13, backup.version)
+                assertEquals(14, backup.version)
                 backup.rawQuery("PRAGMA integrity_check", null).use { c -> c.moveToFirst(); assertEquals("ok", c.getString(0)) }
             }
         } finally { source.close(); SQLiteDatabase.deleteDatabase(sourceFile); SQLiteDatabase.deleteDatabase(destination) }
@@ -127,8 +127,10 @@ class BusinessIntegrityTest {
                 c.moveToFirst(); assertEquals(100.0, c.getDouble(0), 0.0); assertEquals(60.0, c.getDouble(1), 0.0)
             }
             val backups = backupDir.listFiles()!!.filter { it.name !in before }
-            assertEquals(1, backups.size)
-            SQLiteDatabase.openDatabase(backups.single().path, null, SQLiteDatabase.OPEN_READONLY).use { recovery ->
+            val returnBackups = backups.filter { it.name.startsWith("before-returns-") }
+            assertEquals(1, returnBackups.size)
+            assertEquals(1, backups.count { it.name.startsWith("before-debt-") })
+            SQLiteDatabase.openDatabase(returnBackups.single().path, null, SQLiteDatabase.OPEN_READONLY).use { recovery ->
                 assertEquals(12, recovery.version)
                 recovery.rawQuery("SELECT COUNT(*) FROM sale_items WHERE id=501",null).use { c -> c.moveToFirst(); assertEquals(1,c.getInt(0)) }
             }

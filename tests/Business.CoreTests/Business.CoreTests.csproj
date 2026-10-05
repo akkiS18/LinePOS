@@ -6,5 +6,7 @@
     <Compile Include="../../desktop/PosElectro.Desktop/Data/DatabaseContext.cs" Link="DatabaseContext.cs" />
     <Compile Include="../../desktop/PosElectro.Desktop/Returns/*.cs" Link="Returns/%(Filename)%(Extension)" />
     <EmbeddedResource Include="../../sync/schema.sql" LogicalName="WifiSyncSchema" />
+    <Compile Include="../../desktop/PosElectro.Desktop/Debt/DebtSchema.cs" Link="DebtSchema.cs" />
+    <EmbeddedResource Include="../../debt/schema.sql" LogicalName="DebtSchema" />
   </ItemGroup>
 </Project>

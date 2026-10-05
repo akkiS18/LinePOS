@@ -1,5 +1,13 @@
 name: Wi-Fi sync core
 on:
+  push:
+    branches: [feature/customer-debt]
+    paths:
+      - 'debt/**'
+      - 'desktop/**'
+      - 'app/**'
+      - 'tests/**'
+      - '.github/workflows/wifi-sync.yml'
   pull_request:
   workflow_dispatch:
 permissions:

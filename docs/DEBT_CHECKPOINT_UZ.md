@@ -1,6 +1,6 @@
 # Qarz daftari — davom ettirish nuqtasi
 
-Sana: 2026-10-05. Holat: **2A-bosqich yakunlandi — hisoblash yadrosi; integratsiya hali yo‘q**.
+Sana: 2026-10-05. Holat: **2B-1: sxema va migratsiya yozildi; platforma CI tekshiruvi kutilmoqda**.
 
 ## Asos va branch
 
@@ -28,14 +28,29 @@ Sana: 2026-10-05. Holat: **2A-bosqich yakunlandi — hisoblash yadrosi; integrat
 - Toza checkout: `LinePOS-debt-core`. Eski dirty nusxaga tegilmadi.
 - Baza, UI, sync va mavjud sale/report yo‘llariga ulanmagan. Bu bosqichdagi split/refund/transfer — faqat hisoblash; pul qaytarishni ishga tushirmaydi.
 
-## Keyingi sessiya — faqat 2B
+## 2B-1: sxema va migratsiya
 
-1. `feature/customer-debt` holatini tekshir; AGENT.md, DEBT_PLAN_UZ.md va tests/debt/README.md ni o‘qi. Dirty fayllarni tasodifan commit qilma.
-2. Room versiyasini qayta tekshir (asosda 13); additive debt jadvallari, indekslar va FKlar. Desktop/mobil/shared schema parity.
-3. Transactional repository: customer/account/event/lines va outbox birga, immutable request GUID/hash, duplikat natijani qaytarish; core yordamida hisoblash.
-4. GUID/customer/store ownership validatsiyasi repositoryda; 2A sof hisoblashni authorization yoki deduplication deb qabul qilma.
-5. Fresh DB, upgrade/backup, FK, rollback, bir request replay/changed-body testlarini bajar. Balancega eventni ikki marta bermaslikni tekshir.
-6. Sync transport yoki UIga kirishma. Shu branchga commit/push, checkpointni yangila, to‘xta. Main’ga merge qilma.
+Foydalanuvchining kichik tugallangan bosqichlarda ishlash talabi sabab 2B ikkiga bo‘lindi: 2B-1 sxema/migratsiya, 2B-2 transactional repository. Bu commit 2Bni to‘liq yakunlamaydi.
+
+- `debt/schema.sql`, desktop resource va Android asset aynan bir xil. Auxiliary SQLite tables: schema/scope/customers/events/accounts/event_lines/command_receipts/sync_inbox.
+- Room 13→14 migration oldindan `before-debt` snapshot oladi. Fresh/open callback bir xil sxemani o‘rnatadi. Room entitylari o‘zgarmadi; debt sxemasi installer tomonidan sqlite_master definitsiyasi va FK orqali tekshiriladi.
+- Desktop old bazani yangi debt sxemasidan oldin snapshot qiladi; qayta ochishda takror backup yo‘q. Debt schema o‘zining version=1 markeriga ega; Android user_version=14, desktopning mavjud user_version qiymatini majburan o‘zgartirmaydi.
+- Installer FKlarni talab qiladi; schema o‘rnatish atomik. Noma’lum versiya, partial/mismatched schema yoki broken FK bo‘lsa jim tuzatish yo‘q.
+- Composite FK customer/store tegishliligini saqlaydi; request/device-sequence unique; signed integer pul, o‘zgarmas financial history va bir targetga yagona reversal cheklovlari.
+- Lokal Python SQLite: 14 yangi debt schema + 7 mavjud sync test = 21/21 PASS. Bu repository testlari emas.
+- C# migration testlari va Android API26/35 migration testlari qo‘shildi; CI natijasi tekshirilgach alohida qayd etiladi.
+- UI, repository, qarz journal capture/push/pull hali yo‘q. Sxema hech qanday eski DEBT chekdan avtomatik qarz yaratmaydi.
+
+## Keyingi sessiya — faqat 2B-2
+
+1. Remote branch/checkpoint va CI natijalarini tekshir; mavjud 2A va 2B-1 testlarini saqla.
+2. Transactional repository: customer/account/event/lines va mavjud sync_journal outbox birga; immutable request GUID/canonical hash, replay qaytargan eski natija.
+3. Opening account `original_debt_minor` boshlang‘ich qoldiq; `sale_open` header audit/dependency uchun, opening summani yana debt_event_linesga yozib ikki marta hisoblama.
+4. Sxema CHECK/FK yetarli emas: request/effect summalari, event kind/reference, GUID format, store/actor identity, freeze/seal va authorization repositoryda tekshirilishi kerak. To‘liq eventdan keyin qo‘shimcha line yozishni repository bloklasin.
+5. Due date va tarixiy customer_name accountda immutable. Keyingi muddat tahriri kerak bo‘lsa alohida audit modeli; original accountni update qilishga shoshilma.
+6. Store scope avtomatik seed qilinmagan. Offline yangi do‘kon identifikatori, device instance/sequence va restore identity siyosatini reja bo‘yicha repository bilan yarat.
+7. Aynan bir ulanish/tranzaksiyada sale/account/event/outbox va rollback, identical retry/changed body, noto‘g‘ri customer/store, double submission testlari. Yangi payment hali transportga ketmasin: stage3 capability gate talab etiladi.
+8. Sync/UIga kirishma. Test/commit/push va checkpoint; main’ga merge qilma.
 
 ## Muhim cheklovlar
 
