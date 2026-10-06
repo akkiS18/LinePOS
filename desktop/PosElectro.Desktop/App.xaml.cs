@@ -22,6 +22,12 @@ namespace PosElectro.Desktop
         {
             base.OnStartup(e);
 
+            try
+            {
+                System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+            }
+            catch { }
+
             PosElectro.Desktop.Services.KeyboardLayoutHelper.ForceEnglishLayout();
 
             bool isShowingError = false;

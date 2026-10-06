@@ -60,5 +60,48 @@ namespace PosElectro.Desktop.Services
         {
             return RuToEnMap.TryGetValue(c, out var enChar) ? enChar : c;
         }
+
+        public static string FixBarcodeString(string input)
+        {
+            if (string.IsNullOrWhiteSpace(input)) return input ?? string.Empty;
+            
+            var shiftNumberMap = new Dictionary<char, char>() {
+                {'!', '1'}, {'@', '2'}, {'#', '3'}, {'$', '4'}, {'%', '5'}, 
+                {'^', '6'}, {'&', '7'}, {'*', '8'}, {'(', '9'}, {')', '0'},
+                // Russian layout shift numbers:
+                {'"', '2'}, {'№', '3'}, {';', '4'}, {':', '6'}, {'?', '7'}
+            };
+
+            bool hasSymbol = false;
+            bool hasNonConvertible = false;
+            var sb = new StringBuilder();
+            
+            string trimmed = input.Trim();
+            foreach (var c in trimmed)
+            {
+                if (shiftNumberMap.TryGetValue(c, out var num))
+                {
+                    sb.Append(num);
+                    hasSymbol = true;
+                }
+                else if (char.IsDigit(c))
+                {
+                    sb.Append(c);
+                }
+                else
+                {
+                    hasNonConvertible = true;
+                    break;
+                }
+            }
+
+            // Agar kamida bitta belgi bo'lsa, ichida yot belgi bo'lmasa va uzunligi yetarli bo'lsa, to'g'rilanganini qaytaramiz
+            if (!hasNonConvertible && hasSymbol && sb.Length >= 3)
+            {
+                return sb.ToString();
+            }
+            
+            return input;
+        }
     }
 }

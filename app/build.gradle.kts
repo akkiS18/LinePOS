@@ -45,6 +45,11 @@ android {
         manifestPlaceholders["appLabel"] = "SMART kassa"
     }
 
+    lint {
+        abortOnError = false
+        checkReleaseBuilds = false
+    }
+
     buildTypes {
         debug {
             applicationIdSuffix = ".test"

@@ -19,6 +19,15 @@ namespace PosElectro.Desktop.Services
     {
         private readonly DatabaseContext _db;
 
+        static PrinterService()
+        {
+            try
+            {
+                Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+            }
+            catch { }
+        }
+
         public PrinterService(DatabaseContext? db = null)
         {
             _db = db ?? new DatabaseContext();
@@ -193,6 +202,108 @@ namespace PosElectro.Desktop.Services
             return RawPrinterHelper.SendBytesToPrinter(targetPrinter, bytes, $"Chek #{sale.Id}");
         }
 
+        /// <summary>
+        /// Pul summalarini doimo xavfsiz standart ASCII probel (0x20) bilan formatlash.
+        /// Hech qachon \u00A0 (no-break space) chiqarmaydi, shuning uchun printerda "Та" yoki "┬а" chiqmaydi!
+        /// </summary>
+        public static string FormatMoney(double amount)
+        {
+            return amount.ToString("#,##0", System.Globalization.CultureInfo.InvariantCulture).Replace(',', ' ');
+        }
+
+        public static string FormatMoney(decimal amount)
+        {
+            return amount.ToString("#,##0", System.Globalization.CultureInfo.InvariantCulture).Replace(',', ' ');
+        }
+
+        private static string CenterText(string text, int width)
+        {
+            if (string.IsNullOrEmpty(text)) return new string(' ', width);
+            text = text.Trim();
+            if (text.Length >= width) return text;
+            int totalPadding = width - text.Length;
+            int padLeft = totalPadding / 2;
+            int padRight = totalPadding - padLeft;
+            return new string(' ', padLeft) + text + new string(' ', padRight);
+        }
+
+        /// <summary>
+        /// 58 mm kassa chekining qatorlari (har bir qator qat'iy 32 belgidan oshmaydi).
+        /// Ushbu qatorlar ham Jonli Ko'rish (Preview), ham Printer (Chop etish) uchun
+        /// YAGONA 1-GA-1 MANBA bo'lib xizmat qiladi!
+        /// </summary>
+        public static List<string> BuildReceiptLines(Sale sale)
+        {
+            var lines = new List<string>();
+
+            // Markazlashtirilgan sarlavha (32 belgi)
+            lines.Add(CenterText("SMART KASSA", 32));
+            lines.Add(CenterText("Elektr jihozlari do'koni", 32));
+            lines.Add(new string('-', 32));
+
+            // Chek ma'lumotlari
+            lines.Add($"Chek: #{sale.Id}");
+            lines.Add($"Sana: {sale.CreatedDateTime:dd.MM.yyyy HH:mm}");
+            lines.Add($"To'lov turi: {sale.PaymentTypeDisplay}");
+            lines.Add(new string('-', 32));
+
+            // Jadval sarlavhasi (32 ta belgi)
+            lines.Add("Tovar              Miqd.    Jami");
+            lines.Add(new string('-', 32));
+
+            // Tovarlar ro'yxati
+            foreach (var item in sale.Items)
+            {
+                string name = (item.ProductName ?? string.Empty).Trim();
+                if (name.Length > 32)
+                {
+                    name = name.Substring(0, 29) + "...";
+                }
+                lines.Add(name);
+
+                string qtyStr = $"{item.Quantity:0.##}";
+                string priceFormatted = FormatMoney(item.PriceAtSale);
+                string totalFormatted = FormatMoney(item.TotalPrice);
+
+                // 2-qator: masalan: "  275 000 x 1" chapda, "275 000" o'ngda
+                string lineLeft = $"  {priceFormatted} x {qtyStr}";
+                string lineRight = totalFormatted;
+
+                int spaceCount = 32 - lineLeft.Length - lineRight.Length;
+                if (spaceCount < 1) spaceCount = 1;
+                lines.Add(lineLeft + new string(' ', spaceCount) + lineRight);
+            }
+
+            lines.Add(new string('-', 32));
+
+            // Jami summa: "JAMI:" chapda, "275 000 so'm" o'ngda
+            string totalTitle = "JAMI:";
+            string totalVal = $"{FormatMoney(sale.TotalAmount)} so'm";
+            int totalSpace = 32 - totalTitle.Length - totalVal.Length;
+            if (totalSpace < 1) totalSpace = 1;
+            lines.Add(totalTitle + new string(' ', totalSpace) + totalVal);
+
+            // Agar aralash to'lov bo'lsa
+            if (sale.PaymentType == PaymentType.SPLIT)
+            {
+                string cashVal = $"{FormatMoney(sale.CashAmount)} so'm";
+                int cashSpace = 32 - "  Naqd:".Length - cashVal.Length;
+                if (cashSpace < 1) cashSpace = 1;
+                lines.Add("  Naqd:" + new string(' ', cashSpace) + cashVal);
+
+                string cardVal = $"{FormatMoney(sale.CardAmount)} so'm";
+                int cardSpace = 32 - "  Karta:".Length - cardVal.Length;
+                if (cardSpace < 1) cardSpace = 1;
+                lines.Add("  Karta:" + new string(' ', cardSpace) + cardVal);
+            }
+
+            lines.Add(new string('-', 32));
+            lines.Add(CenterText("Rahmat, xaridingiz uchun!", 32));
+            lines.Add(CenterText("Yana tashrif buyuring!", 32));
+
+            return lines;
+        }
+
         private byte[] BuildEscPosReceipt(Sale sale)
         {
             using var ms = new MemoryStream();
@@ -204,100 +315,177 @@ namespace PosElectro.Desktop.Services
             // Kodirovka: PC866 (Kirill/Lotin uchun)
             bw.Write(new byte[] { 0x1B, 0x74, 17 });
 
-            // Sarlavha (Markazlashtirilgan, qalin, 2 barobar baland)
-            bw.Write(new byte[] { 0x1B, 0x61, 0x01 }); // Markazga
-            bw.Write(new byte[] { 0x1B, 0x45, 0x01 }); // Qalin (Bold)
-            bw.Write(new byte[] { 0x1D, 0x21, 0x11 }); // Double height & width
-            WriteCp866(bw, "SMART KASSA\n");
+            var lines = BuildReceiptLines(sale);
 
-            // Normal shrift
-            bw.Write(new byte[] { 0x1D, 0x21, 0x00 });
-            bw.Write(new byte[] { 0x1B, 0x45, 0x00 }); // Bold off
-            WriteCp866(bw, "Elektr jihozlari do'koni\n");
-            WriteCp866(bw, "--------------------------------\n"); // 32 ta belgi
-
-            // Chek ma'lumotlari (Chap tomondan)
-            bw.Write(new byte[] { 0x1B, 0x61, 0x00 }); // Chapga
-            WriteCp866(bw, $"Chek: #{sale.Id}\n");
-            WriteCp866(bw, $"Sana: {sale.CreatedDateTime:dd.MM.yyyy HH:mm}\n");
-            WriteCp866(bw, $"To'lov: {sale.PaymentTypeDisplay}\n");
-            WriteCp866(bw, "--------------------------------\n");
-
-            // Sarlavha jadvali
-            // Kenglik 32 belgi: Nomi (16 ta), Miqdor (6 ta), Summa (10 ta)
-            WriteCp866(bw, "Tovar              Miqd.    Jami\n");
-            WriteCp866(bw, "--------------------------------\n");
-
-            foreach (var item in sale.Items)
+            for (int i = 0; i < lines.Count; i++)
             {
-                string name = item.ProductName;
-                if (name.Length > 30) name = name.Substring(0, 27) + "...";
-                WriteCp866(bw, $"{name}\n");
+                string line = lines[i];
 
-                string qtyStr = $"{item.Quantity:0.##}";
-                string totalStr = $"{item.TotalPrice:N0}";
-
-                // 2-qator: "  45 000 x 2d" chapda, "90 000" o'ngda
-                string lineLeft = $"  {item.PriceAtSale:N0} x {qtyStr}";
-                string lineRight = totalStr;
-
-                int space = 32 - lineLeft.Length - lineRight.Length;
-                if (space < 1) space = 1;
-                string line = lineLeft + new string(' ', space) + lineRight + "\n";
-                WriteCp866(bw, line);
+                if (i == 0) // SMART KASSA
+                {
+                    bw.Write(new byte[] { 0x1B, 0x61, 0x01 }); // Markazga
+                    bw.Write(new byte[] { 0x1B, 0x45, 0x01 }); // Qalin (Bold on)
+                    bw.Write(new byte[] { 0x1D, 0x21, 0x11 }); // Double height & width
+                    WriteCp866(bw, line.Trim() + "\n");
+                    bw.Write(new byte[] { 0x1D, 0x21, 0x00 }); // Normal o'lcham
+                    bw.Write(new byte[] { 0x1B, 0x45, 0x00 }); // Bold off
+                }
+                else if (i == 1) // Elektr jihozlari do'koni
+                {
+                    bw.Write(new byte[] { 0x1B, 0x61, 0x01 }); // Markazga
+                    WriteCp866(bw, line.Trim() + "\n");
+                    bw.Write(new byte[] { 0x1B, 0x61, 0x00 }); // Chapga qaytarish
+                }
+                else if (line.StartsWith("JAMI:"))
+                {
+                    bw.Write(new byte[] { 0x1B, 0x61, 0x00 }); // Chapga
+                    bw.Write(new byte[] { 0x1B, 0x45, 0x01 }); // Qalin (Bold on)
+                    WriteCp866(bw, line + "\n");
+                    bw.Write(new byte[] { 0x1B, 0x45, 0x00 }); // Bold off
+                }
+                else if (i >= lines.Count - 2) // Footer lines (Rahmat... Yana tashrif...)
+                {
+                    bw.Write(new byte[] { 0x1B, 0x61, 0x01 }); // Markazga
+                    WriteCp866(bw, line.Trim() + "\n");
+                }
+                else
+                {
+                    bw.Write(new byte[] { 0x1B, 0x61, 0x00 }); // Chapga
+                    WriteCp866(bw, line + "\n");
+                }
             }
 
-            WriteCp866(bw, "--------------------------------\n");
+            // Chekni qulay yirtib olish uchun 4 qator pastga tushirish va kesish
+            WriteCp866(bw, "\n\n\n\n");
+            bw.Write(new byte[] { 0x1D, 0x56, 0x42, 0x00 }); // Cut (GS V 66 0)
 
-            // Jami summa (Qalin va o'ng tomonga)
-            bw.Write(new byte[] { 0x1B, 0x45, 0x01 }); // Bold on
-            bw.Write(new byte[] { 0x1D, 0x21, 0x01 }); // Double height
+            return ms.ToArray();
+        }
 
-            string totalTitle = "JAMI:";
-            string totalVal = $"{sale.TotalAmount:N0} so'm";
-            int totalSpace = 32 - totalTitle.Length - totalVal.Length;
-            if (totalSpace < 1) totalSpace = 1;
-            WriteCp866(bw, totalTitle + new string(' ', totalSpace) + totalVal + "\n");
+        /// <summary>
+        /// 58/80 mm chek printeriga Buyurtma Ro'yxatini to'g'ridan-to'g'ri ESC/POS orqali chop etadi.
+        /// </summary>
+        public bool PrintReorderReceipt(List<Product> items, string? printerName = null)
+        {
+            if (items == null || items.Count == 0) return false;
 
-            bw.Write(new byte[] { 0x1D, 0x21, 0x00 }); // Normal
-            bw.Write(new byte[] { 0x1B, 0x45, 0x00 }); // Bold off
-
-            // To'lov tafsilotlari (Naqd / Karta)
-            if (sale.PaymentType == PaymentType.SPLIT)
+            var targetPrinter = printerName ?? FindReceiptPrinter();
+            if (string.IsNullOrWhiteSpace(targetPrinter))
             {
-                WriteCp866(bw, $"  Naqd:  {sale.CashAmount:N0} so'm\n");
-                WriteCp866(bw, $"  Karta: {sale.CardAmount:N0} so'm\n");
+                return false;
             }
 
-            WriteCp866(bw, "--------------------------------\n");
+            byte[] bytes = BuildEscPosReorderReceipt(items);
+            return RawPrinterHelper.SendBytesToPrinter(targetPrinter, bytes, $"Buyurtma Ro'yxati ({items.Count} ta tovar)");
+        }
 
-            // Footer (Markazlashtirilgan)
-            bw.Write(new byte[] { 0x1B, 0x61, 0x01 }); // Markazga
-            WriteCp866(bw, "Rahmat, xaridingiz uchun!\n");
-            WriteCp866(bw, "Yana tashrif buyuring!\n\n\n\n");
+        public static List<string> BuildReorderReceiptLines(List<Product> items)
+        {
+            var lines = new List<string>();
 
-            // Qog'ozni kesish yoki surish (GS V 66 0)
-            bw.Write(new byte[] { 0x1D, 0x56, 0x42, 0x00 });
+            lines.Add(CenterText("BUYURTMA RO'YXATI", 32));
+            lines.Add(CenterText("(ZAKAZ UCHUN)", 32));
+            lines.Add(new string('-', 32));
+            lines.Add($"Sana: {DateTime.Now:dd.MM.yyyy HH:mm}");
+            lines.Add($"Jami tovarlar: {items.Count} ta");
+            lines.Add(new string('-', 32));
+            lines.Add("Tovar / Qoldiq          Buyurtma");
+            lines.Add(new string('-', 32));
+
+            for (int i = 0; i < items.Count; i++)
+            {
+                var item = items[i];
+                string name = $"{i + 1}. {item.Name.Trim()}";
+                if (name.Length > 32)
+                {
+                    name = name.Substring(0, 29) + "...";
+                }
+                lines.Add(name);
+
+                string qoldiqStr = $"   Qoldiq: {item.StockDisplay} {item.UnitDisplay}";
+                string boxStr = "[     ]";
+                int spaceCount = 32 - qoldiqStr.Length - boxStr.Length;
+                if (spaceCount < 1) spaceCount = 1;
+                lines.Add(qoldiqStr + new string(' ', spaceCount) + boxStr);
+            }
+
+            lines.Add(new string('-', 32));
+            lines.Add("Eslatma: _______________________");
+            lines.Add("         _______________________");
+            lines.Add(new string('-', 32));
+            lines.Add(CenterText("LINE KASSA", 32));
+
+            return lines;
+        }
+
+        private byte[] BuildEscPosReorderReceipt(List<Product> items)
+        {
+            using var ms = new MemoryStream();
+            using var bw = new BinaryWriter(ms);
+
+            bw.Write(new byte[] { 0x1B, 0x40 }); // ESC @ - Init
+            bw.Write(new byte[] { 0x1B, 0x74, 17 }); // PC866
+
+            var lines = BuildReorderReceiptLines(items);
+
+            for (int i = 0; i < lines.Count; i++)
+            {
+                string line = lines[i];
+
+                if (i == 0) // BUYURTMA RO'YXATI
+                {
+                    bw.Write(new byte[] { 0x1B, 0x61, 0x01 }); // Markazga
+                    bw.Write(new byte[] { 0x1B, 0x45, 0x01 }); // Qalin (Bold on)
+                    bw.Write(new byte[] { 0x1D, 0x21, 0x11 }); // Double height & width
+                    WriteCp866(bw, line.Trim() + "\n");
+                    bw.Write(new byte[] { 0x1D, 0x21, 0x00 }); // Normal
+                    bw.Write(new byte[] { 0x1B, 0x45, 0x00 }); // Bold off
+                }
+                else if (i == 1 || i == lines.Count - 1)
+                {
+                    bw.Write(new byte[] { 0x1B, 0x61, 0x01 }); // Markazga
+                    WriteCp866(bw, line.Trim() + "\n");
+                    bw.Write(new byte[] { 0x1B, 0x61, 0x00 }); // Chapga
+                }
+                else
+                {
+                    bw.Write(new byte[] { 0x1B, 0x61, 0x00 }); // Chapga
+                    WriteCp866(bw, line + "\n");
+                }
+            }
+
+            WriteCp866(bw, "\n\n\n\n");
+            bw.Write(new byte[] { 0x1D, 0x56, 0x42, 0x00 }); // Cut
 
             return ms.ToArray();
         }
 
         private static void WriteCp866(BinaryWriter bw, string text)
         {
-            // O'zbekcha maxsus belgilarni almashtirish
+            if (string.IsNullOrEmpty(text)) return;
+
+            // 1. O'zbekcha va universal bo'shliq belgilarini tozalash:
+            // MUHIM: Har qanday no-break space (\u00A0) yoki boshqa noan'anaviy bo'shliqlar standart ASCII bo'shliqqa (0x20) aylanadi!
+            // Aks holda u UTF-8 da 0xC2 0xA0 bo'lib kodlanadi va printerda "Та" (yoki ┬а) bo'lib chiqadi!
             string normalized = text
+                .Replace('\u00A0', ' ')
+                .Replace('\u202F', ' ')
+                .Replace('\u2007', ' ')
+                .Replace('\u200B', ' ')
                 .Replace("o‘", "o'").Replace("O‘", "O'")
                 .Replace("g‘", "g'").Replace("G‘", "G'")
-                .Replace("ʻ", "'").Replace("’", "'").Replace("‘", "'");
+                .Replace("ʻ", "'").Replace("’", "'").Replace("‘", "'").Replace("`", "'")
+                .Replace("“", "\"").Replace("”", "\"");
 
             byte[] b;
             try
             {
-                b = Encoding.GetEncoding(866).GetBytes(normalized);
+                Encoding cp866 = Encoding.GetEncoding(866);
+                b = cp866.GetBytes(normalized);
             }
             catch
             {
-                b = Encoding.UTF8.GetBytes(normalized);
+                b = Encoding.ASCII.GetBytes(normalized);
             }
             bw.Write(b);
         }
@@ -307,50 +495,8 @@ namespace PosElectro.Desktop.Services
         /// </summary>
         public static string BuildReceiptText(Sale sale)
         {
-            var sb = new StringBuilder();
-            sb.AppendLine("          SMART KASSA           ");
-            sb.AppendLine("    Elektr jihozlari do'koni    ");
-            sb.AppendLine("--------------------------------");
-            sb.AppendLine($"Chek: #{sale.Id}");
-            sb.AppendLine($"Sana: {sale.CreatedDateTime:dd.MM.yyyy HH:mm}");
-            sb.AppendLine($"To'lov turi: {sale.PaymentTypeDisplay}");
-            sb.AppendLine("--------------------------------");
-            sb.AppendLine("Tovar              Miqd.    Jami");
-            sb.AppendLine("--------------------------------");
-
-            foreach (var item in sale.Items)
-            {
-                string name = item.ProductName;
-                if (name.Length > 30) name = name.Substring(0, 27) + "...";
-                sb.AppendLine(name);
-
-                string qtyStr = $"{item.Quantity:0.##}";
-                string totalStr = $"{item.TotalPrice:N0}";
-                string lineLeft = $"  {item.PriceAtSale:N0} x {qtyStr}";
-                string lineRight = totalStr;
-
-                int space = 32 - lineLeft.Length - lineRight.Length;
-                if (space < 1) space = 1;
-                sb.AppendLine(lineLeft + new string(' ', space) + lineRight);
-            }
-
-            sb.AppendLine("--------------------------------");
-            string totalTitle = "JAMI:";
-            string totalVal = $"{sale.TotalAmount:N0} so'm";
-            int totalSpace = 32 - totalTitle.Length - totalVal.Length;
-            if (totalSpace < 1) totalSpace = 1;
-            sb.AppendLine(totalTitle + new string(' ', totalSpace) + totalVal);
-
-            if (sale.PaymentType == PaymentType.SPLIT)
-            {
-                sb.AppendLine($"  Naqd:  {sale.CashAmount:N0} so'm");
-                sb.AppendLine($"  Karta: {sale.CardAmount:N0} so'm");
-            }
-
-            sb.AppendLine("--------------------------------");
-            sb.AppendLine("    Rahmat, xaridingiz uchun!   ");
-            sb.AppendLine("       Yana tashrif buyuring!   ");
-            return sb.ToString();
+            var lines = BuildReceiptLines(sale);
+            return string.Join(Environment.NewLine, lines);
         }
 
         /// <summary>
@@ -560,6 +706,38 @@ namespace PosElectro.Desktop.Services
             return double.TryParse(val, NumberStyles.Any, CultureInfo.InvariantCulture, out var d) ? d : 0.0;
         }
 
+        public void SaveLabelNameOffsetSetting(string sizeId, double offsetMm)
+        {
+            _db?.SetSetting($"label_name_offset_{sizeId}", offsetMm.ToString(CultureInfo.InvariantCulture));
+        }
+
+        public double GetLabelNameOffsetSetting(string sizeId)
+        {
+            var val = _db?.GetSetting($"label_name_offset_{sizeId}", "0");
+            return double.TryParse(val, NumberStyles.Any, CultureInfo.InvariantCulture, out var d) ? d : 0.0;
+        }
+
+        public void SaveLabelNameAlignSetting(string sizeId, string align)
+        {
+            _db?.SetSetting($"label_name_align_{sizeId}", align);
+        }
+
+        public string GetLabelNameAlignSetting(string sizeId)
+        {
+            return _db?.GetSetting($"label_name_align_{sizeId}", "left") ?? "left";
+        }
+
+        public void SaveLabelNameLinesSetting(string sizeId, int lines)
+        {
+            _db?.SetSetting($"label_name_lines_{sizeId}", lines.ToString());
+        }
+
+        public int GetLabelNameLinesSetting(string sizeId)
+        {
+            var val = _db?.GetSetting($"label_name_lines_{sizeId}", "1");
+            return int.TryParse(val, out var l) ? l : 1;
+        }
+
         public bool PrintBarcodeLabel(
             string barcode,
             string productName,
@@ -570,7 +748,10 @@ namespace PosElectro.Desktop.Services
             bool showBarcode = true,
             string? printerName = null,
             string? labelSizeId = null,
-            double? offsetMm = null)
+            double? offsetMm = null,
+            double? nameOffsetMm = null,
+            string? nameAlignment = null,
+            int? maxNameLines = null)
         {
             if (copies <= 0) copies = 1;
 
@@ -612,6 +793,9 @@ namespace PosElectro.Desktop.Services
                 var sizeId = labelSizeId ?? GetLabelSizeSetting();
                 var config = LabelSizeConfig.Get(sizeId);
                 double currentOffset = offsetMm ?? GetLabelOffsetSetting(sizeId);
+                double currentNameOffset = nameOffsetMm ?? GetLabelNameOffsetSetting(sizeId);
+                string currentNameAlign = nameAlignment ?? GetLabelNameAlignSetting(sizeId);
+                int currentNameLines = maxNameLines ?? GetLabelNameLinesSetting(sizeId);
 
                 try
                 {
@@ -625,7 +809,18 @@ namespace PosElectro.Desktop.Services
                 }
                 catch { }
 
-                var visual = CreateLabelVisual(barcode, productName, price, showName, showPrice, showBarcode, config, currentOffset);
+                var visual = CreateLabelVisual(
+                    barcode, 
+                    productName, 
+                    price, 
+                    showName, 
+                    showPrice, 
+                    showBarcode, 
+                    config, 
+                    currentOffset,
+                    currentNameOffset,
+                    currentNameAlign,
+                    currentNameLines);
 
                 for (int i = 0; i < copies; i++)
                 {
@@ -643,6 +838,7 @@ namespace PosElectro.Desktop.Services
 
         /// <summary>
         /// Stikerning vizual ko'rinishini DrawingVisual orqali yaratish (avtomatik markazlashtirilgan va moslashuvchan siljitish bilan).
+        /// Ushbu metod Jonli Preview (WPF RenderTargetBitmap) va Haqiqiy Printer (PrintVisual) uchun yagona manba (100% WYSIWYG) hisoblanadi.
         /// </summary>
         public static DrawingVisual CreateLabelVisual(
             string barcode,
@@ -652,7 +848,10 @@ namespace PosElectro.Desktop.Services
             bool showPrice,
             bool showBarcode,
             LabelSizeConfig? config = null,
-            double offsetMm = 0)
+            double offsetMm = 0,
+            double nameOffsetMm = 0,
+            string nameAlignment = "left",
+            int maxNameLines = 1)
         {
             var cfg = config ?? LabelSizeConfig.Presets["40x30"];
             double width = cfg.VisualWidth;
@@ -664,36 +863,72 @@ namespace PosElectro.Desktop.Services
             var visual = new DrawingVisual();
             using (var dc = visual.RenderOpen())
             {
-                // Oq fon (chetlar oq chiqishi uchun kengroq)
-                dc.DrawRectangle(Brushes.White, null, new Rect(-30, 0, width + 60, height));
+                // Oq fon
+                dc.DrawRectangle(Brushes.White, null, new Rect(0, 0, width, height));
 
-                double curY = 2;
+                // Stiker qog'ozi chegarasidan tashqariga chiqib ketmasligi uchun qat'iy qirqish (PushClip)
+                dc.PushClip(new RectangleGeometry(new Rect(0, 0, width, height)));
 
-                // 1. Do'kon nomi olib tashlandi, lekin uning o'rnini to'ldirish uchun 
-                // shtrix-kod joylashuvi o'zgarmasligi uchun curY ga biroz bo'sh joy qo'shamiz (taxminan 4px).
-                // Mahsulot nomining o'zi kattalashgani uchun qolgan joyni o'zi egallaydi.
-                curY += 4; 
+                double curY = 4;
 
-                // 2. Mahsulot nomi (Agar tanlangan bo'lsa) - KATTAROQ FONT BILAN
+                // 1. Mahsulot nomi (Agar tanlangan bo'lsa)
                 if (showName && !string.IsNullOrWhiteSpace(productName))
                 {
                     var typefaceName = new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Bold, FontStretches.Normal);
-                    int maxLen = cfg.VisualWidth > 200 ? 36 : 26;
-                    string displayName = productName.Length > maxLen ? productName.Substring(0, maxLen - 3) + "..." : productName;
+                    double nameFontSize = maxNameLines == 1 ? (cfg.NameFontSize + 2.0) : (cfg.NameFontSize + 0.5);
+                    double nameShiftDip = nameOffsetMm * (96.0 / 25.4);
+                    double padX = 8.0 + offsetDip; // Chap chetdan xavfsiz oraliq (~2.1 mm)
+                    double availWidth = Math.Max(20, width - 16.0);
+
                     var ftName = new FormattedText(
-                        displayName,
+                        productName,
                         CultureInfo.CurrentCulture,
                         FlowDirection.LeftToRight,
                         typefaceName,
-                        cfg.NameFontSize + 2.5, // Mahsulot nomi kattalashtirildi
+                        nameFontSize,
                         Brushes.Black,
-                        96);
-                    double nameX = centerX - (ftName.Width / 2.0);
+                        1.0);
+
+                    double nameX;
+                    if (maxNameLines > 1)
+                    {
+                        // 2 qatorda chiqarish
+                        ftName.MaxTextWidth = availWidth;
+                        ftName.MaxLineCount = 2;
+                        ftName.Trimming = TextTrimming.WordEllipsis;
+
+                        if (nameAlignment.Equals("center", StringComparison.OrdinalIgnoreCase))
+                        {
+                            ftName.TextAlignment = TextAlignment.Center;
+                            nameX = (width - availWidth) / 2.0 + offsetDip + nameShiftDip;
+                        }
+                        else
+                        {
+                            ftName.TextAlignment = TextAlignment.Left;
+                            nameX = padX + nameShiftDip;
+                        }
+                    }
+                    else
+                    {
+                        // 1 qatorda chiqarish (Mijoz talabi: boshi to'liq ko'rinadi, o'ngga surish/qirqish mumkin)
+                        ftName.MaxLineCount = 1;
+
+                        if (nameAlignment.Equals("center", StringComparison.OrdinalIgnoreCase))
+                        {
+                            nameX = centerX - (ftName.Width / 2.0) + nameShiftDip;
+                        }
+                        else
+                        {
+                            // Chapdan boshlanishi: Boshidagi harflar ("K") hech qachon kesilmaydi!
+                            nameX = padX + nameShiftDip;
+                        }
+                    }
+
                     dc.DrawText(ftName, new Point(nameX, curY));
                     curY += ftName.Height + 2;
                 }
 
-                // 3. Shtrix-kod chiziqlari (To'liq vektor, qop-qora, tiniq va skaner oson o'qiydi)
+                // 2. Shtrix-kod chiziqlari (To'liq vektor, qop-qora, tiniq va skaner oson o'qiydi)
                 if (showBarcode && !string.IsNullOrWhiteSpace(barcode))
                 {
                     string pattern = BarcodeGeneratorHelper.GetBarcodePattern(barcode);
@@ -725,13 +960,13 @@ namespace PosElectro.Desktop.Services
                         typefaceCode,
                         cfg.BarcodeFontSize,
                         Brushes.Black,
-                        96);
+                        1.0);
                     double codeX = centerX - (ftCode.Width / 2.0);
                     dc.DrawText(ftCode, new Point(codeX, curY));
                     curY += ftCode.Height + 2;
                 }
 
-                // 4. Narxi (Agar tanlangan bo'lsa)
+                // 3. Narxi (Agar tanlangan bo'lsa)
                 if (showPrice)
                 {
                     var typefacePrice = new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Bold, FontStretches.Normal);
@@ -743,10 +978,13 @@ namespace PosElectro.Desktop.Services
                         typefacePrice,
                         cfg.PriceFontSize,
                         Brushes.Black,
-                        96);
+                        1.0);
                     double priceX = centerX - (ftPrice.Width / 2.0);
                     dc.DrawText(ftPrice, new Point(priceX, curY));
                 }
+
+                // Qirqishni yopish
+                dc.Pop();
             }
 
             return visual;

@@ -101,6 +101,27 @@ namespace PosElectro.Desktop.Views
             }
         }
 
+        private void BrakModal_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            if (sender is Border border)
+            {
+                if (border.Visibility == Visibility.Visible)
+                {
+                    Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        BrakConfirmBtn?.Focus();
+                    }), System.Windows.Threading.DispatcherPriority.Input);
+                }
+                else
+                {
+                    Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        SearchBox?.Focus();
+                    }), System.Windows.Threading.DispatcherPriority.Input);
+                }
+            }
+        }
+
         private void HoldModal_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
         {
             if (sender is Border border && border.Visibility == Visibility.Visible)

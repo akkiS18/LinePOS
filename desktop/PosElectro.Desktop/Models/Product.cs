@@ -1,9 +1,18 @@
 using System;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 
 namespace PosElectro.Desktop.Models
 {
-    public class Product
+    public class Product : INotifyPropertyChanged
     {
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
         public long Id { get; set; }
         public string Guid { get; set; } = System.Guid.NewGuid().ToString();
         public string? Barcode { get; set; }
@@ -21,6 +30,20 @@ namespace PosElectro.Desktop.Models
         public string? WarehouseGuid { get; set; }
         public string? WarehouseName { get; set; }
         public long UpdatedAt { get; set; } = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+        private bool _isSelected;
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set
+            {
+                if (_isSelected != value)
+                {
+                    _isSelected = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
 
         // UI yordamchi maydonlar
         public bool HasWarehouse => !string.IsNullOrWhiteSpace(WarehouseName);

@@ -176,5 +176,132 @@ namespace PosElectro.Desktop.Services
                 return false;
             }
         }
+
+        /// <summary>
+        /// Kam qolgan tovarlar ichidan buyurtma uchun tanlangan ro'yxatni chiroyli Excel (.xls) qilib saqlash.
+        /// </summary>
+        public static bool ExportReorderList(List<Product> items, string warehouseTitle = "Barcha omborlar")
+        {
+            try
+            {
+                if (items == null || items.Count == 0)
+                {
+                    MessageBox.Show("Buyurtma uchun hech qanday tovar tanlanmagan!", "Ogohlantirish", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return false;
+                }
+
+                var saveDialog = new SaveFileDialog
+                {
+                    Filter = "Excel fayli (*.xls)|*.xls|Barcha fayllar (*.*)|*.*",
+                    FileName = $"LineKassa_Buyurtma_Royxati_{DateTime.Now:yyyyMMdd_HHmm}.xls",
+                    Title = "Buyurtma ro'yxatini Excelga saqlash"
+                };
+
+                if (saveDialog.ShowDialog() != true)
+                {
+                    return false;
+                }
+
+                var filePath = saveDialog.FileName;
+                var html = new StringBuilder();
+
+                html.Append(@"<html xmlns:o=""urn:schemas-microsoft-com:office:office"" xmlns:x=""urn:schemas-microsoft-com:office:excel"" xmlns=""http://www.w3.org/TR/REC-html40"">
+<head>
+    <meta http-equiv=""Content-Type"" content=""text/html; charset=UTF-8"">
+    <!--[if gte mso 9]>
+    <xml>
+    <x:ExcelWorkbook>
+    <x:ExcelWorksheets>
+    <x:ExcelWorksheet>
+    <x:Name>Buyurtma Ro'yxati</x:Name>
+    <x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
+    </x:ExcelWorksheet>
+    </x:ExcelWorksheets>
+    </x:ExcelWorkbook>
+    </xml>
+    <![endif]-->
+    <style>
+        body { font-family: Calibri, Arial, sans-serif; }
+        .title { font-size: 16pt; font-weight: bold; color: #0B6477; }
+        .header { background-color: #0B6477; color: #ffffff; font-weight: bold; text-align: center; border: 1px solid #000000; }
+        .kpi-title { font-weight: bold; background-color: #F1F5F9; }
+        .kpi-val { font-weight: bold; color: #0284C7; }
+        td { padding: 6px 10px; border: 1px solid #CBD5E1; }
+        .num { text-align: right; }
+        .center { text-align: center; }
+        .reorder-box { background-color: #FEF3C7; text-align: center; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <table>
+        <tr>
+            <td colspan=""9"" class=""title"" style=""border:none;"">LINE KASSA - TOVAR BUYURTMA RO'YXATI (ZAKAZ)</td>
+        </tr>
+        <tr>
+            <td colspan=""9"" style=""border:none; font-size: 11pt;""><b>Ombor:</b> " + warehouseTitle + @"</td>
+        </tr>
+        <tr>
+            <td colspan=""9"" style=""border:none; font-size: 10pt; color: #64748B;""><b>Yaratilgan sana:</b> " + DateTime.Now.ToString("dd.MM.yyyy HH:mm") + @" | <b>Jami tovarlar:</b> " + items.Count + @" ta</td>
+        </tr>
+        <tr><td colspan=""9"" style=""border:none;""></td></tr>
+        
+        <tr class=""header"">
+            <th style=""width: 40px; background-color: #0B6477; color: #ffffff;"">T/r</th>
+            <th style=""width: 140px; background-color: #0B6477; color: #ffffff;"">Shtrix-kod</th>
+            <th style=""width: 300px; background-color: #0B6477; color: #ffffff;"">Mahsulot nomi</th>
+            <th style=""width: 150px; background-color: #0B6477; color: #ffffff;"">Kategoriya</th>
+            <th style=""width: 100px; background-color: #0B6477; color: #ffffff;"">Qoldiq</th>
+            <th style=""width: 80px; background-color: #0B6477; color: #ffffff;"">Birlik</th>
+            <th style=""width: 120px; background-color: #0B6477; color: #ffffff;"">Tan narxi</th>
+            <th style=""width: 130px; background-color: #D97706; color: #ffffff;"">Buyurtma Miqdori</th>
+            <th style=""width: 200px; background-color: #0B6477; color: #ffffff;"">Izoh / Yetkazib beruvchi</th>
+        </tr>");
+
+                for (int i = 0; i < items.Count; i++)
+                {
+                    var item = items[i];
+                    var costDisplay = item.CostCurrency == "USD" ? $"${item.CostPrice:N2}" : $"{item.CostPrice:N0} so'm";
+                    var barcodeStr = string.IsNullOrWhiteSpace(item.Barcode) ? "—" : item.Barcode;
+
+                    html.Append($@"
+        <tr>
+            <td class=""center"">{i + 1}</td>
+            <td class=""center"">{barcodeStr}</td>
+            <td><b>{item.Name}</b></td>
+            <td>{item.Category}</td>
+            <td class=""num"" style=""color: #EF4444; font-weight: bold;"">{item.StockQuantity}</td>
+            <td class=""center"">{item.UnitDisplay}</td>
+            <td class=""num"">{costDisplay}</td>
+            <td class=""reorder-box""></td>
+            <td>{item.Note}</td>
+        </tr>");
+                }
+
+                html.Append(@"
+    </table>
+</body>
+</html>");
+
+                File.WriteAllText(filePath, html.ToString(), Encoding.UTF8);
+
+                var result = MessageBox.Show(
+                    $"Buyurtma ro'yxati muvaffaqiyatli saqlandi!\n\nFaylni hozir Excelda ochishni xohlaysizmi?",
+                    "Excel Eksport",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Information);
+
+                if (result == MessageBoxResult.Yes)
+                {
+                    Process.Start(new ProcessStartInfo(filePath) { UseShellExecute = true });
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Excel eksportda xatolik yuz berdi:\n{ex.Message}", "Xatolik", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
+            }
+        }
     }
 }

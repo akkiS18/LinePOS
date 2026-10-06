@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -27,7 +28,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -35,11 +38,13 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
@@ -97,13 +102,21 @@ fun ProductsScreen(
     val stocksInWarehouse by viewModel.stocksInSelectedWarehouse.collectAsState()
     val isAddWarehouseOpen by viewModel.isAddWarehouseOpen.collectAsState()
     val isTransferOpen by viewModel.isTransferOpen.collectAsState()
+    val selectedLowStockGuids by viewModel.selectedLowStockGuids.collectAsState()
+    val isOnlySelectedFilterActive by viewModel.isOnlySelectedFilterActive.collectAsState()
+    val selectedLowStockProducts by viewModel.selectedLowStockProducts.collectAsState()
+    val quickStockProduct by viewModel.quickStockProduct.collectAsState()
+    val quickStockQuantityInput by viewModel.quickStockQuantityInput.collectAsState()
+    val quickStockErrorMessage by viewModel.quickStockErrorMessage.collectAsState()
 
     var isCameraScannerOpen by remember { mutableStateOf(false) }
     var isBackupDialogOpen by remember { mutableStateOf(false) }
+    var isReorderSheetOpen by remember { mutableStateOf(false) }
     var productToDelete by remember { mutableStateOf<ProductEntity?>(null) }
 
     val isSearching = searchQuery.isNotBlank()
     val isInsideCategory = currentCategory != null || isSearching
+    val isLowStockCategory = currentCategory == CATEGORY_LOW_STOCK
 
     // Back handling: 1st back click clears search query
     BackHandler(enabled = searchQuery.isNotBlank()) {
@@ -121,46 +134,71 @@ fun ProductsScreen(
     }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         containerColor = MaterialTheme.colorScheme.background,
         floatingActionButton = {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 32.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Chap tomondagi DB Zaxira (Backup) tugmasi
-                FloatingActionButton(
-                    onClick = { isBackupDialogOpen = true },
+            if (isLowStockCategory && selectedLowStockGuids.isNotEmpty()) {
+                ExtendedFloatingActionButton(
+                    onClick = { isReorderSheetOpen = true },
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Default.ShoppingCart,
+                            contentDescription = "Buyurtma",
+                            modifier = Modifier.size(20.dp)
+                        )
+                    },
+                    text = {
+                        Text(
+                            text = "Buyurtma (${selectedLowStockGuids.size} ta)",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
+                    },
                     shape = CircleShape,
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    contentColor = MaterialTheme.colorScheme.primary,
-                    elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 4.dp),
-                    modifier = Modifier.size(56.dp)
+                    containerColor = LinePrimary,
+                    contentColor = Color.White,
+                    elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp)
+                )
+            } else {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 32.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.CloudDownload,
-                        contentDescription = "Baza Zaxirasi",
-                        modifier = Modifier.size(26.dp)
-                    )
-                }
-
-                // O'ng tomondagi Mahsulot qo'shish (+) tugmasi (Faqat ombor tanlangandan keyin chiqadi)
-                if (selectedWarehouse != null) {
+                    // Chap tomondagi DB Zaxira (Backup) tugmasi
                     FloatingActionButton(
-                        onClick = { viewModel.openAddProductDialog() },
+                        onClick = { isBackupDialogOpen = true },
                         shape = CircleShape,
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = Color.White,
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        contentColor = MaterialTheme.colorScheme.primary,
                         elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 4.dp),
                         modifier = Modifier.size(56.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Yangi mahsulot",
-                            modifier = Modifier.size(28.dp)
+                            imageVector = Icons.Default.CloudDownload,
+                            contentDescription = "Baza Zaxirasi",
+                            modifier = Modifier.size(26.dp)
                         )
+                    }
+
+                    // O'ng tomondagi Mahsulot qo'shish (+) tugmasi (Faqat ombor tanlangandan keyin chiqadi)
+                    if (selectedWarehouse != null) {
+                        FloatingActionButton(
+                            onClick = { viewModel.openAddProductDialog() },
+                            shape = CircleShape,
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = Color.White,
+                            elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 4.dp),
+                            modifier = Modifier.size(56.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "Yangi mahsulot",
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -378,6 +416,80 @@ fun ProductsScreen(
                         )
                     }
 
+                    if (isLowStockCategory) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Hammasini tanlash
+                            OutlinedButton(
+                                onClick = { viewModel.selectAllLowStock(products) },
+                                shape = CircleShape,
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                                modifier = Modifier.height(32.dp)
+                            ) {
+                                Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Barchasi", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                            }
+
+                            // Tozalash
+                            if (selectedLowStockGuids.isNotEmpty()) {
+                                OutlinedButton(
+                                    onClick = { viewModel.clearSelectedLowStock() },
+                                    shape = CircleShape,
+                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                                    modifier = Modifier.height(32.dp)
+                                ) {
+                                    Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Tozalash", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                }
+                            }
+
+                            // Faqat tanlanganlar filtri
+                            Surface(
+                                onClick = { viewModel.setOnlySelectedFilter(!isOnlySelectedFilterActive) },
+                                shape = CircleShape,
+                                color = if (isOnlySelectedFilterActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                                border = if (!isOnlySelectedFilterActive) androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)) else null,
+                                modifier = Modifier.height(32.dp)
+                            ) {
+                                Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier.padding(horizontal = 10.dp)
+                                ) {
+                                    Text(
+                                        text = if (selectedLowStockGuids.isNotEmpty()) "Tanlanganlar (${selectedLowStockGuids.size})" else "Tanlanganlar",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = if (isOnlySelectedFilterActive) Color.White else MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.weight(1f))
+
+                            // Zakaz ro'yxatini ko'rish tugmasi
+                            if (selectedLowStockGuids.isNotEmpty()) {
+                                Button(
+                                    onClick = { isReorderSheetOpen = true },
+                                    shape = CircleShape,
+                                    colors = ButtonDefaults.buttonColors(containerColor = LineSecondary),
+                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                                    modifier = Modifier.height(32.dp)
+                                ) {
+                                    Icon(Icons.Default.ShoppingCart, contentDescription = null, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Zakaz (${selectedLowStockGuids.size})", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+
                     // Kategoriyadagi Mahsulotlar Ro'yxati (List)
                     if (products.isEmpty()) {
                         Box(
@@ -401,10 +513,15 @@ fun ProductsScreen(
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             items(products, key = { it.id }) { product ->
+                                val isSelected = selectedLowStockGuids.contains(product.guid)
                                 ProductItemCard(
                                     product = product,
                                     stockOverride = stocksInWarehouse[product.guid],
+                                    isSelectable = isLowStockCategory,
+                                    isSelected = isSelected,
+                                    onToggleSelect = { viewModel.toggleSelectLowStock(product.guid) },
                                     onEditClick = { viewModel.openEditProductDialog(product) },
+                                    onQuickStockClick = { viewModel.openQuickStockDialog(product) },
                                     onDeleteClick = { productToDelete = product }
                                 )
                             }
@@ -490,6 +607,32 @@ fun ProductsScreen(
                 onTransfer = { pGuid, fromWh, toWh, qty ->
                     viewModel.transferStock(pGuid, fromWh, toWh, qty)
                 }
+            )
+        }
+
+        // Kam qolgan tovarlar buyurtma ro'yxati (Reorder BottomSheet)
+        if (isReorderSheetOpen) {
+            ReorderListBottomSheet(
+                items = selectedLowStockProducts,
+                onDismissRequest = { isReorderSheetOpen = false },
+                onRemoveItem = { guid -> viewModel.removeSelectedLowStock(guid) },
+                onClearAll = { viewModel.clearSelectedLowStock() }
+            )
+        }
+
+        // Tezkor qoldiq oshirish (Kirim) modali
+        quickStockProduct?.let { product ->
+            val whName = selectedWarehouse?.name ?: "Asosiy ombor"
+            val currentStock = stocksInWarehouse[product.guid] ?: product.stockQuantity
+            QuickStockAddDialog(
+                product = product,
+                warehouseName = whName,
+                currentStock = currentStock,
+                quantityInput = quickStockQuantityInput,
+                errorMessage = quickStockErrorMessage,
+                onQuantityChange = { viewModel.onQuickStockQuantityChanged(it) },
+                onDismiss = { viewModel.closeQuickStockDialog() },
+                onConfirm = { viewModel.confirmQuickStockAdd() }
             )
         }
     }
@@ -602,7 +745,11 @@ private fun CategoryGridCard(
 fun ProductItemCard(
     product: ProductEntity,
     stockOverride: Double? = null,
+    isSelectable: Boolean = false,
+    isSelected: Boolean = false,
+    onToggleSelect: (() -> Unit)? = null,
     onEditClick: () -> Unit,
+    onQuickStockClick: (() -> Unit)? = null,
     onDeleteClick: () -> Unit
 ) {
     val numberFormat = remember { NumberFormat.getNumberInstance(Locale.US) }
@@ -612,15 +759,23 @@ fun ProductItemCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onEditClick() },
+            .clickable {
+                if (isSelectable && onToggleSelect != null) {
+                    onToggleSelect()
+                } else {
+                    onEditClick()
+                }
+            },
         shape = RoundedCornerShape(20.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        border = if (isLowStock) androidx.compose.foundation.BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.error.copy(alpha = 0.45f)
-        ) else null,
+        border = when {
+            isSelected -> androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+            isLowStock -> androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.45f))
+            else -> null
+        },
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
+            else MaterialTheme.colorScheme.surface
         )
     ) {
 
@@ -631,6 +786,31 @@ fun ProductItemCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
+            if (isSelectable) {
+                Surface(
+                    onClick = { onToggleSelect?.invoke() },
+                    shape = CircleShape,
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.5.dp,
+                        if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
+                    ),
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        if (isSelected) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Tanlangan",
+                                tint = Color.White,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+            }
+
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -696,6 +876,7 @@ fun ProductItemCard(
                 val isNegativeStock = currentStock < 0
 
                 Surface(
+                    onClick = { onQuickStockClick?.invoke() },
                     shape = CircleShape,
                     color = when {
                         isNegativeStock -> MaterialTheme.colorScheme.error.copy(alpha = 0.22f)
@@ -704,13 +885,23 @@ fun ProductItemCard(
                     },
                     modifier = Modifier.padding(bottom = 6.dp)
                 ) {
-                    Text(
-                        text = if (isNegativeStock) "⚠️ $stockText $unitLabel" else "$stockText $unitLabel",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = if (isNegativeStock || isLowStock) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                    )
+                    ) {
+                        Text(
+                            text = if (isNegativeStock) "⚠️ $stockText $unitLabel" else "$stockText $unitLabel",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isNegativeStock || isLowStock) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(3.dp))
+                        Text(
+                            text = "➕",
+                            fontSize = 9.sp,
+                            color = if (isNegativeStock || isLowStock) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
 
                 Row(

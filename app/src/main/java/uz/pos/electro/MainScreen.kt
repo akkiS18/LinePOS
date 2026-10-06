@@ -8,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -213,15 +214,19 @@ fun MainScreen(
                         .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)),
                     color = MaterialTheme.colorScheme.surface
                 ) {
-                    Row(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .navigationBarsPadding()
-                            .height(64.dp)
-                            .padding(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.SpaceAround,
-                        verticalAlignment = Alignment.CenterVertically
                     ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(64.dp)
+                                .padding(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.SpaceAround,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                         AppleDockTabItem(
                             icon = Icons.Default.PointOfSale,
                             isSelected = selectedTab == 0,
@@ -265,6 +270,7 @@ fun MainScreen(
                                 }
                             }
                         )
+                    }
                     }
                 }
             }

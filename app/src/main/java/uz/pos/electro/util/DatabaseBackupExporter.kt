@@ -391,6 +391,111 @@ object DatabaseBackupExporter {
     }
 
     /**
+     * Kam qolgan tovarlar ichidan buyurtma (zakaz) uchun tanlangan tovarlar Excel (.xls) jadvali
+     */
+    fun exportReorderExcel(
+        context: Context,
+        products: List<ProductEntity>,
+        usdRate: Double = 12850.0
+    ): Result<File> = runCatching {
+        val numberFormat = NumberFormat.getNumberInstance(Locale.US)
+        val dateFormat = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
+        val timeStamp = SimpleDateFormat("yyyy-MM-dd_HH-mm", Locale.getDefault()).format(Date())
+
+        val html = StringBuilder().apply {
+            append("""
+                <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+                <head>
+                    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+                    <!--[if gte mso 9]>
+                    <xml>
+                    <x:ExcelWorkbook>
+                    <x:ExcelWorksheets>
+                    <x:ExcelWorksheet>
+                    <x:Name>Buyurtma Ro'yxati</x:Name>
+                    <x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
+                    </x:ExcelWorksheet>
+                    </x:ExcelWorksheets>
+                    </x:ExcelWorkbook>
+                    </xml>
+                    <![endif]-->
+                    <style>
+                        body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; }
+                        .title { font-size: 16pt; font-weight: bold; color: #0B6477; }
+                        .header { background-color: #0B6477; color: #ffffff; font-weight: bold; text-align: center; border: 1px solid #000000; padding: 8px; }
+                        .reorder-header { background-color: #D97706; color: #ffffff; font-weight: bold; text-align: center; border: 1px solid #000000; padding: 8px; }
+                        td { border: 1px solid #CBD5E1; padding: 6px 10px; }
+                        .num { text-align: right; }
+                        .center { text-align: center; }
+                        .low-stock { color: #DC2626; font-weight: bold; text-align: center; }
+                        .reorder-box { background-color: #FEF3C7; text-align: center; }
+                    </style>
+                </head>
+                <body>
+                    <table>
+                        <tr>
+                            <td colspan="9" class="title" style="border:none;">LINE POS - TOVAR BUYURTMA RO'YXATI (ZAKAZ)</td>
+                        </tr>
+                        <tr>
+                            <td colspan="9" style="border:none; color: #64748B;">Sana: ${dateFormat.format(Date())} | Jami tanlangan: ${products.size} ta tovar</td>
+                        </tr>
+                        <tr><td colspan="9" style="border:none;"></td></tr>
+                        
+                        <tr class="header">
+                            <th style="width: 40px; background-color: #0B6477; color: #ffffff;">T/r</th>
+                            <th style="width: 140px; background-color: #0B6477; color: #ffffff;">Shtrix-kod</th>
+                            <th style="width: 320px; background-color: #0B6477; color: #ffffff;">Mahsulot nomi</th>
+                            <th style="width: 140px; background-color: #0B6477; color: #ffffff;">Kategoriya</th>
+                            <th style="width: 90px; background-color: #0B6477; color: #ffffff;">Qoldiq</th>
+                            <th style="width: 70px; background-color: #0B6477; color: #ffffff;">Birlik</th>
+                            <th style="width: 120px; background-color: #0B6477; color: #ffffff;">Tan narxi</th>
+                            <th class="reorder-header" style="width: 140px;">Buyurtma Miqdori</th>
+                            <th style="width: 200px; background-color: #0B6477; color: #ffffff;">Izoh / Yetkazib beruvchi</th>
+                        </tr>
+            """.trimIndent())
+
+            products.forEachIndexed { index, product ->
+                val unitLabel = when (product.unitType) {
+                    UnitType.METR -> "Metr"
+                    UnitType.KG -> "Kg"
+                    UnitType.DONA -> "Dona"
+                }
+                val stockText = if (product.stockQuantity % 1.0 == 0.0) product.stockQuantity.toLong().toString() else product.stockQuantity.toString()
+                val costPriceText = if (product.costCurrency == "USD") "$${product.costPrice}" else "${numberFormat.format(product.costPrice)} so'm"
+
+                append("""
+                    <tr>
+                        <td class="center">${index + 1}</td>
+                        <td class="center">${product.barcode ?: "-"}</td>
+                        <td><b>${product.name}</b></td>
+                        <td>${product.category.ifBlank { "Barchasi" }}</td>
+                        <td class="low-stock">$stockText</td>
+                        <td class="center">$unitLabel</td>
+                        <td class="num">$costPriceText</td>
+                        <td class="reorder-box"></td>
+                        <td>${product.note}</td>
+                    </tr>
+                """.trimIndent())
+            }
+
+            append("""
+                    </table>
+                </body>
+                </html>
+            """.trimIndent())
+        }
+
+        val backupDir = File(context.cacheDir, "backups").apply { if (!exists()) mkdirs() }
+        val excelFile = File(backupDir, "Line_Buyurtma_Royxati_$timeStamp.xls")
+
+        OutputStreamWriter(FileOutputStream(excelFile), StandardCharsets.UTF_8).use { writer ->
+            writer.write(html.toString())
+        }
+
+        excelFile
+    }
+
+    /**
      * Barcha tovarlar JSON nusxasini yaratish
      */
     fun exportInventoryJson(context: Context, products: List<ProductEntity>): Result<File> = runCatching {

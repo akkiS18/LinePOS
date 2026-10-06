@@ -23,6 +23,7 @@ import uz.pos.electro.data.model.UnitType
 import uz.pos.electro.data.repository.ProductRepository
 import uz.pos.electro.data.repository.WarehouseRepository
 import uz.pos.electro.data.repository.WarehouseWithStats
+import uz.pos.electro.util.SmartSearchHelper
 import java.util.Locale
 import javax.inject.Inject
 
@@ -136,31 +137,67 @@ class ProductViewModel @Inject constructor(
         initialValue = listOf("Barchasi")
     )
 
-    // Tanlangan kategoriya yoki qidiruv bo'yicha mahsulotlar (tanlangan omborga moslangan)
-    val products: StateFlow<List<ProductEntity>> = combine(
-        _searchQuery.flatMapLatest { query ->
-            if (query.isBlank()) {
-                productRepository.getAllProducts()
-            } else {
-                productRepository.searchProducts(query.trim())
-            }
-        },
-        _currentViewCategory,
+    // Kam qolgan tovarlarni tanlash (Reorder Selection)
+    private val _selectedLowStockGuids = MutableStateFlow<Set<String>>(emptySet())
+    val selectedLowStockGuids: StateFlow<Set<String>> = _selectedLowStockGuids.asStateFlow()
+
+    private val _isOnlySelectedFilterActive = MutableStateFlow(false)
+    val isOnlySelectedFilterActive: StateFlow<Boolean> = _isOnlySelectedFilterActive.asStateFlow()
+
+    // Barcha mahsulotlar (ombor bo'yicha moslangan)
+    private val scopedProductsFlow = combine(
+        allProductsFlow,
         _selectedWarehouse,
         stocksInSelectedWarehouse
-    ) { productList, category, selectedWh, stocks ->
-        val active = productList.filter { !it.isDeleted }
-        val scopedList = if (selectedWh != null) {
+    ) { products, selectedWh, stocks ->
+        val active = products.filter { !it.isDeleted }
+        if (selectedWh != null) {
             active.filter { stocks.containsKey(it.guid) }
                 .map { it.copy(stockQuantity = stocks[it.guid] ?: 0.0) }
         } else {
             active
         }
+    }
 
-        when {
+    // Tanlangan kam qolgan mahsulotlar ro'yxati (Buyurtma/Reorder uchun)
+    val selectedLowStockProducts: StateFlow<List<ProductEntity>> = combine(
+        scopedProductsFlow,
+        _selectedLowStockGuids
+    ) { products, guids ->
+        products.filter { guids.contains(it.guid) }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
+    // Tanlangan kategoriya yoki qidiruv bo'yicha mahsulotlar (tanlangan omborga moslangan)
+    val products: StateFlow<List<ProductEntity>> = combine(
+        scopedProductsFlow,
+        _searchQuery,
+        _currentViewCategory,
+        _selectedLowStockGuids,
+        _isOnlySelectedFilterActive
+    ) { scopedList, query, category, selectedGuids, onlySelected ->
+        val categoryFiltered = when {
             category == null || category == "Barchasi" -> scopedList
-            category == CATEGORY_LOW_STOCK -> scopedList.filter { it.stockQuantity <= it.minStockAlert }
+            category == CATEGORY_LOW_STOCK -> {
+                val low = scopedList.filter { it.stockQuantity <= it.minStockAlert }
+                if (onlySelected) low.filter { selectedGuids.contains(it.guid) } else low
+            }
             else -> scopedList.filter { it.category.equals(category, ignoreCase = true) }
+        }
+
+        if (query.isNotBlank()) {
+            SmartSearchHelper.filterAndRank(
+                source = categoryFiltered,
+                query = query.trim(),
+                nameSelector = { it.name },
+                barcodeSelector = { it.barcode },
+                noteSelector = { it.note }
+            )
+        } else {
+            categoryFiltered
         }
     }.stateIn(
         scope = viewModelScope,
@@ -200,6 +237,16 @@ class ProductViewModel @Inject constructor(
 
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
+
+    // Tezkor qoldiq qo'shish (Kirim)
+    private val _quickStockProduct = MutableStateFlow<ProductEntity?>(null)
+    val quickStockProduct: StateFlow<ProductEntity?> = _quickStockProduct.asStateFlow()
+
+    private val _quickStockQuantityInput = MutableStateFlow("")
+    val quickStockQuantityInput: StateFlow<String> = _quickStockQuantityInput.asStateFlow()
+
+    private val _quickStockErrorMessage = MutableStateFlow<String?>(null)
+    val quickStockErrorMessage: StateFlow<String?> = _quickStockErrorMessage.asStateFlow()
 
     companion object {
         fun normalizeProductName(name: String): String {
@@ -244,11 +291,43 @@ class ProductViewModel @Inject constructor(
 
     fun enterCategory(categoryName: String) {
         _currentViewCategory.value = categoryName
+        if (categoryName != CATEGORY_LOW_STOCK) {
+            _isOnlySelectedFilterActive.value = false
+        }
     }
 
     fun exitCategory() {
         _currentViewCategory.value = null
         _searchQuery.value = ""
+        _isOnlySelectedFilterActive.value = false
+    }
+
+    fun toggleSelectLowStock(guid: String) {
+        val current = _selectedLowStockGuids.value.toMutableSet()
+        if (current.contains(guid)) {
+            current.remove(guid)
+        } else {
+            current.add(guid)
+        }
+        _selectedLowStockGuids.value = current
+    }
+
+    fun removeSelectedLowStock(guid: String) {
+        val current = _selectedLowStockGuids.value.toMutableSet()
+        current.remove(guid)
+        _selectedLowStockGuids.value = current
+    }
+
+    fun selectAllLowStock(lowStockProducts: List<ProductEntity>) {
+        _selectedLowStockGuids.value = lowStockProducts.map { it.guid }.toSet()
+    }
+
+    fun clearSelectedLowStock() {
+        _selectedLowStockGuids.value = emptySet()
+    }
+
+    fun setOnlySelectedFilter(active: Boolean) {
+        _isOnlySelectedFilterActive.value = active
     }
 
     fun openAddProductDialog(scannedBarcode: String? = null) {
@@ -297,6 +376,50 @@ class ProductViewModel @Inject constructor(
         _isAddEditOpen.value = false
         _editingProductId.value = null
         _errorMessage.value = null
+    }
+
+    fun openQuickStockDialog(product: ProductEntity) {
+        _quickStockProduct.value = product
+        _quickStockQuantityInput.value = ""
+        _quickStockErrorMessage.value = null
+    }
+
+    fun onQuickStockQuantityChanged(value: String) {
+        _quickStockQuantityInput.value = value
+        _quickStockErrorMessage.value = null
+    }
+
+    fun closeQuickStockDialog() {
+        _quickStockProduct.value = null
+        _quickStockQuantityInput.value = ""
+        _quickStockErrorMessage.value = null
+    }
+
+    fun confirmQuickStockAdd(onSuccess: (() -> Unit)? = null) {
+        val product = _quickStockProduct.value ?: return
+        val raw = _quickStockQuantityInput.value.trim().replace(',', '.')
+        val qty = raw.toDoubleOrNull()
+        if (qty == null || qty <= 0.0) {
+            _quickStockErrorMessage.value = "Iltimos, 0 dan katta son kiriting!"
+            return
+        }
+
+        viewModelScope.launch {
+            try {
+                var currentWh = _selectedWarehouse.value
+                if (currentWh == null) {
+                    val warehouses = warehouseRepository.getAllWarehousesList()
+                    currentWh = warehouses.firstOrNull { it.isPrimary } ?: warehouses.firstOrNull()
+                }
+                val whGuid = currentWh?.guid ?: "main-default-warehouse"
+                productRepository.addProductStock(product.guid, whGuid, qty)
+                _refreshTrigger.value = System.currentTimeMillis()
+                closeQuickStockDialog()
+                onSuccess?.invoke()
+            } catch (e: Exception) {
+                _quickStockErrorMessage.value = "Xatolik: ${e.message}"
+            }
+        }
     }
 
     fun onBarcodeChanged(value: String) {

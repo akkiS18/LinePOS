@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -106,14 +107,16 @@ namespace PosElectro.Desktop.ViewModels
                     OnPropertyChanged(nameof(CanGoBackToWarehouses));
                     OnPropertyChanged(nameof(CanAddProduct));
                     OnPropertyChanged(nameof(SelectedWarehouseNameDisplay));
+                    OnPropertyChanged(nameof(BackButtonText));
                 }
             }
         }
 
         public string CurrentWarehouseTitle => SelectedWarehouse != null ? SelectedWarehouse.Name : "Barcha omborlar";
         public bool CanGoBackToWarehouses => SelectedWarehouse != null && (CurrentViewState == InventoryViewState.CategoriesGrid || CurrentViewState == InventoryViewState.ProductsList);
-        public bool CanAddProduct => SelectedWarehouse != null && CurrentViewState != InventoryViewState.AddEditForm;
+        public bool CanAddProduct => CurrentViewState != InventoryViewState.AddEditForm;
         public string SelectedWarehouseNameDisplay => SelectedWarehouse != null ? SelectedWarehouse.Name : "Tanlanmagan";
+        public string BackButtonText => SelectedWarehouse == null ? "Omborlarga qaytish" : "Kategoriyalarga qaytish";
 
         // Kategoriya qo'shish modali
         private bool _isAddCategoryModalOpen;
@@ -267,6 +270,13 @@ namespace PosElectro.Desktop.ViewModels
         public ICommand SaveEditCategoryCommand { get; }
         public ICommand ClearSearchCommand { get; }
         public ICommand PrintProductBarcodeCommand { get; }
+        public ICommand SelectAllLowStockCommand { get; }
+        public ICommand ClearSelectedLowStockCommand { get; }
+        public ICommand ToggleOnlySelectedFilterCommand { get; }
+        public ICommand OpenReorderListDialogCommand { get; }
+        public ICommand PrintReorderReceiptCommand { get; }
+        public ICommand ExportReorderExcelCommand { get; }
+        public ICommand OpenQuickStockAddCommand { get; }
 
         public InventoryViewModel(DatabaseContext db, ProductService productService, CurrencyService currencyService)
         {
@@ -324,6 +334,133 @@ namespace PosElectro.Desktop.ViewModels
 
                 var printerService = new PrinterService(_db);
                 var dialog = new BarcodePrintDialog(p.Name, p.Barcode, p.SellingPrice, p.StockQuantity, printerService)
+                {
+                    Owner = Application.Current.MainWindow
+                };
+                dialog.ShowDialog();
+            });
+
+            SelectAllLowStockCommand = new RelayCommand(() =>
+            {
+                foreach (var p in _cachedDisplayProducts.Where(x => x.IsLowStock))
+                {
+                    p.IsSelected = true;
+                }
+                OnPropertyChanged(nameof(SelectedLowStockCount));
+                OnPropertyChanged(nameof(HasSelectedLowStock));
+                OnPropertyChanged(nameof(ReorderButtonText));
+                ApplyFilter();
+            });
+
+            ClearSelectedLowStockCommand = new RelayCommand(() =>
+            {
+                foreach (var p in _cachedDisplayProducts.Where(x => x.IsLowStock))
+                {
+                    p.IsSelected = false;
+                }
+                OnPropertyChanged(nameof(SelectedLowStockCount));
+                OnPropertyChanged(nameof(HasSelectedLowStock));
+                OnPropertyChanged(nameof(ReorderButtonText));
+                ApplyFilter();
+            });
+
+            ToggleOnlySelectedFilterCommand = new RelayCommand<bool?>(val =>
+            {
+                IsOnlySelectedFilterActive = val ?? !IsOnlySelectedFilterActive;
+            });
+
+            OpenReorderListDialogCommand = new RelayCommand(() =>
+            {
+                var selected = _cachedDisplayProducts.Where(p => p.IsLowStock && p.IsSelected).ToList();
+                if (selected.Count == 0)
+                {
+                    MessageBox.Show("Buyurtma uchun hech qanday tovar tanlanmagan! Iltimos, ro'yxatdan kerakli tovarlarni tanlang.", "Ogohlantirish", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+
+                var printerService = new PrinterService(_db);
+                var dialog = new ReorderListDialog(
+                    selected,
+                    onRemoveItem: (p) =>
+                    {
+                        p.IsSelected = false;
+                        OnPropertyChanged(nameof(SelectedLowStockCount));
+                        OnPropertyChanged(nameof(HasSelectedLowStock));
+                        OnPropertyChanged(nameof(ReorderButtonText));
+                        ApplyFilter();
+                    },
+                    onClearAll: () =>
+                    {
+                        foreach (var item in _cachedDisplayProducts.Where(x => x.IsLowStock))
+                        {
+                            item.IsSelected = false;
+                        }
+                        OnPropertyChanged(nameof(SelectedLowStockCount));
+                        OnPropertyChanged(nameof(HasSelectedLowStock));
+                        OnPropertyChanged(nameof(ReorderButtonText));
+                        ApplyFilter();
+                    },
+                    printerService: printerService,
+                    warehouseName: CurrentWarehouseTitle
+                )
+                {
+                    Owner = Application.Current.MainWindow
+                };
+                dialog.ShowDialog();
+            });
+
+            PrintReorderReceiptCommand = new RelayCommand(() =>
+            {
+                var selected = _cachedDisplayProducts.Where(p => p.IsLowStock && p.IsSelected).ToList();
+                if (selected.Count == 0)
+                {
+                    MessageBox.Show("Chop etish uchun hech qanday tovar tanlanmagan!", "Ogohlantirish", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                var printerService = new PrinterService(_db);
+                var ok = printerService.PrintReorderReceipt(selected);
+                if (ok)
+                {
+                    MessageBox.Show("Buyurtma ro'yxati chek printeriga muvaffaqiyatli yuborildi!", "Chop etish", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                else
+                {
+                    MessageBox.Show("Chek printeri topilmadi yoki ulanmagan. Iltimos, printer ulanishini tekshiring.", "Xatolik", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+            });
+
+            ExportReorderExcelCommand = new RelayCommand(() =>
+            {
+                var selected = _cachedDisplayProducts.Where(p => p.IsLowStock && p.IsSelected).ToList();
+                if (selected.Count == 0)
+                {
+                    MessageBox.Show("Excelga saqlash uchun hech qanday tovar tanlanmagan!", "Ogohlantirish", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                ExcelExportService.ExportReorderList(selected, CurrentWarehouseTitle);
+            });
+
+            OpenQuickStockAddCommand = new RelayCommand<Product>(p =>
+            {
+                if (p == null) return;
+                var wh = SelectedWarehouse ?? Warehouses.FirstOrDefault(w => w.IsPrimary) ?? Warehouses.FirstOrDefault() ?? _db.GetWarehouses().FirstOrDefault();
+                if (wh == null)
+                {
+                    MessageBox.Show("Ombor topilmadi!", "Ogohlantirish", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                var dialog = new QuickStockAddDialog(
+                    product: p,
+                    warehouseName: wh.Name,
+                    onConfirm: (addedQty) =>
+                    {
+                        _db.AddProductStockInWarehouse(p.Guid, wh.Guid, addedQty);
+                        Refresh();
+                    }
+                )
                 {
                     Owner = Application.Current.MainWindow
                 };
@@ -644,7 +781,8 @@ namespace PosElectro.Desktop.ViewModels
             get => _searchQuery;
             set
             {
-                if (SetProperty(ref _searchQuery, value))
+                var fixedVal = Services.KeyboardLayoutHelper.FixBarcodeString(value);
+                if (SetProperty(ref _searchQuery, fixedVal))
                 {
                     OnPropertyChanged(nameof(HasSearchQuery));
                     if (!string.IsNullOrWhiteSpace(_searchQuery))
@@ -669,11 +807,33 @@ namespace PosElectro.Desktop.ViewModels
             {
                 if (SetProperty(ref _selectedCategory, value))
                 {
+                    _isOnlySelectedFilterActive = false;
+                    OnPropertyChanged(nameof(IsOnlySelectedFilterActive));
+                    OnPropertyChanged(nameof(IsLowStockCategorySelected));
                     OnPropertyChanged(nameof(CurrentCategoryTitle));
                     ApplyFilter();
                 }
             }
         }
+
+        private bool _isOnlySelectedFilterActive;
+        public bool IsOnlySelectedFilterActive
+        {
+            get => _isOnlySelectedFilterActive;
+            set
+            {
+                if (SetProperty(ref _isOnlySelectedFilterActive, value))
+                {
+                    ApplyFilter();
+                }
+            }
+        }
+
+        public bool IsLowStockCategorySelected => SelectedCategory == ProductService.CATEGORY_LOW_STOCK;
+        public int SelectedLowStockCount => _cachedDisplayProducts.Count(p => p.IsLowStock && p.IsSelected);
+        public int TotalLowStockCount => _cachedDisplayProducts.Count(p => p.IsLowStock);
+        public bool HasSelectedLowStock => SelectedLowStockCount > 0;
+        public string ReorderButtonText => SelectedLowStockCount > 0 ? $"🛒 Buyurtma ro'yxati ({SelectedLowStockCount} ta)" : "🛒 Buyurtma ro'yxati";
 
         public string CurrentCategoryTitle => SelectedCategory == ProductService.CATEGORY_ALL ? "Barcha tovarlar" : SelectedCategory;
         public string ProductsCountHeader => $"({Products.Count} ta tovar)";
@@ -694,7 +854,7 @@ namespace PosElectro.Desktop.ViewModels
         public string FormBarcode
         {
             get => _formBarcode;
-            set => SetProperty(ref _formBarcode, value);
+            set => SetProperty(ref _formBarcode, Services.KeyboardLayoutHelper.FixBarcodeString(value));
         }
 
         public string FormCategory
@@ -809,6 +969,12 @@ namespace PosElectro.Desktop.ViewModels
 
         public void BackToCategories()
         {
+            if (SelectedWarehouse == null)
+            {
+                BackToWarehouses();
+                return;
+            }
+
             _searchQuery = string.Empty;
             OnPropertyChanged(nameof(SearchQuery));
             SelectedCategory = ProductService.CATEGORY_ALL;
@@ -1131,6 +1297,10 @@ namespace PosElectro.Desktop.ViewModels
             if (SelectedCategory == ProductService.CATEGORY_LOW_STOCK)
             {
                 list = list.Where(p => p.IsLowStock).ToList();
+                if (IsOnlySelectedFilterActive)
+                {
+                    list = list.Where(p => p.IsSelected).ToList();
+                }
             }
             else if (SelectedCategory != ProductService.CATEGORY_ALL && !string.IsNullOrWhiteSpace(SelectedCategory))
             {
@@ -1139,11 +1309,20 @@ namespace PosElectro.Desktop.ViewModels
 
             if (!string.IsNullOrWhiteSpace(SearchQuery))
             {
-                var q = ProductService.NormalizeProductName(SearchQuery);
-                list = list.Where(p =>
-                    ProductService.NormalizeProductName(p.Name).Contains(q) ||
-                    (p.Barcode != null && p.Barcode.Contains(SearchQuery))
-                ).ToList();
+                list = SmartSearchHelper.FilterAndRank(
+                    list,
+                    SearchQuery,
+                    p => p.Name,
+                    p => p.Barcode,
+                    p => p.Note
+                );
+            }
+
+            // IsSelected o'zgarishlarini kuzatish
+            foreach (var p in list)
+            {
+                p.PropertyChanged -= OnProductItemPropertyChanged;
+                p.PropertyChanged += OnProductItemPropertyChanged;
             }
 
             // Barcha elementlarni bir martada tayinlaymiz (500 ta alohida CollectionChanged eventlari o'rniga 1 ta PropertyChanged)
@@ -1152,6 +1331,25 @@ namespace PosElectro.Desktop.ViewModels
             OnPropertyChanged(nameof(ProductsCountHeader));
             OnPropertyChanged(nameof(HasSearchQuery));
             OnPropertyChanged(nameof(IsEmptySearchResult));
+            OnPropertyChanged(nameof(IsLowStockCategorySelected));
+            OnPropertyChanged(nameof(SelectedLowStockCount));
+            OnPropertyChanged(nameof(TotalLowStockCount));
+            OnPropertyChanged(nameof(HasSelectedLowStock));
+            OnPropertyChanged(nameof(ReorderButtonText));
+        }
+
+        private void OnProductItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(Product.IsSelected))
+            {
+                OnPropertyChanged(nameof(SelectedLowStockCount));
+                OnPropertyChanged(nameof(HasSelectedLowStock));
+                OnPropertyChanged(nameof(ReorderButtonText));
+                if (IsOnlySelectedFilterActive)
+                {
+                    ApplyFilter();
+                }
+            }
         }
     }
 }

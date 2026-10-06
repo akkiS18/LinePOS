@@ -16,7 +16,8 @@
             </Grid.ColumnDefinitions>
 
             <!-- CHAP: QR KOD VA SOZLAMALAR -->
-            <Border Grid.Column="0" Background="#1E293B" CornerRadius="16" Padding="20" BorderBrush="#334155" BorderThickness="1" Margin="0,0,20,0">
+            <Border Grid.Column="0" Background="#1E293B" CornerRadius="16" BorderBrush="#334155" BorderThickness="1" Margin="0,0,20,0">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="20">
                 <StackPanel>
                     <Grid Margin="0,0,0,8">
                         <Grid.ColumnDefinitions>
@@ -69,6 +70,7 @@
                         </StackPanel>
                     </Expander>
                 </StackPanel>
+                </ScrollViewer>
             </Border>
 
             <!-- O'NG: REALTIME ULANGAN QURILMALAR VA TERMINAL JURNALI -->

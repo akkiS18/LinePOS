@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
@@ -22,6 +23,7 @@ import uz.pos.electro.data.model.PaymentType
 import uz.pos.electro.data.model.UnitType
 import uz.pos.electro.data.repository.ProductRepository
 import uz.pos.electro.data.repository.SaleRepository
+import uz.pos.electro.util.SmartSearchHelper
 
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -61,19 +63,26 @@ class CashierViewModel @Inject constructor(
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
-    val searchResults: StateFlow<List<ProductEntity>> = _searchQuery
-        .flatMapLatest { query ->
-            if (query.length < 2) {
-                flowOf(emptyList())
-            } else {
-                productRepository.searchProducts(query.trim())
-            }
+    val searchResults: StateFlow<List<ProductEntity>> = combine(
+        _searchQuery,
+        productRepository.getAllProducts()
+    ) { query, allProducts ->
+        if (query.trim().length < 2) {
+            emptyList()
+        } else {
+            SmartSearchHelper.filterAndRank(
+                source = allProducts.filter { !it.isDeleted },
+                query = query.trim(),
+                nameSelector = { it.name },
+                barcodeSelector = { it.barcode },
+                noteSelector = { it.note }
+            )
         }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
 
     // Xabarnomalar (Toast uchun)
     private val _toastEvent = MutableSharedFlow<String>()

@@ -65,6 +65,19 @@ namespace PosElectro.Desktop.Views
         private void TxtBarcode_TextChanged(object sender, TextChangedEventArgs e)
         {
             if (!IsLoaded) return;
+            
+            if (sender is TextBox tb)
+            {
+                var text = tb.Text;
+                var fixedText = Services.KeyboardLayoutHelper.FixBarcodeString(text);
+                if (fixedText != text)
+                {
+                    var caret = tb.CaretIndex;
+                    tb.Text = fixedText;
+                    tb.CaretIndex = Math.Min(fixedText.Length, caret);
+                }
+            }
+            
             UpdateBarcodeButtons();
         }
 

@@ -880,6 +880,39 @@ namespace PosElectro.Desktop.Data
             RaiseProductsChanged();
         }
 
+        public void AddProductStockInWarehouse(string productGuid, string warehouseGuid, double additionalQuantity)
+        {
+            if (string.IsNullOrWhiteSpace(productGuid) || additionalQuantity == 0) return;
+            var targetWh = (!string.IsNullOrWhiteSpace(warehouseGuid) && warehouseGuid != "null")
+                ? warehouseGuid
+                : (GetPrimaryWarehouse()?.Guid ?? "main-default-warehouse");
+
+            using var conn = CreateConnection();
+            using var syncTransaction = conn.BeginTransaction();
+            long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            using var cmd = conn.CreateCommand();
+            cmd.Transaction = syncTransaction;
+            cmd.CommandText = @"
+                INSERT INTO product_stocks (product_guid, warehouse_guid, quantity, updated_at)
+                VALUES (@pg, @wg, @delta, @now)
+                ON CONFLICT(product_guid, warehouse_guid) DO UPDATE SET
+                    quantity = quantity + excluded.quantity,
+                    updated_at = excluded.updated_at;
+
+                UPDATE products 
+                SET stock_quantity = (SELECT COALESCE(SUM(quantity), 0) FROM product_stocks WHERE product_guid = @pg),
+                    updated_at = @now
+                WHERE guid = @pg;
+            ";
+            cmd.Parameters.AddWithValue("@pg", productGuid);
+            cmd.Parameters.AddWithValue("@wg", targetWh);
+            cmd.Parameters.AddWithValue("@delta", additionalQuantity);
+            cmd.Parameters.AddWithValue("@now", now);
+            cmd.ExecuteNonQuery();
+            syncTransaction.Commit();
+            RaiseProductsChanged();
+        }
+
         public void TransferStock(string productGuid, string fromWarehouseGuid, string toWarehouseGuid, double quantity, bool isFromSync = false)
         {
             if (quantity <= 0 || fromWarehouseGuid == toWarehouseGuid) return;

@@ -1,7 +1,10 @@
 package uz.pos.admin.ui
 
 import android.widget.Toast
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,24 +33,23 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Save
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -62,19 +64,36 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import uz.pos.admin.R
 import uz.pos.admin.data.AdminRepository
 import uz.pos.admin.model.DeviceItem
 import uz.pos.admin.util.AdminLogger
 import uz.pos.admin.util.LogEntry
 import uz.pos.admin.util.LogLevel
+import uz.pos.admin.ui.theme.CyberBg
+import uz.pos.admin.ui.theme.CyberBorder
+import uz.pos.admin.ui.theme.CyberCyan
+import uz.pos.admin.ui.theme.CyberCyanAlpha
+import uz.pos.admin.ui.theme.CyberCyanDim
+import uz.pos.admin.ui.theme.CyberDanger
+import uz.pos.admin.ui.theme.CyberDangerAlpha
+import uz.pos.admin.ui.theme.CyberDivider
+import uz.pos.admin.ui.theme.CyberOnline
+import uz.pos.admin.ui.theme.CyberSurface
+import uz.pos.admin.ui.theme.CyberSurface2
+import uz.pos.admin.ui.theme.CyberTextMono
+import uz.pos.admin.ui.theme.CyberTextPrimary
+import uz.pos.admin.ui.theme.CyberTextSecondary
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -89,59 +108,109 @@ fun DashboardScreen(
     val context = LocalContext.current
     var selectedTab by remember { mutableIntStateOf(0) }
 
-    val devices by repository.getDevicesFlow().collectAsState(initial = emptyList())
-    val currentGlobalCode by repository.getGlobalCodeFlow().collectAsState(initial = "1984")
+    val devicesFlow = remember(repository) { repository.getDevicesFlow() }
+    val globalCodeFlow = remember(repository) { repository.getGlobalCodeFlow() }
+
+    val devices by devicesFlow.collectAsState(initial = emptyList())
+    val currentGlobalCode by globalCodeFlow.collectAsState(initial = "1984")
     val errorMsg by repository.errorState.collectAsState()
     val logs by AdminLogger.logs.collectAsState()
 
     var deviceToDelete by remember { mutableStateOf<DeviceItem?>(null) }
 
+    val tabLabels = listOf(
+        "NODES [${devices.size}]",
+        "ACCESS_KEY",
+        "SYS_LOG [${logs.size}]"
+    )
+
     Scaffold(
-        containerColor = Color(0xFF0F172A),
+        containerColor = CyberBg,
         topBar = {
             TopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF1E293B),
-                    titleContentColor = Color(0xFFF8FAFC)
+                    containerColor = CyberSurface,
+                    titleContentColor = CyberTextPrimary
                 ),
                 title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(
-                            shape = CircleShape,
-                            color = Color(0xFF0B6477),
-                            modifier = Modifier.size(36.dp)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        // Logo
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .background(CyberBg, chamferedShape(7f))
+                                .border(1.dp, CyberCyan.copy(alpha = 0.7f), chamferedShape(7f)),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Default.Devices,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
+                            Image(
+                                painter = painterResource(id = R.drawable.seb_logo),
+                                contentDescription = "Seb",
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .clip(chamferedShape(5f))
+                            )
                         }
-                        Spacer(modifier = Modifier.width(10.dp))
                         Column {
                             Text(
-                                text = "SMART Admin",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold
+                                text = "SEB",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = CyberCyan,
+                                fontFamily = FontFamily.Monospace,
+                                letterSpacing = 3.sp
                             )
                             Text(
-                                text = "${devices.size} ta kassa ulangan",
-                                fontSize = 11.sp,
-                                color = Color(0xFF94A3B8)
+                                text = "SYSTEM ONLINE // ${devices.size} NODES",
+                                fontSize = 9.sp,
+                                color = CyberTextSecondary,
+                                fontFamily = FontFamily.Monospace,
+                                letterSpacing = 0.5.sp
                             )
                         }
                     }
                 },
                 actions = {
-                    IconButton(onClick = onLogout) {
+                    // Ovozli boshqaruv tugmasi (faqat mikrofon ikonkasi)
+                    Box(
+                        modifier = Modifier
+                            .padding(end = 6.dp)
+                            .background(Color(0x3338BDF8), chamferedShape(6f))
+                            .border(0.8.dp, Color(0x8838BDF8), chamferedShape(6f))
+                            .clickable {
+                                val voiceIntent = android.content.Intent(context, uz.pos.admin.voice.SebVoiceActivity::class.java).apply {
+                                    flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_MULTIPLE_TASK
+                                }
+                                context.startActivity(voiceIntent)
+                            }
+                            .padding(8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.Logout,
-                            contentDescription = "Chiqish",
-                            tint = Color(0xFFEF4444)
+                            imageVector = Icons.Default.Mic,
+                            contentDescription = "Voice",
+                            tint = Color(0xFF38BDF8),
+                            modifier = Modifier.size(18.dp)
                         )
+                    }
+
+                    // Chiqish tugmasi
+                    Box(
+                        modifier = Modifier
+                            .padding(end = 8.dp)
+                            .background(CyberDanger.copy(alpha = 0.1f), chamferedShape(6f))
+                            .border(0.8.dp, CyberDanger.copy(alpha = 0.5f), chamferedShape(6f))
+                    ) {
+                        IconButton(onClick = onLogout) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.Logout,
+                                contentDescription = "Chiqish",
+                                tint = CyberDanger,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                     }
                 }
             )
@@ -150,220 +219,159 @@ fun DashboardScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .background(CyberBg)
                 .padding(paddingValues)
-                .padding(16.dp)
+                .padding(12.dp)
         ) {
-            // Tablar: 📱 Qurilmalar | 🔑 Aktivatsiya Kodi | 📋 Loglar
-            TabRow(
-                selectedTabIndex = selectedTab,
-                containerColor = Color(0xFF1E293B),
-                contentColor = Color(0xFF2DD4BF),
-                modifier = Modifier.clip(RoundedCornerShape(12.dp))
+            // ===== HUD TABLAR =====
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(CyberSurface, chamferedShape(8f))
+                    .border(0.8.dp, CyberBorder, chamferedShape(8f))
             ) {
-                Tab(
-                    selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
-                    text = {
-                        Text(
-                            text = "📱 Qurilmalar (${devices.size})",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp
+                TabRow(
+                    selectedTabIndex = selectedTab,
+                    containerColor = Color.Transparent,
+                    contentColor = CyberCyan,
+                    indicator = { tabPositions ->
+                        if (selectedTab < tabPositions.size) {
+                            Box(
+                                modifier = Modifier
+                                    .tabIndicatorOffset(tabPositions[selectedTab])
+                                    .height(2.dp)
+                                    .background(CyberCyan)
+                            )
+                        }
+                    }
+                ) {
+                    tabLabels.forEachIndexed { index, label ->
+                        Tab(
+                            selected = selectedTab == index,
+                            onClick = { selectedTab = index },
+                            text = {
+                                Text(
+                                    text = label,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 10.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    color = if (selectedTab == index) CyberCyan else CyberTextSecondary,
+                                    letterSpacing = 0.5.sp
+                                )
+                            }
                         )
                     }
-                )
-                Tab(
-                    selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
-                    text = {
-                        Text(
-                            text = "🔑 Kod",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp
-                        )
-                    }
-                )
-                Tab(
-                    selected = selectedTab == 2,
-                    onClick = { selectedTab = 2 },
-                    text = {
-                        Text(
-                            text = "📋 Loglar (${logs.size})",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp
-                        )
-                    }
-                )
+                }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Xatolik xabarnomasi (agar Firebase ruxsat berilmagan bo'lsa)
+            // ===== XATO XABARI =====
             errorMsg?.let { error ->
-                Card(
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFEF4444).copy(alpha = 0.15f)),
+                CyberCard(
+                    borderColor = CyberDanger,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 12.dp)
+                        .padding(bottom = 10.dp)
                 ) {
                     Row(
-                        modifier = Modifier.padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier.padding(10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(imageVector = Icons.Default.Warning, contentDescription = null, tint = Color(0xFFEF4444))
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Icon(
+                            imageVector = Icons.Default.Block,
+                            contentDescription = null,
+                            tint = CyberDanger,
+                            modifier = Modifier.size(16.dp)
+                        )
                         Column {
                             Text(
-                                text = "Firebase Ruxsat Xatosi",
-                                color = Color(0xFFEF4444),
+                                text = "FIREBASE_ERROR // PERMISSION DENIED",
+                                color = CyberDanger,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp
+                                fontSize = 10.sp,
+                                fontFamily = FontFamily.Monospace
                             )
-                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = error,
-                                color = Color(0xFFFCA5A5),
-                                fontSize = 11.sp,
-                                lineHeight = 15.sp
+                                color = CyberDanger.copy(alpha = 0.7f),
+                                fontSize = 10.sp,
+                                fontFamily = FontFamily.Monospace,
+                                lineHeight = 14.sp
                             )
                         }
                     }
                 }
             }
 
+            // ===== TAB CONTENT =====
             when (selectedTab) {
-                0 -> {
-                    // ==================== 📱 QURILMALAR BOSHQARUVI ====================
-                    val activeCount = devices.count { it.isActivated }
-                    val blockedCount = devices.size - activeCount
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        StatCard(
-                            title = "Jami",
-                            count = devices.size.toString(),
-                            color = Color(0xFF38BDF8),
-                            modifier = Modifier.weight(1f)
-                        )
-                        StatCard(
-                            title = "Faol",
-                            count = activeCount.toString(),
-                            color = Color(0xFF10B981),
-                            modifier = Modifier.weight(1f)
-                        )
-                        StatCard(
-                            title = "Bloklangan",
-                            count = blockedCount.toString(),
-                            color = Color(0xFFEF4444),
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    if (devices.isEmpty()) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(
-                                    imageVector = Icons.Default.Devices,
-                                    contentDescription = null,
-                                    tint = Color(0xFF475569),
-                                    modifier = Modifier.size(60.dp)
-                                )
-                                Spacer(modifier = Modifier.height(12.dp))
-                                Text(
-                                    text = "Hali hech qanday kassa ulanmagan",
-                                    color = Color(0xFF94A3B8),
-                                    fontSize = 14.sp
-                                )
-                                Text(
-                                    text = "Kassa ilovasi ochilganda bu yerda avtomatik paydo bo'ladi",
-                                    color = Color(0xFF64748B),
-                                    fontSize = 12.sp
-                                )
-                            }
-                        }
-                    } else {
-                        LazyColumn(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            items(devices, key = { it.id }) { device ->
-                                DeviceCard(
-                                    device = device,
-                                    onToggle = {
-                                        val newStatus = !device.isActivated
-                                        repository.toggleDeviceActivation(device.id, newStatus) { success, err ->
-                                            if (success) {
-                                                val msg = if (newStatus) "Qurilma faollashtirildi!" else "Qurilma bloklandi!"
-                                                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                                            } else {
-                                                Toast.makeText(context, "Xato: ${err ?: "Bajarilmadi"}", Toast.LENGTH_SHORT).show()
-                                            }
-                                        }
-                                    },
-                                    onDelete = {
-                                        deviceToDelete = device
-                                    }
-                                )
+                0 -> DevicesTab(
+                    devices = devices,
+                    repository = repository,
+                    context = context,
+                    onRequestDelete = { deviceToDelete = it }
+                )
+                1 -> GlobalCodeSettingsTab(
+                    currentCode = currentGlobalCode,
+                    onSaveCode = { newCode ->
+                        repository.updateGlobalCode(newCode) { success, err ->
+                            if (success) {
+                                Toast.makeText(context, "ACCESS_KEY yangilandi: $newCode", Toast.LENGTH_LONG).show()
+                            } else {
+                                Toast.makeText(context, "XATO: ${err ?: "Saqlab bo'lmadi"}", Toast.LENGTH_LONG).show()
                             }
                         }
                     }
-                }
-                1 -> {
-                    // ==================== 🔑 GLOBAL AKTIVATSIYA KODI ====================
-                    GlobalCodeSettingsTab(
-                        currentCode = currentGlobalCode,
-                        onSaveCode = { newCode ->
-                            repository.updateGlobalCode(newCode) { success, err ->
-                                if (success) {
-                                    Toast.makeText(context, "Aktivatsiya kodi yangilandi: $newCode 🎉", Toast.LENGTH_LONG).show()
-                                } else {
-                                    Toast.makeText(context, "Xatolik: ${err ?: "Saqlab bo'lmadi"}", Toast.LENGTH_LONG).show()
-                                }
-                            }
+                )
+                2 -> LogsTab(
+                    logs = logs,
+                    onClearLogs = {
+                        AdminLogger.clear()
+                        Toast.makeText(context, "Loglar tozalandi", Toast.LENGTH_SHORT).show()
+                    },
+                    onPingFirebase = {
+                        repository.pingFirebase { _, msg ->
+                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                         }
-                    )
-                }
-                2 -> {
-                    // ==================== 📋 LOGLAR TABI ====================
-                    LogsTab(
-                        logs = logs,
-                        onClearLogs = {
-                            AdminLogger.clear()
-                            Toast.makeText(context, "Loglar tozalandi", Toast.LENGTH_SHORT).show()
-                        },
-                        onPingFirebase = {
-                            repository.pingFirebase { _, msg ->
-                                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    )
-                }
+                    }
+                )
             }
         }
     }
 
-    // O'chirishni tasdiqlash dialogi
+    // ===== O'CHIRISH DIALOGI =====
     deviceToDelete?.let { device ->
         AlertDialog(
             onDismissRequest = { deviceToDelete = null },
-            title = { Text("Qurilmani o'chirish") },
-            text = { Text("${device.displayName} qurilmasini ro'yxatdan o'chirmoqchimisiz?") },
+            containerColor = CyberSurface,
+            shape = chamferedShape(14f),
+            title = {
+                Text(
+                    text = "NODE O'CHIRISH",
+                    color = CyberDanger,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 2.sp
+                )
+            },
+            text = {
+                Text(
+                    text = "${device.displayName} — bu nodeni ro'yxatdan o'chirmoqchimisiz?",
+                    color = CyberTextPrimary,
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 13.sp
+                )
+            },
             confirmButton = {
                 Button(
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
+                    colors = ButtonDefaults.buttonColors(containerColor = CyberDanger),
+                    shape = chamferedShape(8f),
                     onClick = {
                         repository.deleteDevice(device.id) { success, err ->
                             if (success) {
-                                Toast.makeText(context, "Qurilma o'chirildi", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Node o'chirildi", Toast.LENGTH_SHORT).show()
                             } else {
                                 Toast.makeText(context, "Xato: ${err ?: "O'chirib bo'lmadi"}", Toast.LENGTH_SHORT).show()
                             }
@@ -371,18 +379,419 @@ fun DashboardScreen(
                         deviceToDelete = null
                     }
                 ) {
-                    Text("Ha, o'chirish")
+                    Text("CONFIRM_DELETE", fontFamily = FontFamily.Monospace, fontSize = 11.sp)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { deviceToDelete = null }) {
-                    Text("Bekor qilish")
+                    Text("ABORT", color = CyberTextSecondary, fontFamily = FontFamily.Monospace, fontSize = 11.sp)
                 }
             }
         )
     }
 }
 
+// ====================================================================
+// QURILMALAR TABI
+// ====================================================================
+@Composable
+private fun DevicesTab(
+    devices: List<DeviceItem>,
+    repository: AdminRepository,
+    context: android.content.Context,
+    onRequestDelete: (DeviceItem) -> Unit
+) {
+    val activeCount = devices.count { it.isActivated }
+    val blockedCount = devices.size - activeCount
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Statistika qatorlari (Stark Tech moviy shisha uslubida)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            CyberStatTile(label = "JAMI", value = devices.size.toString(), color = Color(0xFF38BDF8), modifier = Modifier.weight(1f))
+            CyberStatTile(label = "FAOL", value = activeCount.toString(), color = Color(0xFF7DD3FC), modifier = Modifier.weight(1f))
+            CyberStatTile(label = "BLOKLANGAN", value = blockedCount.toString(), color = Color(0xFFF87171), modifier = Modifier.weight(1f))
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+        CyberDivider()
+        Spacer(modifier = Modifier.height(12.dp))
+
+        if (devices.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(imageVector = Icons.Default.Devices, contentDescription = null, tint = CyberBorder, modifier = Modifier.size(52.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text("NO_NODES_DETECTED", color = CyberTextSecondary, fontSize = 12.sp, fontFamily = FontFamily.Monospace, letterSpacing = 1.sp)
+                    Text("Kassa ilovasi ochilganda bu yerda paydo bo'ladi", color = CyberTextSecondary.copy(alpha = 0.6f), fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(devices, key = { it.id }) { device ->
+                    DeviceCard(
+                        device = device,
+                        onToggle = {
+                            val newStatus = !device.isActivated
+                            repository.toggleDeviceActivation(device.id, newStatus) { success, err ->
+                                if (success) {
+                                    val msg = if (newStatus) "Node faollashtirildi" else "Node bloklandi"
+                                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Toast.makeText(context, "Xato: ${err ?: "Bajarilmadi"}", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        },
+                        onDelete = { onRequestDelete(device) }
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Skrinshotdagi pastki imzo: "⬡ Seb Tech"
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(16.dp)
+                    .background(Color(0x3338BDF8), CircleShape)
+                    .border(0.8.dp, Color(0x8838BDF8), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "S",
+                    color = Color(0xFF38BDF8),
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontFamily = FontFamily.Monospace
+                )
+            }
+            Text(
+                text = "Seb Tech",
+                color = Color(0xFF64748B),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                fontFamily = FontFamily.SansSerif
+            )
+        }
+    }
+}
+
+// ====================================================================
+// QURILMA KARTASI — DeviceCard (HUD uslubida)
+// ====================================================================
+@Composable
+private fun DeviceCard(
+    device: DeviceItem,
+    onToggle: () -> Unit,
+    onDelete: () -> Unit
+) {
+    StarkGlassCard(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            // Yuqori qator: Qurilma ikonkasi, Nomi, Oxirgi vaqti va O'chirish
+            Row(
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    // Qurilma ikonkasi (moviy shisha/kumush telefon yoki noutbuk)
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .background(
+                                Color(0x3338BDF8),
+                                RoundedCornerShape(10.dp)
+                            )
+                            .border(
+                                1.dp,
+                                Color(0x6638BDF8),
+                                RoundedCornerShape(10.dp)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = if (device.model.contains("Desktop", ignoreCase = true) ||
+                                device.model.contains("Windows", ignoreCase = true))
+                                Icons.Default.Computer else Icons.Default.PhoneAndroid,
+                            contentDescription = null,
+                            tint = Color(0xFFBAE6FD),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
+                    Column {
+                        // Qurilma nomi
+                        Text(
+                            text = device.displayName,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFF8FAFC),
+                            fontFamily = FontFamily.SansSerif
+                        )
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        // Oltin-sariq holat nuqtasi + Oxirgi vaqt
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(7.dp)
+                                    .background(
+                                        if (device.isOnline) Color(0xFFFBBF24) else Color(0xFF64748B),
+                                        CircleShape
+                                    )
+                            )
+                            val timeStr = if (device.lastActive > 0) {
+                                SimpleDateFormat("dd.MM HH:mm", Locale.getDefault()).format(Date(device.lastActive))
+                            } else "Noma'lum"
+                            Text(
+                                text = "Oxirgi: $timeStr",
+                                fontSize = 12.sp,
+                                color = Color(0xFF94A3B8),
+                                fontFamily = FontFamily.SansSerif
+                            )
+                        }
+                    }
+                }
+
+                // O'chirish (savatcha) ikonkasi — rasmdagi o'ng yuqoridagi nozik belgi
+                IconButton(
+                    onClick = onDelete,
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "O'chirish",
+                        tint = Color(0xFF64748B),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Pastki qator: Chapda ID, o'ngda Arc Reactor Bloklash tugmasi
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Chapda: ID
+                Text(
+                    text = "ID: ${device.id.take(14)}...",
+                    fontSize = 11.sp,
+                    color = Color(0xFF64748B),
+                    fontFamily = FontFamily.Monospace
+                )
+
+                // O'ngda: Arc Reactor Bloklash / Faollashtirish tugmasi
+                StarkReactorButton(
+                    isActivated = device.isActivated,
+                    onClick = onToggle
+                )
+            }
+        }
+    }
+}
+
+// ====================================================================
+// GLOBAL KOD TABI
+// ====================================================================
+@Composable
+private fun GlobalCodeSettingsTab(
+    currentCode: String,
+    onSaveCode: (String) -> Unit
+) {
+    var inputCode by remember(currentCode) { mutableStateOf(currentCode) }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        // Amaldagi kod ko'rsatish bloki
+        CyberCard(
+            modifier = Modifier.fillMaxWidth(),
+            borderColor = CyberCyanDim
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                CyberSectionHeader(label = "DATA LINK // SECURE CHANNEL")
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Amaldagi kod
+                Box(
+                    modifier = Modifier
+                        .background(CyberCyanAlpha, chamferedShape(10f))
+                        .border(1.dp, CyberCyan.copy(alpha = 0.6f), chamferedShape(10f))
+                        .padding(horizontal = 24.dp, vertical = 14.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "AMALDAGI_KOD",
+                            fontSize = 9.sp,
+                            color = CyberTextSecondary,
+                            fontFamily = FontFamily.Monospace,
+                            letterSpacing = 2.sp
+                        )
+                        Text(
+                            text = currentCode,
+                            fontSize = 34.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = CyberCyan,
+                            fontFamily = FontFamily.Monospace,
+                            letterSpacing = 6.sp
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Text(
+                    text = "Har qanday yangi kassa (mobil yoki desktop) ishga tushganda\nshu kodni kiritishi kerak. Mos kelsa avtomatik faollashadi.",
+                    fontSize = 10.sp,
+                    color = CyberTextSecondary,
+                    fontFamily = FontFamily.Monospace,
+                    lineHeight = 14.sp,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        // Kodni o'zgartirish bloki
+        CyberCard(
+            modifier = Modifier.fillMaxWidth(),
+            borderColor = CyberBorder
+        ) {
+            Column(modifier = Modifier.padding(14.dp)) {
+                CyberSectionHeader(label = "COMMIT NEW ACCESS_KEY")
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = inputCode,
+                    onValueChange = { inputCode = it.take(8) },
+                    label = {
+                        Text(
+                            "Yangi aktivatsiya kodi",
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 11.sp
+                        )
+                    },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = chamferedShape(8f),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = CyberCyan,
+                        unfocusedBorderColor = CyberBorder,
+                        focusedLabelColor = CyberCyan,
+                        unfocusedLabelColor = CyberTextSecondary,
+                        focusedTextColor = CyberTextPrimary,
+                        unfocusedTextColor = CyberTextPrimary,
+                        cursorColor = CyberCyan
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Tasodifiy kod
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .background(CyberSurface2, chamferedShape(7f))
+                            .border(0.8.dp, CyberBorder, chamferedShape(7f))
+                            .clickable {
+                                inputCode = Random.nextInt(1000, 9999).toString()
+                            }
+                            .padding(vertical = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(5.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Autorenew,
+                                contentDescription = null,
+                                tint = CyberTextSecondary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                "GEN_RANDOM",
+                                color = CyberTextSecondary,
+                                fontSize = 10.sp,
+                                fontFamily = FontFamily.Monospace
+                            )
+                        }
+                    }
+
+                    // Saqlash
+                    Box(
+                        modifier = Modifier
+                            .weight(1.3f)
+                            .background(CyberCyan.copy(alpha = 0.12f), chamferedShape(7f))
+                            .border(0.8.dp, CyberCyan.copy(alpha = 0.7f), chamferedShape(7f))
+                            .clickable {
+                                if (inputCode.isNotBlank()) onSaveCode(inputCode)
+                            }
+                            .padding(vertical = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(5.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Save,
+                                contentDescription = null,
+                                tint = CyberCyan,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                "COMMIT_KEY",
+                                color = CyberCyan,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 10.sp,
+                                fontFamily = FontFamily.Monospace
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ====================================================================
+// LOGLAR TABI
+// ====================================================================
 @Composable
 private fun LogsTab(
     logs: List<LogEntry>,
@@ -393,11 +802,10 @@ private fun LogsTab(
     val context = LocalContext.current
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Asboblar paneli: Nusxalash, Ping, Tozalash
-        Card(
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
-            modifier = Modifier.fillMaxWidth()
+        // Asboblar paneli
+        CyberCard(
+            modifier = Modifier.fillMaxWidth(),
+            borderColor = CyberBorder
         ) {
             Row(
                 modifier = Modifier
@@ -407,429 +815,124 @@ private fun LogsTab(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Jami: ${logs.size} ta log",
-                    fontSize = 12.sp,
-                    color = Color(0xFF94A3B8),
+                    text = "SYS_LOGS // ${logs.size} ENTRIES",
+                    fontSize = 10.sp,
+                    color = CyberTextSecondary,
+                    fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.SemiBold
                 )
-
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    // Test ping
-                    IconButton(
-                        onClick = onPingFirebase,
-                        modifier = Modifier.size(34.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Test ulanish",
-                            tint = Color(0xFF38BDF8),
-                            modifier = Modifier.size(18.dp)
-                        )
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    IconButton(onClick = onPingFirebase, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Default.Refresh, contentDescription = null, tint = CyberCyanDim, modifier = Modifier.size(16.dp))
                     }
-
-                    // Nusxalash
-                    IconButton(
-                        onClick = {
-                            if (logs.isNotEmpty()) {
-                                val fullLogText = logs.reversed().joinToString("\n") { entry ->
-                                    "[${entry.formattedTime}] [${entry.level}] [${entry.tag}] ${entry.message}"
-                                }
-                                clipboardManager.setText(AnnotatedString(fullLogText))
-                                Toast.makeText(context, "Barcha loglar buferga nusxalandi 📋", Toast.LENGTH_SHORT).show()
-                            } else {
-                                Toast.makeText(context, "Nusxalash uchun loglar yo'q", Toast.LENGTH_SHORT).show()
+                    IconButton(onClick = {
+                        if (logs.isNotEmpty()) {
+                            val fullLogText = logs.reversed().joinToString("\n") { e ->
+                                "[${e.formattedTime}] [${e.level}] [${e.tag}] ${e.message}"
                             }
-                        },
-                        modifier = Modifier.size(34.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.ContentCopy,
-                            contentDescription = "Nusxalash",
-                            tint = Color(0xFF2DD4BF),
-                            modifier = Modifier.size(18.dp)
-                        )
+                            clipboardManager.setText(AnnotatedString(fullLogText))
+                            Toast.makeText(context, "Loglar buferga nusxalandi", Toast.LENGTH_SHORT).show()
+                        }
+                    }, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Default.ContentCopy, contentDescription = null, tint = CyberCyan, modifier = Modifier.size(16.dp))
                     }
-
-                    // Tozalash
-                    IconButton(
-                        onClick = onClearLogs,
-                        modifier = Modifier.size(34.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.DeleteSweep,
-                            contentDescription = "Tozalash",
-                            tint = Color(0xFFEF4444),
-                            modifier = Modifier.size(18.dp)
-                        )
+                    IconButton(onClick = onClearLogs, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Default.DeleteSweep, contentDescription = null, tint = CyberDanger, modifier = Modifier.size(16.dp))
                     }
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         if (logs.isEmpty()) {
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
+                modifier = Modifier.fillMaxWidth().weight(1f),
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Article,
-                        contentDescription = null,
-                        tint = Color(0xFF475569),
-                        modifier = Modifier.size(48.dp)
-                    )
+                    Icon(Icons.AutoMirrored.Filled.Article, contentDescription = null, tint = CyberBorder, modifier = Modifier.size(44.dp))
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Hozircha hech qanday log yo'q",
-                        color = Color(0xFF94A3B8),
-                        fontSize = 13.sp
-                    )
+                    Text("NO_LOG_ENTRIES", color = CyberTextSecondary, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
                 }
             }
         } else {
             SelectionContainer(modifier = Modifier.weight(1f)) {
                 LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(logs) { entry ->
-                        LogItemCard(entry = entry)
-                    }
+                    items(logs) { entry -> LogItemCard(entry = entry) }
                 }
             }
         }
     }
 }
 
+// ====================================================================
+// LOG ITEM KARTA — terminal uslubida
+// ====================================================================
 @Composable
 private fun LogItemCard(entry: LogEntry) {
-    val (badgeBg, badgeTextColor, badgeLabel) = when (entry.level) {
-        LogLevel.ERROR -> Triple(Color(0xFFEF4444).copy(alpha = 0.2f), Color(0xFFEF4444), "ERROR")
-        LogLevel.WARNING -> Triple(Color(0xFFF59E0B).copy(alpha = 0.2f), Color(0xFFF59E0B), "WARN")
-        LogLevel.SUCCESS -> Triple(Color(0xFF10B981).copy(alpha = 0.2f), Color(0xFF10B981), "OK")
-        LogLevel.INFO -> Triple(Color(0xFF38BDF8).copy(alpha = 0.2f), Color(0xFF38BDF8), "INFO")
+    val (levelColor, levelLabel) = when (entry.level) {
+        LogLevel.ERROR   -> Pair(CyberDanger,               "ERR")
+        LogLevel.WARNING -> Pair(Color(0xFFF59E0B),          "WARN")
+        LogLevel.SUCCESS -> Pair(CyberOnline,               "OK")
+        LogLevel.INFO    -> Pair(CyberCyan,                 "INFO")
     }
 
-    Card(
-        shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
-        modifier = Modifier.fillMaxWidth()
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(CyberSurface, RoundedCornerShape(4.dp))
+            .border(0.5.dp, levelColor.copy(alpha = 0.3f), RoundedCornerShape(4.dp))
+            .padding(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.Top
     ) {
-        Column(modifier = Modifier.padding(10.dp)) {
+        // Level indicator chiziq
+        Box(
+            modifier = Modifier
+                .width(3.dp)
+                .height(40.dp)
+                .background(levelColor, RoundedCornerShape(2.dp))
+        )
+        Column(modifier = Modifier.weight(1f)) {
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    // Badge
-                    Surface(
-                        shape = RoundedCornerShape(4.dp),
-                        color = badgeBg,
-                        modifier = Modifier.padding(end = 6.dp)
-                    ) {
-                        Text(
-                            text = badgeLabel,
-                            color = badgeTextColor,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                        )
-                    }
-
-                    // Tag
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    // Level badge
+                    Text(
+                        text = "[$levelLabel]",
+                        color = levelColor,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Monospace
+                    )
                     Text(
                         text = "[${entry.tag}]",
-                        color = Color(0xFF94A3B8),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold
+                        color = CyberTextSecondary,
+                        fontSize = 9.sp,
+                        fontFamily = FontFamily.Monospace
                     )
                 }
-
-                // Time
                 Text(
                     text = entry.formattedTime,
-                    color = Color(0xFF64748B),
-                    fontSize = 11.sp,
+                    color = CyberTextSecondary.copy(alpha = 0.6f),
+                    fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace
                 )
             }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            // Xabar matni
+            Spacer(modifier = Modifier.height(3.dp))
             Text(
                 text = entry.message,
-                color = Color(0xFFF1F5F9),
-                fontSize = 12.sp,
-                lineHeight = 16.sp,
+                color = CyberTextPrimary.copy(alpha = 0.85f),
+                fontSize = 11.sp,
+                lineHeight = 15.sp,
                 fontFamily = FontFamily.Monospace
             )
-        }
-    }
-}
-
-@Composable
-private fun DeviceCard(
-    device: DeviceItem,
-    onToggle: () -> Unit,
-    onDelete: () -> Unit
-) {
-    Card(
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(modifier = Modifier.padding(14.dp)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(
-                        shape = CircleShape,
-                        color = if (device.isActivated) Color(0xFF10B981).copy(alpha = 0.2f) else Color(0xFFEF4444).copy(alpha = 0.2f),
-                        modifier = Modifier.size(40.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = if (device.model.contains("Desktop", ignoreCase = true) || device.model.contains("Windows", ignoreCase = true))
-                                    Icons.Default.Computer
-                                else
-                                    Icons.Default.PhoneAndroid,
-                                contentDescription = null,
-                                tint = if (device.isActivated) Color(0xFF10B981) else Color(0xFFEF4444),
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Column {
-                        Text(
-                            text = device.displayName,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFFF8FAFC)
-                        )
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(7.dp)
-                                    .clip(CircleShape)
-                                    .background(if (device.isOnline) Color(0xFF10B981) else Color.Gray)
-                            )
-                            Spacer(modifier = Modifier.width(5.dp))
-                            val timeStr = if (device.lastActive > 0) {
-                                SimpleDateFormat("dd.MM HH:mm", Locale.getDefault()).format(Date(device.lastActive))
-                            } else "Noma'lum"
-                            Text(
-                                text = if (device.isOnline) "Onlayn" else "Oxirgi: $timeStr",
-                                fontSize = 11.sp,
-                                color = Color(0xFF94A3B8)
-                            )
-                        }
-                    }
-                }
-
-                // O'chirish tugmasi
-                IconButton(onClick = onDelete) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "O'chirish",
-                        tint = Color(0xFF64748B),
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "ID: ${device.id.take(12)}...",
-                    fontSize = 11.sp,
-                    color = Color(0xFF64748B)
-                )
-
-                // Bloklash / Faollashtirish tugmasi
-                Button(
-                    onClick = onToggle,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (device.isActivated) Color(0xFF334155) else Color(0xFF10B981)
-                    ),
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.height(34.dp)
-                ) {
-                    Icon(
-                        imageVector = if (device.isActivated) Icons.Default.Block else Icons.Default.Check,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = if (device.isActivated) Color(0xFFEF4444) else Color.White
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = if (device.isActivated) "Bloklash" else "Faollashtirish",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (device.isActivated) Color(0xFFEF4444) else Color.White
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun StatCard(
-    title: String,
-    count: String,
-    color: Color,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
-        modifier = modifier
-    ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(text = count, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = color)
-            Text(text = title, fontSize = 11.sp, color = Color(0xFF94A3B8))
-        }
-    }
-}
-
-@Composable
-private fun GlobalCodeSettingsTab(
-    currentCode: String,
-    onSaveCode: (String) -> Unit
-) {
-    var inputCode by remember(currentCode) { mutableStateOf(currentCode) }
-
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Card(
-            shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(
-                modifier = Modifier.padding(18.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Surface(
-                    shape = CircleShape,
-                    color = Color(0xFF0B6477).copy(alpha = 0.2f),
-                    modifier = Modifier.size(54.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Default.Key,
-                            contentDescription = null,
-                            tint = Color(0xFF2DD4BF),
-                            modifier = Modifier.size(28.dp)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Text(
-                    text = "Amaldagi Aktivatsiya Kodi",
-                    fontSize = 13.sp,
-                    color = Color(0xFF94A3B8)
-                )
-
-                Text(
-                    text = currentCode,
-                    fontSize = 36.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = Color(0xFF2DD4BF)
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Text(
-                    text = "Har qanday yangi kassa (mobil yoki desktop) ishga tushganda do'kon egasi shu kodni terishi kerak. Kod mos kelsa qurilma avtomatik faollashadi.",
-                    fontSize = 12.sp,
-                    color = Color(0xFF94A3B8),
-                    lineHeight = 16.sp,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "Kodni O'zgartirish",
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFFF8FAFC)
-                )
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                OutlinedTextField(
-                    value = inputCode,
-                    onValueChange = { inputCode = it.take(8) },
-                    label = { Text("Yangi aktivatsiya kodi") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = {
-                            val randomPin = Random.nextInt(1000, 9999).toString()
-                            inputCode = randomPin
-                        },
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(imageVector = Icons.Default.Autorenew, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Tasodifiy", fontSize = 12.sp)
-                    }
-
-                    Button(
-                        onClick = {
-                            if (inputCode.isNotBlank()) {
-                                onSaveCode(inputCode)
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0B6477)),
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.weight(1.2f)
-                    ) {
-                        Icon(imageVector = Icons.Default.Save, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Saqlash", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    }
-                }
-            }
         }
     }
 }

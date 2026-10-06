@@ -567,7 +567,8 @@ namespace PosElectro.Desktop.ViewModels
             get => _searchQuery;
             set
             {
-                if (SetProperty(ref _searchQuery, value))
+                var fixedVal = Services.KeyboardLayoutHelper.FixBarcodeString(value);
+                if (SetProperty(ref _searchQuery, fixedVal))
                 {
                     _searchDebounceTimer.Stop();
                     _searchDebounceTimer.Start();
@@ -1307,16 +1308,16 @@ namespace PosElectro.Desktop.ViewModels
                 return;
             }
 
-            // Qidiruv rejimi
+            // Qidiruv rejimi (Aqlli tartibsiz ko'p so'zli va kril/lotin qidiruvi)
             IsShowingTopSellers = false;
-            var list = _productService.GetProductsByCategory(SelectedCategory);
-            var q = ProductService.NormalizeProductName(SearchQuery);
-            var qEn = ProductService.NormalizeProductName(KeyboardLayoutHelper.ConvertRuToEn(SearchQuery));
-            list = list.Where(p =>
-                ProductService.NormalizeProductName(p.Name).Contains(q) ||
-                (qEn != q && ProductService.NormalizeProductName(p.Name).Contains(qEn)) ||
-                (p.Barcode != null && (p.Barcode.Contains(SearchQuery) || (qEn != q && p.Barcode.Contains(qEn))))
-            ).ToList();
+            var rawList = _productService.GetProductsByCategory(SelectedCategory);
+            var list = SmartSearchHelper.FilterAndRank(
+                rawList,
+                SearchQuery,
+                p => p.Name,
+                p => p.Barcode,
+                p => p.Note
+            );
 
             FilteredProducts.Clear();
             foreach (var p in list)

@@ -116,4 +116,25 @@ class ProductRepository @Inject constructor(
         productStockDao.upsertStock(p.guid,wh,newStock,System.currentTimeMillis())
         productDao.updateStock(productId,productStockDao.getTotalStockForProduct(p.guid),System.currentTimeMillis())
     }
+
+    suspend fun addProductStock(productGuid: String, warehouseGuid: String? = null, additionalQuantity: Double): Double = database.withTransaction {
+        if (additionalQuantity == 0.0) return@withTransaction 0.0
+        database.openHelper.writableDatabase.execSQL("UPDATE sync_control SET current_group=? WHERE id=1", arrayOf(java.util.UUID.randomUUID().toString()))
+        val now = System.currentTimeMillis()
+        val wh = if (!warehouseGuid.isNullOrBlank() && warehouseGuid != "null") {
+            warehouseGuid
+        } else {
+            warehouseDao.getPrimaryWarehouse()?.guid ?: "main-default-warehouse"
+        }
+
+        productStockDao.addStock(productGuid, wh, additionalQuantity, now)
+        val total = productStockDao.getTotalStockForProduct(productGuid)
+        val product = productDao.getProductByGuid(productGuid)
+        if (product != null) {
+            productDao.updateStock(product.id, total, now)
+            localSyncManager.sendLiveProduct(product.copy(stockQuantity = total, updatedAt = now), wh)
+        }
+        database.openHelper.writableDatabase.execSQL("UPDATE sync_control SET current_group='' WHERE id=1")
+        total
+    }
 }

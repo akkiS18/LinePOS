@@ -38,13 +38,14 @@
                         </Style>
                     </Button.Resources>
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="⬅ Barcha omborlar" FontSize="13"/>
+                        <Path Stretch="Uniform" Data="M10 19l-7-7m0 0l7-7m-7 7h18" Stroke="#38BDF8" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="13" Height="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Text="Barcha omborlar" FontSize="13" VerticalAlignment="Center"/>
                         <TextBlock Text=" | " Foreground="#475569" Margin="6,0,6,0"/>
                         <TextBlock Text="{Binding CurrentWarehouseTitle}" Foreground="#F8FAFC" FontSize="13"/>
                     </StackPanel>
                 </Button>
 
-                <!-- Qidiruv maydoni (Placeholder va ✕ Tozalash tugmasi bilan) -->
+                <!-- Qidiruv maydoni (Placeholder va  Tozalash tugmasi bilan) -->
                 <Grid Grid.Column="1">
                     <TextBox x:Name="SearchBox"
                              Style="{StaticResource ModernTextBox}"
@@ -57,23 +58,23 @@
                                IsHitTestVisible="False"
                                Visibility="{Binding HasSearchQuery, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
 
-                    <!-- ✕ Tozalash tugmasi (Matn kiritilganda chiqadi) -->
+                    <!--  Tozalash tugmasi (Matn kiritilganda chiqadi) -->
                     <Button Command="{Binding ClearSearchCommand}"
                             Visibility="{Binding HasSearchQuery, Converter={StaticResource BooleanToVisibilityConverter}}"
                             Background="Transparent" BorderThickness="0" Foreground="#94A3B8"
                             HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0"
-                            Cursor="Hand" Width="26" Height="26" Content="✕" FontSize="13" FontWeight="Bold"
+                            Cursor="Hand" Width="26" Height="26" 
                             ToolTip="Qidiruvni tozalash"/>
 
                     <!-- Qidiruv ikonchasi (Matn yo'qligida ko'rinadi) -->
-                    <TextBlock Text="🔍" 
-                               Foreground="#94A3B8" 
-                               FontSize="14" 
-                               HorizontalAlignment="Right" 
-                               VerticalAlignment="Center" 
-                               Margin="0,0,14,0" 
-                               IsHitTestVisible="False"
-                               Visibility="{Binding HasSearchQuery, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                    <Path Stretch="Uniform" Data="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" 
+                          Stroke="#64748B" StrokeThickness="2" StrokeStartLineCap="Round" 
+                          Width="14" Height="14"
+                          HorizontalAlignment="Right" 
+                          VerticalAlignment="Center" 
+                          Margin="0,0,14,0" 
+                          IsHitTestVisible="False"
+                          Visibility="{Binding HasSearchQuery, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
                 </Grid>
 
                 <!-- Yangilash va Yangi mahsulot qo'shish -->
@@ -94,11 +95,14 @@
                             </EventTrigger>
                         </Button.Triggers>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock x:Name="InventoryRefreshIcon" Text="🔄" RenderTransformOrigin="0.5,0.5" Margin="0,0,6,0">
-                                <TextBlock.RenderTransform>
-                                    <RotateTransform Angle="0"/>
-                                </TextBlock.RenderTransform>
-                            </TextBlock>
+                        <Path Stretch="Uniform" x:Name="InventoryRefreshIcon"
+                              Data="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                              Stroke="#38BDF8" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                              Width="13" Height="13" RenderTransformOrigin="0.5,0.5" Margin="0,0,6,0" VerticalAlignment="Center">
+                            <Path.RenderTransform>
+                                <RotateTransform x:Name="InventoryRefreshRotate" Angle="0"/>
+                            </Path.RenderTransform>
+                        </Path>
                             <TextBlock Text="Yangilash" FontWeight="SemiBold" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -122,13 +126,22 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                            <TextBlock Text="🏢 OMBORLAR BOSHQARUVI" Foreground="#F8FAFC" FontSize="18" FontWeight="Bold"/>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Path Stretch="Uniform" Data="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                              Stroke="#38BDF8" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Text="OMBORLAR BOSHQARUVI" Foreground="#F8FAFC" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
+                    </StackPanel>
                             <TextBlock Text="Kerakli omborni tanlang yoki yangi ombor yarating" Foreground="#94A3B8" FontSize="13" Margin="0,2,0,0"/>
                         </StackPanel>
                         <StackPanel Grid.Column="1" Orientation="Horizontal">
-                            <Button Content="⇄ Omborlararo Ko'chirish" Command="{Binding OpenTransferModalCommand}"
-                                    Style="{StaticResource ModernButton}" Background="#0284C7" Foreground="White"
-                                    Padding="14,8" FontSize="13" FontWeight="Bold" Margin="0,0,10,0"/>
+                    <Button Command="{Binding OpenTransferModalCommand}"
+                            Style="{StaticResource ModernButton}" Background="#334155" Padding="14,8">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Stretch="Uniform" Data="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+                                  Stroke="#38BDF8" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <TextBlock Text="Omborlararo Ko'chirish" Foreground="White" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
                             <Button Content="+ Yangi Ombor" Command="{Binding OpenAddWarehouseModalCommand}"
                                     Style="{StaticResource SuccessButton}"
                                     Padding="14,8" FontSize="13" FontWeight="Bold"/>
@@ -196,23 +209,35 @@
                                         <!-- Pastki: Amallar -->
                                         <Grid Grid.Row="2">
                                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
-                                                <Button Content="⭐ Asosiy qilish" 
-                                                        Command="{Binding DataContext.SetPrimaryWarehouseCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                <Button Command="{Binding DataContext.SetPrimaryWarehouseCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                         CommandParameter="{Binding}"
                                                         Visibility="{Binding CanSetPrimary, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                                        Background="Transparent" Foreground="#F59E0B" BorderThickness="0" FontSize="11" Cursor="Hand" Margin="0,0,8,0"/>
-                                                <Button Content="🗑️" 
-                                                        Command="{Binding DataContext.DeleteWarehouseCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        Background="Transparent" BorderThickness="0" Cursor="Hand" Margin="0,0,8,0">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <Path Stretch="Uniform" Data="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+                                                              Fill="#F59E0B" Width="12" Height="12" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                                                        <TextBlock Text="Asosiy qilish" Foreground="#F59E0B" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Button>
+                                                <Button Command="{Binding DataContext.DeleteWarehouseCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                         CommandParameter="{Binding}"
                                                         Visibility="{Binding CanDelete, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                                        ToolTip="O'chirish" Background="Transparent" Foreground="#EF4444" BorderThickness="0" FontSize="12" Cursor="Hand"/>
+                                                        ToolTip="O'chirish" Background="Transparent" BorderThickness="0" Cursor="Hand" Padding="4">
+                                                    <Path Data="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14zM10 11v6M14 11v6"
+                                                          Stroke="#F87171" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                                          Stretch="Uniform" Width="13" Height="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Button>
                                             </StackPanel>
-                                            <Button Content="Kirish ➔" 
-                                                    Command="{Binding DataContext.SelectWarehouseCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            <Button Command="{Binding DataContext.SelectWarehouseCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                     CommandParameter="{Binding}"
                                                     HorizontalAlignment="Right"
                                                     Style="{StaticResource ModernButton}"
-                                                    Padding="14,6" FontSize="12" FontWeight="Bold"/>
+                                                    Padding="14,6">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="Kirish" Foreground="White" FontSize="12" FontWeight="Bold" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                                    <Path Stretch="Uniform" Data="M9 5l7 7-7 7" Stroke="White" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="8" Height="8" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Button>
                                         </Grid>
                                     </Grid>
                                 </Border>
@@ -284,9 +309,10 @@
                                                                     ToolTip="Kategoriya nomini o'zgartirish"
                                                                     Background="Transparent" BorderThickness="0"
                                                                     Padding="4" Margin="0,0,6,0" Cursor="Hand">
-                                                                <TextBlock Text="✏️" FontSize="13"/>
+                                            <Path Stretch="Uniform" Data="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"
+                                                  Stroke="#38BDF8" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="12" Height="12" VerticalAlignment="Center"/>
                                                             </Button>
-                                                            <TextBlock Text="➔" Foreground="#94A3B8" FontSize="14" VerticalAlignment="Center"/>
+                                        <Path Stretch="Uniform" Data="M9 5l7 7-7 7" Stroke="#94A3B8" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="10" Height="10" VerticalAlignment="Center"/>
                                                         </StackPanel>
                                                     </Grid>
                                                     <!-- 2-Qator: Kategoriya nomi va soni (ustiga minib qolmaydi) -->
@@ -314,15 +340,83 @@
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <!-- Navigatsiya va Sarlavha: [← Ortga] Kategoriya nomi -->
+                <!-- Navigatsiya va Sarlavha: [ Ortga] Kategoriya nomi + Kam qolgan tovarlar buyurtma paneli -->
                 <Grid Grid.Row="0" Margin="0,0,0,12">
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <Button Content="← Kategoriyalarga qaytish" Command="{Binding BackToCategoriesCommand}"
-                                Background="#1E293B" Foreground="#94A3B8" BorderBrush="#334155" BorderThickness="1"
-                                Style="{StaticResource ModernButton}" Padding="14,8" FontSize="13" Margin="0,0,14,0"/>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Command="{Binding BackToCategoriesCommand}"
+                                Style="{StaticResource ModernButton}" Background="#334155" Padding="14,8" Margin="0,0,16,0">
+                            <StackPanel Orientation="Horizontal">
+                                <Path Stretch="Uniform" Data="M10 19l-7-7m0 0l7-7m-7 7h18" Stroke="White" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <TextBlock Text="Kategoriyalarga qaytish" Foreground="White" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
 
                         <TextBlock Text="{Binding CurrentCategoryTitle}" Foreground="#F8FAFC" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
                         <TextBlock Text="{Binding ProductsCountHeader}" Foreground="#94A3B8" FontSize="14" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                    </StackPanel>
+
+                    <!-- KAM QOLGAN TOVARLAR BUYURTMA BOSHQARUV PANELI -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center"
+                                Visibility="{Binding IsLowStockCategorySelected, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <!-- 1. Barchasini tanlash / Tozalash -->
+                        <Button Command="{Binding SelectAllLowStockCommand}"
+                                ToolTip="Barcha kam qolgan tovarlarni belgilash"
+                                Background="#1E293B" Foreground="#38BDF8" BorderBrush="#0284C7" BorderThickness="1"
+                                Padding="10,6" Margin="0,0,6,0" Cursor="Hand" FontWeight="SemiBold" FontSize="12">
+                            <Button.Resources>
+                                <Style TargetType="Border"><Setter Property="CornerRadius" Value="8"/></Style>
+                            </Button.Resources>
+                            <TextBlock Text="✓ Hammasi"/>
+                        </Button>
+
+                        <Button Command="{Binding ClearSelectedLowStockCommand}"
+                                ToolTip="Barcha tanlanganlarni bekor qilish"
+                                Background="#1E293B" Foreground="#94A3B8" BorderBrush="#475569" BorderThickness="1"
+                                Padding="10,6" Margin="0,0,10,0" Cursor="Hand" FontSize="12">
+                            <Button.Resources>
+                                <Style TargetType="Border"><Setter Property="CornerRadius" Value="8"/></Style>
+                            </Button.Resources>
+                            <TextBlock Text="✕ Tozalash"/>
+                        </Button>
+
+                        <!-- 2. Alohida Buyurtma Ro'yxati Modali -->
+                        <Button Command="{Binding OpenReorderListDialogCommand}"
+                                ToolTip="Buyurtmaga yig'ilgan tovarlarni alohida ko'rish va boshqarish"
+                                Background="#0B6477" Foreground="White" BorderBrush="#2DD4BF" BorderThickness="1"
+                                Padding="12,6" Margin="0,0,8,0" Cursor="Hand" FontWeight="Bold" FontSize="12">
+                            <Button.Resources>
+                                <Style TargetType="Border"><Setter Property="CornerRadius" Value="8"/></Style>
+                            </Button.Resources>
+                            <TextBlock Text="{Binding ReorderButtonText}"/>
+                        </Button>
+
+                        <!-- 3. Chek chiqarish -->
+                        <Button Command="{Binding PrintReorderReceiptCommand}"
+                                ToolTip="Tanlangan tovarlar buyurtma ro'yxatini chek printeriga chiqarish"
+                                Background="#0F766E" Foreground="White" BorderBrush="#14B8A6" BorderThickness="1"
+                                Padding="10,6" Margin="0,0,6,0" Cursor="Hand" FontWeight="Bold" FontSize="12">
+                            <Button.Resources>
+                                <Style TargetType="Border"><Setter Property="CornerRadius" Value="8"/></Style>
+                            </Button.Resources>
+                            <TextBlock Text="🖨️ Chek"/>
+                        </Button>
+
+                        <!-- 4. Excelga saqlash -->
+                        <Button Command="{Binding ExportReorderExcelCommand}"
+                                ToolTip="Buyurtma ro'yxatini Excel (.xls) qilib saqlash"
+                                Background="#1E3A5F" Foreground="White" BorderBrush="#38BDF8" BorderThickness="1"
+                                Padding="10,6" Cursor="Hand" FontWeight="Bold" FontSize="12">
+                            <Button.Resources>
+                                <Style TargetType="Border"><Setter Property="CornerRadius" Value="8"/></Style>
+                            </Button.Resources>
+                            <TextBlock Text="📊 Excel"/>
+                        </Button>
                     </StackPanel>
                 </Grid>
 
@@ -412,15 +506,37 @@
                                 </Style>
                             </DataGrid.RowStyle>
                             <DataGrid.Columns>
-                                <!-- 1. Mahsulot nomi -->
-                                <DataGridTextColumn Header="Mahsulot nomi" Binding="{Binding Name}" Width="2*" MinWidth="180" FontWeight="SemiBold"/>
+                                <!-- Tanlash Checkbox (Kam qolgan tovarlarda ko'rinadi) -->
+                                <DataGridTemplateColumn Width="50" MinWidth="46"
+                                                        Visibility="{Binding DataContext.IsLowStockCategorySelected, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <DataGridTemplateColumn.Header>
+                                        <TextBlock Text="Tanlash" Foreground="#94A3B8" FontSize="11" HorizontalAlignment="Center"/>
+                                    </DataGridTemplateColumn.Header>
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <CheckBox IsChecked="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}"
+                                                      HorizontalAlignment="Center" VerticalAlignment="Center" Cursor="Hand"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
 
-                                <!-- 2. Amallar (Tahrirlash ✏️, Shtrix-kod 🖨️, O'chirish 🗑️) -->
+                                <!-- Mahsulot nomi -->
+                                <DataGridTextColumn Header="Mahsulot nomi" Binding="{Binding Name}" Width="2.5*" MinWidth="160">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                            <Setter Property="Foreground" Value="#F8FAFC"/>
+                                            <Setter Property="VerticalAlignment" Value="Center"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+
+                                <!-- Amallar (Tahrirlash, Shtrix-kod, O'chirish) -->
                                 <DataGridTemplateColumn Header="Amallar" Width="125" MinWidth="120">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                                <!-- Tahrirlash ✏️ -->
+                                                <!-- Tahrirlash -->
                                                 <Button Command="{Binding DataContext.OpenEditProductCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                         CommandParameter="{Binding}"
                                                         ToolTip="Tahrirlash"
@@ -429,7 +545,9 @@
                                                     <Button.Template>
                                                         <ControlTemplate TargetType="Button">
                                                             <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6">
-                                                                <TextBlock Text="✏️" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                <Path Data="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" 
+                                                                      Stroke="#38BDF8" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" 
+                                                                      Stretch="Uniform" Width="13" Height="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                             </Border>
                                                             <ControlTemplate.Triggers>
                                                                 <Trigger Property="IsMouseOver" Value="True">
@@ -441,7 +559,7 @@
                                                     </Button.Template>
                                                 </Button>
 
-                                                <!-- Shtrix-kod chop etish 🖨️ -->
+                                                <!-- Shtrix-kod chop etish -->
                                                 <Button Command="{Binding DataContext.PrintProductBarcodeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                         CommandParameter="{Binding}"
                                                         ToolTip="Shtrix-kod etiketkasini chop etish"
@@ -450,7 +568,9 @@
                                                     <Button.Template>
                                                         <ControlTemplate TargetType="Button">
                                                             <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6">
-                                                                <TextBlock Text="🖨️" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                <Path Data="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6v-8z" 
+                                                                      Stroke="#2DD4BF" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" 
+                                                                      Stretch="Uniform" Width="13" Height="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                             </Border>
                                                             <ControlTemplate.Triggers>
                                                                 <Trigger Property="IsMouseOver" Value="True">
@@ -462,7 +582,7 @@
                                                     </Button.Template>
                                                 </Button>
 
-                                                <!-- O'chirish 🗑️ -->
+                                                <!-- O'chirish -->
                                                 <Button Command="{Binding DataContext.DeleteProductCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                         CommandParameter="{Binding}"
                                                         ToolTip="O'chirish"
@@ -489,52 +609,74 @@
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
 
-                                <!-- 3. Shtrix-kod -->
-                                <DataGridTextColumn Header="Shtrix-kod" Binding="{Binding Barcode}" Width="140" MinWidth="120"/>
+                                <!-- Shtrix-kod -->
+                                <DataGridTextColumn Header="Shtrix-kod" Binding="{Binding Barcode}" Width="1.2*" MinWidth="100" Foreground="#94A3B8"/>
 
-                                <!-- 4. Izoh (Zakaz uchun telefon raqam / ma'lumot) -->
-                                <DataGridTextColumn Header="Izoh (Zakaz uchun)" Binding="{Binding Note}" Width="1.2*" MinWidth="110" Foreground="#94A3B8"/>
+                                <!-- Tan narxi -->
+                                <DataGridTextColumn Header="Tan narxi" Binding="{Binding CostPriceFormatted}" Width="1.2*" MinWidth="90" Foreground="#94A3B8"/>
 
-                                <!-- 5. Tan narxi -->
-                                <DataGridTextColumn Header="Tan narxi" Binding="{Binding CostPriceDisplay}" Width="125" MinWidth="105"/>
+                                <!-- Sotish narxi -->
+                                <DataGridTextColumn Header="Sotish narxi" Binding="{Binding PriceFormatted}" Width="1.2*" MinWidth="90">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="FontWeight" Value="Bold"/>
+                                            <Setter Property="Foreground" Value="#38BDF8"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
 
-                                <!-- 6. Sotish narxi -->
-                                <DataGridTextColumn Header="Sotish narxi" Binding="{Binding SellingPrice, StringFormat='{}{0:N0} so\'m'}" Width="135" MinWidth="115"/>
-                                
-                                <!-- 7. Qoldiq (kam qolgan yoki manfiy bo'lsa qizil) -->
-                                <DataGridTemplateColumn Header="Qoldiq" Width="95" MinWidth="80">
+                                <!-- Qoldiq -->
+                                <DataGridTemplateColumn Header="Qoldiq" Width="1*" MinWidth="85">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <Border Padding="6,2" CornerRadius="6" HorizontalAlignment="Left">
-                                                <Border.Style>
-                                                    <Style TargetType="Border">
-                                                        <Setter Property="Background" Value="Transparent"/>
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsNegativeStock}" Value="True">
-                                                                <Setter Property="Background" Value="#30EF4444"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </Border.Style>
-                                                <TextBlock Text="{Binding StockDisplay}" VerticalAlignment="Center" FontWeight="Bold" ToolTip="{Binding UnitDisplay}">
-                                                    <TextBlock.Style>
-                                                        <Style TargetType="TextBlock">
-                                                            <Setter Property="Foreground" Value="#F8FAFC"/>
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding IsNegativeStock}" Value="True">
-                                                                    <Setter Property="Foreground" Value="#EF4444"/>
-                                                                </DataTrigger>
-                                                                <DataTrigger Binding="{Binding IsLowStock}" Value="True">
-                                                                    <Setter Property="Foreground" Value="#F59E0B"/>
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </TextBlock.Style>
-                                                </TextBlock>
-                                            </Border>
+                                            <Button Command="{Binding DataContext.OpenQuickStockAddCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}"
+                                                    ToolTip="Qoldiqni oshirish (kirim qilish) uchun bosing"
+                                                    Cursor="Hand" HorizontalAlignment="Left">
+                                                <Button.Template>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border x:Name="bd" CornerRadius="6" Padding="8,3" BorderThickness="1" BorderBrush="Transparent">
+                                                            <Border.Style>
+                                                                <Style TargetType="Border">
+                                                                    <Setter Property="Background" Value="#14532D"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsLowStock}" Value="True">
+                                                                            <Setter Property="Background" Value="#7F1D1D"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </Border.Style>
+                                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                                <TextBlock Text="{Binding StockQuantity}" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold">
+                                                                    <TextBlock.Style>
+                                                                        <Style TargetType="TextBlock">
+                                                                            <Setter Property="Foreground" Value="#4ADE80"/>
+                                                                            <Style.Triggers>
+                                                                                <DataTrigger Binding="{Binding IsLowStock}" Value="True">
+                                                                                    <Setter Property="Foreground" Value="#F87171"/>
+                                                                                </DataTrigger>
+                                                                            </Style.Triggers>
+                                                                        </Style>
+                                                                    </TextBlock.Style>
+                                                                </TextBlock>
+                                                                <TextBlock Text=" ➕" FontSize="9" VerticalAlignment="Center" Opacity="0.75"/>
+                                                            </StackPanel>
+                                                        </Border>
+                                                        <ControlTemplate.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter TargetName="bd" Property="BorderBrush" Value="#38BDF8"/>
+                                                                <Setter TargetName="bd" Property="Opacity" Value="0.9"/>
+                                                            </Trigger>
+                                                        </ControlTemplate.Triggers>
+                                                    </ControlTemplate>
+                                                </Button.Template>
+                                            </Button>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
+
+                                <!-- Izoh (Zakaz uchun telefon raqam / ma'lumot) -->
+                                <DataGridTextColumn Header="Izoh (Zakaz uchun)" Binding="{Binding Note}" Width="1.2*" MinWidth="110" Foreground="#94A3B8"/>
                             </DataGrid.Columns>
                         </DataGrid>
 
@@ -543,11 +685,17 @@
                                 Visibility="{Binding IsEmptySearchResult, Converter={StaticResource BooleanToVisibilityConverter}}"
                                 HorizontalAlignment="Center" VerticalAlignment="Center" Padding="32,24" BorderBrush="#334155" BorderThickness="1">
                             <StackPanel HorizontalAlignment="Center">
-                                <TextBlock Text="🔍" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-                                <TextBlock Text="Mahsulot topilmadi" Foreground="#F8FAFC" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                <Path Stretch="Uniform" Data="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" 
+                                      Stroke="#64748B" StrokeThickness="2" StrokeStartLineCap="Round" 
+                                      Width="36" Height="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
                                 <TextBlock Text="Kiritilgan so'rov bo'yicha hech qanday tovar topilmadi" Foreground="#94A3B8" FontSize="13" Margin="0,4,0,14" HorizontalAlignment="Center"/>
-                                <Button Content="✕ Qidiruvni tozalash" Command="{Binding ClearSearchCommand}"
-                                        Style="{StaticResource ModernButton}" Padding="16,8" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                <Button Command="{Binding ClearSearchCommand}"
+                                        Style="{StaticResource ModernButton}" Background="#334155" HorizontalAlignment="Center" Padding="14,6">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Stretch="Uniform" Data="M6 18L18 6M6 6l12 12" Stroke="#94A3B8" StrokeThickness="2" StrokeStartLineCap="Round" Width="12" Height="12" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                        <TextBlock Text="Qidiruvni tozalash" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
                             </StackPanel>
                         </Border>
                     </Grid>
@@ -574,16 +722,22 @@
             <!-- TEPADAGI NAVIGATSIYA -->
             <Grid Grid.Row="0" Margin="0,0,0,18">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Content="← Ortga qaytish" Command="{Binding CancelAddEditCommand}"
-                            Background="#1E293B" Foreground="#94A3B8" BorderBrush="#334155" BorderThickness="1"
-                            Style="{StaticResource ModernButton}" Padding="16,8" FontSize="13" Margin="0,0,16,0"/>
+                <Button Command="{Binding CancelAddEditCommand}"
+                        Style="{StaticResource ModernButton}" Background="#334155" Padding="14,8" Margin="0,0,16,0">
+                    <StackPanel Orientation="Horizontal">
+                        <Path Stretch="Uniform" Data="M10 19l-7-7m0 0l7-7m-7 7h18" Stroke="White" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Text="Ortga qaytish" Foreground="White" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
 
                     <TextBlock Text="{Binding FormTitle}" Foreground="#F8FAFC" FontSize="20" FontWeight="Black" VerticalAlignment="Center"/>
 
                     <!-- Tanlangan Ombor Belgisi -->
                     <Border Background="#064E3B" BorderBrush="#10B981" BorderThickness="1.5" CornerRadius="8" Padding="12,5" Margin="16,0,0,0" VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="🏢 Ombor: " Foreground="#A7F3D0" FontSize="13" FontWeight="Bold"/>
+                        <Path Stretch="Uniform" Data="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                              Stroke="#A7F3D0" StrokeThickness="1.5" Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                        <TextBlock Text="Ombor: " Foreground="#A7F3D0" FontSize="13" FontWeight="Bold" VerticalAlignment="Center"/>
                             <TextBlock Text="{Binding SelectedWarehouseNameDisplay}" Foreground="#FFFFFF" FontSize="13" FontWeight="Bold"/>
                         </StackPanel>
                     </Border>
@@ -601,7 +755,11 @@
                 <!-- 1-BLOK: ASOSIY MA'LUMOTLAR -->
                 <Border Grid.Column="0" Background="#1E293B" CornerRadius="16" BorderBrush="#334155" BorderThickness="1" Padding="16,14" Margin="0,0,8,0">
                     <StackPanel>
-                        <TextBlock Text="📦 MAHSULOT ASOSIY MA'LUMOTLARI" Foreground="#38BDF8" FontSize="13" FontWeight="Bold" Margin="0,0,0,12"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                            <Path Stretch="Uniform" Data="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                                  Stroke="#38BDF8" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="15" Height="15" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="MAHSULOT ASOSIY MA'LUMOTLARI" Foreground="#38BDF8" FontSize="13" FontWeight="Bold" VerticalAlignment="Center"/>
+                        </StackPanel>
 
                         <!-- Mahsulot Nomi -->
                         <TextBlock Text="Mahsulot nomi *" Foreground="#94A3B8" FontSize="12" Margin="0,0,0,4"/>
@@ -629,7 +787,7 @@
                                     </Style>
                                 </Button.Resources>
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <TextBlock Text="✨" FontSize="12" Foreground="#2DD4BF" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                            <Path Stretch="Uniform" Data="M13 10V3L4 14h7v7l9-11h-7z" Fill="#2DD4BF" Width="12" Height="12" Margin="0,0,5,0" VerticalAlignment="Center"/>
                                     <TextBlock Text="Yaratish" Foreground="#2DD4BF" FontWeight="Bold" FontSize="12" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
@@ -643,7 +801,8 @@
                                     </Style>
                                 </Button.Resources>
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <TextBlock Text="🖨️" FontSize="12" Foreground="#F8FAFC" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                            <Path Stretch="Uniform" Data="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6v-8z"
+                                                  Stroke="#F8FAFC" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="12" Height="12" Margin="0,0,5,0" VerticalAlignment="Center"/>
                                     <TextBlock Text="Chop etish" Foreground="#F8FAFC" FontWeight="Bold" FontSize="12" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
@@ -664,7 +823,7 @@
                                       SelectedItem="{Binding FormCategory}"
                                       Height="42" FontSize="13" VerticalContentAlignment="Center"/>
 
-                            <!-- 2. Yonidagi [✏️ Tahrirlash] tanlangan kategoriya nomini o'zgartirish tugmasi -->
+                            <!-- 2. Yonidagi [ Tahrirlash] tanlangan kategoriya nomini o'zgartirish tugmasi -->
                             <Button Grid.Column="1"
                                     Command="{Binding OpenEditCategoryModalCommand}"
                                     ToolTip="Tanlangan kategoriya nomini o'zgartirish"
@@ -676,12 +835,13 @@
                                     </Style>
                                 </Button.Resources>
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <TextBlock Text="✏️" FontSize="12" Foreground="#38BDF8" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                            <Path Stretch="Uniform" Data="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"
+                                                  Stroke="#38BDF8" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="12" Height="12" Margin="0,0,5,0" VerticalAlignment="Center"/>
                                     <TextBlock Text="Tahrirlash" Foreground="#38BDF8" FontWeight="Bold" FontSize="12" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
 
-                            <!-- 3. Yonidagi [➕ Yangi] kategoriya qo'shish tugmasi (Modal ochadi) -->
+                            <!-- 3. Yonidagi [ Yangi] kategoriya qo'shish tugmasi (Modal ochadi) -->
                             <Button Grid.Column="2"
                                     Command="{Binding OpenAddCategoryModalCommand}"
                                     ToolTip="Yangi kategoriya qo'shish oynasini ochish"
@@ -693,7 +853,8 @@
                                     </Style>
                                 </Button.Resources>
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <TextBlock Text="➕" FontFamily="Segoe UI Emoji" FontSize="12" Foreground="#2DD4BF" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                            <Path Stretch="Uniform" Data="M12 4v16m8-8H4"
+                                                  Stroke="#2DD4BF" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="12" Height="12" Margin="0,0,5,0" VerticalAlignment="Center"/>
                                     <TextBlock Text="Yangi" Foreground="#2DD4BF" FontWeight="Bold" FontSize="12" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
@@ -713,19 +874,23 @@
                 <!-- 2-BLOK: NARXLAR VA QOLDIQ -->
                 <Border Grid.Column="1" Background="#1E293B" CornerRadius="16" BorderBrush="#334155" BorderThickness="1" Padding="16,14" Margin="8,0,0,0">
                     <StackPanel>
-                        <TextBlock Text="💰 NARX VA OMBOR QOLDIG'I" Foreground="#16A34A" FontSize="13" FontWeight="Bold" Margin="0,0,0,12"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                            <Path Stretch="Uniform" Data="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                  Stroke="#16A34A" StrokeThickness="1.5" Width="15" Height="15" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="NARX VA OMBOR QOLDIG'I" Foreground="#16A34A" FontSize="13" FontWeight="Bold" VerticalAlignment="Center"/>
+                        </StackPanel>
 
                         <!-- Tan Narxi (Katta va Aniq Valyuta Switch bilan) -->
                         <Grid Margin="0,0,0,6">
                             <TextBlock Text="{Binding FormCostPriceLabel}" Foreground="#94A3B8" FontSize="12" VerticalAlignment="Center"/>
                             <Border Background="#0F172A" CornerRadius="8" Padding="2" BorderBrush="#334155" BorderThickness="1" HorizontalAlignment="Right">
                                 <StackPanel Orientation="Horizontal">
-                                    <RadioButton Content="🇺🇿 SO'M" 
+                                    <RadioButton Content="SO'M (UZS)" 
                                                  GroupName="FormCurrencyGroup"
                                                  IsChecked="{Binding FormIsUzs}" 
                                                  Style="{StaticResource CurrencySegmentRadio}"
                                                  FontSize="11" Padding="6,2"/>
-                                    <RadioButton Content="💵 USD ($)" 
+                                    <RadioButton Content="DOLLAR ($)" 
                                                  GroupName="FormCurrencyGroup"
                                                  IsChecked="{Binding FormIsUsd}" 
                                                  Style="{StaticResource CurrencySegmentRadio}"
@@ -794,12 +959,22 @@
 
             <!-- PASTDAGI SAQLASH VA BEKOR QILISH TUGMALARI -->
             <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
-                <Button Content="❌ Bekor qilish" Command="{Binding CancelAddEditCommand}"
+                <Button Command="{Binding CancelAddEditCommand}"
                         Background="#334155" Foreground="White" FontSize="13" FontWeight="SemiBold"
-                        Style="{StaticResource ModernButton}" Padding="20,10" Margin="0,0,12,0"/>
+                        Style="{StaticResource ModernButton}" Padding="20,10" Margin="0,0,12,0">
+                    <StackPanel Orientation="Horizontal">
+                        <Path Stretch="Uniform" Data="M6 18L18 6M6 6l12 12" Stroke="White" StrokeThickness="2" StrokeStartLineCap="Round" Width="11" Height="11" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Text="Bekor qilish" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
 
-                <Button Content="💾 Saqlash" Command="{Binding SaveProductFormCommand}"
-                        Style="{StaticResource SuccessButton}" Padding="30,10" FontSize="14" FontWeight="Bold"/>
+                <Button Command="{Binding SaveProductFormCommand}"
+                        Style="{StaticResource SuccessButton}" Padding="30,10" FontSize="14" FontWeight="Bold">
+                    <StackPanel Orientation="Horizontal">
+                        <Path Stretch="Uniform" Data="M5 13l4 4L19 7" Stroke="White" StrokeThickness="2.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Text="Saqlash" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
             </StackPanel>
         </Grid>
 
@@ -817,7 +992,8 @@
                     <Grid Margin="0,0,0,16">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                             <Border Background="#1E3A8A" CornerRadius="10" Width="40" Height="40" Margin="0,0,12,0" BorderBrush="#38BDF8" BorderThickness="1.5">
-                                <TextBlock Text="📂" FontFamily="Segoe UI Emoji" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <Path Stretch="Uniform" Data="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                                      Stroke="#38BDF8" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
                             <TextBlock Text="Yangi Kategoriya Qo'shish" Foreground="#F8FAFC" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
                         </StackPanel>
@@ -830,7 +1006,7 @@
                                     <Setter Property="CornerRadius" Value="16"/>
                                 </Style>
                             </Button.Resources>
-                            <TextBlock Text="✕" Foreground="#94A3B8" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Path Stretch="Uniform" Data="M6 18L18 6M6 6l12 12" Stroke="#94A3B8" StrokeThickness="2" StrokeStartLineCap="Round" Width="12" Height="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Button>
                     </Grid>
 
@@ -894,7 +1070,8 @@
                     <!-- Sarlavha va Yopish tugmasi -->
                     <Grid Margin="0,0,0,12">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="✏️" FontSize="16" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                            <Path Stretch="Uniform" Data="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"
+                                                  Stroke="#38BDF8" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="12" Height="12" Margin="0,0,5,0" VerticalAlignment="Center"/>
                             <TextBlock Text="Kategoriya Nomini Tahrirlash" Foreground="#F8FAFC" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
                         </StackPanel>
                         <Button Command="{Binding CloseEditCategoryModalCommand}" HorizontalAlignment="Right"
@@ -905,7 +1082,7 @@
                                     <Setter Property="CornerRadius" Value="16"/>
                                 </Style>
                             </Button.Resources>
-                            <TextBlock Text="✕" Foreground="#94A3B8" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Path Stretch="Uniform" Data="M6 18L18 6M6 6l12 12" Stroke="#94A3B8" StrokeThickness="2" StrokeStartLineCap="Round" Width="12" Height="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Button>
                     </Grid>
 
@@ -976,7 +1153,7 @@
                                     <Setter Property="CornerRadius" Value="16"/>
                                 </Style>
                             </Button.Resources>
-                            <TextBlock Text="✕" Foreground="#94A3B8" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Path Stretch="Uniform" Data="M6 18L18 6M6 6l12 12" Stroke="#94A3B8" StrokeThickness="2" StrokeStartLineCap="Round" Width="12" Height="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Button>
                     </Grid>
                     <Separator Background="#334155" Margin="0,0,0,16"/>
@@ -1031,7 +1208,7 @@
                                     <Setter Property="CornerRadius" Value="16"/>
                                 </Style>
                             </Button.Resources>
-                            <TextBlock Text="✕" Foreground="#94A3B8" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Path Stretch="Uniform" Data="M6 18L18 6M6 6l12 12" Stroke="#94A3B8" StrokeThickness="2" StrokeStartLineCap="Round" Width="12" Height="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Button>
                     </Grid>
                     <Separator Background="#334155" Margin="0,0,0,16"/>
@@ -1047,7 +1224,8 @@
                             <ComboBox ItemsSource="{Binding Warehouses}" SelectedItem="{Binding TransferFromWarehouse}"
                                       DisplayMemberPath="Name" Height="38"/>
                         </StackPanel>
-                        <TextBlock Grid.Column="1" Text="➔" Foreground="#38BDF8" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,14,0,0"/>
+                        <Path Stretch="Uniform" Grid.Column="1" Data="M14 5l7 7m0 0l-7 7m7-7H3"
+                              Stroke="#38BDF8" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="16" Height="16" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,14,0,0"/>
                         <StackPanel Grid.Column="2">
                             <TextBlock Text="Qabul qiluvchi ombor:" Foreground="#94A3B8" FontSize="12" Margin="0,0,0,4"/>
                             <ComboBox ItemsSource="{Binding Warehouses}" SelectedItem="{Binding TransferToWarehouse}"

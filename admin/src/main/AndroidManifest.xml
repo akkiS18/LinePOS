@@ -2,23 +2,76 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
-        android:label="LINE Admin"
+        android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.POSAdmin">
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
             android:theme="@style/Theme.POSAdmin">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Seb Voice Overlay Activity (Vidjetdan va Lock Screendan ochiluvchi shaffof oyna - mustaqil qatlam) -->
+        <activity
+            android:name=".voice.SebVoiceActivity"
+            android:exported="true"
+            android:label="Seb Voice"
+            android:icon="@drawable/ic_mic_cyan"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:taskAffinity="uz.pos.admin.voice"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:launchMode="singleInstance"
+            android:theme="@style/Theme.POSAdmin.Transparent">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.ASSIST" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VOICE_COMMAND" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.media.action.STILL_IMAGE_CAMERA_SECURE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.media.action.ACTION_STILL_IMAGE_CAMERA" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- 1x1 Minimal Arc Reactor Widget Provider -->
+        <receiver
+            android:name=".widget.SebWidgetProvider"
+            android:exported="true"
+            android:label="Seb Voice">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/seb_widget_info" />
+        </receiver>
+
     </application>
 
 </manifest>

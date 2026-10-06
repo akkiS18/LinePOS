@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="4dp">
+
+    <!-- Markaziy 1x1 Arc Reactor Tugmasi -->
+    <FrameLayout
+        android:id="@+id/btn_seb_voice"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:layout_gravity="center"
+        android:background="@drawable/bg_arc_reactor_widget"
+        android:clickable="true"
+        android:focusable="true">
+
+        <ImageView
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:layout_gravity="center"
+            android:contentDescription="Seb Voice"
+            android:src="@drawable/ic_mic_cyan" />
+
+    </FrameLayout>
+
+</FrameLayout>

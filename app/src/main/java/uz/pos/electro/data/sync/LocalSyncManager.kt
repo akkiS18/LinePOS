@@ -27,6 +27,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 enum class LiveSyncStatus { OFFLINE, CONNECTING, CONNECTED, CONFLICT }
+class ServerChangedException(val serverId: String, message: String) : Exception(message)
 private class PendingSyncConflict(message: String) : Exception(message)
 data class SyncSummary(val downloadedProducts: Int, val uploadedProducts: Int, val message: String)
 
@@ -66,7 +67,7 @@ class LocalSyncManager @Inject constructor(
     fun getServerUrl(): String? = prefs.getString("local_desktop_url", null)
     fun saveServerUrl(url: String) { prefs.edit().putString("local_desktop_url", normalizeUrl(url)).apply() }
     private fun token(): String? = prefs.getString("wifi_v2_token", null)
-    suspend fun pairDesktop(raw: String, code: String = ""): Result<String> = withContext(Dispatchers.IO) {
+    suspend fun pairDesktop(raw: String, code: String = "", force: Boolean = false): Result<String> = withContext(Dispatchers.IO) {
         runCatching {
             val qr = if (raw.trim().startsWith("{")) JSONObject(raw) else null
             val base = normalizeUrl(raw)
@@ -76,12 +77,38 @@ class LocalSyncManager @Inject constructor(
                 val reply = request(base, "/api/v2/pair", JSONObject().put("code", pairingCode).put("deviceId", id).put("deviceName", "${Build.MANUFACTURER} ${Build.MODEL}"), authenticated = false)
                 val serverId = reply.getString("serverId")
                 val oldId = metadata("server_id")
-                require(oldId == null || oldId == serverId) { "Bu baza boshqa kompyuterga bog'langan. Bazalarni alohida ko'chirish kerak; avtomatik aralashtirilmaydi." }
-                database.withTransaction { putMetadata("server_id", serverId) }
+                if (oldId != null && oldId != serverId) {
+                    if (!force) {
+                        throw ServerChangedException(serverId, "Bu telefon avval boshqa kompyuter bazasiga bog'langan. Yangi kompyuterga qayta bog'lashni tasdiqlaysizmi?")
+                    }
+                    database.withTransaction {
+                        putMetadata("server_id", serverId)
+                        putMetadata("cursor", "0")
+                        db().execSQL("DELETE FROM sync_versions")
+                        db().execSQL("DELETE FROM sync_conflicts")
+                        db().execSQL("UPDATE sync_journal SET base_revision=-1 WHERE acked=0")
+                    }
+                } else {
+                    database.withTransaction { putMetadata("server_id", serverId) }
+                }
                 prefs.edit().putString("local_desktop_url", base).putString("wifi_v2_token", reply.getString("token")).commit()
             }
             "Line kassa"
         }
+    }
+
+    suspend fun unlinkDesktop() = withContext(Dispatchers.IO) {
+        liveJob?.cancel()
+        liveJob = null
+        _liveSyncStatus.value = LiveSyncStatus.OFFLINE
+        prefs.edit().remove("local_desktop_url").remove("wifi_v2_token").apply()
+        database.withTransaction {
+            db().execSQL("DELETE FROM sync_meta WHERE key IN ('server_id', 'cursor')")
+            db().execSQL("DELETE FROM sync_versions")
+            db().execSQL("DELETE FROM sync_conflicts")
+            db().execSQL("UPDATE sync_journal SET base_revision=-1 WHERE acked=0")
+        }
+        _syncMessage.value = "Kompyuter bilan aloqa uzildi. Yangi QR kod orqali ulanishingiz mumkin."
     }
     suspend fun pingDesktop(serverUrl: String): Result<String> = withContext(Dispatchers.IO) {
         runCatching { require(normalizeUrl(serverUrl) == getServerUrl()) { "Boshqa kompyuterga ulash uchun uning QR yoki ulanish kodidan foydalaning." }; val reply = request(normalizeUrl(serverUrl), "/api/ping"); require(reply.getInt("protocol") == 2); require(reply.getString("serverId") == metadata("server_id")) { "Kompyuter bazasi almashgan. Avval qayta ulang." }; reply.getString("name") }

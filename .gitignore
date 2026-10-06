@@ -70,6 +70,7 @@ LinePOS_Desktop/
 PROD/LinePOS_Desktop/
 PROD/*.exe
 PROD/*.apk
+TEST_BUILD/
 
 # Temporary Desktop logs & debug files
 err.txt

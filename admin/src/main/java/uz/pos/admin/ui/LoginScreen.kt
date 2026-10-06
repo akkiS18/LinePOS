@@ -1,7 +1,9 @@
 package uz.pos.admin.ui
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,14 +16,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Backspace
-import androidx.compose.material.icons.filled.Security
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -33,9 +30,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material3.Icon
+import uz.pos.admin.R
+import uz.pos.admin.ui.theme.CyberBg
+import uz.pos.admin.ui.theme.CyberBorder
+import uz.pos.admin.ui.theme.CyberCyan
+import uz.pos.admin.ui.theme.CyberCyanAlpha
+import uz.pos.admin.ui.theme.CyberCyanDim
+import uz.pos.admin.ui.theme.CyberDanger
+import uz.pos.admin.ui.theme.CyberSurface
+import uz.pos.admin.ui.theme.CyberSurface2
+import uz.pos.admin.ui.theme.CyberTextPrimary
+import uz.pos.admin.ui.theme.CyberTextSecondary
 
 @Composable
 fun LoginScreen(
@@ -55,7 +66,7 @@ fun LoginScreen(
                 if (newPin == adminMasterPin) {
                     onLoginSuccess()
                 } else {
-                    errorMessage = "❌ Noto'g'ri PIN kod!"
+                    errorMessage = "KIRISH RAD ETILDI // ACCESS DENIED"
                     pin = ""
                 }
             }
@@ -69,12 +80,14 @@ fun LoginScreen(
         }
     }
 
+    // ===== ASOSIY FON =====
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(
-                Brush.verticalGradient(
-                    colors = listOf(Color(0xFF0F172A), Color(0xFF1E293B))
+                Brush.radialGradient(
+                    colors = listOf(Color(0xFF0A1825), CyberBg),
+                    radius = 1200f
                 )
             )
             .padding(24.dp),
@@ -85,136 +98,186 @@ fun LoginScreen(
             verticalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxWidth()
         ) {
-            // Qalqon / Logo belgisi
-            Box(
-                modifier = Modifier
-                    .size(80.dp)
-                    .clip(CircleShape)
-                    .background(
-                        Brush.linearGradient(
-                            colors = listOf(Color(0xFF0B6477), Color(0xFF16A34A))
-                        )
-                    ),
-                contentAlignment = Alignment.Center
+
+            // ===== TEPA SARLAVHA CHIZIQLARI (HUD corner decorators) =====
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Icon(
-                    imageVector = Icons.Default.Security,
-                    contentDescription = "Admin",
-                    tint = Color.White,
-                    modifier = Modifier.size(44.dp)
+                // Chap yuqori burchak qavs
+                Box(
+                    modifier = Modifier
+                        .width(24.dp)
+                        .height(2.dp)
+                        .background(CyberCyan)
+                )
+                Box(
+                    modifier = Modifier
+                        .width(2.dp)
+                        .height(24.dp)
+                        .background(CyberCyan)
+                        .align(Alignment.Top)
                 )
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
+            // ===== SEB LOGOSI =====
+            Box(
+                modifier = Modifier
+                    .size(96.dp)
+                    .background(CyberBg, chamferedShape(20f))
+                    .border(1.5.dp, Brush.linearGradient(listOf(CyberCyan, CyberCyanDim)), chamferedShape(20f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.seb_logo),
+                    contentDescription = "Seb",
+                    modifier = Modifier
+                        .size(84.dp)
+                        .clip(chamferedShape(16f))
+                )
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            // ===== ASOSIY SARLAVHA =====
             Text(
-                text = "SMART Kassa — Admin",
+                text = "SEBASTIAN",
                 fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFFF8FAFC)
+                fontWeight = FontWeight.ExtraBold,
+                color = CyberCyan,
+                fontFamily = FontFamily.Monospace,
+                letterSpacing = 5.sp
             )
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
-            Text(
-                text = "Boshqaruv paneliga kirish kodini kiriting",
-                fontSize = 13.sp,
-                color = Color(0xFF94A3B8)
+            // Quyi tag
+            CyberBadge(
+                label = "CORE ACCESS REQUIRED",
+                sublabel = "AUTHENTICATE TO PROCEED",
+                color = CyberCyanDim
             )
 
-            Spacer(modifier = Modifier.height(30.dp))
+            Spacer(modifier = Modifier.height(28.dp))
 
-            // 4 ta nuqta (PIN indikatori)
+            // ===== PIN INDIKATORLARI (HUD bloklar) =====
+            CyberSectionHeader(label = "ENTER ACCESS CODE", color = CyberCyanDim)
+            Spacer(modifier = Modifier.height(14.dp))
+
             Row(
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 repeat(4) { index ->
                     val filled = index < pin.length
                     Box(
                         modifier = Modifier
-                            .size(18.dp)
-                            .clip(CircleShape)
+                            .size(width = 42.dp, height = 50.dp)
                             .background(
-                                if (filled) Color(0xFF2DD4BF) else Color(0xFF334155)
+                                if (filled) CyberCyanAlpha else CyberSurface,
+                                chamferedShape(8f)
                             )
-                    )
+                            .border(
+                                width = if (filled) 1.5.dp else 0.8.dp,
+                                color = if (filled) CyberCyan else CyberBorder,
+                                shape = chamferedShape(8f)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (filled) {
+                            Box(
+                                modifier = Modifier
+                                    .size(10.dp)
+                                    .background(CyberCyan, chamferedShape(3f))
+                            )
+                        }
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Xatolik xabari
+            // ===== XATO XABARI =====
             AnimatedVisibility(visible = errorMessage.isNotEmpty()) {
-                Text(
-                    text = errorMessage,
-                    color = Color(0xFFEF4444),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
+                CyberCard(
+                    borderColor = CyberDanger,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .background(CyberDanger)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = errorMessage,
+                            color = CyberDanger,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = FontFamily.Monospace,
+                            letterSpacing = 1.sp
+                        )
+                    }
+                }
             }
 
-            Spacer(modifier = Modifier.height(36.dp))
+            Spacer(modifier = Modifier.height(28.dp))
 
-            // Ergonomik Raqamlar Klaviatirasi (Numpad)
+            // ===== KIBERPANK NUMPAD KLAVIATURA =====
             val rows = listOf(
                 listOf("1", "2", "3"),
                 listOf("4", "5", "6"),
                 listOf("7", "8", "9"),
-                listOf("C", "0", "⌫")
+                listOf("CLR", "0", "DEL")
             )
 
             Column(
-                verticalArrangement = Arrangement.spacedBy(14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 for (row in rows) {
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         for (key in row) {
                             when (key) {
-                                "⌫" -> {
-                                    KeypadButton(
-                                        onClick = { onBackspaceClick() },
-                                        content = {
-                                            Icon(
-                                                imageVector = Icons.Default.Backspace,
-                                                contentDescription = "O'chirish",
-                                                tint = Color(0xFF94A3B8),
-                                                modifier = Modifier.size(24.dp)
-                                            )
-                                        }
+                                "DEL" -> CyberKeypadButton(
+                                    onClick = { onBackspaceClick() }
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.Backspace,
+                                        contentDescription = "Del",
+                                        tint = CyberCyanDim,
+                                        modifier = Modifier.size(22.dp)
                                     )
                                 }
-                                "C" -> {
-                                    KeypadButton(
-                                        onClick = {
-                                            pin = ""
-                                            errorMessage = ""
-                                        },
-                                        content = {
-                                            Text(
-                                                text = "C",
-                                                fontSize = 20.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = Color(0xFFEF4444)
-                                            )
-                                        }
+                                "CLR" -> CyberKeypadButton(
+                                    onClick = { pin = ""; errorMessage = "" },
+                                    borderColor = CyberDanger.copy(alpha = 0.5f)
+                                ) {
+                                    Text(
+                                        text = "CLR",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = CyberDanger,
+                                        fontFamily = FontFamily.Monospace
                                     )
                                 }
-                                else -> {
-                                    KeypadButton(
-                                        onClick = { onDigitClick(key) },
-                                        content = {
-                                            Text(
-                                                text = key,
-                                                fontSize = 24.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = Color(0xFFF8FAFC)
-                                            )
-                                        }
+                                else -> CyberKeypadButton(onClick = { onDigitClick(key) }) {
+                                    Text(
+                                        text = key,
+                                        fontSize = 22.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = CyberTextPrimary,
+                                        fontFamily = FontFamily.Monospace
                                     )
                                 }
                             }
@@ -222,27 +285,52 @@ fun LoginScreen(
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // ===== PASTKI HUD DEKOR =====
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Box(
+                    modifier = Modifier
+                        .width(24.dp)
+                        .height(2.dp)
+                        .background(CyberCyanDim.copy(alpha = 0.5f))
+                )
+                Text(
+                    text = "SEB // v2.0",
+                    color = CyberTextSecondary,
+                    fontSize = 9.sp,
+                    fontFamily = FontFamily.Monospace,
+                    letterSpacing = 1.sp
+                )
+                Box(
+                    modifier = Modifier
+                        .width(24.dp)
+                        .height(2.dp)
+                        .background(CyberCyanDim.copy(alpha = 0.5f))
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun KeypadButton(
+private fun CyberKeypadButton(
     onClick: () -> Unit,
+    borderColor: Color = CyberCyanDim.copy(alpha = 0.5f),
     content: @Composable () -> Unit
 ) {
-    Surface(
-        onClick = onClick,
-        shape = CircleShape,
-        color = Color(0xFF1E293B),
-        shadowElevation = 2.dp,
-        modifier = Modifier.size(70.dp)
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(68.dp)
+            .background(CyberSurface2, chamferedShape(12f))
+            .border(1.dp, borderColor, chamferedShape(12f))
+            .clickable { onClick() }
     ) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier.fillMaxSize()
-        ) {
-            content()
-        }
+        content()
     }
 }

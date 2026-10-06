@@ -2,6 +2,8 @@ using System;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using PosElectro.Desktop.Services;
 
 namespace PosElectro.Desktop.Views
@@ -14,7 +16,19 @@ namespace PosElectro.Desktop.Views
         private readonly double _stockQuantity;
         private readonly PrinterService _printerService;
         private string? _detectedPrinter;
-        private double _currentOffsetMm = 0;
+
+        private double _currentOffsetMm = 0.0;
+        private double _currentNameOffsetMm = 0.0;
+        private string _currentNameAlignment = "left";
+        private int _currentNameLines = 1;
+
+        private static readonly Brush ActiveBg = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#0B6477"));
+        private static readonly Brush ActiveBorder = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#2DD4BF"));
+        private static readonly Brush ActiveFg = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#2DD4BF"));
+
+        private static readonly Brush InactiveBg = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#334155"));
+        private static readonly Brush InactiveBorder = Brushes.Transparent;
+        private static readonly Brush InactiveFg = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#94A3B8"));
 
         public BarcodePrintDialog(
             string productName, 
@@ -40,21 +54,6 @@ namespace PosElectro.Desktop.Views
             int stockInt = (int)Math.Max(1, Math.Floor(_stockQuantity));
             BtnStockQty.Content = $"📦 Qoldiqcha ({stockInt})";
             BtnStockQty.Tag = stockInt;
-
-            // Preview ma'lumotlarini yuklash
-            PreviewName.Text = string.IsNullOrWhiteSpace(_productName) ? "Mahsulot nomi" : _productName;
-            PreviewBarcodeText.Text = _barcode;
-            PreviewPrice.Text = $"{_sellingPrice:N0} SO'M";
-
-            try
-            {
-                var bmp = BarcodeGeneratorHelper.GenerateBarcodeImage(_barcode, 260, 60);
-                ImgBarcode.Source = bmp;
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Barcode generate error: {ex.Message}");
-            }
 
             // Printerlar ro'yxatini to'ldirish
             var printers = PrinterService.GetInstalledPrinters();
@@ -90,19 +89,166 @@ namespace PosElectro.Desktop.Views
             string savedSize = _printerService.GetLabelSizeSetting();
             var matchedConfig = System.Linq.Enumerable.FirstOrDefault(sizePresets, s => s.Id == savedSize) ?? sizePresets[0];
             CmbLabelSize.SelectedItem = matchedConfig;
-            ApplyLabelSize(matchedConfig);
 
             _currentOffsetMm = _printerService.GetLabelOffsetSetting(matchedConfig.Id);
+            _currentNameOffsetMm = _printerService.GetLabelNameOffsetSetting(matchedConfig.Id);
+            _currentNameAlignment = _printerService.GetLabelNameAlignSetting(matchedConfig.Id);
+            _currentNameLines = _printerService.GetLabelNameLinesSetting(matchedConfig.Id);
+
             UpdateOffsetDisplay();
+            UpdateNameOffsetDisplay();
+            UpdateNameAlignDisplay();
+            UpdateNameLinesDisplay();
+            UpdatePreview();
 
             UpdateCopiesDisplay(1);
         }
+
+        private void SetButtonActive(Button btn, bool isActive)
+        {
+            btn.Background = isActive ? ActiveBg : InactiveBg;
+            btn.BorderBrush = isActive ? ActiveBorder : InactiveBorder;
+            btn.BorderThickness = new Thickness(isActive ? 1.5 : 1);
+            btn.Foreground = isActive ? ActiveFg : InactiveFg;
+            btn.FontWeight = isActive ? FontWeights.Bold : FontWeights.Normal;
+        }
+
+        private void UpdateNameAlignDisplay()
+        {
+            bool isLeft = _currentNameAlignment.Equals("left", StringComparison.OrdinalIgnoreCase);
+            SetButtonActive(BtnAlignLeft, isLeft);
+            SetButtonActive(BtnAlignCenter, !isLeft);
+        }
+
+        private void UpdateNameLinesDisplay()
+        {
+            SetButtonActive(BtnLines1, _currentNameLines == 1);
+            SetButtonActive(BtnLines2, _currentNameLines > 1);
+        }
+
+        private void UpdateOffsetDisplay()
+        {
+            TxtOffset.Text = Math.Abs(_currentOffsetMm) < 0.01 ? "0.0 mm" : $"{_currentOffsetMm:+#0.0;-#0.0;0.0} mm";
+        }
+
+        private void UpdateNameOffsetDisplay()
+        {
+            TxtNameOffset.Text = Math.Abs(_currentNameOffsetMm) < 0.01 ? "0.0 mm" : $"{_currentNameOffsetMm:+#0.0;-#0.0;0.0} mm";
+        }
+
+        /// <summary>
+        /// Jonli Preview ni yangilash.
+        /// DrawingVisual orqali 100% haqiqiy printer chiqishi bilan bir xil (WYSIWYG) render hosil qilinadi.
+        /// </summary>
+        private void UpdatePreview()
+        {
+            if (CmbLabelSize.SelectedItem is not LabelSizeConfig config) return;
+
+            var visual = PrinterService.CreateLabelVisual(
+                _barcode,
+                _productName,
+                _sellingPrice,
+                showName: ChkShowName.IsChecked == true,
+                showPrice: ChkShowPrice.IsChecked == true,
+                showBarcode: ChkShowBarcode.IsChecked == true,
+                config: config,
+                offsetMm: _currentOffsetMm,
+                nameOffsetMm: _currentNameOffsetMm,
+                nameAlignment: _currentNameAlignment,
+                maxNameLines: _currentNameLines);
+
+            // Yuqori tiniqlikda render qilish (2x DPI scale)
+            double previewDpiScale = 2.0;
+            int pxW = (int)Math.Max(1, Math.Round(config.VisualWidth * previewDpiScale));
+            int pxH = (int)Math.Max(1, Math.Round(config.VisualHeight * previewDpiScale));
+
+            var rtb = new RenderTargetBitmap(pxW, pxH, 96 * previewDpiScale, 96 * previewDpiScale, PixelFormats.Pbgra32);
+            rtb.Render(visual);
+            ImgPreview.Source = rtb;
+
+            // Stiker kartochkasi o'lchamini ekranda qulay ko'rinishga moslash
+            double displayScale = 1.4;
+            StickerCard.Width = config.VisualWidth * displayScale;
+            StickerCard.Height = config.VisualHeight * displayScale;
+            TxtLabelSizeCaption.Text = config.DisplayName;
+        }
+
+        // ================= MAHSULOT NOMI SOZLAMALARI =================
+
+        private void BtnAlignLeft_Click(object sender, RoutedEventArgs e)
+        {
+            _currentNameAlignment = "left";
+            UpdateNameAlignDisplay();
+            SaveCurrentNameSettings();
+            UpdatePreview();
+        }
+
+        private void BtnAlignCenter_Click(object sender, RoutedEventArgs e)
+        {
+            _currentNameAlignment = "center";
+            UpdateNameAlignDisplay();
+            SaveCurrentNameSettings();
+            UpdatePreview();
+        }
+
+        private void BtnNameOffsetLeft_Click(object sender, RoutedEventArgs e)
+        {
+            _currentNameOffsetMm -= 0.5;
+            UpdateNameOffsetDisplay();
+            SaveCurrentNameSettings();
+            UpdatePreview();
+        }
+
+        private void BtnNameOffsetRight_Click(object sender, RoutedEventArgs e)
+        {
+            _currentNameOffsetMm += 0.5;
+            UpdateNameOffsetDisplay();
+            SaveCurrentNameSettings();
+            UpdatePreview();
+        }
+
+        private void BtnNameOffsetReset_Click(object sender, RoutedEventArgs e)
+        {
+            _currentNameOffsetMm = 0.0;
+            UpdateNameOffsetDisplay();
+            SaveCurrentNameSettings();
+            UpdatePreview();
+        }
+
+        private void BtnLines1_Click(object sender, RoutedEventArgs e)
+        {
+            _currentNameLines = 1;
+            UpdateNameLinesDisplay();
+            SaveCurrentNameSettings();
+            UpdatePreview();
+        }
+
+        private void BtnLines2_Click(object sender, RoutedEventArgs e)
+        {
+            _currentNameLines = 2;
+            UpdateNameLinesDisplay();
+            SaveCurrentNameSettings();
+            UpdatePreview();
+        }
+
+        private void SaveCurrentNameSettings()
+        {
+            if (CmbLabelSize.SelectedItem is LabelSizeConfig config)
+            {
+                _printerService.SaveLabelNameOffsetSetting(config.Id, _currentNameOffsetMm);
+                _printerService.SaveLabelNameAlignSetting(config.Id, _currentNameAlignment);
+                _printerService.SaveLabelNameLinesSetting(config.Id, _currentNameLines);
+            }
+        }
+
+        // ================= UMUMIY SILJITISH (PRINTER KALIBROVKASI) =================
 
         private void BtnOffsetLeft_Click(object sender, RoutedEventArgs e)
         {
             _currentOffsetMm -= 0.5;
             UpdateOffsetDisplay();
             SaveCurrentOffset();
+            UpdatePreview();
         }
 
         private void BtnOffsetRight_Click(object sender, RoutedEventArgs e)
@@ -110,6 +256,7 @@ namespace PosElectro.Desktop.Views
             _currentOffsetMm += 0.5;
             UpdateOffsetDisplay();
             SaveCurrentOffset();
+            UpdatePreview();
         }
 
         private void BtnOffsetReset_Click(object sender, RoutedEventArgs e)
@@ -117,6 +264,7 @@ namespace PosElectro.Desktop.Views
             _currentOffsetMm = 0.0;
             UpdateOffsetDisplay();
             SaveCurrentOffset();
+            UpdatePreview();
         }
 
         private void SaveCurrentOffset()
@@ -127,28 +275,7 @@ namespace PosElectro.Desktop.Views
             }
         }
 
-        private void UpdateOffsetDisplay()
-        {
-            TxtOffset.Text = Math.Abs(_currentOffsetMm) < 0.01 ? "0.0 mm" : $"{_currentOffsetMm:+#0.0;-#0.0;0.0} mm";
-            double dip = _currentOffsetMm * (96.0 / 25.4);
-            PreviewContentPanel.Margin = new Thickness(dip, 0, -dip, 0);
-        }
-
-        private void ApplyLabelSize(LabelSizeConfig config)
-        {
-            if (config == null) return;
-
-            StickerCard.Width = config.VisualWidth;
-            StickerCard.MinHeight = config.VisualHeight;
-            ImgBarcode.Width = config.BarcodeWidth;
-            ImgBarcode.Height = config.BarcodeHeight;
-
-            PreviewName.FontSize = config.NameFontSize;
-            PreviewBarcodeText.FontSize = config.BarcodeFontSize;
-            PreviewPrice.FontSize = config.PriceFontSize;
-
-            TxtLabelSizeCaption.Text = config.DisplayName;
-        }
+        // ================= O'LCHAM VA PRINTER O'ZGARISHI =================
 
         private void CmbLabelSize_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
@@ -156,10 +283,17 @@ namespace PosElectro.Desktop.Views
 
             if (CmbLabelSize.SelectedItem is LabelSizeConfig config)
             {
-                ApplyLabelSize(config);
                 _printerService.SaveLabelSizeSetting(config.Id);
                 _currentOffsetMm = _printerService.GetLabelOffsetSetting(config.Id);
+                _currentNameOffsetMm = _printerService.GetLabelNameOffsetSetting(config.Id);
+                _currentNameAlignment = _printerService.GetLabelNameAlignSetting(config.Id);
+                _currentNameLines = _printerService.GetLabelNameLinesSetting(config.Id);
+
                 UpdateOffsetDisplay();
+                UpdateNameOffsetDisplay();
+                UpdateNameAlignDisplay();
+                UpdateNameLinesDisplay();
+                UpdatePreview();
             }
         }
 
@@ -179,11 +313,10 @@ namespace PosElectro.Desktop.Views
         private void OnElementVisibilityChanged(object sender, RoutedEventArgs e)
         {
             if (!IsLoaded) return;
-
-            PreviewName.Visibility = ChkShowName.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-            PreviewBarcodePanel.Visibility = ChkShowBarcode.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-            PreviewPrice.Visibility = ChkShowPrice.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+            UpdatePreview();
         }
+
+        // ================= NUSXALAR SONI =================
 
         private void BtnMinus_Click(object sender, RoutedEventArgs e)
         {
@@ -239,6 +372,8 @@ namespace PosElectro.Desktop.Views
             BtnPrint.Content = $"🖨️ Chop etish ({copies} ta)";
         }
 
+        // ================= CHOP ETISH =================
+
         private void BtnTestPrint_Click(object sender, RoutedEventArgs e)
         {
             ExecutePrint(1, isTest: true);
@@ -268,7 +403,10 @@ namespace PosElectro.Desktop.Views
                 showBarcode,
                 _detectedPrinter,
                 labelSizeId,
-                _currentOffsetMm);
+                _currentOffsetMm,
+                _currentNameOffsetMm,
+                _currentNameAlignment,
+                _currentNameLines);
 
             if (ok)
             {

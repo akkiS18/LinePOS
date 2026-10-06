@@ -37,59 +37,96 @@ class AdminRepository {
 
     /**
      * Barcha ulangan qurilmalarni real vaqt rejimida (realtime) kuzatish
+     * Flow faqat bir marta yaratiladi va barcha chaqiriqlar uchun keshlanadi
      */
-    fun getDevicesFlow(): Flow<List<DeviceItem>> = callbackFlow {
-        AdminLogger.i("Qurilmalar", "Qurilmalar ro'yxati tinglanmoqda...")
-        val database = dbInstance
-        if (database == null) {
-            val err = "Firebase ma'lumotlar bazasi instansiyasi topilmadi"
-            _errorState.value = err
-            AdminLogger.e("Qurilmalar", err)
-            trySend(emptyList())
-            close()
-            return@callbackFlow
-        }
+    private val _devicesFlow: Flow<List<DeviceItem>> by lazy {
+        callbackFlow {
+            AdminLogger.i("Qurilmalar", "Qurilmalar ro'yxati tinglanmoqda...")
+            val database = dbInstance
+            if (database == null) {
+                val err = "Firebase ma'lumotlar bazasi instansiyasi topilmadi"
+                _errorState.value = err
+                AdminLogger.e("Qurilmalar", err)
+                trySend(emptyList())
+                close()
+                return@callbackFlow
+            }
 
-        val devicesRef = database.getReference("devices")
-        val listener = object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                _errorState.value = null
-                val list = mutableListOf<DeviceItem>()
-                for (child in snapshot.children) {
-                    val id = child.key ?: continue
-                    val model = child.child("deviceModel").getValue(String::class.java) ?: "Noma'lum"
-                    val customName = child.child("customName").getValue(String::class.java) ?: ""
-                    val isActivated = child.child("isActivated").getValue(Boolean::class.java) ?: false
-                    val lastActive = child.child("lastActive").getValue(Long::class.java) ?: 0L
-                    val appVersion = child.child("appVersion").getValue(String::class.java) ?: "1.0.0"
+            val devicesRef = database.getReference("devices")
+            val listener = object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    _errorState.value = null
+                    val list = mutableListOf<DeviceItem>()
+                    for (child in snapshot.children) {
+                        val id = child.key ?: continue
+                        val model = child.child("deviceModel").getValue(String::class.java) ?: "Noma'lum"
+                        val customName = child.child("customName").getValue(String::class.java) ?: ""
+                        val isActivated = child.child("isActivated").getValue(Boolean::class.java) ?: false
+                        val lastActive = child.child("lastActive").getValue(Long::class.java) ?: 0L
+                        val appVersion = child.child("appVersion").getValue(String::class.java) ?: "1.0.0"
 
-                    list.add(
-                        DeviceItem(
-                            id = id,
-                            model = model,
-                            customName = customName,
-                            isActivated = isActivated,
-                            lastActive = lastActive,
-                            appVersion = appVersion
+                        list.add(
+                            DeviceItem(
+                                id = id,
+                                model = model,
+                                customName = customName,
+                                isActivated = isActivated,
+                                lastActive = lastActive,
+                                appVersion = appVersion
+                            )
                         )
-                    )
+                    }
+                    list.sortByDescending { it.lastActive }
+                    trySend(list)
                 }
-                list.sortByDescending { it.lastActive }
-                AdminLogger.s("Qurilmalar", "Qurilmalar yangilandi: ${list.size} ta topildi (Faol: ${list.count { it.isActivated }})")
-                trySend(list)
+
+                override fun onCancelled(error: DatabaseError) {
+                    val msg = "Firebase ruxsat xatosi: ${error.message} (Code: ${error.code}). Firebase Console -> Realtime Database -> Rules bo'limida .read: true qiling!"
+                    android.util.Log.e("AdminRepository", "Firebase onCancelled: ${error.message}")
+                    _errorState.value = msg
+                    AdminLogger.e("Qurilmalar", msg)
+                }
             }
 
-            override fun onCancelled(error: DatabaseError) {
-                val msg = "Firebase ruxsat xatosi: ${error.message} (Code: ${error.code}). Firebase Console -> Realtime Database -> Rules bo'limida .read: true qiling!"
-                android.util.Log.e("AdminRepository", "Firebase onCancelled: ${error.message}")
-                _errorState.value = msg
-                AdminLogger.e("Qurilmalar", msg)
-            }
+            devicesRef.addValueEventListener(listener)
+            awaitClose { devicesRef.removeEventListener(listener) }
         }
-
-        devicesRef.addValueEventListener(listener)
-        awaitClose { devicesRef.removeEventListener(listener) }
     }
+
+    fun getDevicesFlow(): Flow<List<DeviceItem>> = _devicesFlow
+
+    /**
+     * Yangi qurilmalar uchun global aktivatsiya kodini real vaqtda kuzatish (default 1984)
+     */
+    private val _globalCodeFlow: Flow<String> by lazy {
+        callbackFlow {
+            AdminLogger.i("AktivatsiyaKodi", "settings/globalCode tinglanmoqda...")
+            val database = dbInstance
+            if (database == null) {
+                trySend("1984")
+                close()
+                return@callbackFlow
+            }
+
+            val codeRef = database.getReference("settings").child("globalCode")
+            val listener = object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    val code = snapshot.getValue(String::class.java) ?: "1984"
+                    trySend(code)
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    val msg = "Aktivatsiya kodini o'qishda xatolik: ${error.message}. Firebase Console -> Rules'da .read: true bo'lishi shart."
+                    AdminLogger.e("AktivatsiyaKodi", msg)
+                }
+            }
+
+            codeRef.addValueEventListener(listener)
+            awaitClose { codeRef.removeEventListener(listener) }
+        }
+    }
+
+    fun getGlobalCodeFlow(): Flow<String> = _globalCodeFlow
 
     /**
      * Qurilmani masofadan turib faollashtirish yoki bloklash
@@ -142,35 +179,7 @@ class AdminRepository {
             }
     }
 
-    /**
-     * Yangi qurilmalar uchun global aktivatsiya kodini real vaqtda kuzatish (default 1984)
-     */
-    fun getGlobalCodeFlow(): Flow<String> = callbackFlow {
-        AdminLogger.i("AktivatsiyaKodi", "settings/globalCode tinglanmoqda...")
-        val database = dbInstance
-        if (database == null) {
-            trySend("1984")
-            close()
-            return@callbackFlow
-        }
 
-        val codeRef = database.getReference("settings").child("globalCode")
-        val listener = object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                val code = snapshot.getValue(String::class.java) ?: "1984"
-                AdminLogger.i("AktivatsiyaKodi", "Aktivatsiya kodi Firebase'dan olindi: $code")
-                trySend(code)
-            }
-
-            override fun onCancelled(error: DatabaseError) {
-                val msg = "Aktivatsiya kodini o'qishda xatolik: ${error.message}. Firebase Console -> Rules'da .read: true bo'lishi shart."
-                AdminLogger.e("AktivatsiyaKodi", msg)
-            }
-        }
-
-        codeRef.addValueEventListener(listener)
-        awaitClose { codeRef.removeEventListener(listener) }
-    }
 
     /**
      * Global aktivatsiya kodini yangilash
