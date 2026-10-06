@@ -138,3 +138,11 @@ Ushbu faylda loyihada amalga oshirilgan barcha o'zgarishlar, arxitektura qarorla
 2. Har bir qadam to'liq, production-ready va toza arxitekturada bo'lishi.
 3. **PROD Papkasi Standarti:** Har safar yangi release tayyorlanganda, eng so'nggi mobil APK va desktop relizlari har doim root papkadagi `PROD/` papkasiga joylashtirilishi shart (`PROD/LineKassa_Mobile_Release.apk` va `PROD/LinePOS_Desktop/`).
 
+
+## Qarz daftari — 2026-10-05, 2A checkpoint
+
+`feature/customer-debt` branchida sof C#/Kotlin hisoblash yadrosi va 97 ta umumiy fixture qo‘shildi; lokal kompilyatsiya/test/paritet o‘tdi. Baza/sync/UIga ulanmagan, main’ga merge qilinmagan. Davom ettirish: `docs/DEBT_CHECKPOINT_UZ.md`; keyingi scope faqat 2B migratsiya va transactional repository. To‘liq funksiya yoki D01–D27 integratsiya testlari tayyor deb hisoblamang.
+
+## Qarz daftari — 2026-10-05, 2B-1
+
+Umumiy debt schema v1, Android Room 13→14 va desktop pre-migration snapshot qo‘shildi. Kod `feature/customer-debt`da; main’ga merge yo‘q. Sxema tafsilotlari: `docs/DEBT_SCHEMA.md`. 2B hajmi sabab 2B-1 (sxema/migratsiya) va 2B-2 (transactional repository)ga bo‘lindi. Yakuniy test dalili va keyingi scope `docs/DEBT_CHECKPOINT_UZ.md`da; UI/sync/repository hali amalga oshirilmagan.

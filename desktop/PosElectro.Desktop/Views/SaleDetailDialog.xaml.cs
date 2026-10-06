@@ -7,20 +7,30 @@ namespace PosElectro.Desktop.Views
     public partial class SaleDetailDialog : Window
     {
         private readonly Sale _sale;
+        private readonly PosElectro.Desktop.Data.DatabaseContext? _database;
         private readonly PrinterService _printerService;
 
-        public SaleDetailDialog(Sale sale, PrinterService? printerService = null)
+        public SaleDetailDialog(Sale sale, PrinterService? printerService = null, PosElectro.Desktop.Data.DatabaseContext? database = null)
         {
             InitializeComponent();
             _sale = sale;
+            _database = database;
+            if (sale.PaymentType == PaymentType.RETURN) BtnReturn.Content = "Bekor qilish";
+            BtnReturn.Visibility = database != null && ((int)sale.PaymentType < 6 || sale.PaymentType == PaymentType.RETURN) ? Visibility.Visible : Visibility.Collapsed;
             _printerService = printerService ?? new PrinterService();
 
-            TxtTitle.Text = $"Chek #{sale.Id} Tafsilotlari";
+            TxtTitle.Text = $"Chek #{sale.ReceiptNumber} Tafsilotlari";
             TxtDate.Text = sale.CreatedDateTime.ToString("dd.MM.yyyy HH:mm");
             TxtTotalAmount.Text = $"{sale.TotalAmount:N0} SO'M";
             TxtTotalProfit.Text = $"+{sale.Profit:N0} SO'M";
 
             GridItems.ItemsSource = sale.Items;
+            if (database != null) {
+                var returns = new PosElectro.Desktop.Returns.ReturnStore(database.DatabaseFilePath); returns.Install();
+                sale.OriginalReceiptNumber = returns.OriginalReceipt(sale.Guid);
+                var history = returns.History(sale.Guid);
+                if (!string.IsNullOrEmpty(history)) { TxtStatus.Text = history; TxtStatus.Visibility = Visibility.Visible; }
+            }
         }
 
         private void BtnPreview_Click(object sender, RoutedEventArgs e)
@@ -69,6 +79,16 @@ namespace PosElectro.Desktop.Views
                     TxtStatus.Visibility = Visibility.Visible;
                 }
             }
+        }
+
+        private void BtnReturn_Click(object sender, RoutedEventArgs e)
+        {
+            if (_database == null) return;
+            try {
+                if (_sale.PaymentType == PaymentType.RETURN) new ReturnReversalDialog(_database, _sale) { Owner = this }.ShowDialog();
+                else new ReturnDialog(_database, _sale) { Owner = this }.ShowDialog();
+            }
+            catch (System.Exception ex) { MessageBox.Show(this, ex.Message, "Qaytarish"); }
         }
 
         private void BtnClose_Click(object sender, RoutedEventArgs e)

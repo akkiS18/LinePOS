@@ -199,7 +199,7 @@ namespace PosElectro.Desktop.Services
             }
 
             byte[] bytes = BuildEscPosReceipt(sale);
-            return RawPrinterHelper.SendBytesToPrinter(targetPrinter, bytes, $"Chek #{sale.Id}");
+            return RawPrinterHelper.SendBytesToPrinter(targetPrinter, bytes, $"Chek #{sale.ReceiptNumber}");
         }
 
         /// <summary>
@@ -242,7 +242,11 @@ namespace PosElectro.Desktop.Services
             lines.Add(new string('-', 32));
 
             // Chek ma'lumotlari
-            lines.Add($"Chek: #{sale.Id}");
+            lines.Add($"Chek: #{sale.ReceiptNumber}");
+            if (!string.IsNullOrEmpty(sale.OriginalReceiptNumber))
+            {
+                lines.Add($"Asl chek: {sale.OriginalReceiptNumber}");
+            }
             lines.Add($"Sana: {sale.CreatedDateTime:dd.MM.yyyy HH:mm}");
             lines.Add($"To'lov turi: {sale.PaymentTypeDisplay}");
             lines.Add(new string('-', 32));
@@ -514,7 +518,7 @@ namespace PosElectro.Desktop.Services
 
                 var doc = BuildA4FlowDocument(sale);
                 var paginator = ((System.Windows.Documents.IDocumentPaginatorSource)doc).DocumentPaginator;
-                printDialog.PrintDocument(paginator, $"Hisob-faktura #{sale.Id}");
+                printDialog.PrintDocument(paginator, $"Hisob-faktura #{sale.ReceiptNumber}");
                 return true;
             }
             catch (Exception ex)
@@ -569,7 +573,7 @@ namespace PosElectro.Desktop.Services
 
             var metaRow = new System.Windows.Documents.TableRow();
             var metaCell1 = new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(
-                new System.Windows.Documents.Run($"Hujjat raqami: Chek #{sale.Id}\nSana: {sale.CreatedDateTime:dd.MM.yyyy HH:mm}")));
+                new System.Windows.Documents.Run($"Hujjat raqami: Chek #{sale.ReceiptNumber}\n{(string.IsNullOrEmpty(sale.OriginalReceiptNumber) ? "" : "Asl chek: " + sale.OriginalReceiptNumber + "\n")}Sana: {sale.CreatedDateTime:dd.MM.yyyy HH:mm}")));
             var metaCell2 = new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(
                 new System.Windows.Documents.Run($"To'lov usuli: {sale.PaymentTypeDisplay}\nHolati: To'langan")));
             metaCell2.TextAlignment = TextAlignment.Right;

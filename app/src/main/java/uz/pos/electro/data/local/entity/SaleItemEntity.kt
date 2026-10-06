@@ -17,6 +17,7 @@ import androidx.room.PrimaryKey
         )
     ],
     indices = [
+        Index(value = ["guid"], unique = true),
         Index(value = ["sale_id"]),
         Index(value = ["product_id"]),
         Index(value = ["sale_guid"]),
@@ -26,6 +27,9 @@ import androidx.room.PrimaryKey
 data class SaleItemEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
+
+    @ColumnInfo(name = "guid", defaultValue = "''")
+    val guid: String = "",
 
     @ColumnInfo(name = "sale_id")
     val saleId: Long,
@@ -41,6 +45,12 @@ data class SaleItemEntity(
 
     @ColumnInfo(name = "product_name", defaultValue = "''")
     val productName: String = "",
+
+    @ColumnInfo(name = "category_at_sale", defaultValue = "''")
+    val categoryAtSale: String = "",
+
+    @ColumnInfo(name = "unit_at_sale", defaultValue = "''")
+    val unitAtSale: String = "",
 
     @ColumnInfo(name = "quantity")
     val quantity: Double,

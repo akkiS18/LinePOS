@@ -13,7 +13,15 @@ data class SaleReportItem(
     val profit: Double,
     val category: String = "",
     val warehouseName: String = "",
-    val warehouseGuid: String = ""
+    val warehouseGuid: String = "",
+    val receiptNumber: String = "",
+    val totalCost: Double = costPrice * quantity,
+    val taxAmount: Double = 0.0,
+    val cashAmount: Double = 0.0,
+    val cardAmount: Double = 0.0,
+    val profitUsd: Double? = null,
+    val isReturn: Boolean = false,
+    val isBrak: Boolean = false
 )
 
 data class ReportsSummary(
@@ -26,7 +34,14 @@ data class ReportsSummary(
     val usdRate: Double = 12850.0,
     val totalCashAmount: Double = 0.0,
     val totalCardAmount: Double = 0.0,
-    val totalTaxAmount: Double = 0.0
+    val totalTaxAmount: Double = 0.0,
+    val usdComplete: Boolean = true,
+    val brakCount: Int = 0,
+    val returnCount: Int = 0,
+    val refundedAmount: Double = 0.0,
+    val costReversal: Double = 0.0,
+    val grossSales: Double = 0.0,
+    val brakCost: Double = 0.0
 )
 
 enum class TimeRangeFilter(val displayName: String) {

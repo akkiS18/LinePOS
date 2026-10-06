@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Sync/schema.sql" LogicalName="WifiSyncSchema" />
+    <EmbeddedResource Include="Debt/schema.sql" LogicalName="DebtSchema" />
     <Resource Include="Assets\app_logo.png" />
     <Resource Include="Assets\app_logo.ico" />
   </ItemGroup>

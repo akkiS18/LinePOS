@@ -15,6 +15,8 @@ namespace PosElectro.Desktop.Models
         DEBT = 3,
         HUMO = 4,
         UZCARD = 5,
-        BRAK = 6
+        BRAK = 6,
+        RETURN = 7,
+        RETURN_REVERSAL = 8
     }
 }

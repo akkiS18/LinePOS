@@ -37,7 +37,8 @@ class ReportsViewModel @Inject constructor(
     private val saleRepository: SaleRepository,
     private val productRepository: ProductRepository,
     private val warehouseRepository: WarehouseRepository,
-    private val currencyRepository: CurrencyRepository
+    private val currencyRepository: CurrencyRepository,
+    val returnSync: uz.pos.electro.data.sync.LocalSyncManager
 ) : ViewModel() {
 
     private val _selectedFilter = MutableStateFlow(TimeRangeFilter.TODAY)
@@ -49,8 +50,7 @@ class ReportsViewModel @Inject constructor(
     private val _selectedWarehouseGuid = MutableStateFlow("Barchasi")
     val selectedWarehouseGuid: StateFlow<String> = _selectedWarehouseGuid.asStateFlow()
 
-    val categories: StateFlow<List<String>> = productRepository.getDistinctCategories()
-        .map { listOf("Barchasi") + it }
+    val categories: StateFlow<List<String>> = combine(productRepository.getDistinctCategories(), saleRepository.getHistoricalCategories()) { current, historical -> listOf("Barchasi") + (current + historical).distinct().sorted() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), listOf("Barchasi"))
 
     val warehouses: StateFlow<List<WarehouseEntity>> = warehouseRepository.getAllWarehouses()
@@ -98,6 +98,32 @@ class ReportsViewModel @Inject constructor(
 
     private val _exportSelectedWarehouseGuid = MutableStateFlow("Barchasi")
     val exportSelectedWarehouseGuid: StateFlow<String> = _exportSelectedWarehouseGuid.asStateFlow()
+
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery = _searchQuery.asStateFlow()
+    private val _recordKind = MutableStateFlow("Barchasi")
+    val recordKind = _recordKind.asStateFlow()
+    private var rawSales: List<SaleWithItems> = emptyList()
+    private var rangeStart = 0L
+    private var rangeEnd = Long.MAX_VALUE
+    fun setSearchQuery(value: String) { _searchQuery.value = value; loadCustomReportData(rangeStart, rangeEnd) }
+    fun setRecordKind(value: String) { _recordKind.value = value; applyFilters() }
+    private fun kindMatches(item: uz.pos.electro.data.model.SaleReportItem) = when (_recordKind.value) {
+        "Savdo" -> !item.isBrak && !item.isReturn; "Brak" -> item.isBrak; "Qaytarish" -> item.isReturn; else -> true
+    }
+    private fun applyFilters() {
+        val query = _searchQuery.value.trim().removePrefix("#").uppercase(java.util.Locale.ROOT)
+        val matched = rawSales.filter { query.isBlank() || it.sale.receiptNumber.contains(query) ||
+            it.sale.guid.replace("-", "").contains(query.removePrefix("LP-").replace("-", ""), true) || it.sale.id.toString().contains(query) }
+        val lines = matched.flatMap { uz.pos.electro.data.model.SaleAccounting.lines(it) }.filter {
+            kindMatches(it) && (_selectedCategory.value == "Barchasi" || it.category.equals(_selectedCategory.value, true)) &&
+            (_selectedWarehouseGuid.value == "Barchasi" || it.warehouseGuid == _selectedWarehouseGuid.value)
+        }
+        val ids = lines.map { it.saleId }.toSet()
+        _salesList.value = matched.filter { it.sale.id in ids }
+        _detailedReportItems.value = lines
+        _summary.value = uz.pos.electro.data.model.SaleAccounting.summary(lines, _usdRate.value)
+    }
 
     private var reportCollectionJob: Job? = null
 
@@ -203,61 +229,17 @@ class ReportsViewModel @Inject constructor(
     }
 
     private fun loadCustomReportData(start: Long, end: Long) {
+        rangeStart = start; rangeEnd = end
         reportCollectionJob?.cancel()
         reportCollectionJob = viewModelScope.launch {
-            saleRepository.getSalesBetween(start, end).collect { sales ->
-                _salesList.value = sales
-                updateSummary(sales)
-            }
+            val source = if (_searchQuery.value.isBlank()) saleRepository.getSalesBetween(start, end) else saleRepository.getAllSales()
+            source.collect { sales -> rawSales = sales; applyFilters() }
         }
     }
 
-    private fun recalculateCurrentSummary() {
-        updateSummary(_salesList.value)
-    }
-
-    private fun updateSummary(sales: List<SaleWithItems>) {
-        var totalRevenue = 0.0
-        var totalCost = 0.0
-        var totalCash = 0.0
-        var totalCard = 0.0
-        var totalTax = 0.0
-        var totalItems = 0.0
-
-        for (saleWithItems in sales) {
-            totalRevenue += saleWithItems.sale.totalAmount
-            totalCost += saleWithItems.sale.totalCost
-            totalCash += saleWithItems.sale.cashAmount
-            totalCard += saleWithItems.sale.cardAmount
-            totalTax += saleWithItems.sale.taxAmount
-            totalItems += saleWithItems.items.sumOf { it.quantity }
-        }
-
-        val netProfit = (totalRevenue - totalTax) - totalCost
-        val rate = _usdRate.value
-        val netProfitUsd = if (rate > 0) netProfit / rate else 0.0
-
-        _summary.value = ReportsSummary(
-            totalRevenue = totalRevenue,
-            totalCost = totalCost,
-            netProfit = netProfit,
-            netProfitUsd = netProfitUsd,
-            salesCount = sales.size,
-            totalItemsCount = totalItems,
-            usdRate = rate,
-            totalCashAmount = totalCash,
-            totalCardAmount = totalCard,
-            totalTaxAmount = totalTax
-        )
-    }
-
-    fun setCategoryFilter(category: String) {
-        _selectedCategory.value = category
-    }
-
-    fun setWarehouseFilter(whGuid: String) {
-        _selectedWarehouseGuid.value = whGuid
-    }
+    private fun recalculateCurrentSummary() = applyFilters()
+    fun setCategoryFilter(category: String) { _selectedCategory.value = category; applyFilters() }
+    fun setWarehouseFilter(whGuid: String) { _selectedWarehouseGuid.value = whGuid; applyFilters() }
 
     fun exportToExcel(context: Context) {
         viewModelScope.launch {
@@ -275,7 +257,7 @@ class ReportsViewModel @Inject constructor(
                 endTimestamp = end,
                 categoryFilter = catFilter,
                 warehouseGuidFilter = whFilter
-            )
+            ).filter { kindMatches(it) }
 
             var periodTitle = when (_exportFilter.value) {
                 TimeRangeFilter.TODAY -> "Bugun"
@@ -295,26 +277,8 @@ class ReportsViewModel @Inject constructor(
                 periodTitle += " | Ombor: $whName"
             }
 
-            var rev = 0.0
-            var cost = 0.0
-            for (item in detailedItems) {
-                rev += item.totalPrice
-                cost += (item.costPrice * item.quantity)
-            }
-            val netProfit = rev - cost
-            val rate = _usdRate.value
-            val netProfitUsd = if (rate > 0) netProfit / rate else 0.0
-            val salesCount = detailedItems.map { it.saleId }.distinct().size
-
-            val exportSummary = ReportsSummary(
-                totalRevenue = rev,
-                totalCost = cost,
-                netProfit = netProfit,
-                netProfitUsd = netProfitUsd,
-                salesCount = salesCount,
-                totalItemsCount = detailedItems.sumOf { it.quantity },
-                usdRate = rate
-            )
+            periodTitle += " | ${_recordKind.value}"
+            val exportSummary = uz.pos.electro.data.model.SaleAccounting.summary(detailedItems, _usdRate.value)
 
             val result = ExcelExporter.exportAndShareReport(
                 context = context,

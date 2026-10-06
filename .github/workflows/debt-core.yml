@@ -1,0 +1,51 @@
+name: Debt accounting core
+on:
+  push:
+    branches: [feature/customer-debt]
+    paths:
+      - 'desktop/PosElectro.Desktop/Debt/**'
+      - 'app/src/main/java/uz/pos/electro/data/debt/**'
+      - 'tests/Debt.CoreTests/**'
+      - 'tests/debt/**'
+      - '.github/workflows/debt-core.yml'
+  pull_request:
+    paths:
+      - 'desktop/PosElectro.Desktop/Debt/**'
+      - 'app/src/main/java/uz/pos/electro/data/debt/**'
+      - 'tests/Debt.CoreTests/**'
+      - 'tests/debt/**'
+      - '.github/workflows/debt-core.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  parity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned standalone Kotlin test compiler and JSON reader
+        shell: bash
+        run: |
+          curl --fail --location --retry 3 https://github.com/JetBrains/kotlin/releases/download/v2.0.21/kotlin-compiler-2.0.21.zip -o "$RUNNER_TEMP/kotlin.zip"
+          curl --fail --location --retry 3 https://repo.maven.apache.org/maven2/org/json/json/20240303/json-20240303.jar -o "$RUNNER_TEMP/json.jar"
+          printf '%s  %s\n' '0352c0a45bd22f80f6b26e485cd04da8047baa5de54865281fb9f89a4a7bcf2a' "$RUNNER_TEMP/kotlin.zip" | sha256sum --check
+          printf '%s  %s\n' '3cf6cd6892e32e2b4c1c39e0f52f5248a2f5b37646fdfbb79a66b46b618414ed' "$RUNNER_TEMP/json.jar" | sha256sum --check
+          unzip -q "$RUNNER_TEMP/kotlin.zip" -d "$RUNNER_TEMP/kotlin"
+      - name: Compile production core sources and check all shared fixtures
+        shell: bash
+        run: |
+          dotnet run --project tests/Debt.CoreTests -- tests/debt/fixtures.json "$RUNNER_TEMP/csharp.json"
+          "$RUNNER_TEMP/kotlin/kotlinc/bin/kotlinc" app/src/main/java/uz/pos/electro/data/debt/DebtAccounting.kt tests/debt/KotlinRunner.kt -cp "$RUNNER_TEMP/json.jar" -include-runtime -d "$RUNNER_TEMP/debt-tests.jar"
+          java -cp "$RUNNER_TEMP/debt-tests.jar:$RUNNER_TEMP/json.jar" KotlinRunnerKt tests/debt/fixtures.json "$RUNNER_TEMP/kotlin.json"
+          python tests/debt/verify_results.py tests/debt/fixtures.json "$RUNNER_TEMP/csharp.json" "$RUNNER_TEMP/kotlin.json"

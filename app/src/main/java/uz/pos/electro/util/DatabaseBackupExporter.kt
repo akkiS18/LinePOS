@@ -32,118 +32,118 @@ object DatabaseBackupExporter {
      * SQLite Database (.db) faylini to'liq va atomik tarzda (WAL Checkpoint bilan) nusxalab tayyorlash
      */
     fun backupDatabaseFile(context: Context, database: AppDatabase? = null): Result<File> = runCatching {
-        val backupDir = File(context.cacheDir, "backups").apply { if (!exists()) mkdirs() }
-        val timeStamp = SimpleDateFormat("yyyy-MM-dd_HH-mm", Locale.getDefault()).format(Date())
-        val backupFile = File(backupDir, "SMART_POS_Baza_$timeStamp.db")
-        if (backupFile.exists()) backupFile.delete()
+        val live = requireNotNull(database) { "Zaxira uchun ochiq baza talab qilinadi" }.openHelper.writableDatabase
+        val backupDir = File(context.cacheDir, "backups").apply { mkdirs() }
+        val backupFile = File(backupDir, "LinePOS_${System.currentTimeMillis()}_${UUID.randomUUID()}.db")
+        try {
+            copySnapshot(live, backupFile)
+            backupFile
+        } catch (error: Throwable) {
+            SQLiteDatabase.deleteDatabase(backupFile)
+            throw error
+        }
+    }
 
-        // 1. Agar AppDatabase berilgan bo'lsa, avval SQLite VACUUM INTO yoki WAL checkpoint qilish
-        if (database != null) {
-            try {
-                // SQLite 3.27+ da atomik klon yaratish
-                database.openHelper.writableDatabase.execSQL("VACUUM INTO '${backupFile.absolutePath}'")
-                if (backupFile.exists() && backupFile.length() > 0) {
-                    return@runCatching backupFile
-                }
-            } catch (_: Throwable) {
-                // Agar VACUUM INTO qo'llab-quvvatlanmasa, WAL faylini asosiy bazaga majburiy birlashtiramiz (TRUNCATE)
-                try {
-                    database.openHelper.writableDatabase.query("PRAGMA wal_checkpoint(TRUNCATE)").use { cursor ->
-                        cursor.moveToFirst()
+    internal fun copySnapshot(source: androidx.sqlite.db.SupportSQLiteDatabase, destination: File) {
+        fun quote(name: String) = "\"" + name.replace("\"", "\"\"") + "\""
+        source.beginTransaction()
+        try {
+            val schema = mutableListOf<Triple<String, String, String>>()
+            source.query("SELECT type,name,sql FROM sqlite_master WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%' AND name != 'android_metadata' ORDER BY CASE type WHEN 'table' THEN 0 ELSE 1 END").use { c ->
+                while (c.moveToNext()) schema.add(Triple(c.getString(0), c.getString(1), c.getString(2)))
+            }
+            SQLiteDatabase.openOrCreateDatabase(destination, null).use { target ->
+                target.rawQuery("PRAGMA journal_mode=DELETE", null).use { mode ->
+                    check(mode.moveToFirst() && mode.getString(0).equals("delete", ignoreCase = true)) {
+                        "Zaxira uchun mustaqil SQLite faylini yaratib bo'lmadi"
                     }
-                } catch (_: Throwable) {}
+                }
+                target.beginTransaction()
+                try {
+                    schema.filter { it.first == "table" }.forEach { (_, name, sql) ->
+                        target.execSQL(sql)
+                        source.query("SELECT * FROM " + quote(name)).use { rows ->
+                            val cols = rows.columnNames.joinToString(",") { quote(it) }
+                            val marks = rows.columnNames.joinToString(",") { "?" }
+                            target.compileStatement("INSERT INTO " + quote(name) + " (" + cols + ") VALUES (" + marks + ")").use { stmt ->
+                                while (rows.moveToNext()) {
+                                    stmt.clearBindings()
+                                    for (i in 0 until rows.columnCount) when (rows.getType(i)) {
+                                        android.database.Cursor.FIELD_TYPE_NULL -> stmt.bindNull(i + 1)
+                                        android.database.Cursor.FIELD_TYPE_INTEGER -> stmt.bindLong(i + 1, rows.getLong(i))
+                                        android.database.Cursor.FIELD_TYPE_FLOAT -> stmt.bindDouble(i + 1, rows.getDouble(i))
+                                        android.database.Cursor.FIELD_TYPE_BLOB -> stmt.bindBlob(i + 1, rows.getBlob(i))
+                                        else -> stmt.bindString(i + 1, rows.getString(i))
+                                    }
+                                    stmt.executeInsert()
+                                }
+                            }
+                        }
+                    }
+                    // Preserve deleted high-water IDs, not just MAX(id) in existing rows.
+                    val hasSequence = source.query("SELECT 1 FROM sqlite_master WHERE name='sqlite_sequence'").use { it.moveToFirst() }
+                    if (hasSequence) {
+                        target.execSQL("DELETE FROM sqlite_sequence")
+                        source.query("SELECT name,seq FROM sqlite_sequence").use { c ->
+                            while (c.moveToNext()) target.execSQL("INSERT INTO sqlite_sequence(name,seq) VALUES(?,?)", arrayOf(c.getString(0), c.getLong(1)))
+                        }
+                    }
+                    schema.filter { it.first != "table" }.forEach { target.execSQL(it.third) }
+                    target.version = source.version
+                    target.setTransactionSuccessful()
+                } finally { target.endTransaction() }
+                target.rawQuery("PRAGMA integrity_check", null).use { check ->
+                    require(check.moveToFirst() && check.getString(0) == "ok") { "Zaxira yaxlitligi tekshiruvdan o'tmadi" }
+                }
             }
-        }
-
-        // 2. Asosiy baza faylini qidirish va nusxalash
-        var dbFile = context.getDatabasePath(AppDatabase.databaseName(context))
-        if (!dbFile.exists()) {
-            dbFile = context.getDatabasePath("pos_database.db")
-        }
-        if (!dbFile.exists()) {
-            throw Exception("Baza fayli topilmadi!")
-        }
-
-        FileInputStream(dbFile).use { input ->
-            FileOutputStream(backupFile).use { output ->
-                input.copyTo(output)
-            }
-        }
-
-        backupFile
+            java.io.RandomAccessFile(destination, "rw").use { it.fd.sync() }
+            source.setTransactionSuccessful()
+        } finally { source.endTransaction() }
     }
 
     /**
      * Zaxira faylini (URI orqali) tekshirish va bazani xavfsiz qayta tiklash (Restore)
      */
     fun restoreDatabaseFromUri(context: Context, uri: Uri, database: AppDatabase? = null): Result<String> = runCatching {
-        val tempRestoreFile = File(context.cacheDir, "temp_restore_${System.currentTimeMillis()}.db")
-        if (tempRestoreFile.exists()) tempRestoreFile.delete()
-
-        // 1. URI dan vaqtincha faylga ko'chirib olish
-        context.contentResolver.openInputStream(uri)?.use { input ->
-            FileOutputStream(tempRestoreFile).use { output ->
-                input.copyTo(output)
-            }
-        } ?: throw Exception("Tanlangan faylni ochib bo'lmadi!")
-
-        if (!tempRestoreFile.exists() || tempRestoreFile.length() == 0L) {
-            throw Exception("Fayl bo'sh yoki o'qib bo'lmadi!")
-        }
-
-        // 2. SQLite 3 fayli ekanligini va jadvallar butunligini tekshirish
-        var productsCount = 0
-        var salesCount = 0
+        val live = requireNotNull(database) { "Tiklash uchun ochiq baza talab qilinadi" }
+        val target = context.getDatabasePath(AppDatabase.databaseName(context))
+        val stagingName = "restore_${UUID.randomUUID()}.db"
+        val staging = context.getDatabasePath(stagingName)
+        val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO + kotlinx.coroutines.SupervisorJob())
+        var validator: AppDatabase? = null
         try {
-            val checkDb = SQLiteDatabase.openDatabase(tempRestoreFile.path, null, SQLiteDatabase.OPEN_READONLY)
-            checkDb.use { db ->
-                // Jadvallar mavjudligini tekshirish
-                val cursorTables = db.rawQuery("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('products', 'sales')", null)
-                val tableNames = mutableListOf<String>()
-                while (cursorTables.moveToNext()) {
-                    tableNames.add(cursorTables.getString(0))
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                FileOutputStream(staging).use { output -> input.copyTo(output); output.fd.sync() }
+            } ?: error("Tanlangan faylni ochib bo'lmadi")
+            SQLiteDatabase.openDatabase(staging.path, null, SQLiteDatabase.OPEN_READONLY).use { checkDb ->
+                checkDb.rawQuery("PRAGMA integrity_check", null).use { c ->
+                    require(c.moveToFirst() && c.getString(0) == "ok") { "Baza shikastlangan" }
                 }
-                cursorTables.close()
-
-                if (!tableNames.contains("products")) {
-                    throw Exception("Fayl ichida tovarlar jadvali (products) topilmadi! Bu Line POS bazasi emas.")
+                checkDb.rawQuery("PRAGMA foreign_key_check", null).use { c ->
+                    require(!c.moveToFirst()) { "Baza bog'lanishlari shikastlangan" }
                 }
-
-                try {
-                    val pCur = db.rawQuery("SELECT COUNT(*) FROM products", null)
-                    if (pCur.moveToFirst()) productsCount = pCur.getInt(0)
-                    pCur.close()
-                } catch (_: Throwable) {}
-
-                try {
-                    val sCur = db.rawQuery("SELECT COUNT(*) FROM sales", null)
-                    if (sCur.moveToFirst()) salesCount = sCur.getInt(0)
-                    sCur.close()
-                } catch (_: Throwable) {}
             }
-        } catch (e: Exception) {
-            tempRestoreFile.delete()
-            throw Exception("Yaroqsiz baza fayli: ${e.message}")
+            validator = AppDatabase.buildDatabase(context, scope, stagingName)
+            val checked = validator.openHelper.writableDatabase // validates Room identity and migrates supported versions
+            checked.query("PRAGMA wal_checkpoint(TRUNCATE)").use { c ->
+                check(c.moveToFirst() && c.getInt(0) == 0) { "Tiklanadigan bazani tayyorlab bo'lmadi" }
+            }
+            validator.close(); validator = null
+            val recoveryDir = File(context.filesDir, "restore-recovery").apply { mkdirs() }
+            val recovery = File(recoveryDir, "before_restore_${System.currentTimeMillis()}.db")
+            copySnapshot(live.openHelper.writableDatabase, recovery)
+            live.close()
+            // All source connections are closed. Rename on the same filesystem is atomic.
+            File(target.path + "-wal").delete()
+            File(target.path + "-shm").delete()
+            java.nio.file.Files.move(staging.toPath(), target.toPath(),
+                java.nio.file.StandardCopyOption.ATOMIC_MOVE, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            "Baza tekshirilib tiklandi. Oldingi baza nusxasi saqlandi. Ilova qayta ochiladi."
+        } finally {
+            validator?.close()
+            scope.coroutineContext[kotlinx.coroutines.Job]?.cancel()
+            SQLiteDatabase.deleteDatabase(staging)
         }
-
-        // 3. Joriy bazani yopish va fayllarni almashtirish
-        try {
-            database?.close()
-        } catch (_: Throwable) {}
-
-        val targetDbFile = context.getDatabasePath(AppDatabase.databaseName(context))
-        val targetWalFile = File(targetDbFile.path + "-wal")
-        val targetShmFile = File(targetDbFile.path + "-shm")
-
-        // Eski WAL va SHM keshlarini o'chirish (yangi baza bilan ziddiyat bo'lmasligi uchun)
-        if (targetWalFile.exists()) targetWalFile.delete()
-        if (targetShmFile.exists()) targetShmFile.delete()
-
-        // Yangi bazani asosiy o'rniga ko'chirish
-        tempRestoreFile.copyTo(targetDbFile, overwrite = true)
-        tempRestoreFile.delete()
-
-        "Baza muvaffaqiyatli tiklandi!\n• Tovarlar: $productsCount ta\n• Savdolar: $salesCount ta\nIlova yangi baza bilan qayta ochiladi."
     }
 
     /**

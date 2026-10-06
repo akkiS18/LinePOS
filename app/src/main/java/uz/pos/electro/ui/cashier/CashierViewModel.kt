@@ -40,6 +40,10 @@ class CashierViewModel @Inject constructor(
 ) : ViewModel() {
 
     // Savatdagi tovarlar
+    private val checkoutGate = java.util.concurrent.atomic.AtomicBoolean(false)
+    private val _isCompletingSale = MutableStateFlow(false)
+    val isCompletingSale = _isCompletingSale.asStateFlow()
+
     private val _cartItems = MutableStateFlow<List<CartItemModel>>(emptyList())
     val cartItems: StateFlow<List<CartItemModel>> = _cartItems.asStateFlow()
 
@@ -97,7 +101,7 @@ class CashierViewModel @Inject constructor(
     val lastCompletedSale: StateFlow<CompletedSaleState?> = _lastCompletedSale.asStateFlow()
 
     val totalAmount: Double
-        get() = _cartItems.value.sumOf { it.totalPrice }
+        get() = uz.pos.electro.data.model.SaleAccounting.money(_cartItems.value.sumOf { it.totalPrice })
 
     fun onSearchQueryChanged(query: String) {
         _searchQuery.value = query
@@ -113,10 +117,7 @@ class CashierViewModel @Inject constructor(
         viewModelScope.launch {
             val product = productRepository.getProductByBarcode(cleanBarcode)
             if (product != null) {
-                if (product.stockQuantity <= 0) {
-                    _toastEvent.emit("${product.name} omborda qolmagan (0 qoldiq)!")
-                    return@launch
-                }
+
                 addProductToCart(product)
                 _toastEvent.emit("${product.name} savatga qo'shildi")
             } else {
@@ -133,12 +134,7 @@ class CashierViewModel @Inject constructor(
      * Mahsulotni savatga qo'shish (Ombor qoldig'i tekshiruvi bilan)
      */
     fun addProductToCart(product: ProductEntity, quantity: Double = 1.0) {
-        if (product.stockQuantity <= 0) {
-            viewModelScope.launch {
-                _toastEvent.emit("${product.name} omborda qolmagan!")
-            }
-            return
-        }
+        if (checkoutGate.get()) return
 
         val currentList = _cartItems.value.toMutableList()
         val existingIndex = currentList.indexOfFirst { it.product.id == product.id }
@@ -147,39 +143,20 @@ class CashierViewModel @Inject constructor(
             val existingItem = currentList[existingIndex]
             val newQuantity = existingItem.quantity + quantity
 
-            if (newQuantity > product.stockQuantity) {
-                viewModelScope.launch {
-                    val unitLabel = when (product.unitType) {
-                        UnitType.METR -> "m"
-                        UnitType.KG -> "kg"
-                        UnitType.DONA -> "dona"
-                    }
-                    _toastEvent.emit("Omborda yetarli qoldiq yo'q! (Mavjud: ${product.stockQuantity} $unitLabel)")
-                }
-                return
-            }
+
 
             currentList[existingIndex] = existingItem.copy(quantity = newQuantity)
             _cartItems.value = currentList
             _searchQuery.value = ""
         } else {
-            if (quantity > product.stockQuantity) {
-                viewModelScope.launch {
-                    val unitLabel = when (product.unitType) {
-                        UnitType.METR -> "m"
-                        UnitType.KG -> "kg"
-                        UnitType.DONA -> "dona"
-                    }
-                    _toastEvent.emit("Omborda yetarli qoldiq yo'q! (Mavjud: ${product.stockQuantity} $unitLabel)")
-                }
-                return
-            }
+
 
             viewModelScope.launch {
                 val primaryWh = warehouseRepository.getPrimaryWarehouse()
                 val whName = primaryWh?.name ?: "Do'kondagi ombor"
                 val whGuid = primaryWh?.guid ?: "main-default-warehouse"
 
+                if (checkoutGate.get()) return@launch
                 val updatedList = _cartItems.value.toMutableList()
                 val idx = updatedList.indexOfFirst { it.product.id == product.id }
                 if (idx != -1) {
@@ -214,23 +191,14 @@ class CashierViewModel @Inject constructor(
      * Savatdagi tovar miqdori va narxini yangilash
      */
     fun updateCartItem(index: Int, newQuantity: Double, newPrice: Double) {
+        if (checkoutGate.get()) return
         val currentList = _cartItems.value.toMutableList()
         if (index in currentList.indices) {
             val item = currentList[index]
             if (newQuantity <= 0) {
                 currentList.removeAt(index)
             } else {
-                if (newQuantity > item.product.stockQuantity) {
-                    viewModelScope.launch {
-                        val unitLabel = when (item.product.unitType) {
-                            UnitType.METR -> "m"
-                            UnitType.KG -> "kg"
-                            UnitType.DONA -> "dona"
-                        }
-                        _toastEvent.emit("Omborda yetarli qoldiq yo'q! (Mavjud: ${item.product.stockQuantity} $unitLabel)")
-                    }
-                    return
-                }
+
 
                 currentList[index] = item.copy(
                     quantity = newQuantity,
@@ -243,6 +211,7 @@ class CashierViewModel @Inject constructor(
     }
 
     fun removeCartItem(index: Int) {
+        if (checkoutGate.get()) return
         val currentList = _cartItems.value.toMutableList()
         if (index in currentList.indices) {
             currentList.removeAt(index)
@@ -254,6 +223,7 @@ class CashierViewModel @Inject constructor(
      * Savatdagi tovar narxini 1-narx va 2-narx (usta narxi) o'rtasida almashtirish
      */
     fun toggleCartItemPrice(index: Int) {
+        if (checkoutGate.get()) return
         val currentList = _cartItems.value.toMutableList()
         if (index in currentList.indices) {
             val item = currentList[index]
@@ -268,6 +238,7 @@ class CashierViewModel @Inject constructor(
     }
 
     fun clearCart() {
+        if (checkoutGate.get()) return
         _cartItems.value = emptyList()
     }
 
@@ -282,6 +253,7 @@ class CashierViewModel @Inject constructor(
     }
 
     fun holdCurrentCart(customName: String? = null) {
+        if (checkoutGate.get()) return
         val currentItems = _cartItems.value
         if (currentItems.isEmpty()) return
 
@@ -303,6 +275,7 @@ class CashierViewModel @Inject constructor(
     }
 
     fun resumeHeldCart(heldCart: HeldCart) {
+        if (checkoutGate.get()) return
         val currentActiveItems = _cartItems.value
 
         if (currentActiveItems.isNotEmpty()) {
@@ -339,6 +312,7 @@ class CashierViewModel @Inject constructor(
     }
 
     fun closeCheckoutDialog() {
+        if (checkoutGate.get()) return
         _isCheckoutDialogVisible.value = false
     }
 
@@ -353,11 +327,12 @@ class CashierViewModel @Inject constructor(
         taxRate: Double = 0.0
     ) {
         val items = _cartItems.value
-        if (items.isEmpty()) return
-
+        if (items.isEmpty() || !checkoutGate.compareAndSet(false, true)) return
+        _isCompletingSale.value = true
         viewModelScope.launch {
             try {
-                val total = totalAmount
+                val total = uz.pos.electro.data.model.SaleAccounting.money(items.sumOf { it.totalPrice })
+                val saleGuid = java.util.UUID.randomUUID().toString()
                 val saleId = saleRepository.completeSale(
                     items = items,
                     userId = 1L,
@@ -365,11 +340,13 @@ class CashierViewModel @Inject constructor(
                     cashAmount = cashAmount,
                     cardAmount = cardAmount,
                     taxAmount = taxAmount,
-                    taxRate = taxRate
+                    taxRate = taxRate,
+                    saleGuid = saleGuid
                 )
 
                 _lastCompletedSale.value = CompletedSaleState(
                     saleId = saleId,
+                    receiptNumber = "LP-" + saleGuid.replace("-", "").uppercase(java.util.Locale.ROOT),
                     items = items,
                     totalAmount = total,
                     paymentType = paymentType,
@@ -381,6 +358,9 @@ class CashierViewModel @Inject constructor(
                 _toastEvent.emit("Savdo muvaffaqiyatli amalga oshirildi!")
             } catch (e: Exception) {
                 _toastEvent.emit("Xatolik: ${e.localizedMessage}")
+            } finally {
+                _isCompletingSale.value = false
+                checkoutGate.set(false)
             }
         }
     }
@@ -390,8 +370,8 @@ class CashierViewModel @Inject constructor(
      */
     fun writeOffCartAsBrak() {
         val items = _cartItems.value
-        if (items.isEmpty()) return
-
+        if (items.isEmpty() || !checkoutGate.compareAndSet(false, true)) return
+        _isCompletingSale.value = true
         viewModelScope.launch {
             try {
                 val zeroPriceItems = items.map { it.copy(priceAtSale = 0.0) }
@@ -410,6 +390,9 @@ class CashierViewModel @Inject constructor(
                 _toastEvent.emit("⚠️ Tovar(lar) brak sifatida hisobdan chiqarildi (0 so'm)")
             } catch (e: Exception) {
                 _toastEvent.emit("Xatolik: ${e.localizedMessage}")
+            } finally {
+                _isCompletingSale.value = false
+                checkoutGate.set(false)
             }
         }
     }
@@ -417,6 +400,7 @@ class CashierViewModel @Inject constructor(
 
 data class CompletedSaleState(
     val saleId: Long,
+    val receiptNumber: String,
     val items: List<CartItemModel>,
     val totalAmount: Double,
     val paymentType: PaymentType = PaymentType.CASH,

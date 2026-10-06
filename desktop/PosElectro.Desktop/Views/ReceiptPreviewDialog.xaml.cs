@@ -47,7 +47,7 @@ namespace PosElectro.Desktop.Views
             Txt58mmContent.Text = PrinterService.BuildReceiptText(_sale);
 
             // 2. A4 Ko'rinishi
-            TxtA4ChekNum.Text = $"Hujjat: Chek #{_sale.Id}";
+            TxtA4ChekNum.Text = $"Hujjat: Chek #{_sale.ReceiptNumber}" + (string.IsNullOrEmpty(_sale.OriginalReceiptNumber) ? "" : "\nAsl chek: " + _sale.OriginalReceiptNumber);
             TxtA4Date.Text = $"Sana: {_sale.CreatedDateTime:dd.MM.yyyy HH:mm}";
             TxtA4Payment.Text = $"To'lov: {_sale.PaymentTypeDisplay}";
             TxtA4Total.Text = $"{_sale.TotalAmount:N0} SO'M";

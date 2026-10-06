@@ -1,0 +1,1664 @@
+[
+  {
+    "id": "parse-0",
+    "op": "parse",
+    "text": "0",
+    "expected": 0
+  },
+  {
+    "id": "parse-0.01",
+    "op": "parse",
+    "text": "0.01",
+    "expected": 1
+  },
+  {
+    "id": "parse-12.3",
+    "op": "parse",
+    "text": "12.3",
+    "expected": 1230
+  },
+  {
+    "id": "parse-001.20",
+    "op": "parse",
+    "text": "001.20",
+    "expected": 120
+  },
+  {
+    "id": "parse-1000000",
+    "op": "parse",
+    "text": "1000000",
+    "expected": 100000000
+  },
+  {
+    "id": "parse-92233720368547758.07",
+    "op": "parse",
+    "text": "92233720368547758.07",
+    "expected": 9223372036854775807
+  },
+  {
+    "id": "parse-invalid-0",
+    "op": "parse",
+    "text": "",
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "parse-invalid-1",
+    "op": "parse",
+    "text": "-1",
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "parse-invalid-2",
+    "op": "parse",
+    "text": "+1",
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "parse-invalid-3",
+    "op": "parse",
+    "text": "1.001",
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "parse-invalid-4",
+    "op": "parse",
+    "text": "1.000",
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "parse-invalid-5",
+    "op": "parse",
+    "text": "1e3",
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "parse-invalid-6",
+    "op": "parse",
+    "text": "NaN",
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "parse-invalid-7",
+    "op": "parse",
+    "text": "Infinity",
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "parse-invalid-8",
+    "op": "parse",
+    "text": "1,20",
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "parse-invalid-9",
+    "op": "parse",
+    "text": "1 000",
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "parse-invalid-10",
+    "op": "parse",
+    "text": " 1",
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "parse-invalid-11",
+    "op": "parse",
+    "text": "1\n",
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "parse-invalid-12",
+    "op": "parse",
+    "text": ".5",
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "parse-invalid-13",
+    "op": "parse",
+    "text": "1.",
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "parse-invalid-14",
+    "op": "parse",
+    "text": "١",
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "parse-invalid-15",
+    "op": "parse",
+    "text": "00000000000000000000000000000000000000000000000000000000000000000",
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "parse-overflow",
+    "op": "parse",
+    "text": "92233720368547758.08",
+    "expected": {
+      "error": "overflow"
+    }
+  },
+  {
+    "id": "sale-full",
+    "op": "sale",
+    "total": 10000000,
+    "cash": 0,
+    "card": 0,
+    "expected": 10000000
+  },
+  {
+    "id": "sale-mixed",
+    "op": "sale",
+    "total": 100000000,
+    "cash": 20000000,
+    "card": 30000000,
+    "expected": 50000000
+  },
+  {
+    "id": "sale-paid",
+    "op": "sale",
+    "total": 100,
+    "cash": 60,
+    "card": 40,
+    "expected": 0
+  },
+  {
+    "id": "sale-one-tiyin",
+    "op": "sale",
+    "total": 3,
+    "cash": 1,
+    "card": 1,
+    "expected": 1
+  },
+  {
+    "id": "sale-negative",
+    "op": "sale",
+    "total": -1,
+    "cash": 0,
+    "card": 0,
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "sale-excess",
+    "op": "sale",
+    "total": 100,
+    "cash": 101,
+    "card": 0,
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "sale-negative-cash",
+    "op": "sale",
+    "total": 100,
+    "cash": -1,
+    "card": 0,
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "sale-overflow",
+    "op": "sale",
+    "total": 9223372036854775807,
+    "cash": 9223372036854775807,
+    "card": 1,
+    "expected": {
+      "error": "overflow"
+    }
+  },
+  {
+    "id": "balance-partial",
+    "op": "balance",
+    "original": 10000000,
+    "deltas": [
+      -2000000
+    ],
+    "expected": 8000000
+  },
+  {
+    "id": "balance-two-offline",
+    "op": "balance",
+    "original": 10000000,
+    "deltas": [
+      -10000000,
+      -10000000
+    ],
+    "expected": -10000000
+  },
+  {
+    "id": "balance-reverse",
+    "op": "balance",
+    "original": 100,
+    "deltas": [
+      -60,
+      60
+    ],
+    "expected": 100
+  },
+  {
+    "id": "balance-late-payment-after-return",
+    "op": "balance",
+    "original": 8000000,
+    "deltas": [
+      -8000000,
+      -8000000
+    ],
+    "expected": -8000000
+  },
+  {
+    "id": "balance-negative-opening",
+    "op": "balance",
+    "original": -1,
+    "deltas": [],
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "balance-overflow",
+    "op": "balance",
+    "original": 9223372036854775807,
+    "deltas": [
+      1
+    ],
+    "expected": {
+      "error": "overflow"
+    }
+  },
+  {
+    "id": "balance-min-delta",
+    "op": "balance",
+    "original": 0,
+    "deltas": [
+      -9223372036854775808
+    ],
+    "expected": {
+      "error": "overflow"
+    }
+  },
+  {
+    "id": "balance-order-0",
+    "op": "balance",
+    "original": 9223372036854775806,
+    "deltas": [
+      9223372036854775807,
+      -9223372036854775807,
+      1
+    ],
+    "expected": 9223372036854775807
+  },
+  {
+    "id": "balance-order-1",
+    "op": "balance",
+    "original": 9223372036854775806,
+    "deltas": [
+      9223372036854775807,
+      1,
+      -9223372036854775807
+    ],
+    "expected": 9223372036854775807
+  },
+  {
+    "id": "balance-order-2",
+    "op": "balance",
+    "original": 9223372036854775806,
+    "deltas": [
+      -9223372036854775807,
+      9223372036854775807,
+      1
+    ],
+    "expected": 9223372036854775807
+  },
+  {
+    "id": "balance-order-3",
+    "op": "balance",
+    "original": 9223372036854775806,
+    "deltas": [
+      -9223372036854775807,
+      1,
+      9223372036854775807
+    ],
+    "expected": 9223372036854775807
+  },
+  {
+    "id": "balance-order-4",
+    "op": "balance",
+    "original": 9223372036854775806,
+    "deltas": [
+      1,
+      9223372036854775807,
+      -9223372036854775807
+    ],
+    "expected": 9223372036854775807
+  },
+  {
+    "id": "balance-order-5",
+    "op": "balance",
+    "original": 9223372036854775806,
+    "deltas": [
+      1,
+      -9223372036854775807,
+      9223372036854775807
+    ],
+    "expected": 9223372036854775807
+  },
+  {
+    "id": "totals-no-netting",
+    "op": "totals",
+    "accounts": [
+      {
+        "id": "a",
+        "sale": "sale-a",
+        "customer": "customer-1",
+        "at": 1,
+        "balance": 100
+      },
+      {
+        "id": "b",
+        "sale": "sale-b",
+        "customer": "customer-2",
+        "at": 1,
+        "balance": -75
+      },
+      {
+        "id": "c",
+        "sale": "sale-c",
+        "customer": "customer-1",
+        "at": 1,
+        "balance": 0
+      }
+    ],
+    "expected": [
+      100,
+      75
+    ]
+  },
+  {
+    "id": "totals-empty",
+    "op": "totals",
+    "accounts": [],
+    "expected": [
+      0,
+      0
+    ]
+  },
+  {
+    "id": "totals-duplicate",
+    "op": "totals",
+    "accounts": [
+      {
+        "id": "a",
+        "sale": "sale-a",
+        "customer": "customer-1",
+        "at": 1,
+        "balance": 1
+      },
+      {
+        "id": "a",
+        "sale": "sale-a",
+        "customer": "customer-1",
+        "at": 1,
+        "balance": 1
+      }
+    ],
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "totals-overflow",
+    "op": "totals",
+    "accounts": [
+      {
+        "id": "a",
+        "sale": "sale-a",
+        "customer": "customer-1",
+        "at": 1,
+        "balance": 9223372036854775807
+      },
+      {
+        "id": "b",
+        "sale": "sale-b",
+        "customer": "customer-1",
+        "at": 1,
+        "balance": 1
+      }
+    ],
+    "expected": {
+      "error": "overflow"
+    }
+  },
+  {
+    "id": "totals-min",
+    "op": "totals",
+    "accounts": [
+      {
+        "id": "a",
+        "sale": "sale-a",
+        "customer": "customer-1",
+        "at": 1,
+        "balance": -9223372036854775808
+      }
+    ],
+    "expected": {
+      "error": "overflow"
+    }
+  },
+  {
+    "id": "allocate-oldest",
+    "op": "allocate",
+    "amount": 75,
+    "customer": "customer-1",
+    "accounts": [
+      {
+        "id": "b",
+        "sale": "sale-b",
+        "customer": "customer-1",
+        "at": 2,
+        "balance": 60
+      },
+      {
+        "id": "z",
+        "sale": "sale-z",
+        "customer": "customer-1",
+        "at": 0,
+        "balance": -20
+      },
+      {
+        "id": "a",
+        "sale": "sale-a",
+        "customer": "customer-1",
+        "at": 2,
+        "balance": 50
+      },
+      {
+        "id": "old",
+        "sale": "sale-old",
+        "customer": "customer-1",
+        "at": 1,
+        "balance": 10
+      }
+    ],
+    "expected": [
+      [
+        "old",
+        10
+      ],
+      [
+        "a",
+        50
+      ],
+      [
+        "b",
+        15
+      ]
+    ]
+  },
+  {
+    "id": "allocate-exact",
+    "op": "allocate",
+    "amount": 120,
+    "customer": "customer-1",
+    "accounts": [
+      {
+        "id": "b",
+        "sale": "sale-b",
+        "customer": "customer-1",
+        "at": 2,
+        "balance": 60
+      },
+      {
+        "id": "z",
+        "sale": "sale-z",
+        "customer": "customer-1",
+        "at": 0,
+        "balance": -20
+      },
+      {
+        "id": "a",
+        "sale": "sale-a",
+        "customer": "customer-1",
+        "at": 2,
+        "balance": 50
+      },
+      {
+        "id": "old",
+        "sale": "sale-old",
+        "customer": "customer-1",
+        "at": 1,
+        "balance": 10
+      }
+    ],
+    "expected": [
+      [
+        "old",
+        10
+      ],
+      [
+        "a",
+        50
+      ],
+      [
+        "b",
+        60
+      ]
+    ]
+  },
+  {
+    "id": "allocate-target",
+    "op": "allocate",
+    "amount": 20,
+    "customer": "customer-1",
+    "accounts": [
+      {
+        "id": "b",
+        "sale": "sale-b",
+        "customer": "customer-1",
+        "at": 2,
+        "balance": 60
+      },
+      {
+        "id": "z",
+        "sale": "sale-z",
+        "customer": "customer-1",
+        "at": 0,
+        "balance": -20
+      },
+      {
+        "id": "a",
+        "sale": "sale-a",
+        "customer": "customer-1",
+        "at": 2,
+        "balance": 50
+      },
+      {
+        "id": "old",
+        "sale": "sale-old",
+        "customer": "customer-1",
+        "at": 1,
+        "balance": 10
+      }
+    ],
+    "target": "b",
+    "expected": [
+      [
+        "b",
+        20
+      ]
+    ]
+  },
+  {
+    "id": "allocate-target-excess",
+    "op": "allocate",
+    "amount": 61,
+    "customer": "customer-1",
+    "accounts": [
+      {
+        "id": "b",
+        "sale": "sale-b",
+        "customer": "customer-1",
+        "at": 2,
+        "balance": 60
+      },
+      {
+        "id": "z",
+        "sale": "sale-z",
+        "customer": "customer-1",
+        "at": 0,
+        "balance": -20
+      },
+      {
+        "id": "a",
+        "sale": "sale-a",
+        "customer": "customer-1",
+        "at": 2,
+        "balance": 50
+      },
+      {
+        "id": "old",
+        "sale": "sale-old",
+        "customer": "customer-1",
+        "at": 1,
+        "balance": 10
+      }
+    ],
+    "target": "b",
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "allocate-credit-target",
+    "op": "allocate",
+    "amount": 1,
+    "customer": "customer-1",
+    "accounts": [
+      {
+        "id": "b",
+        "sale": "sale-b",
+        "customer": "customer-1",
+        "at": 2,
+        "balance": 60
+      },
+      {
+        "id": "z",
+        "sale": "sale-z",
+        "customer": "customer-1",
+        "at": 0,
+        "balance": -20
+      },
+      {
+        "id": "a",
+        "sale": "sale-a",
+        "customer": "customer-1",
+        "at": 2,
+        "balance": 50
+      },
+      {
+        "id": "old",
+        "sale": "sale-old",
+        "customer": "customer-1",
+        "at": 1,
+        "balance": 10
+      }
+    ],
+    "target": "z",
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "allocate-unknown",
+    "op": "allocate",
+    "amount": 1,
+    "customer": "customer-1",
+    "accounts": [
+      {
+        "id": "b",
+        "sale": "sale-b",
+        "customer": "customer-1",
+        "at": 2,
+        "balance": 60
+      },
+      {
+        "id": "z",
+        "sale": "sale-z",
+        "customer": "customer-1",
+        "at": 0,
+        "balance": -20
+      },
+      {
+        "id": "a",
+        "sale": "sale-a",
+        "customer": "customer-1",
+        "at": 2,
+        "balance": 50
+      },
+      {
+        "id": "old",
+        "sale": "sale-old",
+        "customer": "customer-1",
+        "at": 1,
+        "balance": 10
+      }
+    ],
+    "target": "missing",
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "allocate-excess",
+    "op": "allocate",
+    "amount": 121,
+    "customer": "customer-1",
+    "accounts": [
+      {
+        "id": "b",
+        "sale": "sale-b",
+        "customer": "customer-1",
+        "at": 2,
+        "balance": 60
+      },
+      {
+        "id": "z",
+        "sale": "sale-z",
+        "customer": "customer-1",
+        "at": 0,
+        "balance": -20
+      },
+      {
+        "id": "a",
+        "sale": "sale-a",
+        "customer": "customer-1",
+        "at": 2,
+        "balance": 50
+      },
+      {
+        "id": "old",
+        "sale": "sale-old",
+        "customer": "customer-1",
+        "at": 1,
+        "balance": 10
+      }
+    ],
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "allocate-zero",
+    "op": "allocate",
+    "amount": 0,
+    "customer": "customer-1",
+    "accounts": [
+      {
+        "id": "b",
+        "sale": "sale-b",
+        "customer": "customer-1",
+        "at": 2,
+        "balance": 60
+      },
+      {
+        "id": "z",
+        "sale": "sale-z",
+        "customer": "customer-1",
+        "at": 0,
+        "balance": -20
+      },
+      {
+        "id": "a",
+        "sale": "sale-a",
+        "customer": "customer-1",
+        "at": 2,
+        "balance": 50
+      },
+      {
+        "id": "old",
+        "sale": "sale-old",
+        "customer": "customer-1",
+        "at": 1,
+        "balance": 10
+      }
+    ],
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "allocate-reordered",
+    "op": "allocate",
+    "amount": 75,
+    "customer": "customer-1",
+    "accounts": [
+      {
+        "id": "old",
+        "sale": "sale-old",
+        "customer": "customer-1",
+        "at": 1,
+        "balance": 10
+      },
+      {
+        "id": "a",
+        "sale": "sale-a",
+        "customer": "customer-1",
+        "at": 2,
+        "balance": 50
+      },
+      {
+        "id": "z",
+        "sale": "sale-z",
+        "customer": "customer-1",
+        "at": 0,
+        "balance": -20
+      },
+      {
+        "id": "b",
+        "sale": "sale-b",
+        "customer": "customer-1",
+        "at": 2,
+        "balance": 60
+      }
+    ],
+    "expected": [
+      [
+        "old",
+        10
+      ],
+      [
+        "a",
+        50
+      ],
+      [
+        "b",
+        15
+      ]
+    ]
+  },
+  {
+    "id": "allocate-other-customer",
+    "op": "allocate",
+    "amount": 1,
+    "customer": "customer-1",
+    "accounts": [
+      {
+        "id": "a",
+        "sale": "sale-a",
+        "customer": "other",
+        "at": 1,
+        "balance": 10
+      }
+    ],
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "allocate-duplicate",
+    "op": "allocate",
+    "amount": 1,
+    "customer": "customer-1",
+    "accounts": [
+      {
+        "id": "a",
+        "sale": "sale-a",
+        "customer": "customer-1",
+        "at": 1,
+        "balance": 10
+      },
+      {
+        "id": "a",
+        "sale": "sale-a",
+        "customer": "customer-1",
+        "at": 1,
+        "balance": 20
+      }
+    ],
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "allocate-duplicate-sale",
+    "op": "allocate",
+    "amount": 1,
+    "customer": "customer-1",
+    "accounts": [
+      {
+        "id": "a",
+        "sale": "same",
+        "customer": "customer-1",
+        "at": 1,
+        "balance": 10
+      },
+      {
+        "id": "b",
+        "sale": "same",
+        "customer": "customer-1",
+        "at": 1,
+        "balance": 20
+      }
+    ],
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "allocate-invalid-id",
+    "op": "allocate",
+    "amount": 1,
+    "customer": "customer-1",
+    "accounts": [
+      {
+        "id": "a!",
+        "sale": "sale-a!",
+        "customer": "customer-1",
+        "at": 1,
+        "balance": 10
+      }
+    ],
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "allocate-negative-time",
+    "op": "allocate",
+    "amount": 1,
+    "customer": "customer-1",
+    "accounts": [
+      {
+        "id": "a",
+        "sale": "sale-a",
+        "customer": "customer-1",
+        "at": -1,
+        "balance": 10
+      }
+    ],
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "payment-mixed",
+    "op": "payment",
+    "cash": 200,
+    "card": 300,
+    "fee": 6,
+    "allocations": [
+      [
+        "a",
+        100
+      ],
+      [
+        "b",
+        400
+      ]
+    ],
+    "expected": {
+      "lines": [
+        [
+          "a",
+          -100
+        ],
+        [
+          "b",
+          -400
+        ]
+      ],
+      "cash": 200,
+      "card": 300,
+      "fee": 6,
+      "revenue": 0
+    }
+  },
+  {
+    "id": "payment-wrong-total",
+    "op": "payment",
+    "cash": 200,
+    "card": 300,
+    "fee": 6,
+    "allocations": [
+      [
+        "a",
+        499
+      ]
+    ],
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "payment-duplicates",
+    "op": "payment",
+    "cash": 200,
+    "card": 300,
+    "fee": 6,
+    "allocations": [
+      [
+        "a",
+        100
+      ],
+      [
+        "a",
+        400
+      ]
+    ],
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "payment-zero-allocation",
+    "op": "payment",
+    "cash": 200,
+    "card": 300,
+    "fee": 6,
+    "allocations": [
+      [
+        "a",
+        0
+      ],
+      [
+        "b",
+        500
+      ]
+    ],
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "payment-negative-allocation",
+    "op": "payment",
+    "cash": 200,
+    "card": 300,
+    "fee": 6,
+    "allocations": [
+      [
+        "a",
+        -1
+      ],
+      [
+        "b",
+        501
+      ]
+    ],
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "payment-fee-too-high",
+    "op": "payment",
+    "cash": 200,
+    "card": 300,
+    "fee": 301,
+    "allocations": [
+      [
+        "a",
+        100
+      ],
+      [
+        "b",
+        400
+      ]
+    ],
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "payment-negative-fee",
+    "op": "payment",
+    "cash": 200,
+    "card": 300,
+    "fee": -1,
+    "allocations": [
+      [
+        "a",
+        100
+      ],
+      [
+        "b",
+        400
+      ]
+    ],
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "payment-negative-cash",
+    "op": "payment",
+    "cash": -1,
+    "card": 300,
+    "fee": 6,
+    "allocations": [
+      [
+        "a",
+        100
+      ],
+      [
+        "b",
+        400
+      ]
+    ],
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "payment-empty",
+    "op": "payment",
+    "cash": 200,
+    "card": 300,
+    "fee": 6,
+    "allocations": [],
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "payment-overflow",
+    "op": "payment",
+    "cash": 9223372036854775807,
+    "card": 1,
+    "fee": 0,
+    "allocations": [
+      [
+        "a",
+        9223372036854775807
+      ]
+    ],
+    "expected": {
+      "error": "overflow"
+    }
+  },
+  {
+    "id": "reverse-fee-kept",
+    "op": "reverse",
+    "refundedFee": 0,
+    "cash": 200,
+    "card": 300,
+    "fee": 6,
+    "allocations": [
+      [
+        "a",
+        100
+      ],
+      [
+        "b",
+        400
+      ]
+    ],
+    "expected": {
+      "lines": [
+        [
+          "a",
+          100
+        ],
+        [
+          "b",
+          400
+        ]
+      ],
+      "cash": -200,
+      "card": -300,
+      "fee": 0,
+      "revenue": 0
+    }
+  },
+  {
+    "id": "reverse-fee-partly-refunded",
+    "op": "reverse",
+    "refundedFee": 3,
+    "cash": 200,
+    "card": 300,
+    "fee": 6,
+    "allocations": [
+      [
+        "a",
+        100
+      ],
+      [
+        "b",
+        400
+      ]
+    ],
+    "expected": {
+      "lines": [
+        [
+          "a",
+          100
+        ],
+        [
+          "b",
+          400
+        ]
+      ],
+      "cash": -200,
+      "card": -300,
+      "fee": -3,
+      "revenue": 0
+    }
+  },
+  {
+    "id": "reverse-fee-refunded",
+    "op": "reverse",
+    "refundedFee": 6,
+    "cash": 200,
+    "card": 300,
+    "fee": 6,
+    "allocations": [
+      [
+        "a",
+        100
+      ],
+      [
+        "b",
+        400
+      ]
+    ],
+    "expected": {
+      "lines": [
+        [
+          "a",
+          100
+        ],
+        [
+          "b",
+          400
+        ]
+      ],
+      "cash": -200,
+      "card": -300,
+      "fee": -6,
+      "revenue": 0
+    }
+  },
+  {
+    "id": "reverse-excess-fee",
+    "op": "reverse",
+    "refundedFee": 7,
+    "cash": 200,
+    "card": 300,
+    "fee": 6,
+    "allocations": [
+      [
+        "a",
+        100
+      ],
+      [
+        "b",
+        400
+      ]
+    ],
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "reverse-negative-fee",
+    "op": "reverse",
+    "refundedFee": -1,
+    "cash": 200,
+    "card": 300,
+    "fee": 6,
+    "allocations": [
+      [
+        "a",
+        100
+      ],
+      [
+        "b",
+        400
+      ]
+    ],
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "return-debt-only",
+    "op": "return",
+    "value": 3000000,
+    "balance": 8000000,
+    "expected": [
+      3000000,
+      0
+    ]
+  },
+  {
+    "id": "return-mixed",
+    "op": "return",
+    "value": 9000000,
+    "balance": 8000000,
+    "expected": [
+      8000000,
+      1000000
+    ]
+  },
+  {
+    "id": "return-paid",
+    "op": "return",
+    "value": 3000000,
+    "balance": 0,
+    "expected": [
+      0,
+      3000000
+    ]
+  },
+  {
+    "id": "return-credit",
+    "op": "return",
+    "value": 3000000,
+    "balance": -1000000,
+    "expected": [
+      0,
+      3000000
+    ]
+  },
+  {
+    "id": "return-zero",
+    "op": "return",
+    "value": 0,
+    "balance": 100,
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "return-negative",
+    "op": "return",
+    "value": -1,
+    "balance": 100,
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "return-min",
+    "op": "return",
+    "value": 1,
+    "balance": -9223372036854775808,
+    "expected": {
+      "error": "overflow"
+    }
+  },
+  {
+    "id": "transfer-partial",
+    "op": "transfer",
+    "source": {
+      "id": "a",
+      "sale": "sale-a",
+      "customer": "customer-1",
+      "at": 1,
+      "balance": -100
+    },
+    "target": {
+      "id": "b",
+      "sale": "sale-b",
+      "customer": "customer-1",
+      "at": 1,
+      "balance": 80
+    },
+    "amount": 60,
+    "expected": {
+      "lines": [
+        [
+          "a",
+          60
+        ],
+        [
+          "b",
+          -60
+        ]
+      ],
+      "cash": 0,
+      "card": 0,
+      "fee": 0,
+      "revenue": 0
+    }
+  },
+  {
+    "id": "transfer-exact",
+    "op": "transfer",
+    "source": {
+      "id": "a",
+      "sale": "sale-a",
+      "customer": "customer-1",
+      "at": 1,
+      "balance": -100
+    },
+    "target": {
+      "id": "b",
+      "sale": "sale-b",
+      "customer": "customer-1",
+      "at": 1,
+      "balance": 100
+    },
+    "amount": 100,
+    "expected": {
+      "lines": [
+        [
+          "a",
+          100
+        ],
+        [
+          "b",
+          -100
+        ]
+      ],
+      "cash": 0,
+      "card": 0,
+      "fee": 0,
+      "revenue": 0
+    }
+  },
+  {
+    "id": "transfer-excess-credit",
+    "op": "transfer",
+    "source": {
+      "id": "a",
+      "sale": "sale-a",
+      "customer": "customer-1",
+      "at": 1,
+      "balance": -50
+    },
+    "target": {
+      "id": "b",
+      "sale": "sale-b",
+      "customer": "customer-1",
+      "at": 1,
+      "balance": 100
+    },
+    "amount": 60,
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "transfer-excess-debt",
+    "op": "transfer",
+    "source": {
+      "id": "a",
+      "sale": "sale-a",
+      "customer": "customer-1",
+      "at": 1,
+      "balance": -100
+    },
+    "target": {
+      "id": "b",
+      "sale": "sale-b",
+      "customer": "customer-1",
+      "at": 1,
+      "balance": 50
+    },
+    "amount": 60,
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "transfer-cross-customer",
+    "op": "transfer",
+    "source": {
+      "id": "a",
+      "sale": "sale-a",
+      "customer": "customer-1",
+      "at": 1,
+      "balance": -100
+    },
+    "target": {
+      "id": "b",
+      "sale": "sale-b",
+      "customer": "other",
+      "at": 1,
+      "balance": 100
+    },
+    "amount": 1,
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "transfer-same-account",
+    "op": "transfer",
+    "source": {
+      "id": "a",
+      "sale": "sale-a",
+      "customer": "customer-1",
+      "at": 1,
+      "balance": -100
+    },
+    "target": {
+      "id": "a",
+      "sale": "sale-a",
+      "customer": "customer-1",
+      "at": 1,
+      "balance": 100
+    },
+    "amount": 1,
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "transfer-zero",
+    "op": "transfer",
+    "source": {
+      "id": "a",
+      "sale": "sale-a",
+      "customer": "customer-1",
+      "at": 1,
+      "balance": -100
+    },
+    "target": {
+      "id": "b",
+      "sale": "sale-b",
+      "customer": "customer-1",
+      "at": 1,
+      "balance": 100
+    },
+    "amount": 0,
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "refund-mixed",
+    "op": "refund",
+    "account": {
+      "id": "a",
+      "sale": "sale-a",
+      "customer": "customer-1",
+      "at": 1,
+      "balance": -100
+    },
+    "cash": 30,
+    "card": 20,
+    "expected": {
+      "lines": [
+        [
+          "a",
+          50
+        ]
+      ],
+      "cash": -30,
+      "card": -20,
+      "fee": 0,
+      "revenue": 0
+    }
+  },
+  {
+    "id": "refund-exact",
+    "op": "refund",
+    "account": {
+      "id": "a",
+      "sale": "sale-a",
+      "customer": "customer-1",
+      "at": 1,
+      "balance": -100
+    },
+    "cash": 100,
+    "card": 0,
+    "expected": {
+      "lines": [
+        [
+          "a",
+          100
+        ]
+      ],
+      "cash": -100,
+      "card": 0,
+      "fee": 0,
+      "revenue": 0
+    }
+  },
+  {
+    "id": "refund-excess",
+    "op": "refund",
+    "account": {
+      "id": "a",
+      "sale": "sale-a",
+      "customer": "customer-1",
+      "at": 1,
+      "balance": -100
+    },
+    "cash": 101,
+    "card": 0,
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "refund-no-credit",
+    "op": "refund",
+    "account": {
+      "id": "a",
+      "sale": "sale-a",
+      "customer": "customer-1",
+      "at": 1,
+      "balance": 0
+    },
+    "cash": 1,
+    "card": 0,
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
+    "id": "refund-zero",
+    "op": "refund",
+    "account": {
+      "id": "a",
+      "sale": "sale-a",
+      "customer": "customer-1",
+      "at": 1,
+      "balance": -100
+    },
+    "cash": 0,
+    "card": 0,
+    "expected": {
+      "error": "invalid"
+    }
+  }
+]
