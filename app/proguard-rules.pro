@@ -27,6 +27,8 @@
 # ------------------------------------------------------------------------------
 -keep class uz.pos.electro.data.model.** { *; }
 -keepclassmembers class uz.pos.electro.data.model.** { *; }
+-keep class uz.pos.electro.data.debt.** { *; }
+-keepclassmembers class uz.pos.electro.data.debt.** { *; }
 -keep class uz.pos.electro.data.licensing.** { *; }
 -keepclassmembers class uz.pos.electro.data.licensing.** { *; }
 
