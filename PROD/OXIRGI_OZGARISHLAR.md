@@ -160,3 +160,13 @@ Ushbu hujjat mijozga oxirgi kiritilgan o'zgarishlar va yangi qulayliklarni ko'rs
   - Yangi kelgan tovarlarni omborga kiritish bir necha baravar tezlashdi. Har bir tovarning tahrirlash oynasiga kirib chiqish, narxlar va boshqa ma'lumotlarni bosib o'tirish shart emas.
 
 ---
+
+### 17. 🚀 Birlashtirilgan Yangi Versiya (1.0.2): Tovarlarni qaytarish va Qarz daftari integratsiyasi
+- **Nima o'zgardi:**
+  - GitHub'dagi mahsulotlarni qaytarish, cheklar yaxlitligi, qarz daftari sxema va migratsiyalari hamda bizning lokal aqlli qidiruv, kam qolgan tovarlar buyurtma ro'yxati va tezkor kirim tizimimiz yagona tizimga birlashtirildi.
+  - Mobil ilova versiyasi `1.0.2` (versionCode `3`) ga yangilandi, dastur nomi rasmiy toza holda **"SMART kassa"** qilindi.
+  - Desktop kompyuter dasturining yangi mustaqil o'rnatish paketi (`Line_kassa_Desktop_Setup.exe`) yig'ildi.
+- **Mijoz uchun foydasi:**
+  - Barcha yangiliklar bitta to'liq paketda ishlaydi, mijoz telefonida mavjud barcha tovar va bazalar 100% saqlangan holda yangilanadi.
+
+---
