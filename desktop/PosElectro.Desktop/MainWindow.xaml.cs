@@ -180,11 +180,18 @@ namespace PosElectro.Desktop
                     if (!cvm.IsPaymentModalOpen && !cvm.IsEditModalOpen && !cvm.IsUnrecognizedBarcodeModalOpen && !cvm.IsHoldModalOpen && !cvm.IsBrakModalOpen && cvm.HasCartItems)
                     {
                         var key = e.Key == Key.System ? e.SystemKey : e.Key;
-                        if (key == Key.F8)
+                        if (key == Key.F8 || key == Key.Space)
                         {
-                            cvm.OpenPaymentModal(0);
-                            e.Handled = true;
-                            return;
+                            if (key == Key.Space && Keyboard.FocusedElement is TextBox tb && !string.IsNullOrWhiteSpace(tb.Text))
+                            {
+                                // Qidiruv maydonida faol so'zlar yozilayotgan bo'lsa, probelga ruxsat
+                            }
+                            else
+                            {
+                                cvm.OpenPaymentModal(0);
+                                e.Handled = true;
+                                return;
+                            }
                         }
                         if (key == Key.F9)
                         {

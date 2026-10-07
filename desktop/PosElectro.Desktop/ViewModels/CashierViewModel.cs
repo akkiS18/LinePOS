@@ -532,7 +532,14 @@ namespace PosElectro.Desktop.ViewModels
                 RefreshProducts();
             };
 
-            AddToCartCommand = new RelayCommand<Product>(p => { if (p != null) AddToCart(p); });
+            AddToCartCommand = new RelayCommand<Product>(p => 
+            { 
+                if (p != null) 
+                { 
+                    AddToCart(p); 
+                    SearchQuery = string.Empty; 
+                } 
+            });
             RemoveFromCartCommand = new RelayCommand<CartItemModel>(c => { if (c != null) RemoveFromCart(c); });
             IncreaseQuantityCommand = new RelayCommand<CartItemModel>(c => { if (c != null) ChangeQuantity(c, 1.0); });
             DecreaseQuantityCommand = new RelayCommand<CartItemModel>(c => { if (c != null) ChangeQuantity(c, -1.0); });

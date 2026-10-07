@@ -293,3 +293,21 @@ Ushbu hujjat mijozga oxirgi kiritilgan o'zgarishlar va yangi qulayliklarni ko'rs
     - Barcha yangilanishlar bilan `Line_kassa_Desktop_Setup.exe` yangidan kompilyatsiya qilindi va `PROD` papkasiga joylashtirildi.
 - **Mijoz uchun foydasi:**
   - Kassir klaviaturadan qo'lini uzmasdan birgina <kbd>Space</kbd> (yoki F8/F9/F10) tugmasi bilan tezkor savdoni amalga oshiradi. 58mm termal printerda chekning hech qaysi qismi qirqilmaydi. Tovarlar kartochkalari esa monitor o'lchamidan qat'i nazar oynani to'liq va go'zal to'ldiradi.
+---
+
+### 26. 🚀 58mm Chek Preview O'lchami To'g'rilandi, Space Tugmasi To'liq Ishga Tushirildi va Amaliyotlar Logi Olib Tashlandi
+- **Nima o'zgardi:**
+  - **Chek preview o'lchami (58mm) to'liq proporsional qilindi:**
+    - Oldingi qotib qolgan `Width="280"` kenglik olib tashlandi.
+    - 58mm termal kassa qog'ozi (32 belgi) o'lchamiga mos ravishda markazlashtirilgan moslashuvchan oyna o'rnatildi (chap va o'ng chegaralari aniq 14px teng masofada). O'ng tomonda noo'rin bo'sh joy qolish xatosi bartaraf etildi.
+    - Chek qog'ozi vertikal aylantirish (ScrollViewer) bilan o'rab olindi, bu esa uzun cheklarni bemalol tepaga-pastga aylantirish imkonini beradi.
+  - **Space (Probel) tugmasi bilan Naqd to'lov muammosi to'liq bartaraf etildi:**
+    - Oyna darajasida (`Window_PreviewKeyDown`) <kbd>Space</kbd> tugmasi <kbd>F8</kbd> kabi to'g'ridan-to'g'ri bog'landi.
+    - Tovar savatga qo'shilganda qidiruv maydoni avtomatik tozalanishi yo'lga qo'yildi.
+    - Natijada savatda tovar bor paytda klaviaturadagi <kbd>Space</kbd> tugmasi bosilishi bilanoq darhol Naqd to'lov oynasi ochiladi (agar qidiruv maydonida faol bir nechta so'z terilayotgan bo'lsa, probel matn ichida bo'shliq vazifasini bajaradi).
+  - **Amaliyotlar logi to'liq olib tashlandi:**
+    - 2-rasmda ko'rsatilgan kassa oynasining pastki qismidagi amaliyotlar haqida xabar beruvchi panel (`StatusMessage`) butunlay olib tashlandi. Interfeys yanada toza va minimalistik ko'rinishga keltirildi.
+  - **Yangi o'rnatish to'plami yig'ildi:**
+    - To'liq mustaqil yangi [`PROD/Line_kassa_Desktop_Setup.exe`](file:///c:/Users/Acer/Documents/POS/PROD/Line_kassa_Desktop_Setup.exe) (52.2 MB) qaytadan muvaffaqiyatli kompilyatsiya qilindi.
+- **Mijoz uchun foydasi:**
+  - Chekni ko'rish oynasi xuddi haqiqiy kassa lentalaridek ixcham va chiroyli ko'rinadi. Kassir birgina <kbd>Space</kbd> tugmasini bosib darhol naqd savdoni tasdiqlashi mumkin. Ekranning pastida ortiqcha log yozuvlari ko'zni chalg'itmaydi.

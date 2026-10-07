@@ -294,7 +294,7 @@ namespace PosElectro.Desktop.Views
                     if (actualKey == Key.Space || actualKey == Key.F8)
                     {
                         // Agar qidiruv maydonida bir nechta so'z yozilayotgan bo'lsa (masalan: "kabel 2x1.5"):
-                        if (actualKey == Key.Space && e.OriginalSource is TextBox tb && tb == SearchBox && !string.IsNullOrWhiteSpace(tb.Text))
+                        if (actualKey == Key.Space && Keyboard.FocusedElement is TextBox tb && tb == SearchBox && !string.IsNullOrWhiteSpace(tb.Text))
                         {
                             // Matn ichidagi oddiy probel
                         }
