@@ -1,6 +1,6 @@
 # Qarz daftari — davom ettirish nuqtasi
 
-Sana: 2026-10-07. Holat: **2B-2 yakunlandi — lokal transactional repository; sync/UI integratsiyasi hali yo‘q**.
+Sana: 2026-10-07. Holat: **3A-1 yakunlandi — canonical wire component / validator; haqiqiy qarz transporti va UI hali ulanmagan**.
 
 ## Asos va branch
 
@@ -61,15 +61,29 @@ Foydalanuvchining kichik tugallangan bosqichlarda ishlash talabi sabab 2B ikkiga
 - [Debt core CI 37607020731](https://github.com/akkiS18/LinePOS/actions/runs/37607020731): C# 97/97, Kotlin 97/97 va paritet SUCCESS. Lokal Python 21/21 va diff whitespace tekshiruvi ham o‘tdi.
 - Real telefon/Windows UI/printer/Telegram sinovi bajarilmadi; bu bosqichda UI yoki yangi release binari yo‘q. Main’ga merge qilinmadi.
 
-## Keyingi sessiya — faqat 3A, avval hajmni ajratish
+## 3A-1: wire component / validator
 
-1. Remote branch/checkpoint va eng yangi CI holatini tekshir. Mavjud schema/core/repository testlarini saqla; main’ga merge yo‘q.
-2. `debtLedgerV1` capability va ishonchli store identity/pairing kontraktini belgilab, har ikki yo‘nalishda eski peerga moliyaviy guruh ketmasligini ta’minla. Full pull/snapshot/legacy endpointlar ham audit qilinsin; `acked=-1`ning o‘zi yetmaydi.
-3. Wire packetda customer/account/sale/header va frozen event lines dependency tartibida bo‘lsin. Canonical local command snapshoti to‘liq wire event emas. Qabul qiluvchi mahalliy `TakePayment`ni chaqirib qayta allocation qilmasin.
-4. Receiver validation/ownership/idempotency va missing-dependency inboxni atomik yozsin. Header/line komplekti to‘liq bo‘lmasa ACK/cursor oldinga yurmasin; bir guruhning faqat sale/stock qismi chiqarilmasin.
-5. HELD journalni faqat tayyor to‘liq packetga aylantirgach release qil; restart/ACK yo‘qolishi/reorder/duplicate va incompatible peer testlarini yoz.
-6. 3A bir sessiyaga katta bo‘lsa 3A-1 packet/validator, 3A-2 transport/ACK kabi tugallangan qismlarga bo‘l; release UI yoqilmasin. Har yakunda test/commit/push/checkpoint.
-7. 3B convergence/restore/contact conflict, 4/5 frontend, 6 returns/report, 7 backup/manual hali alohida. Qarz undirish revenue emas; offline ortiqcha undirish eventi yo‘qolmasin.
+- `DebtWire.cs` / `DebtWire.kt`: customer-create, sale_open va payment komponentlari uchun canonical codec. UTF-8/base64/string-number format float orqali pul yo‘qotmaydi; butun event/account/line tartibi uchun SHA-256 fingerprint.
+- Qat’iy GUID, do‘kon/actor/request/payload mosligi, original debt, due date, summa/fee va line count/uniqueness/taqsimot tekshiruvi. Receiver qoldig‘iga qarab paymentni qayta taqsimlamaydi. Decoded line list o‘zgarmas.
+- Pure `RequirePeer`: do‘kon GUID va `debtLedgerV1` capability tekshiruvi. Bu hali pairing handshake emas; capability ilovada e’lon qilinmagan va HELD navbat ochilmagan.
+- 92 ta umumiy wire fixture: C#/Kotlin va Android uchun bir xil; real repository payloadlariga bog‘langan. 2^53 dan katta pul, Int64 limit, buzilgan UTF-8/base64, boshqa do‘kon, eski peer, noma’lum schema/kind, noto‘g‘ri summa/fee/date, duplicate/missing line kabi holatlar.
+- To‘liq atomic sale/stock envelope yoki DB receiver hali yo‘q. Hash autentifikatsiya o‘rnini bosmaydi. DBdagi account/customer ownership va request/full-content replay receiverda tekshirilishi shart.
+- Audit: desktop full pull HELDdan mustaqil sales o‘qiydi. `download_db` sync_meta’ni ham o‘chiradi, unda customer-create retry snapshot bor. Metadata coalescing/500-limit ham moliyaviy guruhlar uchun qayta ko‘rilishi shart. Batafsil: [DEBT_WIRE.md](DEBT_WIRE.md).
+- Implementatsiya commit: `fc32b4f741e7d3b8f79fea85ca84542ad35c60b6`. [CI 37644570634](https://github.com/akkiS18/LinePOS/actions/runs/37644570634) SUCCESS: SQLite/core/regressiya, 22 Python testi, Windows desktop build, Android build va API26/API35 instrumentatsiya. Har emulyatorda 14 test, shu jumladan 92 wire fixtureli test ishladi.
+- Paritet workflow argumenti tuzatilgan commit: `59368038342ec5106bc3e2bb2fdd97f9493c7a05` (faqat workflow buyrug‘i; app kodi o‘zgarmadi). [CI 37645024740](https://github.com/akkiS18/LinePOS/actions/runs/37645024740) SUCCESS: C# 92/92 + 97/97, Kotlin 92/92 + 97/97, ikkala korpus uchun natijalar teng.
+- Birinchi paritet run `37644570804`da barcha C#/Kotlin misollari o‘tgan, lekin yakuniy Python comparatorga ortiqcha argument berilgani sabab workflow yiqilgan. Keyingi run aynan shu buyruq tuzatilgach muvaffaqiyatli tugadi.
+- Lokal Python 22/22 va `git diff --check` PASS. Fizik qurilma/LAN/ACK testlari bu bosqichda bajarilmagan. Main’ga merge yoki release yo‘q.
+
+## Keyingi sessiya — 3A-2, avval yana kichik scope
+
+1. Remote branch/checkpoint va CI dalilini tekshir. `docs/DEBT_WIRE.md`dagi API/chegaralar va transport auditini o‘qi; main’ga merge yo‘q.
+2. 3A-2ni kerak bo‘lsa **3A-2a: DB export/freeze + atomic receiver**, **3A-2b: handshake/push/pull/ACK**ga bo‘l. Bir sessiyada barcha integrationni majburan tugatishga urinma.
+3. Do‘kon GUIDni trusted setup/pairingdan ol. Stable store va server restore epoch alohida; peerning o‘zi yuborgan store’ni trusted expectedStore qilib ishlatma. `debtLedgerV1` barcha yo‘llar himoyalanmaguncha e’lon qilinmasin.
+4. DBdan asl customer-create snapshot/header/account/frozen linesni bir snapshotda chiqar. Eski outbox payload command array, yangi full envelope emas. Butun canonical event hashni durable dedupda saqla; request hashning o‘zi taqsimot tamperini tekshirmaydi.
+5. Customer/sale/items/account/event/stock to‘liq financial envelope bo‘lsin. Receiver dependency/ownership/permissionni tekshirib, local `TakePayment`ni chaqirmasdan frozen delta’larni atomik yozsin. Bir xil request va boshqa body ko‘rinadigan integrity xatosi; valid kechikkan payment yo‘qolmasin.
+6. Missing dependency yoki unknown kind/schema inbox/errorga; commit bo‘lmasdan ACK/cursor yo‘q. Reorder/duplicate/ACK yo‘qolishi/rollbackni haqiqiy SQLite va Roomda tekshir.
+7. Legacy full/delta pull va stripped `download_db`ni ham debt-aware qil. `acked=-1` yakka o‘zi himoya emas; metadata coalescing HELD dependencylarini yutib yubormasin. Codec 2MiB/10,000 line va HTTP 8MiB chegaralarini butun envelope uchun local commitdan oldin preflight yoki atomic fragmentation bilan hal qil.
+8. Bir bosqich tugagach test/commit/push/checkpoint. 3B convergence/restore/contact conflict, 4/5 frontend, 6 returns/report, 7 backup/manual hali alohida.
 
 ## Muhim cheklovlar
 
@@ -78,7 +92,7 @@ Foydalanuvchining kichik tugallangan bosqichlarda ishlash talabi sabab 2B ikkiga
 - Ikki uzilgan qurilmada ortiqcha undirishni to‘liq bloklash mumkin emas; pul yozuvlari yo‘qolmasin, excess alohida ko‘rinsin.
 - Sale profitni debt collection bilan ikki marta hisoblama. Cashflow, receivable va revenue alohida.
 - Eski qog‘oz qarz import qilinmaydi; legacy DEBT enumdan taxminiy mijoz qarzi yaratma.
-- To‘liq D01–D27 reja testlari o‘tgan deb yozma: 2A arifmetika, 2B-1 migratsiya/sxema va 2B-2 repository alohida testlanadi; 3–7 bajarilmagan.
+- To‘liq D01–D27 reja testlari o‘tgan deb yozma: 2A arifmetika, 2B-1 migratsiya/sxema, 2B-2 repository va 3A-1 codec testlari o‘tdi; 3A-2 hamda 3B–7 bajarilmagan.
 - UI 4/5 tugashi release tayyor degani emas; returns/report/backup integratsiyasi va regressiya gates kerak.
 
 ## Lokal nusxa haqida

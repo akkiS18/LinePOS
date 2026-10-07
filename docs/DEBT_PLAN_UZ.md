@@ -1,6 +1,6 @@
 # Qarz daftari — texnik va frontend reja
 
-Holat: 1-bosqich reja, 2A hisoblash yadrosi va 2B-1 sxema/migratsiya va 2B-2 lokal repository yakunlangan. Ilovaga integratsiya hali amalga oshirilmagan; joriy holat DEBT_CHECKPOINT_UZ.md da.
+Holat: 1-bosqich reja, 2A hisoblash yadrosi va 2B-1 sxema/migratsiya va 2B-2 lokal repository hamda 3A-1 wire codec/validator yakunlangan. Ilovaga integratsiya hali amalga oshirilmagan; joriy holat DEBT_CHECKPOINT_UZ.md da.
 Sana: 2026-10-05 (Asia/Tashkent).
 Tekshirilgan asos: main `b631a27241a5eb25501a6e4ab316c4aebdae4460`.
 Ish branchi: `feature/customer-debt`.
@@ -157,7 +157,8 @@ Har sessiya: kichik yakun → tegishli tekshiruv → commit/push → checkpoint.
 | 2A — keyingi | Kotlin/C# sof pul va ledger hisob kontrakti + umumiy fixturelar | Rounding, allocation, excess, reversal arifmetikasi platformalarda bir xil |
 | 2B-1 | Jadvallar va xavfsiz migratsiya | Fresh/upgrade, FK, snapshot, schema rollback |
 | 2B-2 | Transactional repository/outbox | Request replay/hash, ownership, atomik sale/payment rollback |
-| 3A | Protocol capability, push/pull va atomik guruhlar | Reorder/replay/ACK yo‘qolishi, eski peer |
+| 3A-1 | Canonical wire component / validator | C#/Kotlin/Android fixture pariteti, buzilgan paket/identity/summa rad etilishi |
+| 3A-2 | DB freeze/receiver, protocol capability, push/pull va atomik guruhlar | Reorder/replay/ACK yo‘qolishi, eski peer; kerak bo‘lsa 3A-2a/2bga bo‘linadi |
 | 3B | Parallel qurilmalar, restore epoch, kontakt konflikti | Convergence va restart/restore testlari |
 | 4 | Desktop UI va cashier/payment integratsiyasi | Windows build + jarayon testlari |
 | 5 | Mobil UI va offline cashier/payment | Android build, API 26/35 va jarayon testlari |

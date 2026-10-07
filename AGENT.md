@@ -150,3 +150,8 @@ Umumiy debt schema v1, Android Room 13→14 va desktop pre-migration snapshot qo
 ## Qarz daftari — 2026-10-07, 2B-2
 
 C#/Kotlin local transactional repository: customer creation, nasiya ochish, payment allocation, durable request replay va HELD outbox. Savdo callbacki bir SQLite tranzaksiyasida ishlashi shart; request o‘zgarsa rad etiladi, parallel bir xil to‘lov bir marta yoziladi. Host actor/store/permission va cashier adapter hali UIga ulanmagan. `acked=-1` eski full-pull yo‘llarini to‘liq bloklamaydi: stage3 capability/atomic group tugamasdan UI/cashierga ulash yoki release qilish mumkin emas. API chegaralari `docs/DEBT_REPOSITORY.md`, yakuniy CI dalili va keyingi kichik scope `docs/DEBT_CHECKPOINT_UZ.md`da. Main’ga merge yo‘q; Firebase/CBU o‘zgarmadi.
+
+
+## Qarz daftari — 2026-10-07, 3A-1
+
+C#/Kotlin canonical wire component codec va validator qo‘shildi: customer-create, sale_open, payment; aniq integer pul, frozen allocation, payload/header mosligi va to‘liq komponent fingerprint. 92 ta bir xil fixture C#/JVM/Android uchun; mavjud 97 ta arifmetika saqlangan. Bu full envelope/DB receiver/ACK emas, `debtLedgerV1` hali ilovada e’lon qilinmaydi. HELD navbat ochilmagan; main/UI/release yo‘q. Transport auditida full pull va sync_meta’ni strip qiladigan desktop download_db yo‘li alohida integration gate deb qayd etildi. Kontrakt: `docs/DEBT_WIRE.md`; test dalili va keyingi kichik bosqich: `docs/DEBT_CHECKPOINT_UZ.md`.
