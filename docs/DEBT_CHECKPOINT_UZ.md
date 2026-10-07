@@ -1,6 +1,6 @@
 # Qarz daftari — davom ettirish nuqtasi
 
-Sana: 2026-10-05. Holat: **2B-1 yakunlandi — sxema va xavfsiz migratsiya; repository hali yo‘q**.
+Sana: 2026-10-07. Holat: **2B-2 yakunlandi — lokal transactional repository; sync/UI integratsiyasi hali yo‘q**.
 
 ## Asos va branch
 
@@ -43,18 +43,33 @@ Foydalanuvchining kichik tugallangan bosqichlarda ishlash talabi sabab 2B ikkiga
 - [Debt core CI 37332080765](https://github.com/akkiS18/LinePOS/actions/runs/37332080765): C# 97/97, Kotlin 97/97 va natijalar pariteti SUCCESS.
 - Tekshiruvda Room migration→onOpen FK lifecycle va API35 WAL reader/writer PRAGMA farqi hisobga olindi. Oldingi `035f7dc` runida API35’dagi tranzaksiyadan tashqari FK assertion yiqilgan edi; writer tranzaksiyasi va real orphan INSERT rad etilishi bilan test kuchaytirildi, yakuniy run o‘tdi.
 - Fizik Windows/telefon/printer/Telegram sinovi bajarilmadi. Bu bosqichda yangi qarz UI yoki release binari yo‘q. Sxema va keyingi qatlam chegaralari: `docs/DEBT_SCHEMA.md`.
-- UI, repository, qarz journal capture/push/pull hali yo‘q. Sxema hech qanday eski DEBT chekdan avtomatik qarz yaratmaydi.
+- 2B-1 yakunida UI, repository, qarz journal capture/push/pull yo‘q edi. Sxema hech qanday eski DEBT chekdan avtomatik qarz yaratmaydi.
 
-## Keyingi sessiya — faqat 2B-2
+## 2B-2: transactional repository
 
-1. Remote branch/checkpoint va CI natijalarini tekshir; mavjud 2A va 2B-1 testlarini saqla.
-2. Transactional repository: customer/account/event/lines va mavjud sync_journal outbox birga; immutable request GUID/canonical hash, replay qaytargan eski natija.
-3. Opening account `original_debt_minor` boshlang‘ich qoldiq; `sale_open` header audit/dependency uchun, opening summani yana debt_event_linesga yozib ikki marta hisoblama.
-4. Sxema CHECK/FK yetarli emas: request/effect summalari, event kind/reference, GUID format, store/actor identity, freeze/seal va authorization repositoryda tekshirilishi kerak. To‘liq eventdan keyin qo‘shimcha line yozishni repository bloklasin.
-5. Due date va tarixiy customer_name accountda immutable. Keyingi muddat tahriri kerak bo‘lsa alohida audit modeli; original accountni update qilishga shoshilma.
-6. Store scope avtomatik seed qilinmagan. Offline yangi do‘kon identifikatori, device instance/sequence va restore identity siyosatini reja bo‘yicha repository bilan yarat.
-7. Aynan bir ulanish/tranzaksiyada sale/account/event/outbox va rollback, identical retry/changed body, noto‘g‘ri customer/store, double submission testlari. Yangi payment hali transportga ketmasin: stage3 capability gate talab etiladi.
-8. Sync/UIga kirishma. Test/commit/push va checkpoint; main’ga merge qilma.
+- C# va Kotlin `DebtRepository`: do‘konga binding, mijoz yaratish, atomik nasiya ochish, qarz to‘lovi va qoldiq proyeksiyasi. Pul integer minor-unit, tarixiy ism/muddat o‘zgarmas.
+- Bir xil request/body eski natijani qaytaradi; o‘zgargan body rad etiladi. Sale callback replayda chaqirilmaydi; payment qayta taqsimlanmaydi. Request actor/storega bog‘langan.
+- Customer yaratishning asl snapshoti `sync_meta`da saqlanadi; keyin ism/archive o‘zgarsa ham eski yaratish retryi taniladi. GUID/payload, aktiv mijoz, do‘kon va host permission tekshiriladi.
+- Har repository instance uchun yangi writer epoch UUID; restart/DB nusxasida sequence to‘qnashmaydi. Fizik qurilma yorlig‘i va server restore cursor siyosati hali 3Bda.
+- Sale/account/event/receipt/outbox bir tranzaksiya; payment header/frozen lines/receipt/outbox bir tranzaksiya. Callback tashlagan xato va journal INSERTdagi xato to‘liq rollback qiladi.
+- Mahalliy command remote `applying` yoki ochiq `current_group` ichida ishlamaydi. Arbitrary line append API yo‘q.
+- Outbox `acked=-1` bilan HELD. Nasiya guruhidagi sale/stock journal ham ushlab turiladi. **Desktop full pull sale jadvalini journal holatidan mustaqil o‘qishi mumkin; bu yakka holda barcha eski transportga qarshi himoya emas. Stage3 tugamasdan UI/cashierga ulash mumkin emas.**
+- Hozir UI/cashier/sync call site yo‘q. Callback savdo/items/stockni berilgan tranzaksiyada saqlashi va basket fingerprintni to‘g‘ri tuzishi shart. Host authorization/store setup adapterlari keyingi integratsiyada yoziladi.
+- API, test va transport chegaralari: [DEBT_REPOSITORY.md](DEBT_REPOSITORY.md).
+- Tekshirilgan kod commit: `3b2a77ed1276289b24a400370ca30bb86af199bf` (asosiy repository commit `529d18a125a2071576308018cadc4bfa51b32305`).
+- [CI 37607020561](https://github.com/akkiS18/LinePOS/actions/runs/37607020561): haqiqiy SQLite repository/regressiya, 21 Python testi, Windows desktop build, Android build hamda API26/API35 Room instrumentatsiya — hammasi SUCCESS. Har Android emulyatorida 13 ta test, shu jumladan yangi repository ssenariysi ishladi.
+- [Debt core CI 37607020731](https://github.com/akkiS18/LinePOS/actions/runs/37607020731): C# 97/97, Kotlin 97/97 va paritet SUCCESS. Lokal Python 21/21 va diff whitespace tekshiruvi ham o‘tdi.
+- Real telefon/Windows UI/printer/Telegram sinovi bajarilmadi; bu bosqichda UI yoki yangi release binari yo‘q. Main’ga merge qilinmadi.
+
+## Keyingi sessiya — faqat 3A, avval hajmni ajratish
+
+1. Remote branch/checkpoint va eng yangi CI holatini tekshir. Mavjud schema/core/repository testlarini saqla; main’ga merge yo‘q.
+2. `debtLedgerV1` capability va ishonchli store identity/pairing kontraktini belgilab, har ikki yo‘nalishda eski peerga moliyaviy guruh ketmasligini ta’minla. Full pull/snapshot/legacy endpointlar ham audit qilinsin; `acked=-1`ning o‘zi yetmaydi.
+3. Wire packetda customer/account/sale/header va frozen event lines dependency tartibida bo‘lsin. Canonical local command snapshoti to‘liq wire event emas. Qabul qiluvchi mahalliy `TakePayment`ni chaqirib qayta allocation qilmasin.
+4. Receiver validation/ownership/idempotency va missing-dependency inboxni atomik yozsin. Header/line komplekti to‘liq bo‘lmasa ACK/cursor oldinga yurmasin; bir guruhning faqat sale/stock qismi chiqarilmasin.
+5. HELD journalni faqat tayyor to‘liq packetga aylantirgach release qil; restart/ACK yo‘qolishi/reorder/duplicate va incompatible peer testlarini yoz.
+6. 3A bir sessiyaga katta bo‘lsa 3A-1 packet/validator, 3A-2 transport/ACK kabi tugallangan qismlarga bo‘l; release UI yoqilmasin. Har yakunda test/commit/push/checkpoint.
+7. 3B convergence/restore/contact conflict, 4/5 frontend, 6 returns/report, 7 backup/manual hali alohida. Qarz undirish revenue emas; offline ortiqcha undirish eventi yo‘qolmasin.
 
 ## Muhim cheklovlar
 
@@ -63,7 +78,7 @@ Foydalanuvchining kichik tugallangan bosqichlarda ishlash talabi sabab 2B ikkiga
 - Ikki uzilgan qurilmada ortiqcha undirishni to‘liq bloklash mumkin emas; pul yozuvlari yo‘qolmasin, excess alohida ko‘rinsin.
 - Sale profitni debt collection bilan ikki marta hisoblama. Cashflow, receivable va revenue alohida.
 - Eski qog‘oz qarz import qilinmaydi; legacy DEBT enumdan taxminiy mijoz qarzi yaratma.
-- To‘liq D01–D27 reja testlari o‘tgan deb yozma: 2A arifmetika va 2B-1 migratsiya/sxema testlari o‘tdi; 2B-2 va 3–7 bajarilmagan.
+- To‘liq D01–D27 reja testlari o‘tgan deb yozma: 2A arifmetika, 2B-1 migratsiya/sxema va 2B-2 repository alohida testlanadi; 3–7 bajarilmagan.
 - UI 4/5 tugashi release tayyor degani emas; returns/report/backup integratsiyasi va regressiya gates kerak.
 
 ## Lokal nusxa haqida

@@ -1,6 +1,6 @@
 # Qarz daftari — texnik va frontend reja
 
-Holat: 1-bosqich reja, 2A hisoblash yadrosi va 2B-1 sxema/migratsiya yakunlangan. Ilovaga integratsiya hali amalga oshirilmagan; joriy holat DEBT_CHECKPOINT_UZ.md da.
+Holat: 1-bosqich reja, 2A hisoblash yadrosi va 2B-1 sxema/migratsiya va 2B-2 lokal repository yakunlangan. Ilovaga integratsiya hali amalga oshirilmagan; joriy holat DEBT_CHECKPOINT_UZ.md da.
 Sana: 2026-10-05 (Asia/Tashkent).
 Tekshirilgan asos: main `b631a27241a5eb25501a6e4ab316c4aebdae4460`.
 Ish branchi: `feature/customer-debt`.

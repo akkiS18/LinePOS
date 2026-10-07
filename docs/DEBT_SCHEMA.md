@@ -4,8 +4,8 @@ Canonical SQL: `debt/schema.sql`. Its Android asset and desktop embedded resourc
 must be byte-identical; `tests/test_debt_schema.py` enforces this.
 
 This stage installs empty auxiliary tables, not a usable debt feature. No old DEBT
-receipt becomes a customer debt automatically. No debt write is captured or sent by
-the current sync transport. UI and transactional repositories are subsequent stages.
+receipt becomes a customer debt automatically. Stage 2B-2 now adds local repositories with held outbox entries; see
+[DEBT_REPOSITORY.md](DEBT_REPOSITORY.md). UI and debt transport remain subsequent stages.
 
 ## Migration lifecycle
 

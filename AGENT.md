@@ -146,3 +146,7 @@ Ushbu faylda loyihada amalga oshirilgan barcha o'zgarishlar, arxitektura qarorla
 ## Qarz daftari — 2026-10-05, 2B-1
 
 Umumiy debt schema v1, Android Room 13→14 va desktop pre-migration snapshot qo‘shildi. Kod `feature/customer-debt`da; main’ga merge yo‘q. Sxema tafsilotlari: `docs/DEBT_SCHEMA.md`. 2B hajmi sabab 2B-1 (sxema/migratsiya) va 2B-2 (transactional repository)ga bo‘lindi. Yakuniy test dalili va keyingi scope `docs/DEBT_CHECKPOINT_UZ.md`da; UI/sync/repository hali amalga oshirilmagan.
+
+## Qarz daftari — 2026-10-07, 2B-2
+
+C#/Kotlin local transactional repository: customer creation, nasiya ochish, payment allocation, durable request replay va HELD outbox. Savdo callbacki bir SQLite tranzaksiyasida ishlashi shart; request o‘zgarsa rad etiladi, parallel bir xil to‘lov bir marta yoziladi. Host actor/store/permission va cashier adapter hali UIga ulanmagan. `acked=-1` eski full-pull yo‘llarini to‘liq bloklamaydi: stage3 capability/atomic group tugamasdan UI/cashierga ulash yoki release qilish mumkin emas. API chegaralari `docs/DEBT_REPOSITORY.md`, yakuniy CI dalili va keyingi kichik scope `docs/DEBT_CHECKPOINT_UZ.md`da. Main’ga merge yo‘q; Firebase/CBU o‘zgarmadi.
