@@ -2,6 +2,7 @@ using PosElectro.Desktop.Data;
 using PosElectro.Desktop.Models;
 using Microsoft.Data.Sqlite;
 
+DebtRepositoryTests.Run();
 DebtSchemaTests.Run();
 ReturnAccountingTests.Run();
 ReturnStoreTests.Run();
