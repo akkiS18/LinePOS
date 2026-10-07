@@ -49,6 +49,29 @@ namespace PosElectro.Desktop.Views
                     }
                 }
 
+                var searchKey = e.Key == Key.System ? e.SystemKey : e.Key;
+                if (!vm.IsPaymentModalOpen && !vm.IsEditModalOpen && !vm.IsUnrecognizedBarcodeModalOpen && !vm.IsHoldModalOpen && !vm.IsBrakModalOpen && vm.HasCartItems)
+                {
+                    if ((searchKey == Key.Space && string.IsNullOrWhiteSpace(SearchBox.Text)) || searchKey == Key.F8)
+                    {
+                        vm.OpenPaymentModal(0);
+                        e.Handled = true;
+                        return;
+                    }
+                    else if (searchKey == Key.F9)
+                    {
+                        vm.OpenPaymentModal(1);
+                        e.Handled = true;
+                        return;
+                    }
+                    else if (searchKey == Key.F10)
+                    {
+                        vm.OpenPaymentModal(2);
+                        e.Handled = true;
+                        return;
+                    }
+                }
+
                 if (e.Key == Key.Enter)
                 {
                     vm.HandleSearchQueryEnter();
@@ -262,22 +285,33 @@ namespace PosElectro.Desktop.Views
                     }
                 }
 
-                // 4. Asosiy kassa ekranida tezkor to'lov tugmalari (F8: Naqd, F9: Karta, F10: Aralash):
-                if (!vm.IsPaymentModalOpen && !vm.IsEditModalOpen && !vm.IsUnrecognizedBarcodeModalOpen && !vm.IsHoldModalOpen && !vm.IsBrakModalOpen)
+                // 4. Asosiy kassa ekranida tezkor to'lov tugmalari (Space / F8: Naqd, F9: Karta, F10: Aralash):
+                if (!vm.IsPaymentModalOpen && !vm.IsEditModalOpen && !vm.IsUnrecognizedBarcodeModalOpen && !vm.IsHoldModalOpen && !vm.IsBrakModalOpen && vm.HasCartItems)
                 {
-                    if (e.Key == Key.F8 && vm.HasCartItems)
+                    var actualKey = e.Key == Key.System ? e.SystemKey : e.Key;
+
+                    // Space yoki F8: Naqd to'lov
+                    if (actualKey == Key.Space || actualKey == Key.F8)
                     {
-                        vm.OpenPaymentModal(0);
-                        e.Handled = true;
-                        return;
+                        // Agar qidiruv maydonida bir nechta so'z yozilayotgan bo'lsa (masalan: "kabel 2x1.5"):
+                        if (actualKey == Key.Space && e.OriginalSource is TextBox tb && tb == SearchBox && !string.IsNullOrWhiteSpace(tb.Text))
+                        {
+                            // Matn ichidagi oddiy probel
+                        }
+                        else
+                        {
+                            vm.OpenPaymentModal(0);
+                            e.Handled = true;
+                            return;
+                        }
                     }
-                    else if (e.Key == Key.F9 && vm.HasCartItems)
+                    else if (actualKey == Key.F9)
                     {
                         vm.OpenPaymentModal(1);
                         e.Handled = true;
                         return;
                     }
-                    else if (e.Key == Key.F10 && vm.HasCartItems)
+                    else if (actualKey == Key.F10)
                     {
                         vm.OpenPaymentModal(2);
                         e.Handled = true;

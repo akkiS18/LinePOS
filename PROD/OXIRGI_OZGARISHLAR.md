@@ -266,4 +266,30 @@ Ushbu hujjat mijozga oxirgi kiritilgan o'zgarishlar va yangi qulayliklarni ko'rs
   - **Yangilangan Inno Setup o'rnatish fayli:** Barcha o'zgarishlar bilan yangi to'liq mustaqil [Line_kassa_Desktop_Setup.exe](file:///c:/Users/Acer/Documents/POS/PROD/Line_kassa_Desktop_Setup.exe) (52.2 MB) qayta kompilyatsiya qilindi.
 - **Mijoz uchun foydasi:**
   - Kassir to'lovni tasdiqlash uchun sichqonchaga qo'l urishi shart emas — faqat klaviaturaning <kbd>Enter</kbd> yoki <kbd>Esc</kbd> tugmasi orqali soniyalar ichida savdoni yakunlaydi yoki bekor qiladi. Asosiy kassa ekranida esa qaysi to'lov turi bilan savdo qilish tugmalari juda aniq va yaqqol ko'zga tashlanadi.
-
+
+---
+
+### 25. 🚀 Tovarlar Paneli Moslashuvchanligi (Responsive Grid), 58mm Chek Himoyasi, Tezkor Space/F-tugmalar va Vektor Ikonkalar
+- **Nima o'zgardi:**
+  - **Tovarlar kartochkalari moslashuvchan (Responsive) qilindi:**
+    - Yangi maxsus `AdaptiveGridPanel` yaratildi. U oyna kengligiga qarab ustunlar sonini dinamik hisoblaydi va kartochkalar kengligini bo'sh qolgan o'ng tomondagi joyni to'liq qoplaydigan qilib 100% cho'zadi.
+    - Katalogdagi "Eng ko'p sotiladigan tovarlar" va qidiruv natijalaridagi barcha kartalar ekranning bo'sh joy qoldirmasdan chiroyli va tartibli to'ldirib turadi.
+  - **Kassa qidiruv (Search) ikonkasi toza SVG vektoriga o'tkazildi:**
+    - Qidiruv maydonidagi eskirgan `🔍` emoji o'rniga zamonaviy, tiniq va professional SVG vektor belgisi qo'yildi.
+  - **Navbar va Oyna sarlavhasi brendingi:**
+    - Yuqori navigatsiya panelidagi "Line kassa" so'zi o'rniga "SMART" qo'yildi. Dastur oynasi sarlavhasi esa "SMART kassa" deb yangilandi.
+  - **58mm termal printer qirqilishdan to'liq himoyalandi (Line Wrapping):**
+    - 58mm standart kassa lentasi (1 qatorda 32 ta belgi) cheklovlari qat'iy inobatga olindi.
+    - Yangi aqlli `SplitIntoLines(..., 32)` algoritmi integratsiya qilindi.
+    - Chek ID raqami, asl chek ma'lumotlari, uzun nomli tovarlar va to'lov summalari hech qachon qirqilib yoki `...` bilan uzilib qolmaydi, sig'magan qismi avtomatik ravishda pastki qatordan silliq davom etadi.
+  - **Bog'lanish modali toza vektorga o'tkazildi:**
+    - Modal oynasidagi `👨‍💻`, `📞`, `✈️` emojilari o'rniga dasturchi, telefon va Telegram yo'nalishidagi nozik oq SVG vektor ikonkalar joylashtirildi.
+  - **Tezkor klaviatura tugmalari (<kbd>Space</kbd>, <kbd>F8</kbd>, <kbd>F9</kbd>, <kbd>F10</kbd>) to'liq ishga tushirildi:**
+    - <kbd>Space</kbd> (Probel) va <kbd>F8</kbd> to'g'ridan-to'g'ri **Naqd** to'lovni ishga tushiradi (qidiruv maydonida matn terilayotganda probel yozuvga to'sqinlik qilmaydi, bo'sh bo'lganda yoki kassa fokusida esa tezkor savdo oynasini ochadi).
+    - <kbd>F9</kbd> tugmasi **Karta** to'lovini ochadi.
+    - <kbd>F10</kbd> tugmasi **Aralash** to'lovini ochadi (WPF da Windows tizimi F10 ni menyu sifatida ushlab qolishi to'liq bartaraf etildi).
+    - Tugmalar ustidagi ko'rsatkichlarga (Tooltip) klaviatura belgilari aniq ko'rsatib qo'yildi (`[Space / F8]`, `[F9]`, `[F10]`).
+  - **Mustaqil yangi o'rnatish paketi:**
+    - Barcha yangilanishlar bilan `Line_kassa_Desktop_Setup.exe` yangidan kompilyatsiya qilindi va `PROD` papkasiga joylashtirildi.
+- **Mijoz uchun foydasi:**
+  - Kassir klaviaturadan qo'lini uzmasdan birgina <kbd>Space</kbd> (yoki F8/F9/F10) tugmasi bilan tezkor savdoni amalga oshiradi. 58mm termal printerda chekning hech qaysi qismi qirqilmaydi. Tovarlar kartochkalari esa monitor o'lchamidan qat'i nazar oynani to'liq va go'zal to'ldiradi.

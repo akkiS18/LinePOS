@@ -6,7 +6,7 @@
         xmlns:views="clr-namespace:PosElectro.Desktop.Views"
         xmlns:vm="clr-namespace:PosElectro.Desktop.ViewModels"
         mc:Ignorable="d"
-        Title="Line kassa" 
+        Title="SMART kassa" 
         Icon="Assets/app_logo.png"
         Height="750" Width="1200" MinHeight="650" MinWidth="1000"
         WindowStartupLocation="CenterScreen"
@@ -82,7 +82,7 @@
                     <Border Width="32" Height="32" CornerRadius="8" Margin="0,0,10,0" VerticalAlignment="Center" Background="#16A34A" Padding="1">
                         <Image Source="Assets/app_logo.png" RenderOptions.BitmapScalingMode="HighQuality"/>
                     </Border>
-                    <TextBlock Text="Line kassa" Foreground="#F8FAFC" FontSize="20" FontWeight="Bold" VerticalAlignment="Center"/>
+                    <TextBlock Text="SMART" Foreground="#F8FAFC" FontSize="20" FontWeight="Bold" VerticalAlignment="Center"/>
                 </StackPanel>
 
                 <!-- Menyu Tugmalari (Ishonchli Buttonlar) -->
@@ -543,7 +543,8 @@
                     <Grid Margin="0,0,0,16">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                             <Border Background="#064E3B" CornerRadius="10" Width="40" Height="40" Margin="0,0,12,0" BorderBrush="#059669" BorderThickness="1">
-                                <TextBlock Text="👨‍💻" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <Path Data="M20 18c1.1 0 1.99-.9 1.99-2L22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z" 
+                                      Fill="#34D399" Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
                             <StackPanel>
                                 <TextBlock Text="Ishlab chiqaruvchi" Foreground="#F8FAFC" FontSize="18" FontWeight="Bold"/>
@@ -568,7 +569,8 @@
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="📞" FontSize="16" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                <Path Grid.Column="0" Data="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"
+                                      Fill="#10B981" Width="17" Height="17" Stretch="Uniform" Margin="0,0,12,0" VerticalAlignment="Center"/>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <TextBlock Text="Telefon raqam:" Foreground="#94A3B8" FontSize="11"/>
                                     <TextBlock Text="+998 95 720 88 33" Foreground="#F8FAFC" FontSize="15" FontWeight="Bold"/>
@@ -592,7 +594,8 @@
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="✈️" FontSize="16" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                <Path Grid.Column="0" Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.56 2.94-1.28 4.91-2.12 5.9-2.54 2.81-1.17 3.39-1.38 3.77-1.38.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06-.01.19-.03.37z"
+                                      Fill="#38BDF8" Width="18" Height="18" Stretch="Uniform" Margin="0,0,12,0" VerticalAlignment="Center"/>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <TextBlock Text="Telegram:" Foreground="#94A3B8" FontSize="11"/>
                                     <TextBlock Text="@S18_2003" Foreground="#38BDF8" FontSize="15" FontWeight="Bold"/>

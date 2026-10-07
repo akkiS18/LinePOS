@@ -173,6 +173,33 @@ namespace PosElectro.Desktop
             if (_viewModel.CurrentView == _viewModel.CashierVM)
             {
                 _viewModel.ScannerService.HandlePreviewKeyDown(e);
+
+                if (!e.Handled && _viewModel.CashierVM != null)
+                {
+                    var cvm = _viewModel.CashierVM;
+                    if (!cvm.IsPaymentModalOpen && !cvm.IsEditModalOpen && !cvm.IsUnrecognizedBarcodeModalOpen && !cvm.IsHoldModalOpen && !cvm.IsBrakModalOpen && cvm.HasCartItems)
+                    {
+                        var key = e.Key == Key.System ? e.SystemKey : e.Key;
+                        if (key == Key.F8)
+                        {
+                            cvm.OpenPaymentModal(0);
+                            e.Handled = true;
+                            return;
+                        }
+                        if (key == Key.F9)
+                        {
+                            cvm.OpenPaymentModal(1);
+                            e.Handled = true;
+                            return;
+                        }
+                        if (key == Key.F10)
+                        {
+                            cvm.OpenPaymentModal(2);
+                            e.Handled = true;
+                            return;
+                        }
+                    }
+                }
             }
         }
 

@@ -228,9 +228,69 @@ namespace PosElectro.Desktop.Services
         }
 
         /// <summary>
+        /// Matnni 58 mm chek kengligiga (maksimal 32 belgi) moslab, so'zlarni buzmagan holda
+        /// qatorlarga ajratadi. Hech bir belgi qirqilib qolmaydi, pastki qatordan davom etadi.
+        /// </summary>
+        public static List<string> SplitIntoLines(string text, int maxChars = 32)
+        {
+            var result = new List<string>();
+            if (string.IsNullOrEmpty(text)) return result;
+
+            var words = text.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (words.Length == 0) return result;
+
+            var current = new StringBuilder();
+
+            foreach (var word in words)
+            {
+                // Agar bitta so'zning o'zi maxChars dan uzun bo'lsa (masalan: uzun chek IDsi yoki shtrix-kod)
+                if (word.Length > maxChars)
+                {
+                    if (current.Length > 0)
+                    {
+                        result.Add(current.ToString());
+                        current.Clear();
+                    }
+
+                    int idx = 0;
+                    while (idx < word.Length)
+                    {
+                        int chunk = Math.Min(maxChars, word.Length - idx);
+                        result.Add(word.Substring(idx, chunk));
+                        idx += chunk;
+                    }
+                    continue;
+                }
+
+                if (current.Length == 0)
+                {
+                    current.Append(word);
+                }
+                else if (current.Length + 1 + word.Length <= maxChars)
+                {
+                    current.Append(" ").Append(word);
+                }
+                else
+                {
+                    result.Add(current.ToString());
+                    current.Clear();
+                    current.Append(word);
+                }
+            }
+
+            if (current.Length > 0)
+            {
+                result.Add(current.ToString());
+            }
+
+            return result;
+        }
+
+        /// <summary>
         /// 58 mm kassa chekining qatorlari (har bir qator qat'iy 32 belgidan oshmaydi).
         /// Ushbu qatorlar ham Jonli Ko'rish (Preview), ham Printer (Chop etish) uchun
         /// YAGONA 1-GA-1 MANBA bo'lib xizmat qiladi!
+        /// Hech bir ma'lumot qirqilib qolmaydi, sig'masa pastki qatordan davom etadi.
         /// </summary>
         public static List<string> BuildReceiptLines(Sale sale)
         {
@@ -241,29 +301,41 @@ namespace PosElectro.Desktop.Services
             lines.Add(CenterText("Elektr jihozlari do'koni", 32));
             lines.Add(new string('-', 32));
 
-            // Chek ma'lumotlari
-            lines.Add($"Chek: #{sale.ReceiptNumber}");
+            // Chek ma'lumotlari (Chek ID qanchalik uzun bo'lmasin, qirqilmaydi va pastki qatordan davom etadi)
+            foreach (var cl in SplitIntoLines($"Chek: #{sale.ReceiptNumber}", 32))
+            {
+                lines.Add(cl);
+            }
+
             if (!string.IsNullOrEmpty(sale.OriginalReceiptNumber))
             {
-                lines.Add($"Asl chek: {sale.OriginalReceiptNumber}");
+                foreach (var acl in SplitIntoLines($"Asl chek: {sale.OriginalReceiptNumber}", 32))
+                {
+                    lines.Add(acl);
+                }
             }
+
             lines.Add($"Sana: {sale.CreatedDateTime:dd.MM.yyyy HH:mm}");
-            lines.Add($"To'lov turi: {sale.PaymentTypeDisplay}");
+
+            foreach (var payLine in SplitIntoLines($"To'lov turi: {sale.PaymentTypeDisplay}", 32))
+            {
+                lines.Add(payLine);
+            }
+
             lines.Add(new string('-', 32));
 
             // Jadval sarlavhasi (32 ta belgi)
             lines.Add("Tovar              Miqd.    Jami");
             lines.Add(new string('-', 32));
 
-            // Tovarlar ro'yxati
+            // Tovarlar ro'yxati (Nomlar qirqilmaydi, to'liq yozilib, sig'masa pastki qatordan davom etadi)
             foreach (var item in sale.Items)
             {
                 string name = (item.ProductName ?? string.Empty).Trim();
-                if (name.Length > 32)
+                foreach (var nl in SplitIntoLines(name, 32))
                 {
-                    name = name.Substring(0, 29) + "...";
+                    lines.Add(nl);
                 }
-                lines.Add(name);
 
                 string qtyStr = $"{item.Quantity:0.##}";
                 string priceFormatted = FormatMoney(item.PriceAtSale);
@@ -274,8 +346,15 @@ namespace PosElectro.Desktop.Services
                 string lineRight = totalFormatted;
 
                 int spaceCount = 32 - lineLeft.Length - lineRight.Length;
-                if (spaceCount < 1) spaceCount = 1;
-                lines.Add(lineLeft + new string(' ', spaceCount) + lineRight);
+                if (spaceCount < 1)
+                {
+                    lines.Add(lineLeft);
+                    lines.Add(new string(' ', Math.Max(0, 32 - lineRight.Length)) + lineRight);
+                }
+                else
+                {
+                    lines.Add(lineLeft + new string(' ', spaceCount) + lineRight);
+                }
             }
 
             lines.Add(new string('-', 32));
@@ -284,21 +363,42 @@ namespace PosElectro.Desktop.Services
             string totalTitle = "JAMI:";
             string totalVal = $"{FormatMoney(sale.TotalAmount)} so'm";
             int totalSpace = 32 - totalTitle.Length - totalVal.Length;
-            if (totalSpace < 1) totalSpace = 1;
-            lines.Add(totalTitle + new string(' ', totalSpace) + totalVal);
+            if (totalSpace < 1)
+            {
+                lines.Add(totalTitle);
+                lines.Add(new string(' ', Math.Max(0, 32 - totalVal.Length)) + totalVal);
+            }
+            else
+            {
+                lines.Add(totalTitle + new string(' ', totalSpace) + totalVal);
+            }
 
             // Agar aralash to'lov bo'lsa
             if (sale.PaymentType == PaymentType.SPLIT)
             {
                 string cashVal = $"{FormatMoney(sale.CashAmount)} so'm";
                 int cashSpace = 32 - "  Naqd:".Length - cashVal.Length;
-                if (cashSpace < 1) cashSpace = 1;
-                lines.Add("  Naqd:" + new string(' ', cashSpace) + cashVal);
+                if (cashSpace < 1)
+                {
+                    lines.Add("  Naqd:");
+                    lines.Add(new string(' ', Math.Max(0, 32 - cashVal.Length)) + cashVal);
+                }
+                else
+                {
+                    lines.Add("  Naqd:" + new string(' ', cashSpace) + cashVal);
+                }
 
                 string cardVal = $"{FormatMoney(sale.CardAmount)} so'm";
                 int cardSpace = 32 - "  Karta:".Length - cardVal.Length;
-                if (cardSpace < 1) cardSpace = 1;
-                lines.Add("  Karta:" + new string(' ', cardSpace) + cardVal);
+                if (cardSpace < 1)
+                {
+                    lines.Add("  Karta:");
+                    lines.Add(new string(' ', Math.Max(0, 32 - cardVal.Length)) + cardVal);
+                }
+                else
+                {
+                    lines.Add("  Karta:" + new string(' ', cardSpace) + cardVal);
+                }
             }
 
             lines.Add(new string('-', 32));
