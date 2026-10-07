@@ -62,6 +62,7 @@ object DebtWire {
         }
         require(pack(tag,fields)==wire);return fields
     }
+    internal fun commandFields(payload: String): List<String> = unpack(payload,"debt-command-v1",12)
     fun requirePeer(expectedStore: String,peerStore: String,peerCapabilities: Collection<String>) {
         id(expectedStore);id(peerStore);require(expectedStore==peerStore && CAPABILITY in peerCapabilities)
     }

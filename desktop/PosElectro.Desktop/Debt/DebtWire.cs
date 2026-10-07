@@ -57,6 +57,7 @@ public static class DebtWire
         }
         Need(Pack(tag,fields)==wire);return fields;
     }
+    internal static string[] CommandFields(string payload) => Unpack(payload,"debt-command-v1",12);
     public static void RequirePeer(string expectedStore,string peerStore,IEnumerable<string> peerCapabilities) {
         Id(expectedStore);Id(peerStore);Need(expectedStore==peerStore && peerCapabilities.Contains(Capability,StringComparer.Ordinal));
     }

@@ -34,8 +34,8 @@ class DebtRepository(private val database: AppDatabase, private val store: Strin
         }
         fun canonical(vararg fields: String): String = "[\"debt-command-v1\"," + fields.joinToString(",") { "\""+Base64.getEncoder().encodeToString(utf8(it))+"\"" } + "]"
         private fun hash(payload: String) = MessageDigest.getInstance("SHA-256").digest(utf8(payload)).joinToString("") { "%02x".format(it.toInt() and 255) }
-        private fun exec(db: SupportSQLiteDatabase, sql: String, vararg args: Any?) = db.execSQL(sql,args)
-        private fun rows(db: SupportSQLiteDatabase, sql: String, vararg args: Any?): List<List<Any?>> = db.query(sql,args).use { c ->
+        internal fun exec(db: SupportSQLiteDatabase, sql: String, vararg args: Any?) = db.execSQL(sql,args)
+        internal fun rows(db: SupportSQLiteDatabase, sql: String, vararg args: Any?): List<List<Any?>> = db.query(sql,args).use { c ->
             buildList { while(c.moveToNext()) add((0 until c.columnCount).map { i -> when(c.getType(i)) {
                 android.database.Cursor.FIELD_TYPE_NULL -> null
                 android.database.Cursor.FIELD_TYPE_INTEGER -> c.getLong(i)
@@ -43,8 +43,8 @@ class DebtRepository(private val database: AppDatabase, private val store: Strin
                 else -> c.getString(i)
             } }) }
         }
-        private fun scalar(db: SupportSQLiteDatabase, sql: String, vararg args: Any?) = rows(db,sql,*args).firstOrNull()?.firstOrNull()
-        private fun storedMinor(value: Any?): Long {
+        internal fun scalar(db: SupportSQLiteDatabase, sql: String, vararg args: Any?) = rows(db,sql,*args).firstOrNull()?.firstOrNull()
+        internal fun storedMinor(value: Any?): Long {
             val d=(value as Number).toDouble(); require(d.isFinite() && d>=0)
             return BigDecimal.valueOf(d).setScale(2,RoundingMode.HALF_UP).movePointRight(2).longValueExact()
         }
