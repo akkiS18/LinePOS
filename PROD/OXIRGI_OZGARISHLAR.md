@@ -198,4 +198,15 @@ Ushbu hujjat mijozga oxirgi kiritilgan o'zgarishlar va yangi qulayliklarni ko'rs
   - Dasturning ko'rinishi zamonaviy, bir xil uslubdagi (consistent) va ko'zga qulay bo'ldi. Yuqori menyu tugmalari aniq o'qiladi, ombor kartalari va asboblar panelidagi tugmalar tartibli hamda estetik jihatdan chiroyli ko'rinishga ega bo'ldi.
 
 ---
+
+### 20. 🐞 Xatolik Tuzatildi: Desktop Dasturi Ochilishidagi XAML Stili Xatoligi Bartaraf Etildi
+- **Nima o'zgardi:**
+  - Yuqori menyu tablarining hover triggerida (`MultiDataTrigger`) shart bog'lanishi to'g'rilandi: `Condition Property="IsMouseOver"` o'rniga to'g'ri WPF XAML standarti bo'yicha `Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}"` qo'yildi.
+  - O'rnatishdan so'ng dastur ochilganda chiqqan *"Set property 'System.Windows.FrameworkElement.Style' threw an exception"* xatoligi to'liq tuzatildi.
+  - To'liq mustaqil (self-contained) yangi **Inno Setup** o'rnatish paketi ([Line_kassa_Desktop_Setup.exe](file:///c:/Users/Acer/Documents/POS/PROD/Line_kassa_Desktop_Setup.exe)) qaytadan 100% toza yig'ildi.
+- **Mijoz uchun foydasi:**
+  - O'rnatish faylini o'rnatgandan so'ng dastur hech qanday xatolik xabarlarisisiz silliq, tez va to'g'ridan-to'g'ri ochiladi.
+
+---
+
 
