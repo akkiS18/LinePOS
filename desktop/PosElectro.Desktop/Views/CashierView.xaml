@@ -751,13 +751,107 @@
                         </Grid>
                     </Border>
 
-                    <!-- YAGONA SOTISH TUGMASI -->
-                    <Button Grid.Row="3" 
-                            Content="{Binding CompleteSaleButtonText}"
-                            Command="{Binding CompleteSaleCommand}" 
-                            Style="{StaticResource SuccessButton}" 
-                            FontSize="18" FontWeight="Bold" Padding="0,16" 
-                            Cursor="Hand" HorizontalAlignment="Stretch"/>
+                    <!-- 3 TA TO'LOV TUGMASI (Naqd, Karta, Aralash) -->
+                    <Grid Grid.Row="3">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- 1: Naqd -->
+                        <Button Grid.Column="0" Command="{Binding OpenCashSaleCommand}"
+                                IsEnabled="{Binding HasCartItems}"
+                                ToolTip="Naqd pul orqali sotish (F8)"
+                                Background="#1E293B" Height="50" Margin="0,0,6,0"
+                                BorderThickness="0" Cursor="Hand">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="#334155" BorderThickness="1.5" CornerRadius="10">
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <Path x:Name="ic" Data="M21 6H3C1.89 6 1 6.89 1 8V16C1 17.11 1.89 18 3 18H21C22.11 18 23 17.11 23 16V8C23 6.89 22.11 6 21 6ZM21 16H3V8H21V16ZM12 9C10.34 9 9 10.34 9 12C9 13.66 10.34 15 12 15C13.66 15 15 13.66 15 12C15 10.34 13.66 9 12 9Z" 
+                                                  Fill="#F8FAFC" Width="17" Height="17" Stretch="Uniform" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="Naqd" FontWeight="Bold" FontSize="13.5" Foreground="#F8FAFC" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="bd" Property="Background" Value="#334155"/>
+                                            <Setter TargetName="bd" Property="BorderBrush" Value="#475569"/>
+                                        </Trigger>
+                                        <Trigger Property="IsPressed" Value="True">
+                                            <Setter TargetName="bd" Property="Opacity" Value="0.75"/>
+                                        </Trigger>
+                                        <Trigger Property="IsEnabled" Value="False">
+                                            <Setter TargetName="bd" Property="Opacity" Value="0.35"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+
+                        <!-- 2: Karta -->
+                        <Button Grid.Column="1" Command="{Binding OpenCardSaleCommand}"
+                                IsEnabled="{Binding HasCartItems}"
+                                ToolTip="Plastik karta orqali sotish (F9)"
+                                Background="#1E293B" Height="50" Margin="0,0,6,0"
+                                BorderThickness="0" Cursor="Hand">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="#334155" BorderThickness="1.5" CornerRadius="10">
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <Path x:Name="ic" Data="M20 4H4C2.89 4 2.01 4.89 2.01 6L2 18C2 19.1 2.89 20 4 20H20C21.1 20 22 19.1 22 18V6C22 4.89 21.1 4 20 4ZM20 18H4V12H20V18ZM20 8H4V6H20V8Z" 
+                                                  Fill="#F8FAFC" Width="17" Height="17" Stretch="Uniform" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="Karta" FontWeight="Bold" FontSize="13.5" Foreground="#F8FAFC" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="bd" Property="Background" Value="#334155"/>
+                                            <Setter TargetName="bd" Property="BorderBrush" Value="#475569"/>
+                                        </Trigger>
+                                        <Trigger Property="IsPressed" Value="True">
+                                            <Setter TargetName="bd" Property="Opacity" Value="0.75"/>
+                                        </Trigger>
+                                        <Trigger Property="IsEnabled" Value="False">
+                                            <Setter TargetName="bd" Property="Opacity" Value="0.35"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+
+                        <!-- 3: Aralash -->
+                        <Button Grid.Column="2" Command="{Binding OpenSplitSaleCommand}"
+                                IsEnabled="{Binding HasCartItems}"
+                                ToolTip="Aralash to'lov (Naqd + Karta)"
+                                Background="#1E293B" Height="50" Margin="0"
+                                BorderThickness="0" Cursor="Hand">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="#334155" BorderThickness="1.5" CornerRadius="10">
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <Path x:Name="ic" Data="M6.99 11L3 15L6.99 19V16H14V14H6.99V11ZM21 9L17.01 5V8H10V10H17.01V13L21 9Z" 
+                                                  Fill="#F8FAFC" Width="17" Height="17" Stretch="Uniform" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="Aralash" FontWeight="Bold" FontSize="13.5" Foreground="#F8FAFC" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="bd" Property="Background" Value="#334155"/>
+                                            <Setter TargetName="bd" Property="BorderBrush" Value="#475569"/>
+                                        </Trigger>
+                                        <Trigger Property="IsPressed" Value="True">
+                                            <Setter TargetName="bd" Property="Opacity" Value="0.75"/>
+                                        </Trigger>
+                                        <Trigger Property="IsEnabled" Value="False">
+                                            <Setter TargetName="bd" Property="Opacity" Value="0.35"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+                    </Grid>
 
                     <!-- Status panel -->
                     <TextBlock Grid.Row="4" Text="{Binding StatusMessage}" 
@@ -855,7 +949,6 @@
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/> <!-- Header -->
                             <RowDefinition Height="Auto"/> <!-- Jami to'lov -->
-                            <RowDefinition Height="Auto"/> <!-- To'lov turi tanlash -->
                             <RowDefinition Height="Auto"/> <!-- Karta solig'i yoki Aralash qismlari -->
                             <RowDefinition Height="Auto"/> <!-- Printer tanlash -->
                             <RowDefinition Height="*"/>    <!-- Elastik bo'sh joy -->
@@ -867,9 +960,9 @@
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                 <Border Background="#042F2E" BorderBrush="#0D9488" BorderThickness="1" Width="36" Height="36" CornerRadius="10" Margin="0,0,10,0" VerticalAlignment="Center">
                                     <Path Data="M20 4H4C2.89 4 2 4.89 2 6V18C2 19.1 2.89 20 4 20H20C21.1 20 22 19.1 22 18V6C22 4.89 21.1 4 20 4ZM20 8H4V6H20V8ZM20 18H4V12H20V18Z" 
-                                          Fill="#2DD4BF" Width="20" Height="20" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                          Fill="#2DD4BF" Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
-                                <TextBlock Text="To'lovni amalga oshirish" Foreground="#F8FAFC" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
+                                <TextBlock Text="To'lovni tasdiqlash" Foreground="#F8FAFC" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
                             </StackPanel>
                             <Button HorizontalAlignment="Right" Content="✕" 
                                     Command="{Binding ClosePaymentModalCommand}"
@@ -877,119 +970,22 @@
                                     FontSize="16" Cursor="Hand" Padding="6"/>
                         </Grid>
 
-                        <!-- Jami to'lov -->
+                        <!-- Jami to'lov va tanlangan to'lov turi -->
                         <Border Grid.Row="1" Background="#0F172A" CornerRadius="12" Padding="14,12" Margin="0,0,0,14" BorderBrush="#334155" BorderThickness="1">
                             <Grid>
-                                <TextBlock Text="Jami to'lov:" Foreground="#94A3B8" FontSize="14" VerticalAlignment="Center"/>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="Jami to'lov miqdori:" Foreground="#94A3B8" FontSize="13"/>
+                                    <Border Background="#1E293B" BorderBrush="#334155" BorderThickness="1" CornerRadius="6" Padding="8,2" Margin="0,4,0,0" HorizontalAlignment="Left">
+                                        <TextBlock Text="{Binding SelectedPaymentTypeTitle}" Foreground="#38BDF8" FontSize="12" FontWeight="SemiBold"/>
+                                    </Border>
+                                </StackPanel>
                                 <TextBlock Text="{Binding TotalAmount, StringFormat='{}{0:N0} so\'m'}" 
-                                           Foreground="#10B981" FontSize="20" FontWeight="Bold" HorizontalAlignment="Right"/>
+                                           Foreground="#10B981" FontSize="20" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/>
                             </Grid>
                         </Border>
 
-                        <!-- To'lov turi tanlash -->
-                        <StackPanel Grid.Row="2" Margin="0,0,0,12">
-                            <TextBlock Text="To'lov turini tanlang:" Foreground="#F8FAFC" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-
-                                <!-- Naqd -->
-                                <Button Grid.Column="0" Command="{Binding SelectPaymentTypeCommand}" CommandParameter="0" Margin="0,0,4,0" Padding="0,10" Cursor="Hand">
-                                    <Button.Style>
-                                        <Style TargetType="Button">
-                                            <Setter Property="Background" Value="#0F172A"/>
-                                            <Setter Property="BorderBrush" Value="#334155"/>
-                                            <Setter Property="BorderThickness" Value="1.5"/>
-                                            <Setter Property="Template">
-                                                <Setter.Value>
-                                                    <ControlTemplate TargetType="Button">
-                                                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="10" Padding="{TemplateBinding Padding}">
-                                                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                                <Path Data="M21 6H3C1.89 6 1 6.89 1 8V16C1 17.11 1.89 18 3 18H21C22.11 18 23 17.11 23 16V8C23 6.89 22.11 6 21 6ZM21 16H3V8H21V16ZM12 9C10.34 9 9 10.34 9 12C9 13.66 10.34 15 12 15C13.66 15 15 13.66 15 12C15 10.34 13.66 9 12 9Z" 
-                                                                      Fill="#10B981" Width="20" Height="20" Stretch="Uniform" Margin="0,0,0,4" HorizontalAlignment="Center"/>
-                                                                <TextBlock Text="Naqd" FontWeight="Bold" FontSize="13" Foreground="White" HorizontalAlignment="Center"/>
-                                                            </StackPanel>
-                                                        </Border>
-                                                    </ControlTemplate>
-                                                </Setter.Value>
-                                            </Setter>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsCashSelected}" Value="True">
-                                                    <Setter Property="Background" Value="#064E3B"/>
-                                                    <Setter Property="BorderBrush" Value="#10B981"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Button.Style>
-                                </Button>
-
-                                <!-- Karta -->
-                                <Button Grid.Column="1" Command="{Binding SelectPaymentTypeCommand}" CommandParameter="1" Margin="4,0,4,0" Padding="0,10" Cursor="Hand">
-                                    <Button.Style>
-                                        <Style TargetType="Button">
-                                            <Setter Property="Background" Value="#0F172A"/>
-                                            <Setter Property="BorderBrush" Value="#334155"/>
-                                            <Setter Property="BorderThickness" Value="1.5"/>
-                                            <Setter Property="Template">
-                                                <Setter.Value>
-                                                    <ControlTemplate TargetType="Button">
-                                                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="10" Padding="{TemplateBinding Padding}">
-                                                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                                <Path Data="M20 4H4C2.89 4 2.01 4.89 2.01 6L2 18C2 19.1 2.89 20 4 20H20C21.1 20 22 19.1 22 18V6C22 4.89 21.1 4 20 4ZM20 18H4V12H20V18ZM20 8H4V6H20V8Z" 
-                                                                      Fill="#38BDF8" Width="20" Height="20" Stretch="Uniform" Margin="0,0,0,4" HorizontalAlignment="Center"/>
-                                                                <TextBlock Text="Karta" FontWeight="Bold" FontSize="13" Foreground="White" HorizontalAlignment="Center"/>
-                                                            </StackPanel>
-                                                        </Border>
-                                                    </ControlTemplate>
-                                                </Setter.Value>
-                                            </Setter>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsCardSelected}" Value="True">
-                                                    <Setter Property="Background" Value="#0C4A6E"/>
-                                                    <Setter Property="BorderBrush" Value="#38BDF8"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Button.Style>
-                                </Button>
-
-                                <!-- Aralash -->
-                                <Button Grid.Column="2" Command="{Binding SelectPaymentTypeCommand}" CommandParameter="2" Margin="4,0,0,0" Padding="0,10" Cursor="Hand">
-                                    <Button.Style>
-                                        <Style TargetType="Button">
-                                            <Setter Property="Background" Value="#0F172A"/>
-                                            <Setter Property="BorderBrush" Value="#334155"/>
-                                            <Setter Property="BorderThickness" Value="1.5"/>
-                                            <Setter Property="Template">
-                                                <Setter.Value>
-                                                    <ControlTemplate TargetType="Button">
-                                                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="10" Padding="{TemplateBinding Padding}">
-                                                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                                <Path Data="M6.99 11L3 15L6.99 19V16H14V14H6.99V11ZM21 9L17.01 5V8H10V10H17.01V13L21 9Z" 
-                                                                      Fill="#F59E0B" Width="20" Height="20" Stretch="Uniform" Margin="0,0,0,4" HorizontalAlignment="Center"/>
-                                                                <TextBlock Text="Aralash" FontWeight="Bold" FontSize="13" Foreground="White" HorizontalAlignment="Center"/>
-                                                            </StackPanel>
-                                                        </Border>
-                                                    </ControlTemplate>
-                                                </Setter.Value>
-                                            </Setter>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsSplitSelected}" Value="True">
-                                                    <Setter Property="Background" Value="#78350F"/>
-                                                    <Setter Property="BorderBrush" Value="#F59E0B"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Button.Style>
-                                </Button>
-                            </Grid>
-                        </StackPanel>
-
                         <!-- Soliq / Aralash maydonlari -->
-                        <StackPanel Grid.Row="3" Margin="0,0,0,12">
+                        <StackPanel Grid.Row="2" Margin="0,0,0,12">
                             <!-- Karta tanlanganda Soliq xabarnomasi -->
                             <Border Background="#0F172A" BorderBrush="#0284C7" BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="0,0,0,8"
                                     Visibility="{Binding IsCardSelected, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -1023,7 +1019,7 @@
                         </StackPanel>
 
                         <!-- Chek chop etish tanlovi (Dropdown) -->
-                        <StackPanel Grid.Row="4" Margin="0,0,0,16">
+                        <StackPanel Grid.Row="3" Margin="0,0,0,16">
                             <TextBlock Text="Chek yoki hisob-faktura chop etish:" Foreground="#94A3B8" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,6"/>
                             <ComboBox SelectedIndex="{Binding SelectedReceiptPrintOption}" Height="38" VerticalContentAlignment="Center">
                                 <ComboBoxItem Content="🚫 Chek chiqarilmasin"/>
@@ -1047,7 +1043,7 @@
                         </StackPanel>
 
                         <!-- Tugmalar (Bekor qilish / Tasdiqlash) -->
-                        <Grid Grid.Row="6" Margin="0,4,0,0">
+                        <Grid Grid.Row="5" Margin="0,4,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="*"/>
@@ -1078,8 +1074,9 @@
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                 <TextBlock Text="JONLI KO'RINISH (PREVIEW)" Foreground="#94A3B8" FontSize="12" FontWeight="Bold"/>
                             </StackPanel>
-                            <!-- Printer holati badge -->
-                            <Border HorizontalAlignment="Right" Background="#0F172A" BorderBrush="#334155" BorderThickness="1" CornerRadius="12" Padding="8,4">
+                            <!-- Printer holati badge (Faqat printer tanlanganda ko'rinadi) -->
+                            <Border HorizontalAlignment="Right" Background="#0F172A" BorderBrush="#334155" BorderThickness="1" CornerRadius="12" Padding="8,4"
+                                    Visibility="{Binding HasPrinterStatus, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <TextBlock Text="{Binding PrinterStatusText}" Foreground="{Binding PrinterStatusColor}" FontSize="11" FontWeight="SemiBold"/>
                             </Border>
                         </Grid>

@@ -237,6 +237,20 @@ Ushbu hujjat mijozga oxirgi kiritilgan o'zgarishlar va yangi qulayliklarni ko'rs
 
 ---
 
+### 23. 🎨 Kassa To'lov Tugmalari, Minimalistik Modal va Navbardagi Vektor Ikonkalar
+- **Nima o'zgardi:**
+  - **"Cheksiz to'lov rejimi" matni olib tashlandi:** Sotish modalida printer talab qilinmaydigan rejimda ortiqcha va noqulay `Cheksiz to'lov rejimi (Printer talab qilinmaydi)` nishoni olib tashlandi. Printer statusi faqat kassa cheki yoki A4 printer tanlangandagina ko'rinadi.
+  - **To'lov tugmalari asosiy kassa ekraniga o'tkazildi:** Avval modal ichida turgan va har xil rangda (yashil, moviy, to'q sariq) bo'lgan `Naqd`, `Karta`, `Aralash` tugmalari asosiy kassa ekranidagi savatcha pastiga — yagona "Sotish" tugmasi o'rniga joylashtirildi.
+  - **Vazmin va professional dizayn:** Barcha to'lov tugmalari yagona quyuq slate uslubiga keltirildi (rang-baranglik to'liq yo'qotildi). Savat bo'sh bo'lganda avtomatik nofaol (disabled) va xira holatda turadi.
+  - **Sotish modali tozalandi:** Modal ichida faqat chek Jonli Preview ko'rinishi, printerni tanlash va tasdiqlash qoldirildi.
+  - **Navbardagi tugmalar toza vektorga o'tkazildi:** `Baza zaxirasi` va `Bog'lanish` tugmalaridagi matnlar olib tashlanib, ixcham 36x36 o'lchamdagi toza vektor ikonkali tugmalarga aylantirildi. Karta solig'i foizi va barcha tablar (`Kassa`, `Ombor`, `Hisobotlar`, `Wi-Fi Sinxron`) SVG vektorlariga o'tkazildi.
+  - **"Wi-Fi faol" matnining aktiv holatdagi ko'rinishi to'g'rilandi:** Wi-Fi Sinxron tabi tanlanganda oq fon ustida yozuv yo'qolib qolmasligi uchun yuqori kontrastli yumshoq fon va to'q ko'k-osmonrang matn o'rnatildi.
+- **Mijoz uchun foydasi:**
+  - Kassir uchun savdo qilish yana 1 qadamga qisqardi: mijoz naqd yoki karta berishi bilan to'g'ridan-to'g'ri kerakli tugmani bosadi. Ranglar ko'zni toliqtirmaydi, navbar ixcham va zamonaviy ko'rinishga keldi.
+
+---
+
+
 
 
 

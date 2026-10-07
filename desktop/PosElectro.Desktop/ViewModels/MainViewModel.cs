@@ -45,7 +45,7 @@ namespace PosElectro.Desktop.ViewModels
             }
         }
         public bool IsLiveSyncActive => LiveClientsCount > 0;
-        public string LiveSyncStatusText => LiveClientsCount > 0 ? $"🟢 {LiveClientsCount} ta mobil" : "⚪ Wi-Fi faol";
+        public string LiveSyncStatusText => LiveClientsCount > 0 ? $"🟢 {LiveClientsCount} ta mobil" : "Wi-Fi faol";
 
         // Aktivatsiya holatlari va buyruqlari
         private bool _isDeviceLocked;

@@ -189,7 +189,7 @@ namespace PosElectro.Desktop.ViewModels
         {
             get
             {
-                if (SelectedReceiptPrintOption == 0) return "⚪ Cheksiz to'lov rejimi (Printer talab qilinmaydi)";
+                if (SelectedReceiptPrintOption == 0) return string.Empty;
                 if (SelectedReceiptPrintOption == 1)
                 {
                     var p = SelectedReceiptPrinter ?? _printerService.FindReceiptPrinter();
@@ -202,6 +202,8 @@ namespace PosElectro.Desktop.ViewModels
                 }
             }
         }
+
+        public bool HasPrinterStatus => !string.IsNullOrEmpty(PrinterStatusText);
 
         public string PrinterStatusColor
         {
@@ -267,6 +269,7 @@ namespace PosElectro.Desktop.ViewModels
             OnPropertyChanged(nameof(IsA4Preview));
             OnPropertyChanged(nameof(PrinterStatusText));
             OnPropertyChanged(nameof(PrinterStatusColor));
+            OnPropertyChanged(nameof(HasPrinterStatus));
             OnPropertyChanged(nameof(Receipt58mmPreviewText));
             OnPropertyChanged(nameof(A4PreviewRows));
             OnPropertyChanged(nameof(A4DateDisplay));
@@ -440,6 +443,7 @@ namespace PosElectro.Desktop.ViewModels
                     OnPropertyChanged(nameof(IsCashSelected));
                     OnPropertyChanged(nameof(IsCardSelected));
                     OnPropertyChanged(nameof(IsSplitSelected));
+                    OnPropertyChanged(nameof(SelectedPaymentTypeTitle));
                     RecalculatePaymentAmounts();
                     NotifyPreviewProperties();
                 }
@@ -449,6 +453,13 @@ namespace PosElectro.Desktop.ViewModels
         public bool IsCashSelected => SelectedPaymentType == 0;
         public bool IsCardSelected => SelectedPaymentType == 1;
         public bool IsSplitSelected => SelectedPaymentType == 2;
+
+        public string SelectedPaymentTypeTitle => SelectedPaymentType switch
+        {
+            1 => "Karta orqali to'lov",
+            2 => "Aralash to'lov (Naqd + Karta)",
+            _ => "Naqd to'lov"
+        };
 
         private string _cashAmountInput = string.Empty;
         public string CashAmountInput
@@ -500,6 +511,9 @@ namespace PosElectro.Desktop.ViewModels
         public ICommand ClosePaymentModalCommand { get; }
         public ICommand SelectPaymentTypeCommand { get; }
         public ICommand ConfirmSaleCommand { get; }
+        public ICommand OpenCashSaleCommand { get; }
+        public ICommand OpenCardSaleCommand { get; }
+        public ICommand OpenSplitSaleCommand { get; }
 
         public CashierViewModel(DatabaseContext db, ProductService productService, CurrencyService currencyService)
         {
@@ -525,11 +539,19 @@ namespace PosElectro.Desktop.ViewModels
             ToggleCartPriceCommand = new RelayCommand<CartItemModel>(c => { if (c != null) ToggleCartPrice(c); });
             ToggleAllCartPricesCommand = new RelayCommand(ToggleAllCartPrices);
             ClearCartCommand = new RelayCommand(ClearCart);
-            CompleteSaleCommand = new RelayCommand(_ => OpenPaymentModal());
+            CompleteSaleCommand = new RelayCommand(_ => OpenPaymentModal(0));
+            OpenCashSaleCommand = new RelayCommand(_ => OpenPaymentModal(0));
+            OpenCardSaleCommand = new RelayCommand(_ => OpenPaymentModal(1));
+            OpenSplitSaleCommand = new RelayCommand(_ => OpenPaymentModal(2));
             SelectCategoryCommand = new RelayCommand<string>(cat => { if (cat != null) SelectedCategory = cat; });
             SearchQueryEnterCommand = new RelayCommand(HandleSearchQueryEnter);
 
-            OpenPaymentModalCommand = new RelayCommand(_ => OpenPaymentModal());
+            OpenPaymentModalCommand = new RelayCommand(p => {
+                if (p != null && int.TryParse(p.ToString(), out var m))
+                    OpenPaymentModal(m);
+                else
+                    OpenPaymentModal(0);
+            });
             ClosePaymentModalCommand = new RelayCommand(_ => IsPaymentModalOpen = false);
             SelectPaymentTypeCommand = new RelayCommand(p => {
                 if (int.TryParse(p?.ToString(), out var mode))
@@ -988,11 +1010,11 @@ namespace PosElectro.Desktop.ViewModels
         }
 
         // --- YAGONA SOTISH VA TO'LOV MANTIG'I ---
-        public void OpenPaymentModal()
+        public void OpenPaymentModal(int paymentType = 0)
         {
             if (CartItems.Count == 0) return;
             CurrentCardTaxRate = _db.GetCardTaxRate();
-            SelectedPaymentType = 0; // Standart Naqd
+            SelectedPaymentType = paymentType;
             RecalculatePaymentAmounts();
 
             // Printerlar ro'yxatini yangilash
@@ -1001,6 +1023,7 @@ namespace PosElectro.Desktop.ViewModels
             OnPropertyChanged(nameof(SelectedReceiptPrinter));
 
             NotifyPreviewProperties();
+            OnPropertyChanged(nameof(SelectedPaymentTypeTitle));
             IsPaymentModalOpen = true;
         }
 
