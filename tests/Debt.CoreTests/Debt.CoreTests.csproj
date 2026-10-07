@@ -6,5 +6,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../desktop/PosElectro.Desktop/Debt/DebtAccounting.cs" Link="DebtAccounting.cs" />
+    <Compile Include="../../desktop/PosElectro.Desktop/Debt/DebtWire.cs" Link="DebtWire.cs" />
   </ItemGroup>
 </Project>

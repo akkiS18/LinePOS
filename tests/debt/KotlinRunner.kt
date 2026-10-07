@@ -27,7 +27,8 @@ private fun execute(n: JSONObject): Any = when (n.getString("op")) {
     else -> error("Unknown fixture operation")
 }
 fun main(args: Array<String>) {
-    require(args.size == 2) { "Usage: fixtures.json result.json" }
+    require(args.size == 2 || args.size == 4) { "Usage: fixtures.json result.json" }
+    if(args.size==4) File(args[3]).writeText(WireRunner.run(File(args[2]).readText()).toString())
     val fixtures = JSONArray(File(args[0]).readText()); val output = JSONObject()
     for (i in 0 until fixtures.length()) {
         val f = fixtures.getJSONObject(i)

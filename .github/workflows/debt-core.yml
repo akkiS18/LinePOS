@@ -45,7 +45,8 @@ jobs:
       - name: Compile production core sources and check all shared fixtures
         shell: bash
         run: |
-          dotnet run --project tests/Debt.CoreTests -- tests/debt/fixtures.json "$RUNNER_TEMP/csharp.json"
-          "$RUNNER_TEMP/kotlin/kotlinc/bin/kotlinc" app/src/main/java/uz/pos/electro/data/debt/DebtAccounting.kt tests/debt/KotlinRunner.kt -cp "$RUNNER_TEMP/json.jar" -include-runtime -d "$RUNNER_TEMP/debt-tests.jar"
-          java -cp "$RUNNER_TEMP/debt-tests.jar:$RUNNER_TEMP/json.jar" KotlinRunnerKt tests/debt/fixtures.json "$RUNNER_TEMP/kotlin.json"
-          python tests/debt/verify_results.py tests/debt/fixtures.json "$RUNNER_TEMP/csharp.json" "$RUNNER_TEMP/kotlin.json"
+          dotnet run --project tests/Debt.CoreTests -- tests/debt/fixtures.json "$RUNNER_TEMP/csharp.json" tests/debt/wire-fixtures.json "$RUNNER_TEMP/csharp-wire.json"
+          "$RUNNER_TEMP/kotlin/kotlinc/bin/kotlinc" app/src/main/java/uz/pos/electro/data/debt/DebtAccounting.kt app/src/main/java/uz/pos/electro/data/debt/DebtWire.kt tests/debt/KotlinRunner.kt tests/debt/WireRunner.kt -cp "$RUNNER_TEMP/json.jar" -include-runtime -d "$RUNNER_TEMP/debt-tests.jar"
+          java -cp "$RUNNER_TEMP/debt-tests.jar:$RUNNER_TEMP/json.jar" KotlinRunnerKt tests/debt/fixtures.json "$RUNNER_TEMP/kotlin.json" tests/debt/wire-fixtures.json "$RUNNER_TEMP/kotlin-wire.json"
+          python tests/debt/verify_results.py tests/debt/fixtures.json "$RUNNER_TEMP/csharp.json" tests/debt/wire-fixtures.json "$RUNNER_TEMP/csharp-wire.json" "$RUNNER_TEMP/kotlin.json"
+          python tests/debt/verify_results.py tests/debt/wire-fixtures.json "$RUNNER_TEMP/csharp-wire.json" "$RUNNER_TEMP/kotlin-wire.json"

@@ -35,7 +35,8 @@ static JsonNode Execute(JsonNode n)
     }
 }
 
-if (args.Length != 2) throw new ArgumentException("Usage: fixtures.json result.json");
+if (args.Length != 2 && args.Length != 4) throw new ArgumentException("Usage: fixtures.json result.json");
+if(args.Length==4) WireTests.Run(args[2],args[3]);
 var fixtures = JsonNode.Parse(File.ReadAllText(args[0]))!.AsArray();
 var output = new JsonObject();
 foreach (var fixture in fixtures)
