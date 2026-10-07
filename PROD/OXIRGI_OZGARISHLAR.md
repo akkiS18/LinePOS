@@ -181,4 +181,21 @@ Ushbu hujjat mijozga oxirgi kiritilgan o'zgarishlar va yangi qulayliklarni ko'rs
 - **Mijoz uchun foydasi:**
   - Hisobotlar ekrani toza va yengil bo'ldi, barcha moliyaviy raqamlar bitta qarashda ko'rinadi. Cheklarni ko'rish, qidirish va tahlil qilish esa alohida keng ekranda ancha qulaylashdi.
 
----
+---
+
+### 19. 🎨 Desktop Foydalanuvchi Interfeysi (UI) va Ranglar Falsafasini Yaxshilash
+- **Nima o'zgardi:**
+  - **Aktiv tablar kontrastliligi (Yuqori menyu):** Yuqoridagi asosiy navigatsiya tugmalarida (Kassa, Ombor, Hisobotlar, Wi-Fi Sinxron) aktiv bo'lgan tab ustiga sichqoncha borganda (hover), matn va ikonka xira bo'lib qolishi bartaraf etildi. Aktiv tab hover holatida ikonka va matn yorqin oq (`#FFFFFF`) rangda aniq va tiniq ko'rinadigan bo'ldi.
+  - **Ombor kartochkasi dizayni ixchamlashtirildi:**
+    - "ASOSIY" ombor nishoni kartaning o'rta qatoriga, qoldiq va qiymat statistikasi bilan bir qatorga joylashtirildi.
+    - Avvalgi qalin yashil "Kirish >" tugmasi olib tashlandi, uning o'rniga kartaning o'ng pastki burchagiga toza oq rangli ixcham `>` yo'naltiruvchi chevron belgisi qo'yildi (orqa fonsiz). Ombor kartochkasining istalgan joyiga bosilganda bevosita omborga kiriladi.
+  - **Asboblar paneli tugmalari brend dizayniga moslashtirildi:**
+    - "Yangilash" tugmasi va "Omborlararo Ko'chirish" tugmasidagi ko'k (cyan) ikonkalar sof oq (`#FFFFFF`) rangga o'tkazildi.
+    - "+ Yangi Mahsulot" va "+ Yangi Ombor" tugmalari orqa foni "Line Kassa" brend gradientiga (`ModernButton`: `#0B6477` -> `#16A34A`) o'tkazildi.
+    - "Yangilash" tugmasi ortiqcha matnlardan tozalanib, ixcham kvadrat shakldagi (40x40) aylanuvchi ikonkali tugmaga aylantirildi va orqa foni "Omborlararo Ko'chirish" kabi neytral to'q rangga (`#334155`) keltirildi.
+    - "Omborlararo Ko'chirish" va "+ Yangi Ombor" tugmalari orasiga qulay masofa (gap) qo'shildi.
+- **Mijoz uchun foydasi:**
+  - Dasturning ko'rinishi zamonaviy, bir xil uslubdagi (consistent) va ko'zga qulay bo'ldi. Yuqori menyu tugmalari aniq o'qiladi, ombor kartalari va asboblar panelidagi tugmalar tartibli hamda estetik jihatdan chiroyli ko'rinishga ega bo'ldi.
+
+---
+

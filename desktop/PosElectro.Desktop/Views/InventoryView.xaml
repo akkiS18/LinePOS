@@ -82,7 +82,8 @@
                     <Button Command="{Binding RefreshCommand}"
                             ToolTip="Ro'yxatni yangilash"
                             Style="{StaticResource ModernButton}" 
-                            Padding="14,10" FontSize="13" Margin="0,0,10,0">
+                            Background="#334155"
+                            Width="40" Height="40" Padding="0" Margin="0,0,10,0">
                         <Button.Triggers>
                             <EventTrigger RoutedEvent="Button.Click">
                                 <BeginStoryboard>
@@ -94,21 +95,18 @@
                                 </BeginStoryboard>
                             </EventTrigger>
                         </Button.Triggers>
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                         <Path Stretch="Uniform" x:Name="InventoryRefreshIcon"
                               Data="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                              Stroke="#38BDF8" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                              Width="13" Height="13" RenderTransformOrigin="0.5,0.5" Margin="0,0,6,0" VerticalAlignment="Center">
+                              Stroke="White" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                              Width="16" Height="16" RenderTransformOrigin="0.5,0.5" HorizontalAlignment="Center" VerticalAlignment="Center">
                             <Path.RenderTransform>
                                 <RotateTransform x:Name="InventoryRefreshRotate" Angle="0"/>
                             </Path.RenderTransform>
                         </Path>
-                            <TextBlock Text="Yangilash" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                        </StackPanel>
                     </Button>
 
                     <Button Content="+ Yangi Mahsulot" Command="{Binding OpenAddProductCommand}"
-                            Style="{StaticResource SuccessButton}" Padding="20,10" FontSize="14" FontWeight="Bold"
+                            Style="{StaticResource ModernButton}" Padding="20,10" FontSize="14" FontWeight="Bold"
                             Visibility="{Binding CanAddProduct, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                 </StackPanel>
             </Grid>
@@ -134,16 +132,16 @@
                             <TextBlock Text="Kerakli omborni tanlang yoki yangi ombor yarating" Foreground="#94A3B8" FontSize="13" Margin="0,2,0,0"/>
                         </StackPanel>
                         <StackPanel Grid.Column="1" Orientation="Horizontal">
-                    <Button Command="{Binding OpenTransferModalCommand}"
-                            Style="{StaticResource ModernButton}" Background="#334155" Padding="14,8">
-                        <StackPanel Orientation="Horizontal">
-                            <Path Stretch="Uniform" Data="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
-                                  Stroke="#38BDF8" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                            <TextBlock Text="Omborlararo Ko'chirish" Foreground="White" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
+                            <Button Command="{Binding OpenTransferModalCommand}"
+                                    Style="{StaticResource ModernButton}" Background="#334155" Padding="14,8" Margin="0,0,10,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <Path Stretch="Uniform" Data="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+                                          Stroke="White" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBlock Text="Omborlararo Ko'chirish" Foreground="White" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
                             <Button Content="+ Yangi Ombor" Command="{Binding OpenAddWarehouseModalCommand}"
-                                    Style="{StaticResource SuccessButton}"
+                                    Style="{StaticResource ModernButton}"
                                     Padding="14,8" FontSize="13" FontWeight="Bold"/>
                         </StackPanel>
                     </Grid>
@@ -185,7 +183,7 @@
                                             <RowDefinition Height="Auto"/>
                                         </Grid.RowDefinitions>
 
-                                        <!-- Yuqori: Icon va Badge -->
+                                        <!-- Yuqori: Icon va Nom -->
                                         <Grid Grid.Row="0">
                                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                 <Border CornerRadius="8" Background="#064E3B" BorderBrush="#10B981" BorderThickness="1.5" Width="34" Height="34" Margin="0,0,10,0">
@@ -194,17 +192,20 @@
                                                 </Border>
                                                 <TextBlock Text="{Binding Name}" Foreground="#F8FAFC" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
                                             </StackPanel>
-                                            <Border CornerRadius="10" Background="#10B981" Padding="8,3" HorizontalAlignment="Right"
+                                        </Grid>
+
+                                        <!-- O'rta: Statistika va Asosiy nishoni -->
+                                        <Grid Grid.Row="1" VerticalAlignment="Center" Margin="0,8,0,8">
+                                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Left">
+                                                <TextBlock Text="{Binding SummaryDisplay}" Foreground="#94A3B8" FontSize="13" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding TotalStockValue, StringFormat='Qiymati: {0:N0} so\'m'}" Foreground="#38BDF8" FontSize="12" Margin="0,2,0,0"/>
+                                            </StackPanel>
+                                            <Border CornerRadius="8" Background="#10B981" Padding="10,4" 
+                                                    HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,6,0"
                                                     Visibility="{Binding IsPrimary, Converter={StaticResource BooleanToVisibilityConverter}}">
                                                 <TextBlock Text="ASOSIY" Foreground="White" FontSize="10" FontWeight="Bold"/>
                                             </Border>
                                         </Grid>
-
-                                        <!-- O'rta: Statistika -->
-                                        <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="0,8,0,8">
-                                            <TextBlock Text="{Binding SummaryDisplay}" Foreground="#94A3B8" FontSize="13" FontWeight="SemiBold"/>
-                                            <TextBlock Text="{Binding TotalStockValue, StringFormat='Qiymati: {0:N0} so\'m'}" Foreground="#38BDF8" FontSize="12" Margin="0,2,0,0"/>
-                                        </StackPanel>
 
                                         <!-- Pastki: Amallar -->
                                         <Grid Grid.Row="2">
@@ -228,16 +229,9 @@
                                                           Stretch="Uniform" Width="13" Height="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                 </Button>
                                             </StackPanel>
-                                            <Button Command="{Binding DataContext.SelectWarehouseCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                    CommandParameter="{Binding}"
-                                                    HorizontalAlignment="Right"
-                                                    Style="{StaticResource ModernButton}"
-                                                    Padding="14,6">
-                                                <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="Kirish" Foreground="White" FontSize="12" FontWeight="Bold" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                                    <Path Stretch="Uniform" Data="M9 5l7 7-7 7" Stroke="White" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="8" Height="8" VerticalAlignment="Center"/>
-                                                </StackPanel>
-                                            </Button>
+                                            <Path Stretch="Uniform" Data="M9 5l7 7-7 7" Stroke="White" StrokeThickness="2.5" 
+                                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="10" Height="10" 
+                                                  HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,6,0"/>
                                         </Grid>
                                     </Grid>
                                 </Border>

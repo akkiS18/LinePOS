@@ -98,6 +98,13 @@
                                         <Setter Property="Foreground" Value="#0B6477"/>
                                         <Setter Property="FontWeight" Value="Bold"/>
                                     </DataTrigger>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding IsCashierSelected}" Value="True"/>
+                                            <Condition Property="IsMouseOver" Value="True"/>
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </MultiDataTrigger>
                                 </Style.Triggers>
                             </Style>
                         </Button.Style>
@@ -114,6 +121,13 @@
                                         <Setter Property="Foreground" Value="#0B6477"/>
                                         <Setter Property="FontWeight" Value="Bold"/>
                                     </DataTrigger>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding IsInventorySelected}" Value="True"/>
+                                            <Condition Property="IsMouseOver" Value="True"/>
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </MultiDataTrigger>
                                 </Style.Triggers>
                             </Style>
                         </Button.Style>
@@ -130,6 +144,13 @@
                                         <Setter Property="Foreground" Value="#0B6477"/>
                                         <Setter Property="FontWeight" Value="Bold"/>
                                     </DataTrigger>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding IsReportsSelected}" Value="True"/>
+                                            <Condition Property="IsMouseOver" Value="True"/>
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </MultiDataTrigger>
                                 </Style.Triggers>
                             </Style>
                         </Button.Style>
@@ -145,6 +166,13 @@
                                         <Setter Property="Foreground" Value="#0B6477"/>
                                         <Setter Property="FontWeight" Value="Bold"/>
                                     </DataTrigger>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding IsSyncSelected}" Value="True"/>
+                                            <Condition Property="IsMouseOver" Value="True"/>
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </MultiDataTrigger>
                                 </Style.Triggers>
                             </Style>
                         </Button.Style>
