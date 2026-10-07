@@ -116,7 +116,7 @@ namespace PosElectro.Desktop.ViewModels
         public bool CanGoBackToWarehouses => SelectedWarehouse != null && (CurrentViewState == InventoryViewState.CategoriesGrid || CurrentViewState == InventoryViewState.ProductsList);
         public bool CanAddProduct => CurrentViewState != InventoryViewState.AddEditForm;
         public string SelectedWarehouseNameDisplay => SelectedWarehouse != null ? SelectedWarehouse.Name : "Tanlanmagan";
-        public string BackButtonText => SelectedWarehouse == null ? "Omborlarga qaytish" : "Kategoriyalarga qaytish";
+        public string BackButtonText => "Ortga qaytish";
 
         // Kategoriya qo'shish modali
         private bool _isAddCategoryModalOpen;
@@ -511,6 +511,7 @@ namespace PosElectro.Desktop.ViewModels
             {
                 if (w != null)
                 {
+                    if (w.IsPrimary) return;
                     _db.SetPrimaryWarehouse(w.Guid);
                     Refresh();
                 }

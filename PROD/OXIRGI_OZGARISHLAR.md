@@ -330,3 +330,25 @@ Ushbu hujjat mijozga oxirgi kiritilgan o'zgarishlar va yangi qulayliklarni ko'rs
     - Barcha o'zgarishlar bilan yangi [`PROD/Line_kassa_Desktop_Setup.exe`](file:///c:/Users/Acer/Documents/POS/PROD/Line_kassa_Desktop_Setup.exe) (52.2 MB) qayta yig'ildi.
 - **Mijoz uchun foydasi:**
   - To'lov oynasi ekran bo'ylab cho'zilib ketmaydi, qulay va chiroyli o'lchamda turadi. Chek kassa lentasi kabi ixcham va toza ko'rinishda bo'lib, ko'p mahsulotli savdolarda ham ichkarida bemalol aylanadi. Kassa pastidagi log yozuvlari butunlay tozalandi.
+
+---
+
+### 28. 🎨 Kassa Qidiruvidan Kategoriyalar Olib Tashlandi, Ombor Oynasi Navigatsiyasi va Asosiy Ombor Kartasi Modernizatsiya Qilindi
+- **Nima o'zgardi:**
+  - **Kassa qidiruvidagi kategoriya tugmalari olib tashlandi (1-rasm):**
+    - Qidiruv maydoni ostidagi eski UX dan qolgan toifa chiplari ("Barchasi", "Kam qolgan tovarlar", "2-ombor", ...) to'liq olib tashlandi.
+    - Endi kassir qidiruv maydoniga yozganda tovarlar ro'yxati to'g'ridan-to'g'ri barcha mahsulotlar bo'yicha to'liq bo'y-bastida chiqadi.
+  - **Ombor boshqaruvidagi ortiqcha tavsif yozuvi olib tashlandi:**
+    - "OMBORLAR BOSHQARUVI" sarlavhasi ostidagi "Kerakli omborni tanlang yoki yangi ombor yarating" tushuntirish yozuvi o'chirildi.
+  - **Qidiruvdan so'ng tugma nomi "Ortga qaytish" ga o'zgartirildi (2-rasm):**
+    - Tovarlar jadvalidagi navigatsiya tugmasi "Kategoriyalarga qaytish" o'rniga aniq va mantiqiy "Ortga qaytish" deb nomlandi (`BackButtonText`).
+  - **Ombor kartasidagi "Asosiy qilish" tugmasi oq yulduzcha vektor ikonka qilindi (3-rasm):**
+    - Pastki chapdagi sariq rangli `★ Asosiy qilish` tugmasi butunlay olib tashlandi.
+    - Kartaning yuqori o'ng burchagiga oq rangli vektor yulduzcha (`Path`) joylashtirildi:
+      - Agar ombor asosiy bo'lsa: to'lgan oq yulduzcha (★) ko'rinadi;
+      - Agar ombor ikkilamchi bo'lsa: ichi bo'sh oq kontur yulduzcha (☆) ko'rinadi.
+    - Yulduzchani bosganda ombor darhol asosiy omborga aylanadi; agar allaqachon asosiy bo'lsa o'z holicha qolaveradi.
+  - **Yangi o'rnatish to'plami yig'ildi:**
+    - Yangi [`PROD/Line_kassa_Desktop_Setup.exe`](file:///c:/Users/Acer/Documents/POS/PROD/Line_kassa_Desktop_Setup.exe) (52.2 MB) qaytadan muvaffaqiyatli kompilyatsiya qilindi.
+- **Mijoz uchun foydasi:**
+  - Kassada tovar izlash jarayoni tezlashdi va toza ko'rinishga ega bo'ldi. Ombor boshqaruvi keraksiz matnlardan tozalanib, zamonaviy va ixcham ko'rinishga keltirildi. Asosiy omborni tanlash endi qulay yulduzcha orqali bir harakat bilan bajariladi.

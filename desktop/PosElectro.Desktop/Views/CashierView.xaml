@@ -23,8 +23,6 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <!-- Qidiruv -->
-                    <RowDefinition Height="Auto"/>
-                    <!-- Kategoriyalar (faqat qidiruv rejimida) -->
                     <RowDefinition Height="*"/>
                     <!-- Tovarlar -->
                 </Grid.RowDefinitions>
@@ -45,44 +43,10 @@
                           Margin="0,0,16,0" IsHitTestVisible="False"/>
                 </Grid>
 
-                <!-- Kategoriyalar filtri (FAQAT qidiruv rejimida ko'rinadi) -->
-                <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Margin="0,0,0,12"
-                              Visibility="{Binding IsShowingSearch, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <ItemsControl ItemsSource="{Binding Categories}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <StackPanel Orientation="Horizontal"/>
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Button Content="{Binding}" 
-                                        Command="{Binding DataContext.SelectCategoryCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                        CommandParameter="{Binding}"
-                                        Margin="0,0,8,0" Padding="14,8"
-                                        Background="#1E293B" Foreground="#F8FAFC"
-                                        BorderBrush="#334155" BorderThickness="1"
-                                        Cursor="Hand">
-                                    <Button.Template>
-                                        <ControlTemplate TargetType="Button">
-                                            <Border Background="{TemplateBinding Background}" 
-                                                    BorderBrush="{TemplateBinding BorderBrush}" 
-                                                    BorderThickness="{TemplateBinding BorderThickness}" 
-                                                    CornerRadius="20" Padding="{TemplateBinding Padding}">
-                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                            </Border>
-                                        </ControlTemplate>
-                                    </Button.Template>
-                                </Button>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </ScrollViewer>
-
                 <!-- ============================================================= -->
                 <!-- TOP-SELLERS: Bo'sh qidiruv => Eng ko'p sotiladigan tovarlar   -->
                 <!-- ============================================================= -->
-                <Grid Grid.Row="2" Visibility="{Binding IsShowingTopSellers, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <Grid Grid.Row="1" Visibility="{Binding IsShowingTopSellers, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
@@ -194,7 +158,7 @@
                 <!-- ============================================================= -->
                 <!-- QIDIRUV NATIJALARI: SearchQuery bo'sh emas => filtr ko'rsatish -->
                 <!-- ============================================================= -->
-                <ListBox Grid.Row="2"
+                <ListBox Grid.Row="1"
                          ItemsSource="{Binding FilteredProducts}"
                          Background="Transparent"
                          BorderThickness="0"

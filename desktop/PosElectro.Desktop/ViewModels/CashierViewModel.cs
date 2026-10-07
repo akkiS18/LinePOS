@@ -1356,7 +1356,7 @@ namespace PosElectro.Desktop.ViewModels
 
             // Qidiruv rejimi (Aqlli tartibsiz ko'p so'zli va kril/lotin qidiruvi)
             IsShowingTopSellers = false;
-            var rawList = _productService.GetProductsByCategory(SelectedCategory);
+            var rawList = _db.GetAllProducts(includeDeleted: false);
             var list = SmartSearchHelper.FilterAndRank(
                 rawList,
                 SearchQuery,
