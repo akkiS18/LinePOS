@@ -597,6 +597,7 @@ namespace PosElectro.Desktop.ViewModels
         public double TotalAmount => SaleAccounting.Money(CartItems.Sum(i => i.TotalPrice));
         public double TotalCost => CartItems.Sum(i => i.TotalCost);
         public int TotalItemsCount => CartItems.Count;
+        public bool HasCartItems => CartItems.Count > 0;
         public bool HasHeldCarts => HeldCarts.Count > 0;
         public string CompleteSaleButtonText => CartItems.Count > 0 ? $"🛒 SOTISH ({TotalAmount:N0} so'm)" : "🛒 SOTISH";
 
@@ -1347,6 +1348,7 @@ namespace PosElectro.Desktop.ViewModels
             OnPropertyChanged(nameof(TotalAmount));
             OnPropertyChanged(nameof(TotalCost));
             OnPropertyChanged(nameof(TotalItemsCount));
+            OnPropertyChanged(nameof(HasCartItems));
             OnPropertyChanged(nameof(CompleteSaleButtonText));
             OnPropertyChanged(nameof(IsAllPrice2Active));
         }

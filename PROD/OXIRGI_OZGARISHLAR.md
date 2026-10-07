@@ -209,4 +209,22 @@ Ushbu hujjat mijozga oxirgi kiritilgan o'zgarishlar va yangi qulayliklarni ko'rs
 
 ---
 
+### 21. 🎨 Desktop Savatcha Qatori Qayta Loyihalandi: 5 Ta Teng Keng Ustun va Vektor Ikonkalar
+- **Nima o'zgardi:**
+  - **"Savatcha" matni olib tashlandi:** Keraksiz matn o'rniga zamonaviy sof vektor savatcha belgisi va uning yonida tovarlar sonini ko'rsatuvchi ixcham indikator qoldirildi.
+  - **Teng 5 ta ustunga bo'lindi:** Kassa ekranidagi savatchaning yuqori qatori aniq teng 5 ta ustunga ajratildi:
+    1. *1-ustun:* Vektor savatcha belgisi va tovarlar soni nishoni;
+    2. *2-ustun:* Brak tovar sotish (ogohlantiruvchi vektor uchburchak);
+    3. *3-ustun:* Narxni almashtirish (1-narx / 2-narx vektor strelkalar);
+    4. *4-ustun:* Pause / Kutishga qo'yish (Hold);
+    5. *5-ustun:* Delete / Savatchani tozalash (Chiqindi qutisi).
+  - **Ranglar uyg'unlashtirildi:** Faqat Delete tugmasi qizil rangli urg'u bilan ajralib turadi. Qolgan barcha tugmalar chiroyli kulrang fonda (`#334155`) sof oq (`#FFFFFF`) vektor ikonkalar bilan ta'minlandi.
+  - **Bo'sh savatda xira (Disabled) holat:** Savatchada tovar bo'lmaganda 4 ta amal tugmasi (Brak, 2-narx, Pause, Delete) vizual ravishda xiralashib (`Opacity: 0.35`), bosilmaydigan (disabled) holatda turadi. Mahsulot qo'shilishi bilan avtomatik yorqin va faol holatga o'tadi.
+  - **Qulaylik:** Tugmalar o'lchami kengayib, sichqoncha bilan bosish bir necha barobar qulaylashdi.
+- **Mijoz uchun foydasi:**
+  - Kassa oynasining savatcha qismi zamonaviy va keng ko'rinishga ega bo'ldi. Kassir adashib bo'sh savatda tugmalarni bosib o'tirmaydi, tugmalar kattaligi tufayli tezkor savdoda bosish ancha osonlashdi.
+
+---
+
+
 
