@@ -226,5 +226,17 @@ Ushbu hujjat mijozga oxirgi kiritilgan o'zgarishlar va yangi qulayliklarni ko'rs
 
 ---
 
+### 22. 🎨 Kassa Tugmalari va Modallar Minimalistik Dizayni: Switch Hover Buzi Tuzatildi, Minus (-) Ikonkalar va Professional Ranglar
+- **Nima o'zgardi:**
+  - **Switch tugmasidagi hover xatoligi (bug) tuzatildi:** Savatdagi har bir mahsulot qatoridagi narxni almashtirish tugmasi (`[ ⇄ 1 ]`) ustiga sichqoncha borganda tizimning oq/och-ko'k standart qobig'i (chrome) chiqib qolish xatosi bartaraf etildi. Maxsus `ControlTemplate` orqali silliq va chiroyli quyuq slate hover effekti o'rnatildi.
+  - **2-narxga o'tgandagi professional ranglar sxemasi:** Avvalgi qo'pol sarg'ish fon, qalin sariq ramka va ko'zni charchatuvchi ranglar o'rniga zamonaviy professional ranglar tanlandi: quyuq nozik fon (`#1E293B`), yengil osmonrang moviy hoshiya (`#0284C7`) va tiniq sky-cyan (`#38BDF8`) narx yozuvi. O'zgarish aniq seziladi, lekin ortiqcha ko'zga tashlanmaydi va professional uslubga to'liq mos keladi.
+  - **Minimalistik Kutish (Hold) va Brak modallari:** Qizil va sariq bo'lib ko'zni oladigan yaltiroq oynalar o'rniga barcha modallar xotirjam minimalistik dizaynga keltirildi: to'q slate ramkalar (`#334155`), quyuq fon (`#1E293B`), Kutish uchun brend moviy aksenti va Brak uchun vazmin qizil urg'u.
+  - **Axlat qutisi ikonkasi o'rniga toza Minus (-) belgisi:** Tovar savatdan axlatga tashlanmasligi, balki chegirilishi/ayrilishi mantiqiga muvofiq, savatcha sarlavhasidagi tozalash tugmasi va har bir tovar qatoridagi o'chirish tugmasi zamonaviy vektor **`-` (Minus)** belgisiga almashtirildi.
+- **Mijoz uchun foydasi:**
+  - Kassa interfeysi yagona minimalistik uslubda bo'lib, ko'zni toliqtirmaydi va ortiqcha vizual shovqindan xoli bo'ldi. Kassir uchun tezkor savdo qilish yanada yoqimli va qulay bo'ldi.
+
+---
+
+
 
 
