@@ -73,11 +73,17 @@ class DebtSyncStoreTest {
             reject { bridge(c,store=g(99)).exportEvent(g(6)) }
             repo(c).createCustomer(DebtCustomerDraft(g(30),"Other","","",1))
             reject { bridge(c).apply(emptyList(),listOf(newPayment(e,8,30,g(4),99))) }
+            // Production Room bootstraps a warehouse journal entry; preserve that baseline.
+            val baselineJournal=count(d,"sync_journal")
             var missing=false
             try { bridge(d).apply(listOf(customer),listOf(wa)) }catch(_: DebtDependencyException){missing=true}
             assertTrue(missing)
             fun empty() {
-                assertEquals(0L,count(d,"debt_customers"));assertEquals(0L,count(d,"debt_events"));assertEquals(0L,count(d,"sync_journal"));assertEquals(0L,count(d,"sales"))
+                assertEquals("customers rollback",0L,count(d,"debt_customers"))
+                assertEquals("events rollback",0L,count(d,"debt_events"))
+                assertEquals("journal baseline preserved",baselineJournal,count(d,"sync_journal"))
+                assertEquals("sales rollback",0L,count(d,"sales"))
+                assertEquals("debt metadata rollback","0",value(d,"SELECT COUNT(*) FROM sync_meta WHERE key LIKE 'debt_%'"))
                 assertEquals("10",value(d,"SELECT quantity FROM transaction_probe"));assertEquals("0",value(d,"SELECT applying FROM sync_control"))
             }
             empty()
