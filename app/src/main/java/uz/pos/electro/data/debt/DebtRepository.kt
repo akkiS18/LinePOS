@@ -54,6 +54,8 @@ class DebtRepository(private val database: AppDatabase, private val store: Strin
         val db=database.openHelper.writableDatabase
         check(scalar(db,"PRAGMA foreign_keys")==1L)
         check(scalar(db,"SELECT version FROM debt_schema WHERE id=1")==1L)
+        check(scalar(db,"SELECT applying FROM sync_control WHERE id=1")==0L)
+        check(scalar(db,"SELECT current_group FROM sync_control WHERE id=1")=="")
         action(db)
     }
     private fun scope(db: SupportSQLiteDatabase) { require(scalar(db,"SELECT store_guid FROM debt_scope WHERE id=1")==store) }

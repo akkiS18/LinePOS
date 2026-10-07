@@ -51,6 +51,11 @@ static class DebtRepositoryTests
             Reject(()=>repo.TakePayment(payment with {RequestGuid=G(70),TargetAccountGuid=G(90)}));
             Reject(()=>repo.TakePayment(payment with {RequestGuid=G(70),CashMinor=9000}));
             Reject(()=>Repo(store:G(99)).TakePayment(payment));
+            using(var c=new SqliteConnection("Data Source="+path)) { c.Open();Exec(c,null,"UPDATE sync_control SET applying=1"); }
+            Reject(()=>repo.TakePayment(payment));
+            using(var c=new SqliteConnection("Data Source="+path)) { c.Open();Exec(c,null,"UPDATE sync_control SET applying=0,current_group='busy'"); }
+            Reject(()=>repo.TakePayment(payment));
+            using(var c=new SqliteConnection("Data Source="+path)) { c.Open();Exec(c,null,"UPDATE sync_control SET current_group=''"); }
             // The same frozen command remains retryable after contact metadata changes.
             using(var c=new SqliteConnection("Data Source="+path)) { c.Open();Exec(c,null,"UPDATE debt_customers SET name='Renamed',archived=1"); }
             repo.CreateCustomer(customer);Repo().TakePayment(payment);

@@ -61,6 +61,11 @@ class DebtRepositoryTest {
             reject { repo().takePayment(payment.copy(requestGuid=g(70),targetAccountGuid=g(90))) }
             reject { repo().takePayment(payment.copy(requestGuid=g(70),cashMinor=9000)) }
             reject { repo(store=g(99)).takePayment(payment) }
+            sql.execSQL("UPDATE sync_control SET applying=1")
+            reject { repo().takePayment(payment) }
+            sql.execSQL("UPDATE sync_control SET applying=0,current_group='busy'")
+            reject { repo().takePayment(payment) }
+            sql.execSQL("UPDATE sync_control SET current_group=''")
             sql.execSQL("UPDATE debt_customers SET name='Renamed',archived=1")
             repo().createCustomer(customer);repo().takePayment(payment)
             reject { repo().takePayment(payment.copy(requestGuid=g(70))) }

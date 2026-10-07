@@ -50,6 +50,8 @@ public sealed class DebtRepository
         if(!canWrite())throw new UnauthorizedAccessException("Debt write permission required");
         Need(Convert.ToInt64(Scalar(c,t,"PRAGMA foreign_keys"))==1);
         Need(Convert.ToInt64(Scalar(c,t,"SELECT version FROM debt_schema WHERE id=1"))==1);
+        Need(Scalar(c,t,"SELECT applying FROM sync_control WHERE id=1") is long applying && applying==0);
+        Need((string?)Scalar(c,t,"SELECT current_group FROM sync_control WHERE id=1")=="");
         var result=action(c,t);t.Commit();return result;
     }
     private void Scope(SqliteConnection c,SqliteTransaction t) => Need((string?)Scalar(c,t,"SELECT store_guid FROM debt_scope WHERE id=1")==store);
