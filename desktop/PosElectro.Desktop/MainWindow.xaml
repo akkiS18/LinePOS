@@ -101,7 +101,7 @@
                                     <MultiDataTrigger>
                                         <MultiDataTrigger.Conditions>
                                             <Condition Binding="{Binding IsCashierSelected}" Value="True"/>
-                                            <Condition Property="IsMouseOver" Value="True"/>
+                                            <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True"/>
                                         </MultiDataTrigger.Conditions>
                                         <Setter Property="Foreground" Value="White"/>
                                     </MultiDataTrigger>
@@ -124,7 +124,7 @@
                                     <MultiDataTrigger>
                                         <MultiDataTrigger.Conditions>
                                             <Condition Binding="{Binding IsInventorySelected}" Value="True"/>
-                                            <Condition Property="IsMouseOver" Value="True"/>
+                                            <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True"/>
                                         </MultiDataTrigger.Conditions>
                                         <Setter Property="Foreground" Value="White"/>
                                     </MultiDataTrigger>
@@ -147,7 +147,7 @@
                                     <MultiDataTrigger>
                                         <MultiDataTrigger.Conditions>
                                             <Condition Binding="{Binding IsReportsSelected}" Value="True"/>
-                                            <Condition Property="IsMouseOver" Value="True"/>
+                                            <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True"/>
                                         </MultiDataTrigger.Conditions>
                                         <Setter Property="Foreground" Value="White"/>
                                     </MultiDataTrigger>
@@ -169,7 +169,7 @@
                                     <MultiDataTrigger>
                                         <MultiDataTrigger.Conditions>
                                             <Condition Binding="{Binding IsSyncSelected}" Value="True"/>
-                                            <Condition Property="IsMouseOver" Value="True"/>
+                                            <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True"/>
                                         </MultiDataTrigger.Conditions>
                                         <Setter Property="Foreground" Value="White"/>
                                     </MultiDataTrigger>
