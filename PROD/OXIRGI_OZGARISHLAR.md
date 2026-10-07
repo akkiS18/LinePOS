@@ -311,3 +311,22 @@ Ushbu hujjat mijozga oxirgi kiritilgan o'zgarishlar va yangi qulayliklarni ko'rs
     - To'liq mustaqil yangi [`PROD/Line_kassa_Desktop_Setup.exe`](file:///c:/Users/Acer/Documents/POS/PROD/Line_kassa_Desktop_Setup.exe) (52.2 MB) qaytadan muvaffaqiyatli kompilyatsiya qilindi.
 - **Mijoz uchun foydasi:**
   - Chekni ko'rish oynasi xuddi haqiqiy kassa lentalaridek ixcham va chiroyli ko'rinadi. Kassir birgina <kbd>Space</kbd> tugmasini bosib darhol naqd savdoni tasdiqlashi mumkin. Ekranning pastida ortiqcha log yozuvlari ko'zni chalg'itmaydi.
+---
+
+### 27. 🚀 To'lov Modali O'lchami Qat'iylashtirildi, 58mm Chek Aylantirish (Scroll) va Bo'shliq Muammosi Ildizi Bilan Tuzatildi
+- **Nima o'zgardi:**
+  - **Xatolik sababi aniqlandi va to'liq bartaraf etildi:**
+    - Avvalgi yig'ish jarayonida `dotnet publish` natijasi bilan Inno Setup (`Line_kassa_Setup.iss`) o'qiyotgan katalog o'rtasidagi yo'l nomuvofiqligi sababli, Inno Setup eski (21:49 dagi) DLL fayllarini o'rab qo'ygani aniqlandi. Shu sababli oldingi o'zgarishlar (amaliyotlar logini o'chirish va kenglik tuzatishlari) o'rnatuvchi faylga kirmay qolgan edi.
+    - `dotnet publish` to'g'ridan-to'g'ri `win-x64\publish` papkasiga yo'naltirildi va o'rnatuvchi paket yangi versiya bilan 100% qayta qurildi.
+  - **To'lov modali endi kattalashmaydi ("modal kattalashmasin"):**
+    - To'lov modaliga qat'iy va qulay `Height="570"` balandlik o'rnatildi (`MaxHeight` o'rniga). Savatda nechta tovar bo'lishidan qat'i nazar, modal oynasi kattalashmaydi, barcha tugmalar va ma'lumotlar joyida qat'iy turadi.
+  - **Chekning o'zi erkin aylanadigan (scroll) qilindi ("chekni ozi scroll boladigan bolsin"):**
+    - Preview bloki balandligi modal ichida to'liq moslashib (`VerticalAlignment="Stretch"`), uzun cheklar (ko'p tovarlar) uchun faqat oq chek qog'ozi ichkarida sichqoncha g'ildiragi orqali yuqoriga-pastga silliq aylanadi (scroll).
+  - **O'ng tomondagi bo'shliq to'liq yo'qotildi:**
+    - 58mm chek qog'ozi kengligi aniq `Width="220"` ga keltirildi (193.5px matn + chap va o'ngdan 13px dan teng simmetrik maydon). O'ng tomonda ortiqcha noo'rin oq bo'shliq qolishi butunlay yo'qoldi.
+  - **Sotish tugmalari ostidagi yozuvlar (amaliyotlar logi) butunlay olib tashlandi:**
+    - Kassa oynasidagi `StatusMessage` matn bloki yangi yig'ilgan to'plamda to'liq yo'q bo'lib, sotish tugmalari ostida hech qanday yozuv chiqmaydi.
+  - **Yangi Inno Setup fayli:**
+    - Barcha o'zgarishlar bilan yangi [`PROD/Line_kassa_Desktop_Setup.exe`](file:///c:/Users/Acer/Documents/POS/PROD/Line_kassa_Desktop_Setup.exe) (52.2 MB) qayta yig'ildi.
+- **Mijoz uchun foydasi:**
+  - To'lov oynasi ekran bo'ylab cho'zilib ketmaydi, qulay va chiroyli o'lchamda turadi. Chek kassa lentasi kabi ixcham va toza ko'rinishda bo'lib, ko'p mahsulotli savdolarda ham ichkarida bemalol aylanadi. Kassa pastidagi log yozuvlari butunlay tozalandi.
