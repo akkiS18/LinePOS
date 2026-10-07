@@ -169,4 +169,16 @@ Ushbu hujjat mijozga oxirgi kiritilgan o'zgarishlar va yangi qulayliklarni ko'rs
 - **Mijoz uchun foydasi:**
   - Barcha yangiliklar bitta to'liq paketda ishlaydi, mijoz telefonida mavjud barcha tovar va bazalar 100% saqlangan holda yangilanadi.
 
+---
+
+### 18. 📱🎨 Mobil Hisobotlar Ekrani Qayta Loyihalandi: Alohida "Cheklar Tarixi" Oynasi va Ixcham Chek Kartochkalari
+- **Nima o'zgardi:**
+  - Hisobotlar ekrani 2 ta mustaqil va tartibli qismga ajratildi:
+    1. **Asosiy hisobotlar paneli (Dashboard):** Vaqt filtrlari, ombor/kategoriya tanlovi, moliyaviy xulosa bloki, 4 ta asosiy KPI kartasi (Jami tushum, Sof foyda, Savdolar soni, Sotilgan tovarlar), Excel eksport tugmasi va yuqori o'ng burchakda aylanuvchi animatsiyali ixcham Dollar kursi nishoni. Ekranning to'lib, siqilib ketishi to'liq bartaraf etildi.
+    2. **Alohida "Cheklar tarixi" oynasi:** Asosiy ekrandagi "Cheklar tarixi (N ta chek) ➔" kartasini yoki "SAVDOLAR SONI" KPI kartasini bosganda to'liq ekranni egallagan yangi oyna ochiladi. Unda orqaga qaytish (`←`) tugmasi, chek raqami bo'yicha tezkor qidiruv, to'lov turlari filtrlari (`Barchasi`, `Savdo`, `Qaytarish`, `Brak`) va barcha cheklar ro'yxati joylashgan. Telefonning orqaga (Back) tugmasi bilan ham qulay qaytish mumkin.
+  - **Chek kartochkasi 2 barobar ixchamlashtirildi:** Oldingi 35 belgili uzun hash-kod o'rniga qulay `Chek #2` va to'lov nishoni (`Naqd`, `Karta`, `Brak`, `Qaytarish`) 1 qatorda ko'rsatiladigan qilindi. Balandligi ixchamlashib, barcha ma'lumotlar o'z o'rnida joylashdi. Tizimning to'liq hujjati raqami esa chek ustiga bosilganda ochiladigan dialogda saqlab qolindi.
+  - **Dollar kursi FAB tugmasi to'g'rilandi:** Pastda chek kartalari va matnlarni to'sib turuvchi suzuvchi (FAB) tugma olib tashlanib, asosiy ekranning yuqorisidagi xalaqit bermaydigan qulay joyga ko'chirildi.
+- **Mijoz uchun foydasi:**
+  - Hisobotlar ekrani toza va yengil bo'ldi, barcha moliyaviy raqamlar bitta qarashda ko'rinadi. Cheklarni ko'rish, qidirish va tahlil qilish esa alohida keng ekranda ancha qulaylashdi.
+
 ---

@@ -2,6 +2,7 @@ package uz.pos.electro.ui.reports
 
 import android.app.DatePickerDialog
 import android.content.Context
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -23,7 +24,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Payments
@@ -125,272 +128,449 @@ fun ReportsScreen(
     val numberFormat = remember { NumberFormat.getNumberInstance(Locale.US) }
     val dayFormat = remember { SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()) }
 
+    // Alohida Cheklar Tarixi oynasi (Sub-view) holati
+    var isReceiptsViewOpen by remember { mutableStateOf(false) }
+    BackHandler(enabled = isReceiptsViewOpen) {
+        isReceiptsViewOpen = false
+    }
+
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        containerColor = MaterialTheme.colorScheme.background,
-        // Fixed Floating Dollar Kursini yangilash tugmasi (Dinamik to'liq yangilash)
-        floatingActionButton = {
-            Surface(
-                onClick = { viewModel.refreshReportData(context) },
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.surface,
-                shadowElevation = 6.dp,
-                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)),
-                modifier = Modifier
-                    .padding(bottom = 8.dp)
-                    .height(46.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = "Yangilash",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier
-                            .size(18.dp)
-                            .rotate(if (isRefreshing) refreshRotation else 0f)
-                    )
-                    val rateFormatted = if (usdRate % 1.0 == 0.0) {
-                        String.format(Locale.US, "%,.0f", usdRate)
-                    } else {
-                        String.format(Locale.US, "%,.2f", usdRate)
-                    }
-                    Text(
-                        text = "1$ = $rateFormatted so'm",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            }
-        }
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(14.dp)
         ) {
-            // 1. Vaqt oralig'i filtri (Gorizontal to'liq kengaygan, erkin chips)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TimeRangeFilter.values().forEach { timeFilter ->
-                    val labelText = if (timeFilter == TimeRangeFilter.CUSTOM && filter == TimeRangeFilter.CUSTOM) {
-                        "${dayFormat.format(Date(customStart))} - ${dayFormat.format(Date(customEnd))}"
-                    } else {
-                        timeFilter.displayName
-                    }
-
-                    FilterChip(
-                        selected = filter == timeFilter,
-                        onClick = {
-                            if (timeFilter == TimeRangeFilter.CUSTOM) {
-                                showSequentialDateRangePicker(context) { start, end ->
-                                    viewModel.setCustomRange(start, end)
-                                }
-                            } else {
-                                viewModel.setFilter(timeFilter)
-                            }
-                        },
-                        shape = CircleShape,
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primary,
-                            selectedLabelColor = Color.White
-                        ),
-                        label = { Text(labelText, fontSize = 12.sp, fontWeight = FontWeight.SemiBold) },
-                        leadingIcon = if (timeFilter == TimeRangeFilter.CUSTOM) {
-                            {
-                                Icon(
-                                    imageVector = Icons.Default.CalendarMonth,
-                                    contentDescription = "Kalendar",
-                                    modifier = Modifier.size(14.dp),
-                                    tint = if (filter == timeFilter) Color.White else MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        } else null
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("Barchasi", "Savdo", "Qaytarish", "Brak").forEach { kind ->
-                    FilterChip(selected = recordKind == kind, onClick = { viewModel.setRecordKind(kind) }, label = { Text(kind) })
-                }
-            }
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ReportChoice("Kategoriya", selectedCategory, categories.map { it to it }, viewModel::setCategoryFilter)
-                ReportChoice("Ombor", selectedWarehouseGuid, listOf("Barchasi" to "Barchasi") + warehouses.map { it.guid to it.name }, viewModel::setWarehouseFilter)
-            }
-            Text("Savdo tushumi: ${numberFormat.format(summary.grossSales)} • Qaytarilgan (sof): ${numberFormat.format(summary.refundedAmount)} • Tannarx tiklanishi: ${numberFormat.format(summary.costReversal)} so‘m", style = MaterialTheme.typography.bodySmall)
-            Text("Brak: ${summary.brakCount} ta • Tannarx: ${numberFormat.format(summary.brakCost)} so‘m", style = MaterialTheme.typography.bodySmall)
-            // 2. Moliyaviy KPI Ko'rsatkichlari (Apple Rounded Cards)
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+            if (isReceiptsViewOpen) {
+                // ==========================================
+                // 1. ALOHIDA CHEKLAR TARIXI OYNASI
+                // ==========================================
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(14.dp)
                 ) {
-                    KpiCard(
-                        title = "JAMI TUSHUM",
-                        value = "${numberFormat.format(summary.totalRevenue)} so'm",
-                        subtitle = "Naqd: ${numberFormat.format(summary.totalCashAmount)} • Karta: ${numberFormat.format(summary.totalCardAmount)}",
-                        icon = Icons.Default.Payments,
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = Color.White,
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    // SOF FOYDA (So'mda va Dollarda)
-                    val formattedUsdProfit = if (summary.usdComplete) String.format(Locale.US, "%.2f", summary.netProfitUsd) else "— (eski kurs yo‘q)"
-                    val taxSubtitle = if (summary.totalTaxAmount > 0) "Karta solig'i: -${numberFormat.format(summary.totalTaxAmount)}" else null
-                    val fullSubtitle = if (taxSubtitle != null) "($${formattedUsdProfit}) • $taxSubtitle" else "($${formattedUsdProfit})"
-                    val profitIsNegative = summary.netProfit < 0
-                    val profitValueText = if (profitIsNegative)
-                        "${numberFormat.format(summary.netProfit)} so'm"
-                    else
-                        "+${numberFormat.format(summary.netProfit)} so'm"
-                    KpiCard(
-                        title = "SOF FOYDA",
-                        value = profitValueText,
-                        subtitle = fullSubtitle,
-                        icon = Icons.Default.TrendingUp,
-                        containerColor = if (profitIsNegative) Color(0xFF7F1D1D) else LineSecondary,
-                        contentColor = Color.White,
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable { viewModel.refreshUsdRate(context) }
-                    )
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    KpiCard(
-                        title = "SAVDOLAR SONI",
-                        value = "${summary.salesCount} ta chek",
-                        icon = Icons.Default.ReceiptLong,
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        contentColor = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    KpiCard(
-                        title = "SOTILGAN TOVARLAR",
-                        value = "${if (summary.totalItemsCount % 1.0 == 0.0) summary.totalItemsCount.toLong() else summary.totalItemsCount} ta/m",
-                        icon = Icons.Default.Description,
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        contentColor = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // 3. Excel Eksport Tugmasi (Modal ochiladi)
-            Button(
-                onClick = { viewModel.openExportModal() },
-                modifier = Modifier.fillMaxWidth(),
-                shape = CircleShape,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = LineSecondary,
-                    contentColor = Color.White
-                )
-            ) {
-                Icon(
-                    imageVector = Icons.Default.FileDownload,
-                    contentDescription = "Excel",
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Excel hisobotni yuklab olish (.xls)",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp
-                )
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Chek raqami bo'yicha qidiruv
-            androidx.compose.material3.OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { viewModel.setSearchQuery(it) },
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Chek № bo'yicha qidirish...", fontSize = 14.sp) },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.ReceiptLong,
-                        contentDescription = "Chek qidirish",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                },
-                trailingIcon = if (searchQuery.isNotEmpty()) {
-                    {
-                        IconButton(onClick = { viewModel.setSearchQuery("") }) {
-                            Icon(Icons.Default.Close, contentDescription = "Tozalash")
+                    // Top Bar: Orqaga qaytish + Sarlavha + Cheklar soni + Yangilash
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = { isReceiptsViewOpen = false }) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Orqaga",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Cheklar tarixi",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        Spacer(modifier = Modifier.weight(1f))
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            modifier = Modifier.padding(end = 4.dp)
+                        ) {
+                            Text(
+                                text = "${filteredSales.size} ta chek",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                            )
+                        }
+                        IconButton(onClick = { viewModel.refreshReportData(context) }) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "Yangilash",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .rotate(if (isRefreshing) refreshRotation else 0f)
+                            )
                         }
                     }
-                } else null,
-                singleLine = true,
-                shape = RoundedCornerShape(14.dp),
-                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Text
-                )
-            )
 
-            Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
-            // 4. Savdolar tarixi (Cheklar ro'yxati)
-            Text(
-                text = if (searchQuery.isNotBlank())
-                    "QIDIRUV NATIJALARI (${filteredSales.size} ta chek)"
-                else
-                    "SAVDOLAR TARIXI (${salesList.size} ta chek)",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            if (filteredSales.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = if (searchQuery.isNotBlank()) "Chek #${searchQuery.trim()} topilmadi"
-                               else "Ushbu davrda savdolar mavjud emas",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodyMedium
+                    // Chek № bo'yicha qidiruv maydoni
+                    androidx.compose.material3.OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { viewModel.setSearchQuery(it) },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Chek № bo'yicha qidirish...", fontSize = 14.sp) },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.ReceiptLong,
+                                contentDescription = "Chek qidirish",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        },
+                        trailingIcon = if (searchQuery.isNotEmpty()) {
+                            {
+                                IconButton(onClick = { viewModel.setSearchQuery("") }) {
+                                    Icon(Icons.Default.Close, contentDescription = "Tozalash")
+                                }
+                            }
+                        } else null,
+                        singleLine = true,
+                        shape = RoundedCornerShape(14.dp),
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Text
+                        )
                     )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Turlar filtri (Barchasi, Savdo, Qaytarish, Brak)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf("Barchasi", "Savdo", "Qaytarish", "Brak").forEach { kind ->
+                            FilterChip(
+                                selected = recordKind == kind,
+                                onClick = { viewModel.setRecordKind(kind) },
+                                shape = CircleShape,
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                    selectedLabelColor = Color.White
+                                ),
+                                label = { Text(kind, fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Cheklar ro'yxati (To'liq bo'yiga cho'zilgan)
+                    if (filteredSales.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = if (searchQuery.isNotBlank()) "Chek #${searchQuery.trim()} topilmadi"
+                                else "Ushbu davrda cheklar mavjud emas",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(filteredSales, key = { it.sale.id }) { saleWithItems ->
+                                SaleHistoryCard(
+                                    saleWithItems = saleWithItems,
+                                    onClick = { viewModel.selectSaleForDetail(saleWithItems) }
+                                )
+                            }
+                        }
+                    }
                 }
             } else {
-                LazyColumn(
-                    modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(bottom = 70.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                // ==========================================
+                // 2. ASOSIY HISOBOTLAR DASHBOARDI
+                // ==========================================
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(filteredSales, key = { it.sale.id }) { saleWithItems ->
-                        SaleHistoryCard(
-                            saleWithItems = saleWithItems,
-                            onClick = { viewModel.selectSaleForDetail(saleWithItems) }
+                    // Sarlavha va Dollar kursi (Ixcham pill)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Hisobotlar",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+
+                        // Ixcham Dollar kursi pill tugmasi
+                        Surface(
+                            onClick = { viewModel.refreshReportData(context) },
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.surface,
+                            shadowElevation = 2.dp,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = "Yangilash",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier
+                                        .size(16.dp)
+                                        .rotate(if (isRefreshing) refreshRotation else 0f)
+                                )
+                                val rateFormatted = if (usdRate % 1.0 == 0.0) {
+                                    String.format(Locale.US, "%,.0f", usdRate)
+                                } else {
+                                    String.format(Locale.US, "%,.2f", usdRate)
+                                }
+                                Text(
+                                    text = "1$ = $rateFormatted so'm",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    }
+
+                    // 1. Vaqt oralig'i filtri (Gorizontal aylanuvchi chipslar)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TimeRangeFilter.values().forEach { timeFilter ->
+                            val labelText = if (timeFilter == TimeRangeFilter.CUSTOM && filter == TimeRangeFilter.CUSTOM) {
+                                "${dayFormat.format(Date(customStart))} - ${dayFormat.format(Date(customEnd))}"
+                            } else {
+                                timeFilter.displayName
+                            }
+
+                            FilterChip(
+                                selected = filter == timeFilter,
+                                onClick = {
+                                    if (timeFilter == TimeRangeFilter.CUSTOM) {
+                                        showSequentialDateRangePicker(context) { start, end ->
+                                            viewModel.setCustomRange(start, end)
+                                        }
+                                    } else {
+                                        viewModel.setFilter(timeFilter)
+                                    }
+                                },
+                                shape = CircleShape,
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                    selectedLabelColor = Color.White
+                                ),
+                                label = { Text(labelText, fontSize = 12.sp, fontWeight = FontWeight.SemiBold) },
+                                leadingIcon = if (timeFilter == TimeRangeFilter.CUSTOM) {
+                                    {
+                                        Icon(
+                                            imageVector = Icons.Default.CalendarMonth,
+                                            contentDescription = "Kalendar",
+                                            modifier = Modifier.size(14.dp),
+                                            tint = if (filter == timeFilter) Color.White else MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                } else null
+                            )
+                        }
+                    }
+
+                    // Kategoriya va Ombor filtrlari
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        ReportChoice("Kategoriya", selectedCategory, categories.map { it to it }, viewModel::setCategoryFilter)
+                        ReportChoice("Ombor", selectedWarehouseGuid, listOf("Barchasi" to "Barchasi") + warehouses.map { it.guid to it.name }, viewModel::setWarehouseFilter)
+                    }
+
+                    // Xulosa ma'lumotlar bloki (Tartibli yorug' blok)
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = "Savdo tushumi: ${numberFormat.format(summary.grossSales)} • Qaytarilgan: ${numberFormat.format(summary.refundedAmount)} • Tannarx tiklanishi: ${numberFormat.format(summary.costReversal)} so‘m",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = "Brak: ${summary.brakCount} ta • Tannarx: ${numberFormat.format(summary.brakCost)} so‘m",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    // 2. Moliyaviy KPI Ko'rsatkichlari (Apple Rounded Cards)
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            KpiCard(
+                                title = "JAMI TUSHUM",
+                                value = "${numberFormat.format(summary.totalRevenue)} so'm",
+                                subtitle = "Naqd: ${numberFormat.format(summary.totalCashAmount)} • Karta: ${numberFormat.format(summary.totalCardAmount)}",
+                                icon = Icons.Default.Payments,
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = Color.White,
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            // SOF FOYDA (So'mda va Dollarda)
+                            val formattedUsdProfit = if (summary.usdComplete) String.format(Locale.US, "%.2f", summary.netProfitUsd) else "— (eski kurs yo‘q)"
+                            val taxSubtitle = if (summary.totalTaxAmount > 0) "Karta solig'i: -${numberFormat.format(summary.totalTaxAmount)}" else null
+                            val fullSubtitle = if (taxSubtitle != null) "($${formattedUsdProfit}) • $taxSubtitle" else "($${formattedUsdProfit})"
+                            val profitIsNegative = summary.netProfit < 0
+                            val profitValueText = if (profitIsNegative)
+                                "${numberFormat.format(summary.netProfit)} so'm"
+                            else
+                                "+${numberFormat.format(summary.netProfit)} so'm"
+                            KpiCard(
+                                title = "SOF FOYDA",
+                                value = profitValueText,
+                                subtitle = fullSubtitle,
+                                icon = Icons.Default.TrendingUp,
+                                containerColor = if (profitIsNegative) Color(0xFF7F1D1D) else LineSecondary,
+                                contentColor = Color.White,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { viewModel.refreshUsdRate(context) }
+                            )
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            KpiCard(
+                                title = "SAVDOLAR SONI",
+                                value = "${summary.salesCount} ta chek",
+                                subtitle = "Ko'rish uchun bosing ➔",
+                                icon = Icons.Default.ReceiptLong,
+                                containerColor = MaterialTheme.colorScheme.surface,
+                                contentColor = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { isReceiptsViewOpen = true }
+                            )
+
+                            KpiCard(
+                                title = "SOTILGAN TOVARLAR",
+                                value = "${if (summary.totalItemsCount % 1.0 == 0.0) summary.totalItemsCount.toLong() else summary.totalItemsCount} ta/m",
+                                icon = Icons.Default.Description,
+                                containerColor = MaterialTheme.colorScheme.surface,
+                                contentColor = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+
+                    // 3. Alohida Cheklar Tarixi Oynasiga O'tish Kartasi
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { isReceiptsViewOpen = true },
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+                        ),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(42.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            imageVector = Icons.Default.ReceiptLong,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                    }
+                                }
+                                Column {
+                                    Text(
+                                        text = "Cheklar tarixi",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "${salesList.size} ta chek mavjud • Ro'yxatni ochish",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            Icon(
+                                imageVector = Icons.Default.ChevronRight,
+                                contentDescription = "Ochish",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(26.dp)
+                            )
+                        }
+                    }
+
+                    // 4. Excel Eksport Tugmasi (Modal ochiladi)
+                    Button(
+                        onClick = { viewModel.openExportModal() },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = LineSecondary,
+                            contentColor = Color.White
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.FileDownload,
+                            contentDescription = "Excel",
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Excel hisobotni yuklab olish (.xls)",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp
                         )
                     }
+
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
         }
@@ -488,7 +668,7 @@ private fun SaleHistoryCard(
         uz.pos.electro.data.model.PaymentType.CASH -> "Naqd"
         uz.pos.electro.data.model.PaymentType.CARD -> "Karta"
         uz.pos.electro.data.model.PaymentType.SPLIT -> "Aralash"
-        uz.pos.electro.data.model.PaymentType.RETURN_REVERSAL -> "Qaytarishni bekor qilish"
+        uz.pos.electro.data.model.PaymentType.RETURN_REVERSAL -> "Bekor"
         uz.pos.electro.data.model.PaymentType.RETURN -> "Qaytarish"
         uz.pos.electro.data.model.PaymentType.BRAK -> "⚠️ Brak"
     }
@@ -497,22 +677,22 @@ private fun SaleHistoryCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() },
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
+                .padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "Chek #${saleWithItems.sale.receiptNumber}",
-                        style = MaterialTheme.typography.titleSmall,
+                        text = "Chek #${saleWithItems.sale.id}",
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -523,6 +703,7 @@ private fun SaleHistoryCard(
                             uz.pos.electro.data.model.PaymentType.CARD -> Color(0xFF0284C7).copy(alpha = 0.15f)
                             uz.pos.electro.data.model.PaymentType.SPLIT -> Color(0xFF8B5CF6).copy(alpha = 0.15f)
                             uz.pos.electro.data.model.PaymentType.BRAK -> Color(0xFFE11D48).copy(alpha = 0.15f)
+                            uz.pos.electro.data.model.PaymentType.RETURN, uz.pos.electro.data.model.PaymentType.RETURN_REVERSAL -> Color(0xFFEA580C).copy(alpha = 0.15f)
                             else -> LineSecondary.copy(alpha = 0.15f)
                         }
                     ) {
@@ -534,6 +715,7 @@ private fun SaleHistoryCard(
                                 uz.pos.electro.data.model.PaymentType.CARD -> Color(0xFF0284C7)
                                 uz.pos.electro.data.model.PaymentType.SPLIT -> Color(0xFF8B5CF6)
                                 uz.pos.electro.data.model.PaymentType.BRAK -> Color(0xFFE11D48)
+                                uz.pos.electro.data.model.PaymentType.RETURN, uz.pos.electro.data.model.PaymentType.RETURN_REVERSAL -> Color(0xFFEA580C)
                                 else -> LineSecondary
                             },
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -551,7 +733,7 @@ private fun SaleHistoryCard(
             Column(horizontalAlignment = Alignment.End) {
                 Text(
                     text = "${numberFormat.format(saleWithItems.sale.totalAmount)} so'm",
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.ExtraBold,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -597,14 +779,14 @@ private fun SaleDetailDialog(
                     .padding(20.dp)
             ) {
                 Text(
-                    text = "Chek #${saleWithItems.sale.receiptNumber} Tafsilotlari",
+                    text = "Chek #${saleWithItems.sale.id} Tafsilotlari",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
                 )
 
                 Text(
-                    text = dateFormat.format(Date(saleWithItems.sale.createdAt)),
+                    text = "Hujjat: ${saleWithItems.sale.receiptNumber} • ${dateFormat.format(Date(saleWithItems.sale.createdAt))}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
