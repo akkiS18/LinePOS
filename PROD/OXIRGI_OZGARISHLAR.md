@@ -250,7 +250,20 @@ Ushbu hujjat mijozga oxirgi kiritilgan o'zgarishlar va yangi qulayliklarni ko'rs
 
 ---
 
-
-
-
+### 24. ⚡ To'lov Modalida Enter/Esc Muammosi Bartaraf Etildi va Minimalistik Ko'zga Tashlanadigan To'lov Paneli
+- **Nima o'zgardi:**
+  - **Enter va Esc tugmalari to'liq ishlaydigan qilindi:** To'lovni tasdiqlash modali ochilganda <kbd>Enter</kbd> (Tasdiqlash) va <kbd>Esc</kbd> (Bekor qilish) tugmalari ishlamay qolish sababi (fokus SearchBox yoki boshqa elementda qolib ketishi va hodisaning yutilishi) ildizi bilan tuzatildi:
+    - `CashierView` darajasida `PreviewKeyDown` hodisasida to'lov modali ochiqligi tekshirilib, <kbd>Enter</kbd> darhol sotuvni tasdiqlaydi (`ConfirmSale()`), <kbd>Esc</kbd> esa modalni yopadi;
+    - Modal ochilishi bilanoq fokus avtomatik ravishda `Tasdiqlash` tugmasiga yo'naltiriladi (`IsDefault="True"` va `IsCancel="True"` qo'shildi);
+    - Modal yopilgach kursor silliq ravishda yana qidiruv maydoniga (`SearchBox`) qaytadi.
+  - **"Jami to'lov" so'zi olib tashlandi (Minimalist dizayn):** 2-rasm namunasiga mos ravishda ortiqcha "Jami to'lov:" matni butunlay olib tashlandi. Uning o'rniga chap tomonda tovarlar soni (`3 ta tovar`), o'ng tomonda esa yirik, zamonaviy va yorqin zumrad rangli yakuniy summa (`30,000 so'm`) joylashtirildi.
+  - **To'lov tugmalari yaqqol ko'rinadigan qilib qayta loyihalandi:** 
+    - Savatchaning pastki qismidagi barcha elementlar alohida chiroyli to'q konteynerga (`#0F172A`) birlashtirildi;
+    - 3 ta to'lov tugmasi (`Naqd`, `Karta`, `Aralash`) ushbu konteyner ichida alohida ko'tarilgan kartochkalar kabi bo'rttirib qo'yildi (balandligi 58px, 1.5px hoshiya, 20x20 vektor ikonka yuqorida va 14px qalin matn markazda);
+    - Sichqoncha borganda osmonrang moviy yaltirash (`#38BDF8`) va quyuq fon o'rnatildi, bu esa ularning asosiy amal tugmasi ekanini yaqqol ko'rsatib turadi;
+    - Savat bo'sh bo'lganda 3 ta tugma avtomatik xira (disabled) holatga o'tadi.
+  - **Tezkor klaviatura tugmalari ulandi:** Kassir klaviaturadan <kbd>F8</kbd> (Naqd), <kbd>F9</kbd> (Karta) yoki <kbd>F10</kbd> (Aralash) tugmasini bosib to'g'ridan-to'g'ri tegishli to'lov turini ochishi mumkin.
+  - **Yangilangan Inno Setup o'rnatish fayli:** Barcha o'zgarishlar bilan yangi to'liq mustaqil [Line_kassa_Desktop_Setup.exe](file:///c:/Users/Acer/Documents/POS/PROD/Line_kassa_Desktop_Setup.exe) (52.2 MB) qayta kompilyatsiya qilindi.
+- **Mijoz uchun foydasi:**
+  - Kassir to'lovni tasdiqlash uchun sichqonchaga qo'l urishi shart emas — faqat klaviaturaning <kbd>Enter</kbd> yoki <kbd>Esc</kbd> tugmasi orqali soniyalar ichida savdoni yakunlaydi yoki bekor qiladi. Asosiy kassa ekranida esa qaysi to'lov turi bilan savdo qilish tugmalari juda aniq va yaqqol ko'zga tashlanadi.
 

@@ -17,6 +17,22 @@ namespace PosElectro.Desktop.Views
         {
             if (DataContext is CashierViewModel vm)
             {
+                if (vm.IsPaymentModalOpen)
+                {
+                    if (e.Key == Key.Enter)
+                    {
+                        vm.ConfirmSale();
+                        e.Handled = true;
+                        return;
+                    }
+                    else if (e.Key == Key.Escape)
+                    {
+                        vm.IsPaymentModalOpen = false;
+                        e.Handled = true;
+                        return;
+                    }
+                }
+
                 if (vm.IsUnrecognizedBarcodeModalOpen)
                 {
                     if (e.Key == Key.Enter)
@@ -101,6 +117,27 @@ namespace PosElectro.Desktop.Views
             }
         }
 
+        private void PaymentModal_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            if (sender is Border border)
+            {
+                if (border.Visibility == Visibility.Visible)
+                {
+                    Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        PaymentConfirmBtn?.Focus();
+                    }), System.Windows.Threading.DispatcherPriority.Input);
+                }
+                else
+                {
+                    Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        SearchBox?.Focus();
+                    }), System.Windows.Threading.DispatcherPriority.Input);
+                }
+            }
+        }
+
         private void BrakModal_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
         {
             if (sender is Border border)
@@ -174,7 +211,24 @@ namespace PosElectro.Desktop.Views
         {
             if (DataContext is CashierViewModel vm)
             {
-                // Agar Savatni kutishga qo'yish (Hold) modali ochiq bo'lsa:
+                // 1. Agar To'lov tasdiqlash modali ochiq bo'lsa:
+                if (vm.IsPaymentModalOpen)
+                {
+                    if (e.Key == Key.Enter)
+                    {
+                        vm.ConfirmSale();
+                        e.Handled = true;
+                        return;
+                    }
+                    else if (e.Key == Key.Escape)
+                    {
+                        vm.IsPaymentModalOpen = false;
+                        e.Handled = true;
+                        return;
+                    }
+                }
+
+                // 2. Agar Savatni kutishga qo'yish (Hold) modali ochiq bo'lsa:
                 if (vm.IsHoldModalOpen)
                 {
                     if (e.Key == Key.Enter)
@@ -191,7 +245,7 @@ namespace PosElectro.Desktop.Views
                     }
                 }
 
-                // Agar Brak tasdiqlash modali ochiq bo'lsa:
+                // 3. Agar Brak tasdiqlash modali ochiq bo'lsa:
                 if (vm.IsBrakModalOpen)
                 {
                     if (e.Key == Key.Enter || e.Key == Key.Y)
@@ -208,7 +262,30 @@ namespace PosElectro.Desktop.Views
                     }
                 }
 
-                // Agar foydalanuvchi matn maydonida yozmayotgan bo'lsa va Backspace bosilsa:
+                // 4. Asosiy kassa ekranida tezkor to'lov tugmalari (F8: Naqd, F9: Karta, F10: Aralash):
+                if (!vm.IsPaymentModalOpen && !vm.IsEditModalOpen && !vm.IsUnrecognizedBarcodeModalOpen && !vm.IsHoldModalOpen && !vm.IsBrakModalOpen)
+                {
+                    if (e.Key == Key.F8 && vm.HasCartItems)
+                    {
+                        vm.OpenPaymentModal(0);
+                        e.Handled = true;
+                        return;
+                    }
+                    else if (e.Key == Key.F9 && vm.HasCartItems)
+                    {
+                        vm.OpenPaymentModal(1);
+                        e.Handled = true;
+                        return;
+                    }
+                    else if (e.Key == Key.F10 && vm.HasCartItems)
+                    {
+                        vm.OpenPaymentModal(2);
+                        e.Handled = true;
+                        return;
+                    }
+                }
+
+                // 5. Agar foydalanuvchi matn maydonida yozmayotgan bo'lsa va Backspace bosilsa:
                 if (e.Key == Key.Back && !(e.OriginalSource is TextBox) && !(e.OriginalSource is PasswordBox))
                 {
                     if (!vm.IsPaymentModalOpen && !vm.IsEditModalOpen && !vm.IsUnrecognizedBarcodeModalOpen && !vm.IsHoldModalOpen)
