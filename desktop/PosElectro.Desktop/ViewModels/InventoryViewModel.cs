@@ -113,7 +113,7 @@ namespace PosElectro.Desktop.ViewModels
         }
 
         public string CurrentWarehouseTitle => SelectedWarehouse != null ? SelectedWarehouse.Name : "Barcha omborlar";
-        public bool CanGoBackToWarehouses => SelectedWarehouse != null && (CurrentViewState == InventoryViewState.CategoriesGrid || CurrentViewState == InventoryViewState.ProductsList);
+        public bool CanGoBackToWarehouses => SelectedWarehouse != null && CurrentViewState == InventoryViewState.CategoriesGrid;
         public bool CanAddProduct => CurrentViewState != InventoryViewState.AddEditForm;
         public string SelectedWarehouseNameDisplay => SelectedWarehouse != null ? SelectedWarehouse.Name : "Tanlanmagan";
         public string BackButtonText => "Ortga qaytish";

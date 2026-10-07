@@ -352,3 +352,25 @@ Ushbu hujjat mijozga oxirgi kiritilgan o'zgarishlar va yangi qulayliklarni ko'rs
     - Yangi [`PROD/Line_kassa_Desktop_Setup.exe`](file:///c:/Users/Acer/Documents/POS/PROD/Line_kassa_Desktop_Setup.exe) (52.2 MB) qaytadan muvaffaqiyatli kompilyatsiya qilindi.
 - **Mijoz uchun foydasi:**
   - Kassada tovar izlash jarayoni tezlashdi va toza ko'rinishga ega bo'ldi. Ombor boshqaruvi keraksiz matnlardan tozalanib, zamonaviy va ixcham ko'rinishga keltirildi. Asosiy omborni tanlash endi qulay yulduzcha orqali bir harakat bilan bajariladi.
+
+
+---
+
+### 29. 🎨 Ombor UI Tahrirlash Tugmalari, Non Uvoqlari (Breadcrumbs), Qidiruv Navigatsiyasi va Mahsulot Qo'shish Formasi To'liq Mukammallashtirildi
+- **Nima o'zgardi:**
+  - **Tahrirlash tugmalari yiriklashtirildi va bosishga qulay qilindi (1-rasm):**
+    - Kategoriya kartasidagi kichik qalamcha tugmasi professional `32x32px` o'lchamdagi to'liq tugmaga aylantirildi (`#1E3A5F`, `#0284C7` hoshiya va `15x15px` vektor ikonka bilan).
+    - Tovarlar jadvalidagi barcha amallar tugmalari (Tahrirlash, Chop etish, O'chirish) `28x28px` dan `34x34px` gacha kattalashtirildi, piktogrammalari `16x16px` ga oshirilib, bosish o'ta qulay va sezilarli qilindi.
+  - **Ombor kategoriyalari sarlavhasi va Ortga qaytish tugmasi modernizatsiya qilindi (2-rasm):**
+    - "OMBOR KATEGORIYALARI" statik sarlavhasi o'rniga faol ombor nomi (masalan: `secondary`) piktogrammasi bilan joylashtirildi.
+    - Yuqori navigatsiya tugmasi "Ortga qaytish" deb nomlanib, professional to'q ranglar palitrasi (`#1E293B`, hoshiya `#334155`, hoverda `#334155`/`#64748B`) va silliq radius bilan jihozlandi.
+  - **Ortiqcha yuqori tugma olib tashlandi va sarlavhada ombor/kategoriya ko'rinishi qo'shildi (3-rasm):**
+    - Mahsulotlar ro'yxatida qidiruv maydoni oldidagi takroriy yuqori tugma olib tashlandi, faqat bitta pastki professional "Ortga qaytish" tugmasi qoldirildi.
+    - Sarlavha non uvoqlari (breadcrumbs) shakliga keltirildi: `Ombor nomi / Kategoriya nomi (Soni)`, masalan: `secondary / Barcha tovarlar (1 ta tovar)`, zamonaviy ranglar bilan ajratildi.
+  - **Mahsulot qo'shish/tahrirlash formasi kartalari ekranga to'liq moslashtirildi (4-rasm):**
+    - Mahsulot formasi kartalarining pastida hosil bo'ladigan bo'shliq to'liq yo'qotildi (`VerticalAlignment="Top"` qo'llanilib, kartalar ichidagi maydonlarga mos ravishda ixcham o'raldi).
+    - Kartalarning to'rtala tomoni bo'ylab teng va simmetrik `20px` padding o'rnatildi, barcha elementlar toza va chiroyli joylashdi.
+  - **Yangi o'rnatish to'plami yig'ildi:**
+    - Yangi [`PROD/Line_kassa_Desktop_Setup.exe`](file:///c:/Users/Acer/Documents/POS/PROD/Line_kassa_Desktop_Setup.exe) (52.2 MB) qaytadan muvaffaqiyatli kompilyatsiya qilindi.
+- **Mijoz uchun foydasi:**
+  - Ombor bo'limida harakatlanish osonlashdi, tugmalar kattalashib sensorli va sichqonchali boshqaruvda oson bosiladigan bo'ldi. Mahsulot qo'shish oynasi desktop ekranlarda ortiqcha bo'sh joylarsiz, professional darajadagi zamonaviy forma ko'rinishiga ega bo'ldi.
