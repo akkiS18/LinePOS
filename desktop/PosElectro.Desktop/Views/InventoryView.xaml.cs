@@ -21,6 +21,41 @@ namespace PosElectro.Desktop.Views
             InitializeComponent();
         }
 
+        private void InventoryView_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (DataContext is InventoryViewModel vm && vm.IsAddEditFormVisible)
+            {
+                // Agar ustki modal dialoglar ochiq bo'lsa (kategoriya/ombor modallari), ularga xalaqit bermaslik
+                if (vm.IsAddCategoryModalOpen || vm.IsEditCategoryModalOpen || vm.IsAddWarehouseModalOpen || vm.IsTransferModalOpen)
+                {
+                    return;
+                }
+
+                if (e.Key == System.Windows.Input.Key.Escape)
+                {
+                    if (vm.CancelAddEditCommand.CanExecute(null))
+                    {
+                        vm.CancelAddEditCommand.Execute(null);
+                        e.Handled = true;
+                    }
+                }
+                else if (e.Key == System.Windows.Input.Key.Enter)
+                {
+                    // Agar fokus ko'p qatorli Izoh maydonida bo'lsa, foydalanuvchiga qator tashlashga imkon berish
+                    if (System.Windows.Input.Keyboard.FocusedElement is TextBox tb && tb.AcceptsReturn)
+                    {
+                        return;
+                    }
+
+                    if (vm.SaveProductFormCommand.CanExecute(null))
+                    {
+                        vm.SaveProductFormCommand.Execute(null);
+                        e.Handled = true;
+                    }
+                }
+            }
+        }
+
         private void PriceTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             if (sender is not TextBox tb) return;

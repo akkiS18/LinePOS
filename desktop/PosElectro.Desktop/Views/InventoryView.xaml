@@ -3,8 +3,10 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:controls="clr-namespace:PosElectro.Desktop.Controls"
              mc:Ignorable="d" 
-             d:DesignHeight="750" d:DesignWidth="1150">
+             d:DesignHeight="750" d:DesignWidth="1150"
+             PreviewKeyDown="InventoryView_PreviewKeyDown">
     <Grid Background="#0F172A" Margin="20">
 
         <!-- ========================================================= -->
@@ -294,22 +296,28 @@
                         <TextBlock Text="{Binding CurrentWarehouseTitle}" Foreground="#F8FAFC" FontSize="17" FontWeight="Bold" VerticalAlignment="Center"/>
                     </StackPanel>
 
-                    <!-- Kategoriyalar kartalari wrap paneli -->
+                    <!-- Kategoriyalar kartalari: konteyner kengligiga moslashuvchan (AdaptiveGridPanel) -->
                     <ItemsControl ItemsSource="{Binding CategoryCards}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <WrapPanel Orientation="Horizontal"/>
+                                <controls:AdaptiveGridPanel MinItemWidth="230" ItemHeight="120" Spacing="14"/>
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemContainerStyle>
+                            <Style TargetType="ContentPresenter">
+                                <Setter Property="HorizontalAlignment" Value="Stretch"/>
+                                <Setter Property="VerticalAlignment" Value="Stretch"/>
+                            </Style>
+                        </ItemsControl.ItemContainerStyle>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Button Command="{Binding DataContext.SelectCategoryCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                         CommandParameter="{Binding}"
-                                        Margin="0,0,14,14" Width="250" Height="120"
+                                        HorizontalAlignment="Stretch" Height="120"
                                         Cursor="Hand">
                                     <Button.Template>
                                         <ControlTemplate TargetType="Button">
-                                            <Border CornerRadius="16" Padding="14,12" BorderThickness="1.5">
+                                            <Border CornerRadius="16" Padding="14,12" BorderThickness="1.5" HorizontalAlignment="Stretch">
                                                 <Border.Style>
                                                     <Style TargetType="Border">
                                                         <Setter Property="Background" Value="#1E293B"/>
@@ -778,12 +786,8 @@
             <Grid.RowDefinitions>
                 <!-- Sarlavha va Ortga tugmasi -->
                 <RowDefinition Height="Auto"/>
-                <!-- Asosiy forma: 2 ustunli karta (scroll-siz sig'adi) -->
+                <!-- Asosiy forma va amallar -->
                 <RowDefinition Height="*"/>
-                <!-- Xatolik matni -->
-                <RowDefinition Height="Auto"/>
-                <!-- Saqlash va Bekor qilish tugmalari -->
-                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
             <!-- TEPADAGI NAVIGATSIYA -->
@@ -824,16 +828,25 @@
                 </StackPanel>
             </Grid>
 
-            <!-- 2 TA ZAMONAVIY BLOK (ASOSIY VA NARXLAR) -->
+            <!-- 2 TA ZAMONAVIY BLOK (ASOSIY VA NARXLAR) VA AMALLAR -->
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <Grid VerticalAlignment="Top">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <!-- 1. Ikkala karta qatori (Balandligi 100% teng) -->
+                        <RowDefinition Height="Auto"/>
+                        <!-- 2. Qulay amallar paneli (Kartalar ostida) -->
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
 
-                    <!-- 1-BLOK: ASOSIY MA'LUMOTLAR -->
-                    <Border Grid.Column="0" Background="#1E293B" CornerRadius="16" BorderBrush="#334155" BorderThickness="1" Padding="20" Margin="0,0,8,0" VerticalAlignment="Top">
+                    <!-- 2 TA KARTA QATORI -->
+                    <Grid Grid.Row="0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- 1-BLOK: ASOSIY MA'LUMOTLAR -->
+                        <Border Grid.Column="0" Background="#1E293B" CornerRadius="16" BorderBrush="#334155" BorderThickness="1" Padding="20" Margin="0,0,8,0">
                     <StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
                             <Path Stretch="Uniform" Data="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
@@ -944,7 +957,7 @@
                         <TextBlock Text="Izoh (Zakaz berish uchun telefon nomer va ma'lumot) [Ixtiyoriy]" Foreground="#94A3B8" FontSize="12" Margin="0,0,0,4"/>
                         <TextBox Text="{Binding FormNote, UpdateSourceTrigger=PropertyChanged}" 
                                  Style="{StaticResource ModernTextBox}" 
-                                 FontSize="13" Padding="10,8" Height="70" 
+                                 FontSize="13" Padding="10,8" Height="65" 
                                  AcceptsReturn="True" TextWrapping="Wrap"
                                  VerticalContentAlignment="Top"
                                  VerticalScrollBarVisibility="Auto"/>
@@ -952,7 +965,7 @@
                 </Border>
 
                 <!-- 2-BLOK: NARXLAR VA QOLDIQ -->
-                <Border Grid.Column="1" Background="#1E293B" CornerRadius="16" BorderBrush="#334155" BorderThickness="1" Padding="20" Margin="8,0,0,0" VerticalAlignment="Top">
+                <Border Grid.Column="1" Background="#1E293B" CornerRadius="16" BorderBrush="#334155" BorderThickness="1" Padding="20" Margin="8,0,0,0">
                     <StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
                             <Path Stretch="Uniform" Data="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
@@ -1029,34 +1042,76 @@
                     </StackPanel>
                 </Border>
             </Grid>
-            </ScrollViewer>
 
-            <!-- XATOLIK XABARI -->
-            <TextBlock Grid.Row="2" Text="{Binding FormErrorMessage}" 
-                       Foreground="#EF4444" FontSize="13" FontWeight="SemiBold" 
-                       Margin="0,8,0,0" TextWrapping="Wrap" 
-                       Visibility="{Binding HasFormError, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+            <!-- BEVOSITA KARTALAR OSTIDAGI QULAY AMAL TUGMALARI VA XATOLIK -->
+            <Grid Grid.Row="1" Margin="0,16,0,24">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
 
-            <!-- PASTDAGI SAQLASH VA BEKOR QILISH TUGMALARI -->
-            <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
-                <Button Command="{Binding CancelAddEditCommand}"
-                        Background="#334155" Foreground="White" FontSize="13" FontWeight="SemiBold"
-                        Style="{StaticResource ModernButton}" Padding="20,10" Margin="0,0,12,0">
-                    <StackPanel Orientation="Horizontal">
-                        <Path Stretch="Uniform" Data="M6 18L18 6M6 6l12 12" Stroke="White" StrokeThickness="2" StrokeStartLineCap="Round" Width="11" Height="11" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                        <TextBlock Text="Bekor qilish" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
+                <!-- Xatolik xabari -->
+                <TextBlock Grid.Column="0" Text="{Binding FormErrorMessage}" 
+                           Foreground="#EF4444" FontSize="13" FontWeight="SemiBold" 
+                           VerticalAlignment="Center" Margin="0,0,16,0" TextWrapping="Wrap" 
+                           Visibility="{Binding HasFormError, Converter={StaticResource BooleanToVisibilityConverter}}"/>
 
-                <Button Command="{Binding SaveProductFormCommand}"
-                        Style="{StaticResource SuccessButton}" Padding="30,10" FontSize="14" FontWeight="Bold">
-                    <StackPanel Orientation="Horizontal">
-                        <Path Stretch="Uniform" Data="M5 13l4 4L19 7" Stroke="White" StrokeThickness="2.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <TextBlock Text="Saqlash" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
-            </StackPanel>
+                <!-- Bekor qilish va Saqlash tugmalari -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Command="{Binding CancelAddEditCommand}"
+                            IsCancel="True"
+                            Background="#1E293B" Foreground="#F8FAFC" BorderBrush="#475569" BorderThickness="1"
+                            Height="44" Padding="18,0" Margin="0,0,12,0" Cursor="Hand" FontWeight="SemiBold" FontSize="13">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="10" Padding="{TemplateBinding Padding}">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Path Stretch="Uniform" Data="M6 18L18 6M6 6l12 12" Stroke="#94A3B8" StrokeThickness="2" StrokeStartLineCap="Round" Width="12" Height="12" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                        <TextBlock Text="Bekor qilish" Foreground="{TemplateBinding Foreground}" VerticalAlignment="Center"/>
+                                        <Border Background="#334155" CornerRadius="4" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                            <TextBlock Text="Esc" Foreground="#94A3B8" FontSize="10" FontWeight="Bold"/>
+                                        </Border>
+                                    </StackPanel>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="bd" Property="Background" Value="#334155"/>
+                                        <Setter TargetName="bd" Property="BorderBrush" Value="#64748B"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+
+                    <Button Command="{Binding SaveProductFormCommand}"
+                            IsDefault="True"
+                            Background="#059669" Foreground="White" BorderBrush="#34D399" BorderThickness="1.5"
+                            Height="44" Padding="26,0" Cursor="Hand" FontWeight="Bold" FontSize="14">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="10" Padding="{TemplateBinding Padding}">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Path Stretch="Uniform" Data="M5 13l4 4L19 7" Stroke="White" StrokeThickness="2.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                        <TextBlock Text="Saqlash" Foreground="{TemplateBinding Foreground}" VerticalAlignment="Center"/>
+                                        <Border Background="#047857" CornerRadius="4" Padding="6,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                            <TextBlock Text="Enter ↵" Foreground="#A7F3D0" FontSize="10" FontWeight="Bold"/>
+                                        </Border>
+                                    </StackPanel>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="bd" Property="Background" Value="#10B981"/>
+                                        <Setter TargetName="bd" Property="BorderBrush" Value="#6EE7B7"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </StackPanel>
+            </Grid>
         </Grid>
+    </ScrollViewer>
+</Grid>
 
         <!-- YANGI KATEGORIYA QO'SHISH MODAL OYNASI -->
         <Grid Visibility="{Binding IsAddCategoryModalOpen, Converter={StaticResource BooleanToVisibilityConverter}}"

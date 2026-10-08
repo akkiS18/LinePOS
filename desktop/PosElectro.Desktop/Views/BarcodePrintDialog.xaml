@@ -1,7 +1,7 @@
 <Window x:Class="PosElectro.Desktop.Views.BarcodePrintDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Shtrix-kod etiketka chop etish" Height="670" Width="720"
+        Title="Shtrix-kod etiketka chop etish" Height="670" Width="780"
         WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
         Background="#0F172A">
     <Grid Margin="18">
@@ -70,7 +70,7 @@
             <!-- O'NG: SOZLAMALAR VA BOSHQARUV -->
             <Border Grid.Column="1" Background="#1E293B" BorderBrush="#334155" BorderThickness="1" CornerRadius="12" Padding="14">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <StackPanel Margin="0,0,4,0">
+                    <StackPanel Margin="0,0,10,0">
                         <!-- Printerni tanlash -->
                         <TextBlock Text="🖨️ Printer (Xprinter XP-365B):" Foreground="#94A3B8" FontSize="12" Margin="0,0,0,4"/>
                         <ComboBox x:Name="CmbPrinters" Height="32" FontSize="12" Margin="0,0,0,8" 
@@ -162,26 +162,30 @@
                         <TextBlock Text="Chop etiladigan nusxalar soni:" Foreground="#F8FAFC" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,4"/>
                         <Grid Margin="0,0,0,8">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="38"/>
+                                <ColumnDefinition Width="42"/>
                                 <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="38"/>
+                                <ColumnDefinition Width="42"/>
                             </Grid.ColumnDefinitions>
 
                             <!-- Minus -->
                             <Button Grid.Column="0" Content="-" Click="BtnMinus_Click"
-                                    Style="{StaticResource ModernButton}" Height="34" FontSize="16" FontWeight="Bold"/>
+                                    Style="{StaticResource ModernButton}" Height="36" Padding="0"
+                                    HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                                    FontSize="20" FontWeight="Bold"/>
 
                             <!-- Input -->
                             <TextBox x:Name="TxtCopies" Grid.Column="1" Text="1" 
-                                     Style="{StaticResource ModernTextBox}" Height="34"
-                                     FontSize="15" FontWeight="Bold" TextAlignment="Center" Margin="4,0"
+                                     Style="{StaticResource ModernTextBox}" Height="36"
+                                     FontSize="16" FontWeight="Bold" TextAlignment="Center" Margin="6,0"
                                      Padding="0" VerticalContentAlignment="Center" HorizontalContentAlignment="Center"
                                      Foreground="#FFFFFF" Background="#0F172A" CaretBrush="#2DD4BF"
                                      TextChanged="TxtCopies_TextChanged"/>
 
                             <!-- Plus -->
                             <Button Grid.Column="2" Content="+" Click="BtnPlus_Click"
-                                    Style="{StaticResource ModernButton}" Height="34" FontSize="16" FontWeight="Bold"/>
+                                    Style="{StaticResource ModernButton}" Height="36" Padding="0"
+                                    HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                                    FontSize="20" FontWeight="Bold"/>
                         </Grid>
 
                         <!-- Tezkor tugmalar -->

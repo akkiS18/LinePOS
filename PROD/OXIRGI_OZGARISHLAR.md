@@ -374,3 +374,22 @@ Ushbu hujjat mijozga oxirgi kiritilgan o'zgarishlar va yangi qulayliklarni ko'rs
     - Yangi [`PROD/Line_kassa_Desktop_Setup.exe`](file:///c:/Users/Acer/Documents/POS/PROD/Line_kassa_Desktop_Setup.exe) (52.2 MB) qaytadan muvaffaqiyatli kompilyatsiya qilindi.
 - **Mijoz uchun foydasi:**
   - Ombor bo'limida harakatlanish osonlashdi, tugmalar kattalashib sensorli va sichqonchali boshqaruvda oson bosiladigan bo'ldi. Mahsulot qo'shish oynasi desktop ekranlarda ortiqcha bo'sh joylarsiz, professional darajadagi zamonaviy forma ko'rinishiga ega bo'ldi.
+
+
+---
+
+### 30. 🎨 Kategoriya Kartalarining Moslashuvchan Kengligi (Adaptive), Forma Kartalarining Teng Balandligi, Enter/Esc Tugmalari va Shtrix-kod Bosish Oynasi Tuzatildi
+- **Nima o'zgardi:**
+  - **Kategoriya kartalari kengligi desktop ekranni to'liq to'ldiradigan qilindi (1-rasm):**
+    - Statik `Width="250"` va `WrapPanel` o'rniga kassa oynasidagi kabi `AdaptiveGridPanel` (`MinItemWidth="230"`, `ItemHeight="120"`, `Spacing="14"`) o'rnatildi.
+    - Kartalar konteyner kengligiga qarab ustunlar sonini dinamik hisoblaydi va barcha bo'shliqni o'zaro teng taqsimlaydi; o'ng tomonda noo'rin bo'sh joy qolishi butunlay bartaraf etildi.
+  - **Mahsulot formasi kartalari balandligi 100% tenglashtirildi va tugmalar joylashuvi qulay qilindi (2-rasm):**
+    - Chap va o'ng kartalar bitta `Grid` qatorida birlashtirildi, `VerticalAlignment="Top"` olib tashlanib, har ikkala kartaning bo'yi avtomatik ravishda tenglashtirildi (balandliklar nomutanosibligi yo'qotildi).
+    - "Bekor qilish" va "Saqlash" tugmalari oynaning eng chetidagi uzoq burchakdan olinib, bevosita ikkala kartaning ostiga (`Grid.Row="1"`) juda qulay holatda joylashtirildi. Xatolik matni ham tugmalar bilan bitta chiziqda ravshan ko'rinadi.
+    - Tugmalarga `[Esc]` va `[Enter ↵]` klaviatura biriktirildi (`IsCancel="True"`, `IsDefault="True"` hamda `InventoryView_PreviewKeyDown` orqali tezkor saqlash va bekor qilish to'liq ulandi).
+  - **Shtrix-kod etiketka chop etish oynasidagi - va + tugmalari qirqilishi tuzatildi (3-rasm):**
+    - Chop etish modali kengligi `720px` dan `780px` ga kengaytirildi, o'ng panelga `10px` xavfsiz oraliq o'rnatildi.
+    - Nusxalar soni qismidagi `-` va `+` tugmalari ustunlari `42px` ga o'rnatildi, `Padding="0"` va `FontSize="20"` berilib, piktogrammalarning qirqilib qolishi to'liq tuzatildi.
+  - **Eslatma:** Foydalanuvchi ko'rsatmasiga binoan, yangi o'rnatish paketi (setup) yig'ilmadi, keyingi topshiriqlar kutilmoqda.
+- **Mijoz uchun foydasi:**
+  - Ombor bo'limida kartalar monitor kengligini chiroyli va tartibli to'ldiradi. Mahsulot qo'shishda maydonlar to'ldirilishi bilan darhol Enter orqali saqlash yoki Esc orqali chiqish mumkin. Stiker chop etishda nusxa tanlash tugmalari to'liq va ravon ko'rinadi.
