@@ -420,3 +420,28 @@ Ushbu hujjat mijozga oxirgi kiritilgan o'zgarishlar va yangi qulayliklarni ko'rs
 - **Mijoz uchun foydasi:**
   - Kassada va Ombordagi qoldiqlar 100% bir-biriga mos keladi, noo'rin "arvoh" qoldiqlar yo'qoldi.
   - Kassir qaysi ombordan tovar sotayotganini aniq bilib boshqaradi. Skaner ishlatilganda esa do'konda tovar qolmagan taqdirda dastur o'zi avtomatik zaxira ombordagi tovardan qo'shib beradi.
+
+---
+
+### 32. 📅 Hisobotlar Oynasi: Vektor Ikonkalar, Zedge Uslubidagi Aqlli Kalendar (Dual-Month Range Picker), Chek Qidiruvining Qulay Joylashuvi va Ombor Yangilash Tugmasi
+- **Nima o'zgardi:**
+  - **Barcha emojilar zamonaviy SVG vektor ikonkalariga almashtirildi (Zero Emojis):**
+    - Yuqori paneldagi barcha ikonkalar (kalendar, dollar kursi, Excel (.xls), yangilash), 4 ta asosiy statistika kartalari (Jami tushum, Sof foyda, Savdolar soni, Sotilgan tovarlar), cheklar jadvali sarlavhasi, qidiruv lupasi va tafsilot "Ko'rish" tugmalari, shuningdek Excel eksport modalidagi barcha emojilar to'liq professional SVG vektor yo'llariga (`Path Data=...`) o'tkazildi.
+  - **Sana tanlash tugmalari yagona aqlli dropdownga birlashtirildi:**
+    - Avvalgi 4 ta alohida knopka o'rniga bitta ixcham `[ 📅 Vaqt oralig'i: Bugun (08.10.2026) ▾ ]` tugmasi qo'yildi. Tugma bosilganda aqlli kalendar darchasi ochiladi.
+  - **Zedge namunasidagi aqlli ikki oyli kalendar (Dual-Month Range Picker):**
+    - **Tezkor tanlov paneli (Chapda):** "Bugun", "Kecha", "Oxirgi 7 kun", "Shu oy", "O'tgan oy" tugmalari orqali bir marta bosish bilan tezkor oraliqni o'rnatish.
+    - **Yonma-yon 2 oylik to'liq kalendar (O'rtada):** Oldingi va keyingi oylarga o'tish tugmalari (`<` va `>`), hafta kunlari sarlavhalari (`Du, Se, Ch, Pa, Ju, Sha, Ya`) va oy kunlari.
+    - **Aqlli sana tanlash rejimi:**
+      - Bitta sana bosilsa — aynan bitta kun tanlanadi va ko'k doira bilan belgilanadi (`IsSingleSelected`).
+      - Ikkinchi sana bosilsa — ikki sana oralig'i to'liq qamrab olinadi: boshlanish va tugash sanalari dumaloq ko'k (`#0284C7`), oraliqdagi barcha kunlar esa uzluksiz chiroyli ko'k fonga (`#1E3A5F`) olinadi.
+    - **Pastki amal paneli:** Tanlangan sana oralig'i va umumiy kunlar soni (masalan: `01.10.2026 — 08.10.2026 (8 kun)`), "Tozalash" (Bugungi kunga qaytarish) va "Qo'llash" tugmalari.
+  - **Chek № bo'yicha qidiruv bevosita cheklar jadvali ustiga ko'chirildi:**
+    - Yuqori navbar paneli bo'shatilib, qidiruv qismi pastdagi savdolar jadvali qutisining ichiga, "Cheklar Tarixi" sarlavhasi yoniga olib tushildi. Natijada chekni izlash va ro'yxatni ko'rish bitta joyda jamlandi.
+  - **Yangilash tugmasi Ombor oynasidagi kabi animatsiyali vektor tugmaga aylantirildi:**
+    - 40x40 `#334155` o'lchamdagi, bosilganda 360 daraja silliq aylanuvchi sinxronlash/yangilash vektor tugmasi qo'yildi.
+  - **Eslatma:** Foydalanuvchi ko'rsatmasiga binoan, yangi o'rnatish paketi (setup) yig'ilmadi, dastur faqat kompyuterda build qilindi va sinovdan o'tkazildi.
+- **Mijoz uchun foydasi:**
+  - Hisobotlar ekrani ancha toza, tartibli va professional ko'rinishga keldi.
+  - Bir necha hafta yoki oylab oraliqdagi hisobotlarni ikki oylik ko'rgazmali kalendarda bir zumda ko'rib, xoh bitta kunni, xoh oraliqni juda qulay tanlash mumkin.
+  - Chek raqami orqali qidiruv to'g'ridan-to'g'ri jadval boshida joylashgani hisobiga sotuvchi o'ziga kerakli chekni qidirishda adashmaydi.

@@ -73,6 +73,9 @@ namespace PosElectro.Desktop.ViewModels
         public ICommand FilterYesterdayCommand { get; }
         public ICommand FilterThisMonthCommand { get; }
         public ICommand FilterCustomCommand { get; }
+        public ICommand ToggleDatePickerCommand { get; }
+        public ICommand ApplyDateRangePickerCommand { get; }
+        public ICommand QuickApplyPresetCommand { get; }
         public ICommand RefreshCommand { get; }
         public ICommand RefreshUsdRateCommand { get; }
         public ICommand OpenExportModalCommand { get; }
@@ -80,6 +83,27 @@ namespace PosElectro.Desktop.ViewModels
         public ICommand ExecuteExportCommand { get; }
         public ICommand SetExportFilterCommand { get; }
         public ICommand ClearReceiptSearchCommand { get; }
+
+        public DateRangePickerViewModel DatePicker { get; } = new();
+
+        private bool _isDateRangePickerOpen;
+        public bool IsDateRangePickerOpen
+        {
+            get => _isDateRangePickerOpen;
+            set => SetProperty(ref _isDateRangePickerOpen, value);
+        }
+
+        public string SelectedDateDisplay
+        {
+            get
+            {
+                if (SelectedFilter == ReportTimeFilter.Today) return $"Bugun ({DateTime.Today:dd.MM.yyyy})";
+                if (SelectedFilter == ReportTimeFilter.Yesterday) return $"Kecha ({DateTime.Today.AddDays(-1):dd.MM.yyyy})";
+                if (SelectedFilter == ReportTimeFilter.ThisMonth) return $"Shu oy ({_startDate:MMMM yyyy})";
+                if (_startDate.Date == _endDate.Date) return $"{_startDate:dd.MM.yyyy}";
+                return $"{_startDate:dd.MM.yyyy} — {_endDate:dd.MM.yyyy}";
+            }
+        }
 
         private string _searchReceiptNumber = string.Empty;
         public string SearchReceiptNumber
@@ -196,6 +220,9 @@ namespace PosElectro.Desktop.ViewModels
             FilterYesterdayCommand = new RelayCommand(SetYesterday);
             FilterThisMonthCommand = new RelayCommand(SetThisMonth);
             FilterCustomCommand = new RelayCommand(SetCustom);
+            ToggleDatePickerCommand = new RelayCommand(() => IsDateRangePickerOpen = !IsDateRangePickerOpen);
+            ApplyDateRangePickerCommand = new RelayCommand(ApplyDateRangePicker);
+            QuickApplyPresetCommand = new RelayCommand<string>(QuickApplyPreset);
             RefreshCommand = new RelayCommand(RefreshData);
             RefreshUsdRateCommand = new RelayCommand(RefreshUsdRate);
             OpenExportModalCommand = new RelayCommand(OpenExportModal);
@@ -332,6 +359,8 @@ namespace PosElectro.Desktop.ViewModels
             SelectedFilter = ReportTimeFilter.Today;
             _startDate = DateTime.Today;
             _endDate = DateTime.Today.AddDays(1).AddTicks(-1);
+            DatePicker.SetRange(_startDate, _startDate);
+            OnPropertyChanged(nameof(SelectedDateDisplay));
             LoadData();
         }
 
@@ -340,6 +369,8 @@ namespace PosElectro.Desktop.ViewModels
             SelectedFilter = ReportTimeFilter.Yesterday;
             _startDate = DateTime.Today.AddDays(-1);
             _endDate = DateTime.Today.AddTicks(-1);
+            DatePicker.SetRange(_startDate, _startDate);
+            OnPropertyChanged(nameof(SelectedDateDisplay));
             LoadData();
         }
 
@@ -348,6 +379,8 @@ namespace PosElectro.Desktop.ViewModels
             SelectedFilter = ReportTimeFilter.ThisMonth;
             _startDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1, 0, 0, 0);
             _endDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, DateTime.DaysInMonth(DateTime.Today.Year, DateTime.Today.Month), 23, 59, 59, 999);
+            DatePicker.SetRange(_startDate, new DateTime(DateTime.Today.Year, DateTime.Today.Month, DateTime.DaysInMonth(DateTime.Today.Year, DateTime.Today.Month)));
+            OnPropertyChanged(nameof(SelectedDateDisplay));
             LoadData();
         }
 
@@ -356,7 +389,57 @@ namespace PosElectro.Desktop.ViewModels
             SelectedFilter = ReportTimeFilter.Custom;
             _startDate = CustomStartDate.Date;
             _endDate = CustomEndDate.Date.AddDays(1).AddTicks(-1);
+            DatePicker.SetRange(_startDate, CustomEndDate.Date);
+            OnPropertyChanged(nameof(SelectedDateDisplay));
             LoadData();
+        }
+
+        public void ApplyDateRangePicker()
+        {
+            if (!DatePicker.RangeStartDate.HasValue) return;
+
+            var start = DatePicker.RangeStartDate.Value.Date;
+            var end = (DatePicker.RangeEndDate ?? DatePicker.RangeStartDate.Value).Date;
+
+            if (start > end)
+            {
+                var temp = start;
+                start = end;
+                end = temp;
+            }
+
+            _startDate = start;
+            _endDate = end.AddDays(1).AddTicks(-1);
+
+            var today = DateTime.Today;
+            if (start == today && end == today)
+            {
+                SelectedFilter = ReportTimeFilter.Today;
+            }
+            else if (start == today.AddDays(-1) && end == today.AddDays(-1))
+            {
+                SelectedFilter = ReportTimeFilter.Yesterday;
+            }
+            else if (start == new DateTime(today.Year, today.Month, 1) && end == new DateTime(today.Year, today.Month, DateTime.DaysInMonth(today.Year, today.Month)))
+            {
+                SelectedFilter = ReportTimeFilter.ThisMonth;
+            }
+            else
+            {
+                SelectedFilter = ReportTimeFilter.Custom;
+                CustomStartDate = start;
+                CustomEndDate = end;
+            }
+
+            IsDateRangePickerOpen = false;
+            OnPropertyChanged(nameof(SelectedDateDisplay));
+            LoadData();
+        }
+
+        public void QuickApplyPreset(string? preset)
+        {
+            DatePicker.SetPreset(preset);
+            ApplyDateRangePicker();
         }
 
         public async void RefreshUsdRate()
