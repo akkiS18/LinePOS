@@ -440,7 +440,7 @@ Ushbu hujjat mijozga oxirgi kiritilgan o'zgarishlar va yangi qulayliklarni ko'rs
     - Yuqori navbar paneli bo'shatilib, qidiruv qismi pastdagi savdolar jadvali qutisining ichiga, "Cheklar Tarixi" sarlavhasi yoniga olib tushildi. Natijada chekni izlash va ro'yxatni ko'rish bitta joyda jamlandi.
   - **Yangilash tugmasi Ombor oynasidagi kabi animatsiyali vektor tugmaga aylantirildi:**
     - 40x40 `#334155` o'lchamdagi, bosilganda 360 daraja silliq aylanuvchi sinxronlash/yangilash vektor tugmasi qo'yildi.
-  - **Eslatma:** Foydalanuvchi ko'rsatmasiga binoan, yangi o'rnatish paketi (setup) yig'ilmadi, dastur faqat kompyuterda build qilindi va sinovdan o'tkazildi.
+  - **O'rnatish paketi (Setup):** Barcha yangiliklar va optimizatsiyalar bilan to'liq Inno Setup o'rnatish paketi (`desktop/Output/Line_kassa_Desktop_Setup.exe`) muvaffaqiyatli yig'ildi.
 - **Mijoz uchun foydasi:**
   - Hisobotlar ekrani ancha toza, tartibli va professional ko'rinishga keldi.
   - Bir necha hafta yoki oylab oraliqdagi hisobotlarni ikki oylik ko'rgazmali kalendarda bir zumda ko'rib, xoh bitta kunni, xoh oraliqni juda qulay tanlash mumkin.
