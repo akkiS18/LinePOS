@@ -78,10 +78,7 @@ namespace PosElectro.Desktop.ViewModels
         public ICommand QuickApplyPresetCommand { get; }
         public ICommand RefreshCommand { get; }
         public ICommand RefreshUsdRateCommand { get; }
-        public ICommand OpenExportModalCommand { get; }
-        public ICommand CloseExportModalCommand { get; }
         public ICommand ExecuteExportCommand { get; }
-        public ICommand SetExportFilterCommand { get; }
         public ICommand ClearReceiptSearchCommand { get; }
 
         public DateRangePickerViewModel DatePicker { get; } = new();
@@ -120,64 +117,7 @@ namespace PosElectro.Desktop.ViewModels
         }
         public bool HasSearchReceiptNumber => !string.IsNullOrWhiteSpace(SearchReceiptNumber);
 
-        // --- EXCEL EXPORT MODAL PROPERTIES ---
-        private bool _isExportModalOpen;
-        public bool IsExportModalOpen
-        {
-            get => _isExportModalOpen;
-            set => SetProperty(ref _isExportModalOpen, value);
-        }
 
-        private ReportTimeFilter _exportFilter = ReportTimeFilter.Today;
-        public ReportTimeFilter ExportFilter
-        {
-            get => _exportFilter;
-            set
-            {
-                if (SetProperty(ref _exportFilter, value))
-                {
-                    OnPropertyChanged(nameof(IsExportToday));
-                    OnPropertyChanged(nameof(IsExportYesterday));
-                    OnPropertyChanged(nameof(IsExportThisMonth));
-                    OnPropertyChanged(nameof(IsExportCustom));
-                    OnPropertyChanged(nameof(IsExportCustomDateVisible));
-                }
-            }
-        }
-
-        public bool IsExportToday => ExportFilter == ReportTimeFilter.Today;
-        public bool IsExportYesterday => ExportFilter == ReportTimeFilter.Yesterday;
-        public bool IsExportThisMonth => ExportFilter == ReportTimeFilter.ThisMonth;
-        public bool IsExportCustom => ExportFilter == ReportTimeFilter.Custom;
-        public bool IsExportCustomDateVisible => ExportFilter == ReportTimeFilter.Custom;
-
-        private DateTime _exportCustomStartDate = DateTime.Today;
-        public DateTime ExportCustomStartDate
-        {
-            get => _exportCustomStartDate;
-            set => SetProperty(ref _exportCustomStartDate, value);
-        }
-
-        private DateTime _exportCustomEndDate = DateTime.Today;
-        public DateTime ExportCustomEndDate
-        {
-            get => _exportCustomEndDate;
-            set => SetProperty(ref _exportCustomEndDate, value);
-        }
-
-        private Warehouse? _exportSelectedWarehouse;
-        public Warehouse? ExportSelectedWarehouse
-        {
-            get => _exportSelectedWarehouse;
-            set => SetProperty(ref _exportSelectedWarehouse, value);
-        }
-
-        private string _exportSelectedCategory = "Barchasi";
-        public string ExportSelectedCategory
-        {
-            get => _exportSelectedCategory;
-            set => SetProperty(ref _exportSelectedCategory, value);
-        }
 
         public ReportsViewModel(DatabaseContext db, CurrencyService currencyService)
         {
@@ -225,16 +165,7 @@ namespace PosElectro.Desktop.ViewModels
             QuickApplyPresetCommand = new RelayCommand<string>(QuickApplyPreset);
             RefreshCommand = new RelayCommand(RefreshData);
             RefreshUsdRateCommand = new RelayCommand(RefreshUsdRate);
-            OpenExportModalCommand = new RelayCommand(OpenExportModal);
-            CloseExportModalCommand = new RelayCommand(() => IsExportModalOpen = false);
             ExecuteExportCommand = new RelayCommand(ExecuteExport);
-            SetExportFilterCommand = new RelayCommand<string>(filter =>
-            {
-                if (filter == "today") ExportFilter = ReportTimeFilter.Today;
-                else if (filter == "yesterday") ExportFilter = ReportTimeFilter.Yesterday;
-                else if (filter == "this_month") ExportFilter = ReportTimeFilter.ThisMonth;
-                else if (filter == "custom") ExportFilter = ReportTimeFilter.Custom;
-            });
             ClearReceiptSearchCommand = new RelayCommand(() => SearchReceiptNumber = string.Empty);
 
             LoadFilterOptions();
@@ -514,53 +445,14 @@ namespace PosElectro.Desktop.ViewModels
             OnPropertyChanged(nameof(UsdRateText));
         }
 
-        public void OpenExportModal()
-        {
-            ExportFilter = SelectedFilter;
-            ExportCustomStartDate = CustomStartDate;
-            ExportCustomEndDate = CustomEndDate;
-            ExportSelectedWarehouse = SelectedWarehouse ?? Warehouses.FirstOrDefault();
-            ExportSelectedCategory = SelectedCategory ?? "Barchasi";
-            IsExportModalOpen = true;
-        }
-
         public void ExecuteExport()
         {
-            DateTime start;
-            DateTime end;
-            string periodTitle;
+            string? catFilter = (SelectedCategory == "Barchasi") ? null : SelectedCategory;
+            string? whGuidFilter = (_selectedWarehouse == null || _selectedWarehouse.Guid == "all") ? null : _selectedWarehouse.Guid;
+            string whTitle = _selectedWarehouse?.Name ?? "Barcha omborlar";
 
-            switch (ExportFilter)
-            {
-                case ReportTimeFilter.Yesterday:
-                    start = DateTime.Today.AddDays(-1);
-                    end = DateTime.Today.AddTicks(-1);
-                    periodTitle = "Kecha";
-                    break;
-                case ReportTimeFilter.ThisMonth:
-                    start = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1, 0, 0, 0);
-                    end = new DateTime(DateTime.Today.Year, DateTime.Today.Month, DateTime.DaysInMonth(DateTime.Today.Year, DateTime.Today.Month), 23, 59, 59, 999);
-                    periodTitle = "Shu oy";
-                    break;
-                case ReportTimeFilter.Custom:
-                    start = ExportCustomStartDate.Date;
-                    end = ExportCustomEndDate.Date.AddDays(1).AddTicks(-1);
-                    periodTitle = $"{ExportCustomStartDate:dd.MM.yyyy} - {ExportCustomEndDate:dd.MM.yyyy}";
-                    break;
-                case ReportTimeFilter.Today:
-                default:
-                    start = DateTime.Today;
-                    end = DateTime.Today.AddDays(1).AddTicks(-1);
-                    periodTitle = "Bugun";
-                    break;
-            }
-
-            string catFilter = ExportSelectedCategory ?? "Barchasi";
-            string? whGuidFilter = (ExportSelectedWarehouse == null || ExportSelectedWarehouse.Guid == "all") ? null : ExportSelectedWarehouse.Guid;
-            string whTitle = ExportSelectedWarehouse?.Name ?? "Barcha omborlar";
-
-            var detailedItems = _db.GetDetailedReportItems(start, end, UsdRate, catFilter, whGuidFilter).Where(i => KindMatches(i)).ToList();
-            periodTitle += " | " + SelectedRecordKind;
+            var detailedItems = _db.GetDetailedReportItems(_startDate, _endDate, UsdRate, catFilter, whGuidFilter).Where(i => KindMatches(i)).ToList();
+            string periodTitle = $"{SelectedDateDisplay} | {SelectedRecordKind}";
             periodTitle += $" | Qaytarilgan (sof): {-detailedItems.Where(i => i.IsReturn).Sum(i => i.TotalPrice):N2}; Tannarx tiklanishi: {-detailedItems.Where(i => i.IsReturn).Sum(i => i.TotalCost):N2}";
 
             double rev = 0;
@@ -577,10 +469,9 @@ namespace PosElectro.Desktop.ViewModels
 
             periodTitle += $" | Brak: {detailedItems.Where(i => i.IsBrak).Select(i => i.SaleId).Distinct().Count()} ta, {detailedItems.Where(i => i.IsBrak).Sum(i => i.TotalCost):N2} so‘m";
             periodTitle += detailedItems.All(i => i.ProfitUsd.HasValue) ? $" | USD foyda: ${detailedItems.Sum(i => i.ProfitUsd ?? 0):N2}" : " | USD foyda: noma’lum (eski kurs saqlanmagan)";
-            bool exported = ExcelExportService.ExportReport(periodTitle, rev, cost, prof, salesCount, detailedItems, catFilter, whTitle);
+            bool exported = ExcelExportService.ExportReport(periodTitle, rev, cost, prof, salesCount, detailedItems, catFilter ?? "Barchasi", whTitle);
             if (exported)
             {
-                IsExportModalOpen = false;
                 StatusMessage = "✅ Excel hisoboti muvaffaqiyatli saqlandi";
             }
         }

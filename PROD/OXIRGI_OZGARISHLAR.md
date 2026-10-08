@@ -445,3 +445,22 @@ Ushbu hujjat mijozga oxirgi kiritilgan o'zgarishlar va yangi qulayliklarni ko'rs
   - Hisobotlar ekrani ancha toza, tartibli va professional ko'rinishga keldi.
   - Bir necha hafta yoki oylab oraliqdagi hisobotlarni ikki oylik ko'rgazmali kalendarda bir zumda ko'rib, xoh bitta kunni, xoh oraliqni juda qulay tanlash mumkin.
   - Chek raqami orqali qidiruv to'g'ridan-to'g'ri jadval boshida joylashgani hisobiga sotuvchi o'ziga kerakli chekni qidirishda adashmaydi.
+
+---
+
+### 33. 🎨 Hisobotlar: Vektor Ikonkalar O'lchami Fix, Yagona Filtrlar Paneli (Ombor, Kategoriya, Operatsiya Turi) va 1-Bosishda Excel Eksport
+- **Nima o'zgardi:**
+  - **Vektor ikonkalar o'lchami va masshtablanishi to'liq to'g'rilandi (`Stretch="Uniform"`):**
+    - Barcha `Path` elementlariga `Stretch="Uniform"` qo'shilib, SVG koordinatalari to'g'ri masshtablandi.
+    - Natijada oldin qirqilib, katta va xunuk ko'ringan ikonkalar (Dollar belgisi `d` harfiga aylanib qolishi, ko'z belgisi yarimta ko'rinishi, stat kartalardagi chiziqlarning uzilishi) to'liq tuzatildi. Ikonkalar endi aniq, ixcham (12-16px) va estetik ko'rinishga ega.
+  - **Filtrlar yagona yuqori panelga jamlandi:**
+    - `Sana oralig'i` yoniga `Ombor`, `Kategoriya` va `Operatsiya turi` ("Barchasi", "Savdo", "Qaytarish", "Brak") filtr dropdownlari chiqarildi.
+    - 3-kartochka (SAVDOLAR SONI) ichidagi ortiqcha ComboBox olib tashlanib, kartochka bo'sh va chiroyli holatga keltirildi.
+    - Har qanday filtr o'zgartirilganda (sana, ombor, tovar kategoriyasi yoki operatsiya turi) butun hisobotlar jadvali va 4 ta KPI kartochkasi darhol jonli yangilanadi.
+  - **Excel eksport modali olib tashlandi (1-bosishda to'g'ridan-to'g'ri eksport):**
+    - Eski qora modal dialog butunlay o'chirildi.
+    - Yashil "Excel (.xls)" tugmasi bosilganda darhol ekranda filtrlangan ma'lumotlar bo'yicha to'g'ridan-to'g'ri fayl saqlash oynasi ochiladi va eksport qilinadi.
+- **Mijoz uchun foydasi:**
+  - Ikonkalar ko'zni qamashtirmaydi, o'lchamlari mutanosib va toza ko'rinadi.
+  - Hisobotni filtrlash uchun bir nechta joyga yugurish shart emas — barcha filtrlar tepada bir qatorda turadi.
+  - Excel yuklab olishda takroriy savollar va oynalar chiqmaydi, bir marta bosishda hisobot tayyor bo'ladi.
