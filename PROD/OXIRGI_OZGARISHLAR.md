@@ -460,6 +460,7 @@ Ushbu hujjat mijozga oxirgi kiritilgan o'zgarishlar va yangi qulayliklarni ko'rs
   - **Excel eksport modali olib tashlandi (1-bosishda to'g'ridan-to'g'ri eksport):**
     - Eski qora modal dialog butunlay o'chirildi.
     - Yashil "Excel (.xls)" tugmasi bosilganda darhol ekranda filtrlangan ma'lumotlar bo'yicha to'g'ridan-to'g'ri fayl saqlash oynasi ochiladi va eksport qilinadi.
+  - **O'rnatish paketi (Setup):** Barcha so'nggi yangiliklar bilan to'liq Inno Setup o'rnatish paketi (`desktop/Output/Line_kassa_Desktop_Setup.exe`) muvaffaqiyatli yig'ildi.
 - **Mijoz uchun foydasi:**
   - Ikonkalar ko'zni qamashtirmaydi, o'lchamlari mutanosib va toza ko'rinadi.
   - Hisobotni filtrlash uchun bir nechta joyga yugurish shart emas — barcha filtrlar tepada bir qatorda turadi.
