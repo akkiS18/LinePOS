@@ -483,6 +483,7 @@ private fun SaleHistoryCard(
     val dateFormat = remember { SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault()) }
     val profit = (saleWithItems.sale.totalAmount - saleWithItems.sale.taxAmount) - saleWithItems.sale.totalCost
     val paymentTypeText = when (saleWithItems.sale.paymentType) {
+        uz.pos.electro.data.model.PaymentType.DEBT -> "Nasiya"
         uz.pos.electro.data.model.PaymentType.CASH -> "Naqd"
         uz.pos.electro.data.model.PaymentType.CARD -> "Karta"
         uz.pos.electro.data.model.PaymentType.SPLIT -> "Aralash"

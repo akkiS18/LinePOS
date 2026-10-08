@@ -55,6 +55,7 @@ class SaleRepository @Inject constructor(
         taxRate: Double = 0.0,
         saleGuid: String = java.util.UUID.randomUUID().toString()
     ): Long {
+        paymentType.requireOrdinaryCheckout()
         require(items.isNotEmpty() && items.all { it.quantity.isFinite() && it.quantity > 0 && it.priceAtSale.isFinite() && it.priceAtSale >= 0 && it.product.costPrice.isFinite() && it.product.costPrice >= 0 }) { "Miqdor yoki narx noto‘g‘ri" }
         require(taxRate.isFinite() && taxRate in 0.0..100.0 && cashAmount.isFinite() && cardAmount.isFinite() && cashAmount >= 0 && cardAmount >= 0) { "To‘lov summasi noto‘g‘ri" }
         val (saleId, savedEntity, savedItems) = database.withTransaction {
@@ -71,7 +72,6 @@ class SaleRepository @Inject constructor(
                 costInUzs * item.quantity
             })
 
-            require(paymentType != PaymentType.RETURN && paymentType != PaymentType.RETURN_REVERSAL) { "Qaytarish mahalliy kompyuter orqali tasdiqlanadi" }
             val paidCash = when (paymentType) { PaymentType.CASH -> totalAmount; PaymentType.BRAK -> 0.0; else -> SaleAccounting.money(cashAmount) }
             val paidCard = when (paymentType) { PaymentType.CARD -> totalAmount; PaymentType.BRAK -> 0.0; else -> SaleAccounting.money(cardAmount) }
             require(paymentType == PaymentType.BRAK || SaleAccounting.money(paidCash + paidCard) == totalAmount) { "To‘lov jami chek summasiga teng emas" }
