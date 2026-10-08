@@ -76,7 +76,7 @@ public sealed class DebtEnvelopeInbox
                 var chars=Convert.ToInt64(Scalar(db,tx,"SELECT COALESCE(SUM(length(payload)),0) FROM debt_sync_inbox"),CultureInfo.InvariantCulture);
                 if(count>=MaxPendingPackets || chars>MaxPendingChars-wire.Length)throw new DebtInboxFullException();
                 Exec(db,tx,"INSERT INTO debt_sync_inbox(packet_guid,store_guid,payload,received_at,error) VALUES(@p0,@p1,@p2,@p3,@p4)",p.Guid,store,wire,receivedAt,reason);
-            } else Exec(db,tx,"UPDATE debt_sync_inbox SET error=@p1 WHERE packet_guid=@p0",p.Guid,reason);
+            } else Exec(db,tx,"UPDATE debt_sync_inbox SET error=@p0 WHERE packet_guid=@p1",reason,p.Guid);
             return p.SaleWire.Length>0?DebtReceiveStatus.WaitingForSaleAdapter:DebtReceiveStatus.WaitingForDependency;
         }
         Exec(db,tx,"UPDATE sync_control SET applying=1 WHERE id=1");

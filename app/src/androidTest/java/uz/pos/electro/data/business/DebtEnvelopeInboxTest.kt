@@ -32,7 +32,7 @@ class DebtEnvelopeInboxTest {
         val names=List(4){"debt-inbox-${UUID.randomUUID()}.db"};val dbs=names.map { AppDatabase.buildDatabase(context,scope,it) }.toMutableList()
         try {
             for(db in dbs){sql(db).execSQL("INSERT OR IGNORE INTO users(id,name,pin_code,role) VALUES(1,'Admin','0000','ADMIN')");repo(db).bindStore()}
-            val a=dbs[0];var b=dbs[1];val c=dbs[2];val q=dbs[3]
+            val a=dbs[0];var b=dbs[1];var c=dbs[2];val q=dbs[3]
             val sw=DebtEnvelope.encodeSale(DebtSaleSnapshot(g(4),1,10000,6000,2000,0,0,"0","12000","DEBT",listOf(DebtSaleItem(g(10),g(11),"Wire","Electric","m",g(12),"Main","1","100","60","UZS",g(13),"-1"))))
             repo(a).createCustomer(DebtCustomerDraft(g(3),"Ali","","",1));repo(a).openSale(DebtSaleCommand(g(5),g(3),g(4),DebtWire.fingerprint(sw),10000,2000,0,1)){sale(it,g(4))}
             repo(a).takePayment(DebtPaymentCommand(g(6),g(3),4000,0,0,2))
@@ -42,7 +42,8 @@ class DebtEnvelopeInboxTest {
             assertEquals(0L,count(b,"debt_customers"));assertEquals(0L,count(b,"debt_events"));assertEquals(0L,count(b,"sales"))
             b.close();b=AppDatabase.buildDatabase(context,scope,names[1]);dbs[1]=b
             assertEquals(DebtPendingPacket(incoming,10,"missing_dependency"),inbox(b).readPending(g(6)))
-            assertEquals(DebtReceiveStatus.WaitingForDependency,inbox(b).receive(incoming,99));assertEquals(10L,inbox(b).readPending(g(6))!!.receivedAt)
+            sql(b).execSQL("UPDATE debt_sync_inbox SET error='retry_needed'")
+            assertEquals(DebtReceiveStatus.WaitingForDependency,inbox(b).receive(incoming,99));assertEquals(10L,inbox(b).readPending(g(6))!!.receivedAt);assertEquals("missing_dependency",inbox(b).readPending(g(6))!!.reason)
             reject { inbox(b).receive(packet("",pw),99) };reject { inbox(b,actor=false).readPending(g(6)) };reject { inbox(b,allowed=false).receive(incoming,1) }
             assertEquals(DebtReceiveStatus.WaitingForSaleAdapter,inbox(b).receive(opening,11));assertNull(inbox(b).exportApplied(g(5)))
             assertEquals(0L,count(b,"debt_customers"));assertEquals(0L,count(b,"sales"))
@@ -71,6 +72,17 @@ class DebtEnvelopeInboxTest {
             sql(c).execSQL("DROP TRIGGER fail_customer_outer")
             assertEquals(DebtReceiveStatus.Applied,inbox(c).receive(customer,1));assertEquals(DebtReceiveStatus.AlreadyApplied,inbox(c).receive(customer,2))
             reject { inbox(c).receive(incoming.replace("debt-envelope-v1","debt-envelope-v2"),1) };reject { inbox(c).receive(incoming,-1) };assertEquals(0L,count(c,"debt_sync_inbox"))
+            val largeSale=DebtEnvelope.decodeSale(sw)
+            val largeItems=(0 until 1000).map { i->largeSale.items[0].copy(guid=g(1000+i),stockOperationGuid=g(10000+i),productName="界".repeat(180),category="界".repeat(100),warehouseName="界".repeat(120)) }
+            val largeWire=DebtEnvelope.encodeSale(largeSale.copy(totalMinor=10000000,costMinor=6000000,items=largeItems))
+            val largeEvent=DebtWire.decodeEvent(ew,g(1))
+            val largePayload=DebtRepository.canonical("sale_open",g(1),g(2),g(5),g(3),g(4),DebtWire.fingerprint(largeWire),"10000000","2000","0","1","")
+            val largePacket=packet(cw,DebtWire.encodeEvent(largeEvent.copy(payload=largePayload,payloadHash=DebtWire.fingerprint(largePayload),account=largeEvent.account!!.copy(originalDebtMinor=9998000)),g(1)),largeWire)
+            assertTrue("Large body fixture too small",largePacket.length>2*1024*1024)
+            assertEquals(DebtReceiveStatus.WaitingForSaleAdapter,inbox(c).receive(largePacket,30))
+            c.close();c=AppDatabase.buildDatabase(context,scope,names[2]);dbs[2]=c
+            assertEquals(largePacket,inbox(c).readPending(g(5))!!.wire)
+            assertEquals(DebtReceiveStatus.WaitingForSaleAdapter,inbox(c).receive(largePacket,31));assertEquals(30L,inbox(c).readPending(g(5))!!.receivedAt)
             for(i in 100..227)assertEquals(DebtReceiveStatus.WaitingForDependency,inbox(q).receive(another(pw,cw,i),1))
             var full=false;try{inbox(q).receive(another(pw,cw,300),1)}catch(_: DebtInboxFullException){full=true};assertTrue(full);assertEquals(128L,count(q,"debt_sync_inbox"))
             assertEquals(DebtReceiveStatus.WaitingForDependency,inbox(q).receive(another(pw,cw,100),2));assertEquals(DebtReceiveStatus.Applied,inbox(q).receive(customer,1))

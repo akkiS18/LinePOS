@@ -30,7 +30,8 @@ static class DebtEnvelopeInboxTests
             Check(Inbox(b).Receive(packet,10)==DebtReceiveStatus.WaitingForDependency,"Missing account falsely accepted");
             Check(Count(b,"debt_customers")==0 && Count(b,"debt_events")==0 && Count(b,"sales")==0,"Partial packet applied");
             Check(Inbox(b).ReadPending(G(6))==new DebtPendingPacket(packet,10,"missing_dependency"),"Frozen inbox body changed");
-            Check(Inbox(b).Receive(packet,99)==DebtReceiveStatus.WaitingForDependency && Inbox(b).ReadPending(G(6))!.ReceivedAt==10,"Retry changed receive time");
+            Sql(b,"UPDATE debt_sync_inbox SET error='retry_needed'");
+            Check(Inbox(b).Receive(packet,99)==DebtReceiveStatus.WaitingForDependency && Inbox(b).ReadPending(G(6))!.ReceivedAt==10 && Inbox(b).ReadPending(G(6))!.Reason=="missing_dependency","Retry changed time/reason");
             Reject(()=>Inbox(b).Receive(Packet("",pw),99));Reject(()=>Inbox(b,actor:false).ReadPending(G(6)));Reject(()=>Inbox(b,allowed:false).Receive(packet,10));
             Check(Inbox(b).Receive(opening,11)==DebtReceiveStatus.WaitingForSaleAdapter && Inbox(b).ExportApplied(G(5))==null,"Opening partially accepted");
             Check(Count(b,"debt_customers")==0 && Count(b,"sales")==0,"Opening wrote sale/contact");
@@ -58,6 +59,16 @@ static class DebtEnvelopeInboxTests
             Reject(()=>Inbox(c).Receive(customer,1));Check(Count(c,"debt_customers")==0 && N(c,"SELECT COUNT(*) FROM sync_meta WHERE key LIKE 'debt_%'")==0,"Partial customer receipt");Sql(c,"DROP TRIGGER fail_customer_outer");
             Check(Inbox(c).Receive(customer,1)==DebtReceiveStatus.Applied && Inbox(c).Receive(customer,2)==DebtReceiveStatus.AlreadyApplied,"Customer replay");
             Reject(()=>Inbox(c).Receive(packet.Replace("debt-envelope-v1","debt-envelope-v2"),1));Reject(()=>Inbox(c).Receive(packet,-1));Check(Count(c,"debt_sync_inbox")==0,"Invalid frame persisted");
+            var largeSale=DebtEnvelope.DecodeSale(sale);
+            var largeItems=Enumerable.Range(0,1000).Select(i=>largeSale.Items[0] with{Guid=G(1000+i),StockOperationGuid=G(10000+i),ProductName=new string('界',180),Category=new string('界',100),WarehouseName=new string('界',120)}).ToArray();
+            var largeWire=DebtEnvelope.EncodeSale(largeSale with{TotalMinor=10000000,CostMinor=6000000,Items=largeItems});
+            var largeEvent=DebtWire.DecodeEvent(ew,G(1));var command=DebtWire.CommandFields(largeEvent.Payload);command[6]=DebtWire.Fingerprint(largeWire);command[7]="10000000";
+            var largePayload=DebtRepository.Canonical(command);
+            largeEvent=largeEvent with{Payload=largePayload,PayloadHash=DebtWire.Fingerprint(largePayload),Account=largeEvent.Account! with{OriginalDebtMinor=9998000}};
+            var largePacket=Packet(cw,DebtWire.EncodeEvent(largeEvent,G(1)),largeWire);
+            Check(largePacket.Length>2*1024*1024,"Large body fixture too small");
+            Check(Inbox(c).Receive(largePacket,30)==DebtReceiveStatus.WaitingForSaleAdapter && Inbox(c).ReadPending(G(5))!.Wire==largePacket,"Large pending body lost");
+            Check(Inbox(c).Receive(largePacket,31)==DebtReceiveStatus.WaitingForSaleAdapter && Inbox(c).ReadPending(G(5))!.ReceivedAt==30,"Large retry changed body/time");
             for(int i=100;i<228;i++)Check(Inbox(q).Receive(Another(pw,cw,i),1)==DebtReceiveStatus.WaitingForDependency,"Capacity seed");
             bool full=false;try{Inbox(q).Receive(Another(pw,cw,300),1);}catch(DebtInboxFullException){full=true;}Check(full && Count(q,"debt_sync_inbox")==128,"Packet count cap");
             Check(Inbox(q).Receive(Another(pw,cw,100),2)==DebtReceiveStatus.WaitingForDependency,"Full inbox rejected identical retry");
