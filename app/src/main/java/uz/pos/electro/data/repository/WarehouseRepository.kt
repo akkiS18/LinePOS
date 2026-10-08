@@ -101,14 +101,26 @@ class WarehouseRepository @Inject constructor(
         database.openHelper.writableDatabase.execSQL("UPDATE sync_control SET current_group='' WHERE id=1")
     }
 
-    suspend fun deleteWarehouse(guid: String) {
+    suspend fun deleteWarehouse(guid: String) = database.withTransaction {
         val now = System.currentTimeMillis()
         warehouseDao.softDeleteWarehouse(guid, now)
+        productStockDao.deleteStocksForWarehouse(guid)
+        database.openHelper.writableDatabase.execSQL("""
+            UPDATE products 
+            SET stock_quantity = COALESCE((
+                SELECT SUM(ps.quantity) 
+                FROM product_stocks ps 
+                JOIN warehouses w ON w.guid = ps.warehouse_guid AND w.is_deleted = 0 
+                WHERE ps.product_guid = products.guid
+            ), 0.0)
+        """)
         val wh = warehouseDao.getWarehouseByGuid(guid)
         if (wh != null) {
             localSyncManager.sendLiveWarehouse(wh)
         }
     }
+
+    fun getAllStocks(): Flow<List<ProductStockEntity>> = productStockDao.getAllProductStocks()
 
     fun getStocksForWarehouse(warehouseGuid: String): Flow<List<ProductStockEntity>> {
         return productStockDao.getStocksForWarehouse(warehouseGuid)

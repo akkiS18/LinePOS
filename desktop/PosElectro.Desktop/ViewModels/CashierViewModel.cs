@@ -712,31 +712,35 @@ namespace PosElectro.Desktop.ViewModels
             var product = _db.GetProductByBarcode(q) ?? (qEn != q ? _db.GetProductByBarcode(qEn) : null);
             if (product != null)
             {
+                // Skanerda afzal ombor ko'rsatilmagan (null) qilinadi, shunda GetWarehouseForProduct
+                // zaxirasi bor omborni ustuvorlik tartibida (Asosiy ombor -> 2-ombor -> 3-ombor) avtomatik tanlaydi
+                product.WarehouseGuid = null;
                 AddToCart(product);
                 SearchQuery = string.Empty;
                 StatusMessage = $"✅ '{product.Name}' savatchaga qo'shildi";
                 return;
             }
 
-            // 2. Qidiruv natijasida 1 ta mahsulot chiqqan bo'lsa, o'shani qo'shish
+            // 2. Filtrlanganlar orasidan shtrix-kodi aynan mos kelganini topish (Zaxira ustuvorligi bo'yicha)
+            var matchingBcItems = FilteredProducts.Where(p => 
+                string.Equals(p.Barcode?.Trim(), q, StringComparison.OrdinalIgnoreCase) ||
+                (qEn != q && string.Equals(p.Barcode?.Trim(), qEn, StringComparison.OrdinalIgnoreCase))).ToList();
+            if (matchingBcItems.Count > 0)
+            {
+                var bestItem = matchingBcItems.FirstOrDefault(p => p.StockQuantity > 0) ?? matchingBcItems[0];
+                AddToCart(bestItem);
+                SearchQuery = string.Empty;
+                StatusMessage = $"✅ '{bestItem.Name}' savatchaga qo'shildi";
+                return;
+            }
+
+            // 3. Qidiruv natijasida faqat 1 ta karta chiqqan bo'lsa, o'shani qo'shish
             if (FilteredProducts.Count == 1)
             {
                 var singleProduct = FilteredProducts[0];
                 AddToCart(singleProduct);
                 SearchQuery = string.Empty;
                 StatusMessage = $"✅ '{singleProduct.Name}' savatchaga qo'shildi";
-                return;
-            }
-
-            // 3. Filtrlanganlar orasidan shtrix-kodi aynan mos kelganini topish
-            var byBc = FilteredProducts.FirstOrDefault(p => 
-                string.Equals(p.Barcode?.Trim(), q, StringComparison.OrdinalIgnoreCase) ||
-                (qEn != q && string.Equals(p.Barcode?.Trim(), qEn, StringComparison.OrdinalIgnoreCase)));
-            if (byBc != null)
-            {
-                AddToCart(byBc);
-                SearchQuery = string.Empty;
-                StatusMessage = $"✅ '{byBc.Name}' savatchaga qo'shildi";
                 return;
             }
 
@@ -1337,18 +1341,21 @@ namespace PosElectro.Desktop.ViewModels
 
         public void RefreshProducts()
         {
-            var whMap = _db.GetProductWarehouseNamesMap();
-            var defWh = _db.GetPrimaryWarehouse()?.Name ?? "Do'kondagi ombor";
+            var activeWarehouses = _db.GetWarehouses(includeDeleted: false);
+            var stockMap = _db.GetAllActiveProductWarehouseStocks();
+            var primaryWh = activeWarehouses.FirstOrDefault(w => w.IsPrimary) 
+                            ?? activeWarehouses.FirstOrDefault() 
+                            ?? new Warehouse { Guid = "main-default-warehouse", Name = "Do'kondagi ombor", IsPrimary = true };
 
             if (string.IsNullOrWhiteSpace(SearchQuery))
             {
                 // Bo'sh qidiruv: eng ko'p sotiladigan tovarlarni ko'rsat
                 IsShowingTopSellers = true;
                 TopSellingProducts.Clear();
-                foreach (var p in _db.GetTopSellingProducts(50))
+                var topProds = _db.GetTopSellingProducts(50);
+                foreach (var p in topProds)
                 {
-                    p.WarehouseName = whMap.TryGetValue(p.Guid, out var whn) ? whn : defWh;
-                    TopSellingProducts.Add(p);
+                    ExpandProductForWarehouses(p, activeWarehouses, stockMap, primaryWh, TopSellingProducts);
                 }
                 FilteredProducts.Clear();
                 return;
@@ -1368,8 +1375,45 @@ namespace PosElectro.Desktop.ViewModels
             FilteredProducts.Clear();
             foreach (var p in list)
             {
-                p.WarehouseName = whMap.TryGetValue(p.Guid, out var whn) ? whn : defWh;
-                FilteredProducts.Add(p);
+                ExpandProductForWarehouses(p, activeWarehouses, stockMap, primaryWh, FilteredProducts);
+            }
+        }
+
+        private static void ExpandProductForWarehouses(
+            Product p, 
+            List<Warehouse> activeWarehouses, 
+            Dictionary<(string, string), double> stockMap, 
+            Warehouse primaryWh, 
+            System.Collections.ObjectModel.ObservableCollection<Product> targetCollection)
+        {
+            if (activeWarehouses.Count <= 1)
+            {
+                var wh = activeWarehouses.Count == 1 ? activeWarehouses[0] : primaryWh;
+                double stock = stockMap.TryGetValue((p.Guid, wh.Guid), out var s) ? s : p.StockQuantity;
+                var card = p.CloneForWarehouse(wh.Guid, wh.Name, orderIndex: 1, stock: stock);
+                targetCollection.Add(card);
+                return;
+            }
+
+            // Ko'p omborli rejim:
+            // 1-o'rinda: Har doim Asosiy ombor (1)
+            double primaryStock = stockMap.TryGetValue((p.Guid, primaryWh.Guid), out var ps) ? ps : 0.0;
+            var primaryCard = p.CloneForWarehouse(primaryWh.Guid, primaryWh.Name, orderIndex: 1, stock: primaryStock);
+            targetCollection.Add(primaryCard);
+
+            // Keyingi o'rinlarda: Qolgan faol omborlar (2, 3...) - faqat qoldig'i 0 dan katta bo'lsa
+            for (int i = 0; i < activeWarehouses.Count; i++)
+            {
+                var wh = activeWarehouses[i];
+                if (wh.Guid == primaryWh.Guid) continue;
+
+                int orderIndex = i + 1;
+                bool hasStock = stockMap.TryGetValue((p.Guid, wh.Guid), out var whStock);
+                if (hasStock && whStock > 0)
+                {
+                    var secCard = p.CloneForWarehouse(wh.Guid, wh.Name, orderIndex: orderIndex, stock: whStock);
+                    targetCollection.Add(secCard);
+                }
             }
         }
 

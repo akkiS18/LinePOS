@@ -218,35 +218,69 @@ fun CashierScreen(
                             .fillMaxWidth()
                             .height((searchResults.size * 60).coerceAtMost(200).dp)
                     ) {
-                        items(searchResults) { product ->
+                        items(searchResults) { result ->
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable { viewModel.addProductToCart(product) }
-                                    .padding(horizontal = 18.dp, vertical = 10.dp),
+                                    .clickable { 
+                                        viewModel.addProductToCart(
+                                            product = result.product,
+                                            quantity = 1.0,
+                                            warehouseGuid = result.warehouseGuid,
+                                            warehouseName = result.warehouseName
+                                        ) 
+                                    }
+                                    .padding(horizontal = 16.dp, vertical = 10.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Column {
-                                    Text(
-                                        text = product.name,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    val unitLabel = when (product.unitType) {
-                                        UnitType.METR -> "m"
-                                        UnitType.KG -> "kg"
-                                        UnitType.DONA -> "dona"
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    // Joy kamligi sababli raqamlangan ombor badge'i (1, 2, ...)
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = if (result.warehouseIndex == 1) 
+                                            MaterialTheme.colorScheme.primaryContainer 
+                                        else 
+                                            MaterialTheme.colorScheme.secondaryContainer,
+                                        modifier = Modifier.padding(end = 10.dp)
+                                    ) {
+                                        Text(
+                                            text = "${result.warehouseIndex}",
+                                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (result.warehouseIndex == 1) 
+                                                MaterialTheme.colorScheme.onPrimaryContainer 
+                                            else 
+                                                MaterialTheme.colorScheme.onSecondaryContainer
+                                        )
                                     }
-                                    Text(
-                                        text = "Qoldiq: ${product.stockQuantity} $unitLabel",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+
+                                    Column {
+                                        Text(
+                                            text = result.product.name,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        val unitLabel = when (result.product.unitType) {
+                                            UnitType.METR -> "m"
+                                            UnitType.KG -> "kg"
+                                            UnitType.DONA -> "dona"
+                                        }
+                                        Text(
+                                            text = "Qoldiq: ${result.stockQuantity} $unitLabel",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
                                 }
+
                                 Text(
-                                    text = "${numberFormat.format(product.sellingPrice)} so'm",
+                                    text = "${numberFormat.format(result.product.sellingPrice)} so'm",
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.ExtraBold,
                                     color = MaterialTheme.colorScheme.primary

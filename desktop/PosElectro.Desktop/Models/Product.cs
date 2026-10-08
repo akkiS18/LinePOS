@@ -45,9 +45,14 @@ namespace PosElectro.Desktop.Models
             }
         }
 
+        public int WarehouseOrderIndex { get; set; } = 1;
+        public string WarehouseBadgeDisplay => !string.IsNullOrWhiteSpace(WarehouseName)
+            ? (WarehouseOrderIndex > 0 ? $"{WarehouseOrderIndex}. {WarehouseName}" : WarehouseName)
+            : string.Empty;
+
         // UI yordamchi maydonlar
         public bool HasWarehouse => !string.IsNullOrWhiteSpace(WarehouseName);
-        public string WarehouseDisplay => string.IsNullOrWhiteSpace(WarehouseName) ? string.Empty : $"🏢 {WarehouseName}";
+        public string WarehouseDisplay => string.IsNullOrWhiteSpace(WarehouseName) ? string.Empty : $"🏢 {WarehouseBadgeDisplay}";
         public bool HasSellingPrice2 => SellingPrice2.HasValue && SellingPrice2.Value > 0;
         public string SellingPrice2Display => HasSellingPrice2 ? $"{SellingPrice2!.Value:N0} so'm" : "—";
         public bool IsLowStock => StockQuantity <= MinStockAlert;
@@ -61,5 +66,30 @@ namespace PosElectro.Desktop.Models
             UnitType.KG => "kg",
             _ => "dona"
         };
+
+        public Product CloneForWarehouse(string whGuid, string whName, int orderIndex, double stock)
+        {
+            return new Product
+            {
+                Id = this.Id,
+                Guid = this.Guid,
+                Barcode = this.Barcode,
+                Name = this.Name,
+                Category = this.Category,
+                CostPrice = this.CostPrice,
+                CostCurrency = this.CostCurrency,
+                SellingPrice = this.SellingPrice,
+                SellingPrice2 = this.SellingPrice2,
+                StockQuantity = stock,
+                UnitType = this.UnitType,
+                MinStockAlert = this.MinStockAlert,
+                IsDeleted = this.IsDeleted,
+                Note = this.Note,
+                WarehouseGuid = whGuid,
+                WarehouseName = whName,
+                WarehouseOrderIndex = orderIndex,
+                UpdatedAt = this.UpdatedAt
+            };
+        }
     }
 }

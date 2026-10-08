@@ -221,6 +221,20 @@ abstract class AppDatabase : RoomDatabase() {
                     uz.pos.electro.data.debt.DebtSchema.install(db,
                         context.assets.open("debt-schema.sql").bufferedReader().use { it.readText() })
                     uz.pos.electro.data.sync.WifiSyncSchema.install(db, context.assets.open("wifi-sync-schema.sql").bufferedReader().use { it.readText() })
+                    try {
+                        db.execSQL("DELETE FROM product_stocks WHERE warehouse_guid IN (SELECT guid FROM warehouses WHERE is_deleted = 1)")
+                        db.execSQL("""
+                            UPDATE products 
+                            SET stock_quantity = COALESCE((
+                                SELECT SUM(ps.quantity) 
+                                FROM product_stocks ps 
+                                JOIN warehouses w ON w.guid = ps.warehouse_guid AND w.is_deleted = 0 
+                                WHERE ps.product_guid = products.guid
+                            ), 0.0)
+                        """)
+                    } catch (e: Throwable) {
+                        android.util.Log.e("AppDatabase", "onOpen cleanup error: ${e.message}")
+                    }
                 }
                 private fun seedDefaults(db: SupportSQLiteDatabase) {
                     try {

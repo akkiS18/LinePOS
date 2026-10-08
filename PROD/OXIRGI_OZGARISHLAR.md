@@ -393,3 +393,30 @@ Ushbu hujjat mijozga oxirgi kiritilgan o'zgarishlar va yangi qulayliklarni ko'rs
   - **Eslatma:** Foydalanuvchi ko'rsatmasiga binoan, yangi o'rnatish paketi (setup) yig'ilmadi, keyingi topshiriqlar kutilmoqda.
 - **Mijoz uchun foydasi:**
   - Ombor bo'limida kartalar monitor kengligini chiroyli va tartibli to'ldiradi. Mahsulot qo'shishda maydonlar to'ldirilishi bilan darhol Enter orqali saqlash yoki Esc orqali chiqish mumkin. Stiker chop etishda nusxa tanlash tugmalari to'liq va ravon ko'rinadi.
+
+---
+
+### 31. 🏬 Kassa va Ombor Qoldiqlari Tafovuti Bartaraf Etildi, Ko'p Omborli Kartalar, Raqamlangan Badge va Skaner Ustuvorligi Zanjiri (Desktop & Mobil)
+- **Nima o'zgardi:**
+  - **O'chirilgan omborlarning "arvoh" qoldiqlari to'liq tozalandi (Data Repair Migration):**
+    - Avval o'chirilgan `r` va `secondary` omborlaridagi qoldiqlar (jami 65 ta va 58 ta tovar) umumiy hisobdan ayirilmasdan qolib ketgan edi. Baza avtomatik tozalash migratsiyasi orqali ushbu noo'rin qoldiqlar o'chirildi.
+    - Barcha tovarlarning `products.stock_quantity` umumiy qoldiqlari faqat **faol va mavjud** omborlar bo'yicha to'g'ri qayta hisoblandi (`tovar 2`: 95 emas, balki faol omborlar jami 30 ta qoldi; `2_ombor`: 61 emas, 3 ta; `Tovar 1`: 1 emas, 0 ta).
+    - `DeleteWarehouse`, `SaveProduct`, `TransferStock` va `SaveSale` so'rovlariga faol omborlar filtri (`w.is_deleted = 0`) o'rnatildi.
+  - **Kassada ko'p omborli tovarlar uchun alohida kartalar tizimi (Desktop & Mobil):**
+    - Tovar bir nechta omborda mavjud bo'lsa (masalan, `tovar 2` Do'konda 20 ta, Ikkinchi omborda 10 ta), kassada va qidiruvda **har bir ombor uchun alohida karta** chiqadi:
+      - 1-karta: `tovar 2` — **Do'kondagi ombor** (Qoldiq: 20 dona)
+      - 2-karta: `tovar 2` — **Ikkinchi ombor** (Qoldiq: 10 dona)
+    - **Tartib:** Ro'yxat boshida har doim **Asosiy ombor** (Do'kon ombori), keyin qolgan omborlar ketma-ket chiqadi.
+    - Qaysi karta bosilsa, tovar aynan o'sha ombordan savatga tushadi va sotuvda o'sha ombor qoldig'idan yechiladi.
+  - **Desktop va Mobil badge farqlari (Joy tejash va shaffoflik):**
+    - **Desktop (WPF):** Katta ekranda tovar kartasida ombor nomi va tartibi to'liq ko'rinadi (`🏢 1. Do'kondagi ombor`, `🏢 2. Ikkinchi ombor`).
+    - **Mobil (Android):** Telefonda ekran joyi kamligi uchun tovar nomi yonida ixcham va ravshan **raqamlangan badge** joylashtirildi: Asosiy ombor uchun `1`, keyingilari uchun `2`, `3`...
+  - **Shtrix-kod skanerlangandagi aqlli zaxira zanjiri (Barcode Priority Chain):**
+    - Skaner orqali tovar o'qitilganda (Desktop va Mobil):
+      1. Birinchi navbatda **Asosiy ombordagi qoldiq** tekshiriladi (`stock > 0` bo'lsa, asosiy ombordan olinadi).
+      2. Agar asosiy omborda tovar tugagan bo'lsa (`stock <= 0`), keyingi faol omborlar (2-ombor, 3-ombor...) zaxirasi tekshirilib, qoldig'i bor birinchi ombordan avtomatik savatga qo'shiladi.
+      3. Agar hech qaysi omborda qoldiq qolmagan bo'lsa, asosiy ombor orqali qo'shiladi.
+  - **Eslatma:** Foydalanuvchi ko'rsatmasiga binoan, yangi o'rnatish paketi (setup) yig'ilmadi.
+- **Mijoz uchun foydasi:**
+  - Kassada va Ombordagi qoldiqlar 100% bir-biriga mos keladi, noo'rin "arvoh" qoldiqlar yo'qoldi.
+  - Kassir qaysi ombordan tovar sotayotganini aniq bilib boshqaradi. Skaner ishlatilganda esa do'konda tovar qolmagan taqdirda dastur o'zi avtomatik zaxira ombordagi tovardan qo'shib beradi.

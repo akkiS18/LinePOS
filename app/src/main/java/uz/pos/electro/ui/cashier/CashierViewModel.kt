@@ -63,24 +63,89 @@ class CashierViewModel @Inject constructor(
     private val _unrecognizedBarcode = MutableStateFlow<String?>(null)
     val unrecognizedBarcode: StateFlow<String?> = _unrecognizedBarcode.asStateFlow()
 
+data class CashierSearchResult(
+    val product: ProductEntity,
+    val warehouseGuid: String,
+    val warehouseName: String,
+    val warehouseIndex: Int,
+    val stockQuantity: Double
+)
+
     // Jonli qidiruv
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
-    val searchResults: StateFlow<List<ProductEntity>> = combine(
+    val searchResults: StateFlow<List<CashierSearchResult>> = combine(
         _searchQuery,
-        productRepository.getAllProducts()
-    ) { query, allProducts ->
+        productRepository.getAllProducts(),
+        warehouseRepository.getAllWarehouses(),
+        warehouseRepository.getAllStocks()
+    ) { query, allProducts, warehouses, stocks ->
         if (query.trim().length < 2) {
             emptyList()
         } else {
-            SmartSearchHelper.filterAndRank(
+            val matched = SmartSearchHelper.filterAndRank(
                 source = allProducts.filter { !it.isDeleted },
                 query = query.trim(),
                 nameSelector = { it.name },
                 barcodeSelector = { it.barcode },
                 noteSelector = { it.note }
             )
+
+            val primaryWh = warehouses.firstOrNull { it.isPrimary } ?: warehouses.firstOrNull()
+            val resultList = mutableListOf<CashierSearchResult>()
+
+            for (prod in matched) {
+                if (warehouses.isEmpty() || warehouses.size <= 1) {
+                    val wh = warehouses.firstOrNull() ?: primaryWh
+                    val whGuid = wh?.guid ?: "main-default-warehouse"
+                    val whName = wh?.name ?: "Do'kondagi ombor"
+                    val stockQty = stocks.find { it.productGuid == prod.guid && it.warehouseGuid == whGuid }?.quantity ?: prod.stockQuantity
+                    resultList.add(
+                        CashierSearchResult(
+                            product = prod,
+                            warehouseGuid = whGuid,
+                            warehouseName = whName,
+                            warehouseIndex = 1,
+                            stockQuantity = stockQty
+                        )
+                    )
+                } else {
+                    // Ko'p omborli rejim:
+                    // 1-o'rinda: Har doim Asosiy ombor (1)
+                    val pGuid = primaryWh?.guid ?: "main-default-warehouse"
+                    val pName = primaryWh?.name ?: "Do'kondagi ombor"
+                    val pStock = stocks.find { it.productGuid == prod.guid && it.warehouseGuid == pGuid }?.quantity ?: 0.0
+                    resultList.add(
+                        CashierSearchResult(
+                            product = prod,
+                            warehouseGuid = pGuid,
+                            warehouseName = pName,
+                            warehouseIndex = 1,
+                            stockQuantity = pStock
+                        )
+                    )
+
+                    // Keyingi o'rinlarda: Qolgan faol omborlar (2, 3...) - faqat qoldig'i 0 dan katta bo'lsa
+                    for (i in warehouses.indices) {
+                        val wh = warehouses[i]
+                        if (wh.guid == pGuid) continue
+                        val secStock = stocks.find { it.productGuid == prod.guid && it.warehouseGuid == wh.guid }?.quantity ?: 0.0
+                        if (secStock > 0) {
+                            resultList.add(
+                                CashierSearchResult(
+                                    product = prod,
+                                    warehouseGuid = wh.guid,
+                                    warehouseName = wh.name,
+                                    warehouseIndex = i + 1,
+                                    stockQuantity = secStock
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+            resultList
         }
     }.stateIn(
         scope = viewModelScope,
@@ -108,7 +173,7 @@ class CashierViewModel @Inject constructor(
     }
 
     /**
-     * Skanerdan kelgan shtrix-kodni qabul qilib to'g'ridan-to'g'ri savatga qo'shish.
+     * Skanerdan kelgan shtrix-kodni qabul qilib to'g'ridan-to'g'ri savatga qo'shish (Ustuvorlik zanjiri bilan).
      */
     fun onBarcodeScanned(barcode: String) {
         val cleanBarcode = barcode.trim()
@@ -117,9 +182,20 @@ class CashierViewModel @Inject constructor(
         viewModelScope.launch {
             val product = productRepository.getProductByBarcode(cleanBarcode)
             if (product != null) {
-
-                addProductToCart(product)
-                _toastEvent.emit("${product.name} savatga qo'shildi")
+                val activeWarehouses = warehouseRepository.getAllWarehousesList()
+                // Ustuvorlik tartibi: Asosiy ombor (stock > 0) -> 2-ombor (stock > 0) -> ... -> Fallback Asosiy ombor
+                var chosenWh = activeWarehouses.firstOrNull { it.isPrimary } ?: activeWarehouses.firstOrNull()
+                for (wh in activeWarehouses) {
+                    val stock = warehouseRepository.getProductStockInWarehouse(product.guid, wh.guid)
+                    if (stock > 0) {
+                        chosenWh = wh
+                        break
+                    }
+                }
+                val finalGuid = chosenWh?.guid ?: "main-default-warehouse"
+                val finalName = chosenWh?.name ?: "Do'kondagi ombor"
+                addProductToCart(product, 1.0, finalGuid, finalName)
+                _toastEvent.emit("${product.name} ($finalName) savatga qo'shildi")
             } else {
                 _unrecognizedBarcode.value = cleanBarcode
             }
@@ -131,51 +207,43 @@ class CashierViewModel @Inject constructor(
     }
 
     /**
-     * Mahsulotni savatga qo'shish (Ombor qoldig'i tekshiruvi bilan)
+     * Mahsulotni savatga qo'shish (Ombor ko'rsatilgan holda)
      */
-    fun addProductToCart(product: ProductEntity, quantity: Double = 1.0) {
+    fun addProductToCart(
+        product: ProductEntity, 
+        quantity: Double = 1.0,
+        warehouseGuid: String? = null,
+        warehouseName: String? = null
+    ) {
         if (checkoutGate.get()) return
 
-        val currentList = _cartItems.value.toMutableList()
-        val existingIndex = currentList.indexOfFirst { it.product.id == product.id }
+        viewModelScope.launch {
+            val primaryWh = warehouseRepository.getPrimaryWarehouse()
+            val finalWhGuid = warehouseGuid ?: primaryWh?.guid ?: "main-default-warehouse"
+            val finalWhName = warehouseName ?: primaryWh?.name ?: "Do'kondagi ombor"
 
-        if (existingIndex != -1) {
-            val existingItem = currentList[existingIndex]
-            val newQuantity = existingItem.quantity + quantity
+            val currentList = _cartItems.value.toMutableList()
+            val existingIndex = currentList.indexOfFirst { 
+                it.product.id == product.id && it.warehouseGuid == finalWhGuid 
+            }
 
-
-
-            currentList[existingIndex] = existingItem.copy(quantity = newQuantity)
+            if (existingIndex != -1) {
+                val existingItem = currentList[existingIndex]
+                val newQuantity = existingItem.quantity + quantity
+                currentList[existingIndex] = existingItem.copy(quantity = newQuantity)
+            } else {
+                currentList.add(
+                    CartItemModel(
+                        product = product,
+                        quantity = quantity,
+                        priceAtSale = product.sellingPrice,
+                        warehouseGuid = finalWhGuid,
+                        warehouseName = finalWhName
+                    )
+                )
+            }
             _cartItems.value = currentList
             _searchQuery.value = ""
-        } else {
-
-
-            viewModelScope.launch {
-                val primaryWh = warehouseRepository.getPrimaryWarehouse()
-                val whName = primaryWh?.name ?: "Do'kondagi ombor"
-                val whGuid = primaryWh?.guid ?: "main-default-warehouse"
-
-                if (checkoutGate.get()) return@launch
-                val updatedList = _cartItems.value.toMutableList()
-                val idx = updatedList.indexOfFirst { it.product.id == product.id }
-                if (idx != -1) {
-                    val ex = updatedList[idx]
-                    updatedList[idx] = ex.copy(quantity = ex.quantity + quantity)
-                } else {
-                    updatedList.add(
-                        CartItemModel(
-                            product = product,
-                            quantity = quantity,
-                            priceAtSale = product.sellingPrice,
-                            warehouseGuid = whGuid,
-                            warehouseName = whName
-                        )
-                    )
-                }
-                _cartItems.value = updatedList
-                _searchQuery.value = ""
-            }
         }
     }
 

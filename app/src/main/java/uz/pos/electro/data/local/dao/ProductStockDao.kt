@@ -33,6 +33,9 @@ interface ProductStockDao {
     @Query("DELETE FROM product_stocks WHERE warehouse_guid IS NULL OR warehouse_guid = 'null' OR warehouse_guid = ''")
     suspend fun deleteInvalidStocks(): Int
 
+    @Query("DELETE FROM product_stocks WHERE warehouse_guid = :warehouseGuid")
+    suspend fun deleteStocksForWarehouse(warehouseGuid: String): Int
+
     suspend fun insertOrUpdateStock(stock: ProductStockEntity): Long =
         upsertStock(stock.productGuid, stock.warehouseGuid, stock.quantity, stock.updatedAt)
 

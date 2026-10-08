@@ -448,6 +448,26 @@ namespace PosElectro.Desktop.Data
                 cleanWhCmd.ExecuteNonQuery();
             }
             catch { }
+
+            // O'chirilgan omborlarga tegishli "arvoh" qoldiqlarni tozalash va tovarlar qoldig'ini to'g'rilash
+            try
+            {
+                using var cleanDeletedWhCmd = conn.CreateCommand();
+                cleanDeletedWhCmd.CommandText = @"
+                    DELETE FROM product_stocks 
+                    WHERE warehouse_guid IN (SELECT guid FROM warehouses WHERE is_deleted = 1);
+
+                    UPDATE products 
+                    SET stock_quantity = COALESCE((
+                        SELECT SUM(ps.quantity) 
+                        FROM product_stocks ps 
+                        JOIN warehouses w ON w.guid = ps.warehouse_guid AND w.is_deleted = 0
+                        WHERE ps.product_guid = products.guid
+                    ), 0);
+                ";
+                cleanDeletedWhCmd.ExecuteNonQuery();
+            }
+            catch { }
         }
 
         // --- APP SETTINGS OPERATIONS ---
@@ -607,14 +627,16 @@ namespace PosElectro.Desktop.Data
                 }
             }
 
-            // 2. Ushbu tovar qoldig'i 0 dan katta bo'lgan omborni topish (eng ko'p qoldiq ustuvor)
+            // 2. Skaner / avtomatik tanlash ustuvorligi:
+            // 1-o'rinda: Asosiy ombor (w.is_primary = 1) da qoldiq > 0 bo'lsa
+            // 2-o'rinda: Keyingi faol omborlar (w.is_primary DESC, w.name ASC) da qoldiq > 0 bo'lsa
             using var cmdStock = conn.CreateCommand();
             cmdStock.CommandText = @"
                 SELECT w.guid, w.name, ps.quantity 
                 FROM product_stocks ps
                 JOIN warehouses w ON w.guid = ps.warehouse_guid AND w.is_deleted = 0
                 WHERE ps.product_guid = @pg AND ps.quantity > 0
-                ORDER BY ps.quantity DESC, w.is_primary DESC
+                ORDER BY w.is_primary DESC, w.name ASC
                 LIMIT 1;
             ";
             cmdStock.Parameters.AddWithValue("@pg", productGuid);
@@ -624,25 +646,29 @@ namespace PosElectro.Desktop.Data
                 return (rStock.GetString(0), rStock.GetString(1));
             }
 
-            // 3. Qoldiq bo'lmasa, bog'langan har qanday ombor
-            using var cmdAny = conn.CreateCommand();
-            cmdAny.CommandText = @"
-                SELECT w.guid, w.name 
-                FROM product_stocks ps
-                JOIN warehouses w ON w.guid = ps.warehouse_guid AND w.is_deleted = 0
-                WHERE ps.product_guid = @pg
-                ORDER BY ps.quantity DESC, w.is_primary DESC
-                LIMIT 1;
-            ";
-            cmdAny.Parameters.AddWithValue("@pg", productGuid);
-            using var rAny = cmdAny.ExecuteReader();
-            if (rAny.Read())
-            {
-                return (rAny.GetString(0), rAny.GetString(1));
-            }
-
-            // 4. Standart asosiy ombor
+            // 3. Agar hech bir omborda qoldiq > 0 bo'lmasa, har doim asosiy ombor tanlanadi
             return (defGuid, defName);
+        }
+
+        public Dictionary<(string ProductGuid, string WarehouseGuid), double> GetAllActiveProductWarehouseStocks()
+        {
+            var dict = new Dictionary<(string ProductGuid, string WarehouseGuid), double>();
+            using var conn = CreateConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                SELECT ps.product_guid, ps.warehouse_guid, ps.quantity
+                FROM product_stocks ps
+                JOIN warehouses w ON w.guid = ps.warehouse_guid AND w.is_deleted = 0;
+            ";
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                var pg = reader.GetString(0);
+                var wg = reader.GetString(1);
+                var qty = reader.GetDouble(2);
+                dict[(pg, wg)] = qty;
+            }
+            return dict;
         }
 
         public Dictionary<string, string> GetProductWarehouseNamesMap()
@@ -767,11 +793,33 @@ namespace PosElectro.Desktop.Data
         public void DeleteWarehouse(string guid, bool isFromSync = false)
         {
             using var conn = CreateConnection();
+            using var tx = conn.BeginTransaction();
+
             using var cmd = conn.CreateCommand();
+            cmd.Transaction = tx;
             cmd.CommandText = "UPDATE warehouses SET is_deleted = 1, updated_at = @now WHERE guid = @guid AND is_primary = 0";
             cmd.Parameters.AddWithValue("@guid", guid);
             cmd.Parameters.AddWithValue("@now", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
             cmd.ExecuteNonQuery();
+
+            using var cleanCmd = conn.CreateCommand();
+            cleanCmd.Transaction = tx;
+            cleanCmd.CommandText = @"
+                DELETE FROM product_stocks WHERE warehouse_guid = @guid;
+
+                UPDATE products 
+                SET stock_quantity = COALESCE((
+                    SELECT SUM(ps.quantity) 
+                    FROM product_stocks ps 
+                    JOIN warehouses w ON w.guid = ps.warehouse_guid AND w.is_deleted = 0
+                    WHERE ps.product_guid = products.guid
+                ), 0);
+            ";
+            cleanCmd.Parameters.AddWithValue("@guid", guid);
+            cleanCmd.ExecuteNonQuery();
+
+            tx.Commit();
+
             RaiseWarehousesChanged();
             if (!isFromSync)
             {
@@ -909,7 +957,7 @@ namespace PosElectro.Desktop.Data
                     updated_at = excluded.updated_at;
 
                 UPDATE products 
-                SET stock_quantity = (SELECT COALESCE(SUM(quantity), 0) FROM product_stocks WHERE product_guid = @pg),
+                SET stock_quantity = (SELECT COALESCE(SUM(ps.quantity), 0) FROM product_stocks ps JOIN warehouses w ON w.guid = ps.warehouse_guid AND w.is_deleted = 0 WHERE ps.product_guid = @pg),
                     updated_at = @now
                 WHERE guid = @pg;
             ";
@@ -942,7 +990,7 @@ namespace PosElectro.Desktop.Data
                     updated_at = excluded.updated_at;
 
                 UPDATE products 
-                SET stock_quantity = (SELECT COALESCE(SUM(quantity), 0) FROM product_stocks WHERE product_guid = @pg),
+                SET stock_quantity = (SELECT COALESCE(SUM(ps.quantity), 0) FROM product_stocks ps JOIN warehouses w ON w.guid = ps.warehouse_guid AND w.is_deleted = 0 WHERE ps.product_guid = @pg),
                     updated_at = @now
                 WHERE guid = @pg;
             ";
@@ -998,7 +1046,7 @@ namespace PosElectro.Desktop.Data
             updProdCmd.Transaction = tx;
             updProdCmd.CommandText = @"
                 UPDATE products 
-                SET stock_quantity = (SELECT COALESCE(SUM(quantity), 0) FROM product_stocks WHERE product_guid = @pg),
+                SET stock_quantity = (SELECT COALESCE(SUM(ps.quantity), 0) FROM product_stocks ps JOIN warehouses w ON w.guid = ps.warehouse_guid AND w.is_deleted = 0 WHERE ps.product_guid = @pg),
                     updated_at = @now
                 WHERE guid = @pg;
             ";
@@ -1279,7 +1327,7 @@ namespace PosElectro.Desktop.Data
                     sumCmd.Transaction = syncTransaction;
                     sumCmd.CommandText = @"
                         UPDATE products
-                        SET stock_quantity = (SELECT COALESCE(SUM(quantity), 0) FROM product_stocks WHERE product_guid = @pg)
+                        SET stock_quantity = (SELECT COALESCE(SUM(ps.quantity), 0) FROM product_stocks ps JOIN warehouses w ON w.guid = ps.warehouse_guid AND w.is_deleted = 0 WHERE ps.product_guid = @pg)
                         WHERE guid = @pg;
                     ";
                     sumCmd.Parameters.AddWithValue("@pg", p.Guid);
@@ -1616,7 +1664,7 @@ namespace PosElectro.Desktop.Data
                     updProdStockCmd.Transaction = transaction;
                     updProdStockCmd.CommandText = @"
                         UPDATE products 
-                        SET stock_quantity = (SELECT COALESCE(SUM(quantity), 0) FROM product_stocks WHERE product_guid = @pg),
+                        SET stock_quantity = (SELECT COALESCE(SUM(ps.quantity), 0) FROM product_stocks ps JOIN warehouses w ON w.guid = ps.warehouse_guid AND w.is_deleted = 0 WHERE ps.product_guid = @pg),
                             updated_at = @now
                         WHERE guid = @pg;
                     ";
