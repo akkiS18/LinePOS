@@ -1357,6 +1357,14 @@
     }
   },
   {
+    "id": "delimiter-flood",
+    "op": "delimiter-flood",
+    "store": "00000000-0000-0000-0000-000000000001",
+    "expected": {
+      "error": "invalid"
+    }
+  },
+  {
     "id": "max-items",
     "op": "max-items",
     "store": "00000000-0000-0000-0000-000000000001",

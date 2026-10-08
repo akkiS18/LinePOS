@@ -13,7 +13,7 @@ object EnvelopeRunner {
             val f=fixtures.getJSONObject(i);val store=f.getString("store")
             val result=try {
                 val op=f.getString("op")
-                val wire=if(op.startsWith("oversize-") && op!="oversize-unicode-sale")"x".repeat((if(op=="oversize-sale")DebtWire.MAX_PACKET_CHARS else DebtEnvelope.MAX_ENVELOPE_CHARS)+1) else f.getString("wire")
+                val wire=if(op=="delimiter-flood")"[\"debt-envelope-v1\","+",".repeat(DebtEnvelope.MAX_ENVELOPE_CHARS-21)+"]" else if(op.startsWith("oversize-") && op!="oversize-unicode-sale")"x".repeat((if(op=="oversize-sale")DebtWire.MAX_PACKET_CHARS else DebtEnvelope.MAX_ENVELOPE_CHARS)+1) else f.getString("wire")
                 if(op in listOf("max-items","max-items-plus-one","oversize-unicode-sale")) {
                     val s=DebtEnvelope.decodeSale(wire);val count=if(op=="max-items-plus-one")1001 else 1000
                     val items=(1..count).map { n -> s.items[0].copy(guid="00000000-0000-0000-0000-"+String.format(Locale.ROOT,"%012d",n),stockOperationGuid="00000000-0000-0000-0001-"+String.format(Locale.ROOT,"%012d",n),

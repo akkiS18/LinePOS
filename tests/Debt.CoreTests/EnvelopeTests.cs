@@ -9,7 +9,7 @@ static class EnvelopeTests
             var f=item!;var store=f["store"]!.GetValue<string>();JsonNode result;
             try {
                 var op=f["op"]!.GetValue<string>();
-                var wire=op.StartsWith("oversize-") && op!="oversize-unicode-sale"?new string('x',(op=="oversize-sale"?DebtWire.MaxPacketChars:DebtEnvelope.MaxEnvelopeChars)+1):f["wire"]!.GetValue<string>();
+                var wire=op=="delimiter-flood"?"[\"debt-envelope-v1\","+new string(',',DebtEnvelope.MaxEnvelopeChars-21)+"]":op.StartsWith("oversize-") && op!="oversize-unicode-sale"?new string('x',(op=="oversize-sale"?DebtWire.MaxPacketChars:DebtEnvelope.MaxEnvelopeChars)+1):f["wire"]!.GetValue<string>();
                 string encoded;
                 if(op=="max-items" || op=="max-items-plus-one" || op=="oversize-unicode-sale") {
                     var s=DebtEnvelope.DecodeSale(wire);int count=op=="max-items-plus-one"?1001:1000;

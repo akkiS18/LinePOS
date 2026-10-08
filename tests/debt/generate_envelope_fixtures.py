@@ -76,7 +76,7 @@ for name,idx,v in [('changed-sale-id',0,g(44)),('changed-sale-time',1,'2'),('cha
 add('other-valid-basket',change(e,4,wire(u)),op='envelope')
 for name,w in [('trailing-garbage',pack('debt-envelope-v1',e)+'x'),('unknown-version',pack('debt-envelope-v2',e)),('extra-field',pack('debt-envelope-v1',e+['hidden'])),('space',pack('debt-envelope-v1',e).replace(',',', ',1)),('bad-utf8','["debt-envelope-v1","/w=="]'),('bad-base64','["debt-envelope-v1","MQ"]'),('object','{}')]:add('frame-'+name,raw=w,op='envelope')
 # Generated large cases avoid duplicating multi-MiB strings in git.
-for op in ['oversize-sale','oversize-envelope']:rows.append(dict(id=op,op=op,store=g(1),expected={'error':'invalid'}))
+for op in ['oversize-sale','oversize-envelope','delimiter-flood']:rows.append(dict(id=op,op=op,store=g(1),expected={'error':'invalid'}))
 for op in ['max-items','max-items-plus-one','oversize-unicode-sale']:
     rows.append(dict(id=op,op=op,store=g(1),wire=wire(s),expected={'accepted':True} if op=='max-items' else {'error':'invalid'}))
 output=json.dumps(rows,ensure_ascii=False,indent=2)+'\n'

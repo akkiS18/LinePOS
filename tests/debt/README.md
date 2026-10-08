@@ -77,6 +77,6 @@ python tests/debt/verify_results.py tests/debt/envelope-fixtures.json /tmp/cshar
 ```
 
 The current complete invocations are in `.github/workflows/debt-core.yml`.
-154 shared vectors cover the pure frozen sale/envelope contract, including exact
+155 shared vectors cover the pure frozen sale/envelope contract, including exact
 historical money/FX/fee checks and bounded stock deltas. This is not a DB inbox or
 end-to-end Wi-Fi test. See [DEBT_ENVELOPE.md](../../docs/DEBT_ENVELOPE.md).

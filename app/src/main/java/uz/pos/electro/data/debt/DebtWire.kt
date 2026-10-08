@@ -54,7 +54,7 @@ object DebtWire {
     internal fun unpack(wire: String,tag: String,maxFields: Int,maxChars: Int=MAX_PACKET_CHARS): List<String> {
         require(wire.length<=maxChars)
         val prefix="[\"$tag\",";require(wire.startsWith(prefix) && wire.endsWith("]"))
-        val parts=wire.substring(prefix.length,wire.length-1).split(',');require(parts.size<=maxFields)
+        val parts=wire.substring(prefix.length,wire.length-1).split(',',limit=maxFields+1);require(parts.size<=maxFields)
         val fields=parts.map { token ->
             require(token.length>=2 && token.first()=='"' && token.last()=='"')
             val b64=token.substring(1,token.length-1);val bytes=Base64.getDecoder().decode(b64)

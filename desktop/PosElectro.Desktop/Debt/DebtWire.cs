@@ -48,7 +48,7 @@ public static class DebtWire
     internal static string[] Unpack(string wire,string tag,int maxFields,int maxChars=MaxPacketChars) {
         Need(wire.Length<=maxChars);
         var prefix="[\""+tag+"\",";Need(wire.StartsWith(prefix,StringComparison.Ordinal) && wire.EndsWith("]",StringComparison.Ordinal));
-        var parts=wire.Substring(prefix.Length,wire.Length-prefix.Length-1).Split(',');Need(parts.Length<=maxFields);
+        var parts=wire.Substring(prefix.Length,wire.Length-prefix.Length-1).Split(new[]{','},maxFields+1,StringSplitOptions.None);Need(parts.Length<=maxFields);
         var fields=new string[parts.Length];
         for(int i=0;i<parts.Length;i++) {
             var token=parts[i];Need(token.Length>=2 && token[0]=='"' && token[^1]=='"');var b64=token[1..^1];
