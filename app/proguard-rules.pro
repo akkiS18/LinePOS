@@ -31,6 +31,8 @@
 -keepclassmembers class uz.pos.electro.data.debt.** { *; }
 -keep class uz.pos.electro.data.licensing.** { *; }
 -keepclassmembers class uz.pos.electro.data.licensing.** { *; }
+-keep class uz.pos.electro.data.sync.** { *; }
+-keepclassmembers class uz.pos.electro.data.sync.** { *; }
 
 # ------------------------------------------------------------------------------
 # 4. Firebase Realtime Database
