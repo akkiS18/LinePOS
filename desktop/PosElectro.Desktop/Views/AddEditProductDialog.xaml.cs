@@ -241,8 +241,12 @@ namespace PosElectro.Desktop.Views
                 return;
             }
 
-            double.TryParse(TxtMinStockAlert.Text.Replace(',', '.'), NumberStyles.Any, CultureInfo.InvariantCulture, out var minStockAlert);
-            if (minStockAlert <= 0) minStockAlert = 3.0;
+            double minStockAlert = 3.0;
+            var rawMinAlert = TxtMinStockAlert.Text?.Trim().Replace(',', '.');
+            if (!string.IsNullOrWhiteSpace(rawMinAlert) && double.TryParse(rawMinAlert, NumberStyles.Any, CultureInfo.InvariantCulture, out var parsedMin))
+            {
+                minStockAlert = Math.Max(0.0, parsedMin);
+            }
 
             var unitType = CmbUnitType.SelectedIndex switch
             {

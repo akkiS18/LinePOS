@@ -1143,8 +1143,11 @@ namespace PosElectro.Desktop.ViewModels
             }
 
             var cleanMin = CleanNumberInput(FormMinStockAlert);
-            double.TryParse(cleanMin, NumberStyles.Any, CultureInfo.InvariantCulture, out var minStockAlert);
-            if (minStockAlert <= 0) minStockAlert = 3.0;
+            double minStockAlert = 3.0;
+            if (!string.IsNullOrWhiteSpace(cleanMin) && double.TryParse(cleanMin, NumberStyles.Any, CultureInfo.InvariantCulture, out var parsedMin))
+            {
+                minStockAlert = Math.Max(0.0, parsedMin);
+            }
 
             var unitType = FormUnitTypeIndex switch
             {

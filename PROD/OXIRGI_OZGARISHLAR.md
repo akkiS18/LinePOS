@@ -465,3 +465,20 @@ Ushbu hujjat mijozga oxirgi kiritilgan o'zgarishlar va yangi qulayliklarni ko'rs
   - Ikonkalar ko'zni qamashtirmaydi, o'lchamlari mutanosib va toza ko'rinadi.
   - Hisobotni filtrlash uchun bir nechta joyga yugurish shart emas — barcha filtrlar tepada bir qatorda turadi.
   - Excel yuklab olishda takroriy savollar va oynalar chiqmaydi, bir marta bosishda hisobot tayyor bo'ladi.
+
+---
+
+### 34. 🐞 Kam Qolgan Tovarlar Chegarasi (MinStockAlert) va Qoldiq Logikasi Tuzatildi
+- **Nima o'zgardi:**
+  - **"0" kiritilganda uni majburiy "3" ga almashtirib yuborish xatosi bartaraf etildi:**
+    - Kodda mavjud bo'lgan `if (minStockAlert <= 0) minStockAlert = 3.0;` sharti butunlay olib tashlandi.
+    - Endi foydalanuvchi tovar qo'shayotganda yoki tahrirlayotganda "Kam qolganda chegara" maydoniga `0` deb kiritsa, tizim o'zboshimchalik bilan `3` ga aylantirib yubormaydi va aynan `0` deb saqlaydi.
+  - **Kam qolganlikni aniqlash va qizil ogohlantirish logikasi to'g'rilandi:**
+    - Agar tovar uchun chegara `0` deb belgilangan bo'lsa:
+      - Omborda `1` ta (yoki undan ko'p) qoldiq bo'lsa, tovar asossiz qizil rangga kirmaydi va "Kam qolgan tovarlar" ro'yxatiga qo'shilmaydi (yashil / oddiy holatda turadi).
+      - Faqat qoldiq `0` ga tushgandagina (tovar to'liq tugaganda) yoki manfiyga kirgandagina qizil ogohlantirish bilan kam qolganlar qatoriga qo'shiladi.
+    - Agar chegara `3` (yoki foydalanuvchi kiritgan ixtiyoriy son) bo'lsa, qoldiq o'sha chegaraga yetganda yoki undan kamayganda ogohlantirish beriladi.
+  - **Ikkala platforma (Desktop va Mobil ilova) uchun ham bir xil standart joriy qilindi.**
+- **Mijoz uchun foydasi:**
+  - Do'konda 1 ta yoki 2 ta qolgan tovarlar, agar ularning chegarasi 0 qilingan bo'lsa, soxta xavf (qizil fon) bermaydi va kam qolganlar ro'yxatini to'ldirib yubormaydi.
+  - Sotuvchi qaysi tovar qachon ogohlantirish berishini o'zi to'liq nazorat qila oladi.

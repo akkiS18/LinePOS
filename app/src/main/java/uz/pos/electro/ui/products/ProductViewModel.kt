@@ -494,7 +494,7 @@ class ProductViewModel @Inject constructor(
         }
 
         val stock = stockQuantityInput.value.trim().toDoubleOrNull() ?: 0.0
-        val minAlert = minStockAlertInput.value.trim().toDoubleOrNull() ?: 3.0
+        val minAlert = minStockAlertInput.value.trim().toDoubleOrNull()?.coerceAtLeast(0.0) ?: 3.0
         val barcode = barcodeInput.value.trim().ifBlank { null }
         if (!barcode.isNullOrBlank()) {
             val duplicateBarcode = allProductsState.value.firstOrNull { 
