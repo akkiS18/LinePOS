@@ -108,8 +108,9 @@ product-stock capture; Android uses a transactional stock-effect probe, plus exi
 production capture tests. The Android receiver DB is physically closed/reopened before
 replay. All imported debt journal entries remain HELD.
 
-Next bounded stage: a complete frozen financial envelope and durable receiver/inbox,
-then handshake/push/pull/ACK adapters and old-peer barriers. Audit full/delta pull,
+Stage 3A-2b-1 now supplies the pure frozen financial envelope codec (see
+`DEBT_ENVELOPE.md`). Next bounded stage: local frozen capture/preflight and a durable
+full-envelope receiver/inbox, then handshake/push/pull/ACK adapters and old-peer barriers. Audit full/delta pull,
 metadata coalescing, stripped DB download and restore identity as documented in
 `DEBT_WIRE.md`. UI, release and main merge remain blocked on those integrations.
 Current verified run/commit evidence lives in `DEBT_CHECKPOINT_UZ.md`.

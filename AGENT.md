@@ -160,3 +160,7 @@ C#/Kotlin canonical wire component codec va validator qo‘shildi: customer-crea
 ## Qarz daftari — 2026-10-08, 3A-2a
 
 C#/Kotlin `DebtSyncStore`: frozen component export, full-body replay va atomic DB import; haqiqiy bazalarda offline to‘lovlar birlashishi, qayta yuborish, ownership/permission va rollback testlari. To‘liq body+hash seali sync_meta’da saqlanadi, HELD navbat ochilmagan. Bu to‘liq sale/stock envelope, durable inbox yoki network ACK emas; trusted callbackni tarmoq bodyga to‘g‘ridan-to‘g‘ri ulash mumkin emas. Scope 3A-2a DB component, 2b full envelope/inbox, 2c transport/ACKga ajratildi. `docs/DEBT_DB_BRIDGE.md` va `docs/DEBT_CHECKPOINT_UZ.md` keyingi ish uchun asos; main/UI/release yo‘q.
+
+## Qarz daftari — 2026-10-08, 3A-2b-1
+
+`DebtEnvelope.cs/kt`: pure frozen financial envelope codec va sale/items/stock/FX/fee validation, 155 umumiy fixture. 3A-2b ikkiga bo‘lindi: 2b-1 codec, 2b-2 local freeze/preflight + atomic full-envelope DB receiver/inbox. Bu bosqich DB/network/UIga ulanmaydi, HELD/navbat ochilmaydi, main/release yo‘q. Keyingi ish uchun `docs/DEBT_ENVELOPE.md` va yakuniy CI dalillari bilan `docs/DEBT_CHECKPOINT_UZ.md`ni o‘qi. Local SaleFingerprint endi canonical sale wire hashiga bog‘lanishi shart; arbitrary old test fingerprintni production envelopega aylantirma.
