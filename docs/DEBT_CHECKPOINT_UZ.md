@@ -1,6 +1,6 @@
 # Qarz daftari — davom ettirish nuqtasi
 
-Sana: 2026-10-07. Holat: **3A-1 yakunlandi — canonical wire component / validator; haqiqiy qarz transporti va UI hali ulanmagan**.
+Sana: 2026-10-08. Holat: **3A-2a yakunlandi — DB component export / atomic receiver; haqiqiy qarz transporti va UI hali ulanmagan**.
 
 ## Asos va branch
 
@@ -74,16 +74,31 @@ Foydalanuvchining kichik tugallangan bosqichlarda ishlash talabi sabab 2B ikkiga
 - Birinchi paritet run `37644570804`da barcha C#/Kotlin misollari o‘tgan, lekin yakuniy Python comparatorga ortiqcha argument berilgani sabab workflow yiqilgan. Keyingi run aynan shu buyruq tuzatilgach muvaffaqiyatli tugadi.
 - Lokal Python 22/22 va `git diff --check` PASS. Fizik qurilma/LAN/ACK testlari bu bosqichda bajarilmagan. Main’ga merge yoki release yo‘q.
 
-## Keyingi sessiya — 3A-2, avval yana kichik scope
+## 3A-2a: DB component export / atomic receiver
 
-1. Remote branch/checkpoint va CI dalilini tekshir. `docs/DEBT_WIRE.md`dagi API/chegaralar va transport auditini o‘qi; main’ga merge yo‘q.
-2. 3A-2ni kerak bo‘lsa **3A-2a: DB export/freeze + atomic receiver**, **3A-2b: handshake/push/pull/ACK**ga bo‘l. Bir sessiyada barcha integrationni majburan tugatishga urinma.
-3. Do‘kon GUIDni trusted setup/pairingdan ol. Stable store va server restore epoch alohida; peerning o‘zi yuborgan store’ni trusted expectedStore qilib ishlatma. `debtLedgerV1` barcha yo‘llar himoyalanmaguncha e’lon qilinmasin.
-4. DBdan asl customer-create snapshot/header/account/frozen linesni bir snapshotda chiqar. Eski outbox payload command array, yangi full envelope emas. Butun canonical event hashni durable dedupda saqla; request hashning o‘zi taqsimot tamperini tekshirmaydi.
-5. Customer/sale/items/account/event/stock to‘liq financial envelope bo‘lsin. Receiver dependency/ownership/permissionni tekshirib, local `TakePayment`ni chaqirmasdan frozen delta’larni atomik yozsin. Bir xil request va boshqa body ko‘rinadigan integrity xatosi; valid kechikkan payment yo‘qolmasin.
-6. Missing dependency yoki unknown kind/schema inbox/errorga; commit bo‘lmasdan ACK/cursor yo‘q. Reorder/duplicate/ACK yo‘qolishi/rollbackni haqiqiy SQLite va Roomda tekshir.
-7. Legacy full/delta pull va stripped `download_db`ni ham debt-aware qil. `acked=-1` yakka o‘zi himoya emas; metadata coalescing HELD dependencylarini yutib yubormasin. Codec 2MiB/10,000 line va HTTP 8MiB chegaralarini butun envelope uchun local commitdan oldin preflight yoki atomic fragmentation bilan hal qil.
-8. Bir bosqich tugagach test/commit/push/checkpoint. 3B convergence/restore/contact conflict, 4/5 frontend, 6 returns/report, 7 backup/manual hali alohida.
+- `DebtSyncStore.cs` / `DebtSyncStore.kt`: production SQLite/Roomdan customer va eventni bir writer snapshotida chiqarish; incoming component batchni bitta tranzaksiyada qabul qilish.
+- `sync_meta`da `debt_wire_v1:customer:<guid>` / `debt_wire_v1:event:<guid>` ostida to‘liq canonical body va SHA-256 saqlanadi. Oldingi seal ustiga yozilmaydi; o‘zgarsa integrity xatosi. Yangi schema/migratsiya yo‘q.
+- Import customer → opening → payment tartibida, lekin paymentning ichki taqsimotini o‘zgartirmaydi. Account egasi/store bazadan tekshiriladi; archive bo‘lib qolgan mijozning oldin qabul qilingan offline to‘lovi yo‘qolmaydi.
+- Replay DBdan tiklangan to‘liq body bilan solishtiriladi, faqat command hash emas. Mahalliy event echo’si, restart va parallel qayta yuborish yangi savdo/to‘lov/journal yaratmaydi. Sender device/sequence saqlanadi, collision rad etiladi.
+- Yangi opening uchun trusted sale adapter berilgan connection/transactionda sale/items/stock yozishi shart. Total/cash/card/time tekshiriladi. Callback va seal INSERTdagi xato butun batchni rollback qiladi. Eski unrelated receiptga opening biriktirilmaydi.
+- Yetishmagan dependency `DebtDependencyException` qaytaradi; **durable inbox va ACK hali yo‘q**. Host sync permission va source actor policy tekshiriladi; bu pairing/authentication implementatsiyasi emas.
+- `applying=1` ordinary echo capture’ni vaqtincha o‘chiradi; qabul qilingan debt component journal HELD bo‘lib qoladi. To‘liq sale/stock relay envelope hali saqlanmaydi. Qarz component seali outer sale/stock body uchun dedup o‘rnini bosmaydi.
+- API, chegaralar va testlar: [DEBT_DB_BRIDGE.md](DEBT_DB_BRIDGE.md). UI/endpoint/capability ulanmagan, main/release yo‘q.
+- Birinchi CI `37683813561`da desktop/core o‘tdi; Android rollback testi `sync_journal=0` deb noto‘g‘ri taxmin qilgani uchun yiqildi. Production `WifiSyncSchema.install` standart warehouse uchun boshlang‘ich journal yozuvini yaratadi. `6caf66f` testni boshlang‘ich journal sonini saqlash va alohida debt metadata 0 bo‘lishini tekshirishga tuzatdi; production kod o‘zgarmadi.
+- Yakuniy kod/test commit: `6caf66fe4453d4b802bc7d9b710959d5d53b6f24`. [Yakuniy CI 37685714116](https://github.com/akkiS18/LinePOS/actions/runs/37685714116): core, desktop build, Android build va Android API 26/35 Room testlari muvaffaqiyatli; har bir emulyatorda 15 ta test.
+- [Parity CI 37683813588](https://github.com/akkiS18/LinePOS/actions/runs/37683813588), production commit `3f8f1e52de8eb6ed13dec0963b52ea77ad14a011`: C#/Kotlin hisoblash uchun 97 va wire uchun 92 ta kutilgan natija mos. Keyingi `6caf66f` faqat Android test assertionini o‘zgartirgan.
+- Lokal Python testlari 22/22, `git diff --check` muvaffaqiyatli. Haqiqiy qurilma/LAN sinovi bajarilmadi; transport/UI ulanmagan. Main merge va release qilinmagan.
+
+## Keyingi sessiya — 3A-2b: complete envelope / durable inbox
+
+1. Remote/checkpoint/CI holatini tekshir; `DEBT_DB_BRIDGE.md` va `DEBT_WIRE.md`ni o‘qi. Mavjud core/codec/repository/DB bridge testlarini saqla.
+2. 3A-2 hajmi sabab **2a component DB bridge**, **2b complete frozen envelope/inbox**, **2c handshake/push/pull/ACK**ga ajratildi. Keyingi sessiya faqat 2bning tugallangan qismi; UI/main/release yo‘q.
+3. Sale/items/stock/customer/account/event bir full envelope bo‘lsin. Basket fingerprint va real item/stock/FX/payment type validation, full-envelope hash va durable replay receipt zarur. DB bridge trusted callbackni tekshirilmagan tarmoq body bilan ulama; callback external/asynchronous side effect qilmasin. Hozir Apply o‘z tranzaksiyasini ochadi: outer receipt/cursor uchun shu boundary kengaytirilsin yoki internal transaction participant ajratilsin; ikkinchi tranzaksiyada yozib qo‘yish atomiklikni buzadi.
+4. Asl customer-create va immutable component DB seal ishlatiladi. Receiver `TakePayment`ni qayta chaqirmaydi. Full incoming body durable saqlanmasdan oddiy debt journal relayga yetarli emas; stock effectni hozirgi DB qoldig‘idan qayta taxmin qilma.
+5. Missing dependency/unknown version/kind uchun validated durable inbox/error yo‘lini yoz. Butun guruh commit bo‘lmasdan ACK/cursor yo‘q. Qayta urinish, reordered dependency, duplicate/changed body va rollbackni real SQLite/Room bilan tekshir.
+6. Codec 2MiB/10,000 line, bridge 500 component/8MiB va HTTP 8MiB limitlarini outer body overhead bilan local commitdan oldin preflight yoki atomic fragmentation hal qilsin. Hozir local repositoryda bu preflight yo‘q; UI yoqilmasin.
+7. Keyingi 2cda trusted store/capability, existing full/delta pull va stripped `download_db` ham debt-aware bo‘lsin. `acked=-1` yakka himoya emas; metadata coalescing HELD dependencylarini yutmasin. Store GUID/server restore epochni ajrat; source actor mapping/policy network adapterda konkretlashtirilsin.
+8. Har qism test/commit/push/checkpoint bilan tugasin. 3B convergence/restore/contact conflict, 4/5 frontend, 6 returns/report, 7 backup/manual alohida; boshlang‘ich DB convergence testi 3B to‘liq yakunlandi degani emas.
 
 ## Muhim cheklovlar
 
@@ -92,7 +107,7 @@ Foydalanuvchining kichik tugallangan bosqichlarda ishlash talabi sabab 2B ikkiga
 - Ikki uzilgan qurilmada ortiqcha undirishni to‘liq bloklash mumkin emas; pul yozuvlari yo‘qolmasin, excess alohida ko‘rinsin.
 - Sale profitni debt collection bilan ikki marta hisoblama. Cashflow, receivable va revenue alohida.
 - Eski qog‘oz qarz import qilinmaydi; legacy DEBT enumdan taxminiy mijoz qarzi yaratma.
-- To‘liq D01–D27 reja testlari o‘tgan deb yozma: 2A arifmetika, 2B-1 migratsiya/sxema, 2B-2 repository va 3A-1 codec testlari o‘tdi; 3A-2 hamda 3B–7 bajarilmagan.
+- To‘liq D01–D27 reja testlari o‘tgan deb yozma: 2A arifmetika, 2B-1 migratsiya/sxema, 2B-2 repository, 3A-1 codec va 3A-2a DB bridge testlari o‘tdi; 3A-2b/3A-2c hamda 3B–7 bajarilmagan.
 - UI 4/5 tugashi release tayyor degani emas; returns/report/backup integratsiyasi va regressiya gates kerak.
 
 ## Lokal nusxa haqida

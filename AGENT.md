@@ -155,3 +155,8 @@ C#/Kotlin local transactional repository: customer creation, nasiya ochish, paym
 ## Qarz daftari — 2026-10-07, 3A-1
 
 C#/Kotlin canonical wire component codec va validator qo‘shildi: customer-create, sale_open, payment; aniq integer pul, frozen allocation, payload/header mosligi va to‘liq komponent fingerprint. 92 ta bir xil fixture C#/JVM/Android uchun; mavjud 97 ta arifmetika saqlangan. Bu full envelope/DB receiver/ACK emas, `debtLedgerV1` hali ilovada e’lon qilinmaydi. HELD navbat ochilmagan; main/UI/release yo‘q. Transport auditida full pull va sync_meta’ni strip qiladigan desktop download_db yo‘li alohida integration gate deb qayd etildi. Kontrakt: `docs/DEBT_WIRE.md`; test dalili va keyingi kichik bosqich: `docs/DEBT_CHECKPOINT_UZ.md`.
+
+
+## Qarz daftari — 2026-10-08, 3A-2a
+
+C#/Kotlin `DebtSyncStore`: frozen component export, full-body replay va atomic DB import; haqiqiy bazalarda offline to‘lovlar birlashishi, qayta yuborish, ownership/permission va rollback testlari. To‘liq body+hash seali sync_meta’da saqlanadi, HELD navbat ochilmagan. Bu to‘liq sale/stock envelope, durable inbox yoki network ACK emas; trusted callbackni tarmoq bodyga to‘g‘ridan-to‘g‘ri ulash mumkin emas. Scope 3A-2a DB component, 2b full envelope/inbox, 2c transport/ACKga ajratildi. `docs/DEBT_DB_BRIDGE.md` va `docs/DEBT_CHECKPOINT_UZ.md` keyingi ish uchun asos; main/UI/release yo‘q.
