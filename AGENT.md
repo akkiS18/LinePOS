@@ -164,3 +164,7 @@ C#/Kotlin `DebtSyncStore`: frozen component export, full-body replay va atomic D
 ## Qarz daftari — 2026-10-08, 3A-2b-1
 
 `DebtEnvelope.cs/kt`: pure frozen financial envelope codec va sale/items/stock/FX/fee validation, 155 umumiy fixture. 3A-2b ikkiga bo‘lindi: 2b-1 codec, 2b-2 local freeze/preflight + atomic full-envelope DB receiver/inbox. Bu bosqich DB/network/UIga ulanmaydi, HELD/navbat ochilmaydi, main/release yo‘q. Keyingi ish uchun `docs/DEBT_ENVELOPE.md` va yakuniy CI dalillari bilan `docs/DEBT_CHECKPOINT_UZ.md`ni o‘qi. Local SaleFingerprint endi canonical sale wire hashiga bog‘lanishi shart; arbitrary old test fingerprintni production envelopega aylantirma.
+
+## Qarz daftari — 2026-10-08, 3A-2b-2a
+
+`DebtEnvelopeInbox.cs/kt`: durable validated v1 inbox, customer/payment + full receipt + pending removal bir writer tranzaksiyada. 128 packet/32MiB pending cap, exact replay va original relay; sale_open faqat WaitingForSaleAdapter, yangi public callback orqali bypass yo‘q. 2b-2b concrete sale/items/stock adapter va local freeze/preflight hali qolgan. Unknown version quarantine ham transport bosqichida; waiting hech qachon moliyaviy ACK emas. UI/main/release/Firebase/CBU yo‘q. Kontrakt `docs/DEBT_INBOX.md`, CI va keyingi scope `docs/DEBT_CHECKPOINT_UZ.md`da.

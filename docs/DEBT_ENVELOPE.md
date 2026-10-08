@@ -94,7 +94,11 @@ Unknown versions/kinds, malformed framing, missing/extra fields, unsupported ret
 kinds and mismatched snapshots fail closed. Durable quarantine/error handling belongs
 to 3A-2b-2; do not interpret rejection as a successful synchronization or ACK.
 
-## Next bounded stage: 3A-2b-2 DB receiver/inbox
+## DB integration status and next bounded stage: 3A-2b-2b
+
+Stage 3A-2b-2a now provides the validated durable inbox and atomic customer/payment
+receiver; see `DEBT_INBOX.md`. Sale opening is explicitly pending until the concrete
+adapter is implemented. Local before-commit envelope freeze is also still missing.
 
 - Define and validate trusted product/warehouse/actor dependencies and local numeric
   conversion before any writes. Do not invent missing products or use current costs.
@@ -103,17 +107,18 @@ to 3A-2b-2; do not interpret rejection as a successful synchronization or ACK.
   `OpenSale`. Old placeholder/arbitrary test fingerprints are not exportable financial
   envelopes. Do not silently retrofit or reconstruct immutable stock effects from
   today's inventory. Source adapters must capture original movement IDs and deltas.
-- Extend/extract `DebtSyncStore.Apply`'s transaction boundary for the full envelope,
-  sale/items/stock/debt writes, durable full-body replay receipt and inbox completion.
-  A second transaction for the outer receipt is forbidden. An identical replay must
-  skip every effect; changed body with the same ID must conflict, even when individually
-  codec-valid. Re-export must preserve original bytes, not query changed product data.
-- Use existing `debt_sync_inbox` only with a defined bounded validated identity/body
-  contract. Persist missing-dependency packets across restart; reject changed body
-  under the same ID. Unknown-version retention is not equivalent to accepting money.
-  No ACK/cursor advancement until the whole financial group commits.
-- Test real SQLite/Room rollback at every write boundary, concurrency/restart/replay,
-  ordering, missing dependencies, original frozen relay, and initial outbox preflight.
+- Extend the inbox's existing SAME writer boundary for sale/items/stock, ledger,
+  full-body replay receipt and inbox completion. Internal component transaction
+  participants already exist; do not call public Apply and then commit another receipt.
+- Lift `WaitingForSaleAdapter` only after concrete frozen sale/stock validation and
+  persistence are tested. Identical opening replay skips every effect; changed body
+  or reused stock operation identity conflicts. Re-export preserves original bytes.
+- Existing pending inbox handles known v1 missing dependencies. Unknown future format
+  quarantine is not implemented. No ACK/cursor until the whole financial group commits.
+- Add real SQLite/Room tests for opening rollback at every write boundary, concurrency,
+  restart/replay, product/warehouse dependency ordering, original relay and local size/
+  precision preflight. Current inbox tests explicitly use fixture opening dependencies;
+  they do not prove concrete sale/items/stock import works.
 
 Then 3A-2c adds authenticated capability/store negotiation, push/pull/ACK, old-peer
 barriers, HELD-safe coalescing and debt-safe DB download. `canSync`/actor callbacks and

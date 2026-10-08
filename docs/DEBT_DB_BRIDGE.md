@@ -61,9 +61,10 @@ can therefore converge to customer credit. Contact replay does not undo renames 
 unarchive a customer.
 
 Missing customer/account or absent required sale adapter throws the distinguishable
-`DebtDependencyException`; the transaction rolls back. There is **no durable inbox
-implementation yet**. The future transport must keep/resend the complete group or
-persist it atomically in a validated inbox. Never ACK this exception or discard money.
+`DebtDependencyException`; the component transaction rolls back. This public component
+API does not itself persist an inbox. Stage 3A-2b-2a adds `DebtEnvelopeInbox` for validated
+customer/payment packets and pending openings (see `DEBT_INBOX.md`). Never ACK a
+missing-dependency exception or a waiting result, and never discard the sender packet.
 
 ## Trusted host and sale adapter
 
@@ -89,9 +90,10 @@ bridge cannot infer those from the debt component alone.
 `sync_control.applying=1` suppresses ordinary echo capture throughout the receiver
 transaction and returns to zero on commit/rollback. Only held debt component journal
 rows are added here; they do not yet encode a complete relayable sale/stock envelope.
-The current public `Apply` owns its transaction. The envelope stage must extract an
-internal transaction participant or otherwise extend this same boundary; calling
-`Apply` and then saving the outer receipt/cursor in a second transaction is forbidden.
+The public `Apply` owns its transaction. Internal participants now let the inbox
+share this writer boundary for supported customer/payment packets. Future opening
+import must extend that SAME boundary; calling public `Apply` and then saving the
+outer receipt/cursor in a second transaction is forbidden.
 Future transport must persist the full incoming envelope and its own full-body dedup
 receipt, including callback effects, before acknowledging or forwarding it. A seal of
 the debt component alone cannot prove that the surrounding stock/body was unchanged.
@@ -109,8 +111,10 @@ production capture tests. The Android receiver DB is physically closed/reopened 
 replay. All imported debt journal entries remain HELD.
 
 Stage 3A-2b-1 now supplies the pure frozen financial envelope codec (see
-`DEBT_ENVELOPE.md`). Next bounded stage: local frozen capture/preflight and a durable
-full-envelope receiver/inbox, then handshake/push/pull/ACK adapters and old-peer barriers. Audit full/delta pull,
+`DEBT_ENVELOPE.md`). Stage 3A-2b-2a now has a durable inbox and atomic customer/payment receiver
+(`DEBT_INBOX.md`), using internal transaction participants from this bridge. Opening
+packets remain pending. Next: concrete frozen sale/stock adapter and local capture/
+preflight, then handshake/push/pull/ACK adapters and old-peer barriers. Audit full/delta pull,
 metadata coalescing, stripped DB download and restore identity as documented in
 `DEBT_WIRE.md`. UI, release and main merge remain blocked on those integrations.
 Current verified run/commit evidence lives in `DEBT_CHECKPOINT_UZ.md`.

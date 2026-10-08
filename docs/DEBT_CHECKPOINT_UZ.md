@@ -1,6 +1,6 @@
 # Qarz daftari — davom ettirish nuqtasi
 
-Sana: 2026-10-08. Holat: **3A-2b-1 yakunlandi: to‘liq frozen paket codec/validator; barcha CI testlari muvaffaqiyatli. DB inbox va haqiqiy qarz transporti/UI hali ulanmagan**.
+Sana: 2026-10-08. Holat: **3A-2b-2a yakunlandi: durable inbox/customer-payment receiver; barcha CI testlari o‘tdi. Sale/stock adapter, local freeze va haqiqiy transport/UI hali ulanmagan**.
 
 ## Asos va branch
 
@@ -102,13 +102,24 @@ Foydalanuvchining kichik tugallangan bosqichlarda ishlash talabi sabab 2B ikkiga
 - [Yakuniy parity CI 37733139917](https://github.com/akkiS18/LinePOS/actions/runs/37733139917) SUCCESS: C#/Kotlin 97 hisob + 92 component + 155 envelope expected natijalari teng. [Yakuniy full CI 37733139869](https://github.com/akkiS18/LinePOS/actions/runs/37733139869) SUCCESS: core/regressiya, desktop build, Android build, API26 va API35 instrumentatsiya. Har emulyatorda 16 ta test, shu jumladan 155 envelope fixtureli test o‘tdi. Fizik qurilma/LAN/UI sinovi bu bosqichda bajarilmagan.
 - DB schema/inbox/receiverga, network/UIga ulanmagan. HELD navbat ochilmagan; main merge/release yo‘q. Batafsil: [DEBT_ENVELOPE.md](DEBT_ENVELOPE.md).
 
-## Keyingi sessiya — 3A-2b-2: local freeze / atomic envelope receiver / durable inbox
+## 3A-2b-2a: durable inbox / atomic customer-payment receiver
 
-1. Remote/checkpoint/CI holatini tekshir; `DEBT_ENVELOPE.md`, `DEBT_DB_BRIDGE.md` va `DEBT_WIRE.md`ni o‘qi. Mavjud core/codec/repository/DB bridge testlarini saqla.
-2. 3A-2 hajmi sabab **2a component DB bridge**, **2b complete frozen envelope/inbox**, **2c handshake/push/pull/ACK**ga ajratildi. 2b-1 codec tugallangan; keyingi sessiya 2b-2ning tugallangan DB qismi; UI/main/release yo‘q.
-3. Sale/items/stock/customer/account/event bir full envelope bo‘lsin. Basket fingerprint va real item/stock/FX/payment type validation, full-envelope hash va durable replay receipt zarur. DB bridge trusted callbackni tekshirilmagan tarmoq body bilan ulama; callback external/asynchronous side effect qilmasin. Hozir Apply o‘z tranzaksiyasini ochadi: outer receipt/cursor uchun shu boundary kengaytirilsin yoki internal transaction participant ajratilsin; ikkinchi tranzaksiyada yozib qo‘yish atomiklikni buzadi.
+- `DebtEnvelopeInbox.cs/kt`: strict v1 paketni saqlash, missing dependency kutish, customer/paymentni ledger + full-body receipt + inbox completion bilan bitta writer tranzaksiyada qabul qilish.
+- `DebtSyncStore` transaction/participant helperlari internal qilindi; public arbitrary sale callback yangi inboxda yo‘q. `sale_open` har doim `WaitingForSaleAdapter`; biror customer/sale/stock/event qisman yozilmaydi. Bu to‘liq 2b-2 yakuni emas.
+- Authorize/known body/request/device sequence/account ownership bir writer snapshotida tekshiriladi. Frozen payment allocation qayta hisoblanmaydi. Exact replay hech qanday yangi to‘lov yaratmaydi; changed body hatto codec-valid bo‘lsa ham conflict.
+- Pending: mavjud `debt_sync_inbox`, first receivedAt va asl body o‘zgarmaydi. Completed: `sync_meta.debt_envelope_v1:<guid>` da SHA256 + newline + full canonical body. Exact relay/export va restart replay uchun saqlanadi; tarmoq ACK emas.
+- 128 paket / 32MiB pending payload limiti. Full queue retry/dependency applicationni bloklamaydi; yangi sig‘magan paket distinct exception bilan rad etiladi, eski yozuv o‘chirilmaydi. Unknown/malformed version bu valid inboxga kiritilmaydi; durable unknown quarantine hali yo‘q.
+- SQLite/Room testlari: pending/completed restart, retry/concurrency, atomic outer receipt va inbox delete rollback, customer rollback, original relay, permissions, changed body, count/byte quota, corrupt receipt, HELD va opening gate. Lokal Python 23/23 va whitespace PASS.
+- Kod commit: `1ab3794406921075d5e9de6f7a5de4280d624646`. [Parity CI 37765703483](https://github.com/akkiS18/LinePOS/actions/runs/37765703483) SUCCESS: 97+92+155 natijalar C#/Kotlinda teng. Birinchi full CI `37765703458`da desktop/core SUCCESS. Yakuniy ko‘rikda Android katta body o‘qishi 65,536 belgilab chunk qilindi; >2MiB paket restart/retry testi qo‘shildi. Android placeholder occurrence order bo‘yicha retry error update parametrlari ham to‘g‘rilandi, test reason yangilanishini tekshiradi. Yakuniy commit `ce991c7ea7d3c0aab407d0fa2d657a85caf5c02b`; [Yakuniy full CI 37766843940](https://github.com/akkiS18/LinePOS/actions/runs/37766843940) SUCCESS: core/regressiya, Windows desktop build, Android build, API26/API35 Room instrumentatsiya. Har emulyatorda 17 ta test o‘tdi. [Yakuniy parity CI 37766843884](https://github.com/akkiS18/LinePOS/actions/runs/37766843884) SUCCESS: 97+92+155 natijalar mos. Fizik qurilma/LAN/UI testlari bu bosqichda bajarilmagan.
+- UI/transport/main/release yo‘q; Firebase/CBU o‘zgarmadi. Kontrakt va keyingi scope: [DEBT_INBOX.md](DEBT_INBOX.md).
+
+## Keyingi sessiya — 3A-2b-2b: concrete sale/stock adapter + local freeze/preflight
+
+1. Remote/checkpoint/CI holatini tekshir; `DEBT_INBOX.md`, `DEBT_ENVELOPE.md`, `DEBT_DB_BRIDGE.md` va `DEBT_WIRE.md`ni o‘qi. Mavjud core/codec/repository/DB bridge testlarini saqla.
+2. 3A-2 hajmi sabab **2a component DB bridge**, **2b complete frozen envelope/inbox**, **2c handshake/push/pull/ACK**ga ajratildi. 2b-1 codec va 2b-2a inbox/customer-payment receiver tayyor; keyingi sessiya 2b-2b concrete sale/stock + local freeze; UI/main/release yo‘q.
+3. Sale/items/stock/customer/account/event bir full envelope bo‘lsin. Basket fingerprint va real item/stock/FX/payment type validation, full-envelope hash va durable replay receipt zarur. DB bridge trusted callbackni tekshirilmagan tarmoq body bilan ulama; callback external/asynchronous side effect qilmasin. Inbox hozir internal transaction participantlar orqali bitta writer boundaryda ishlaydi: sale/stock uchun aynan shu boundary kengaytirilsin; ikkinchi tranzaksiyada yozib qo‘yish atomiklikni buzadi.
 4. Asl customer-create va immutable component DB seal ishlatiladi. Receiver `TakePayment`ni qayta chaqirmaydi. Full incoming body durable saqlanmasdan oddiy debt journal relayga yetarli emas; stock effectni hozirgi DB qoldig‘idan qayta taxmin qilma.
-5. Missing dependency/unknown version/kind uchun validated durable inbox/error yo‘lini yoz. Butun guruh commit bo‘lmasdan ACK/cursor yo‘q. Qayta urinish, reordered dependency, duplicate/changed body va rollbackni real SQLite/Room bilan tekshir.
+5. Known v1 missing dependency inbox tayyor; opening gate concrete adapter tugamaguncha saqlansin. Unknown version/kind quarantine/error siyosati transportda alohida belgilanadi. Butun guruh commit bo‘lmasdan ACK/cursor yo‘q. Qayta urinish, reordered dependency, duplicate/changed body va rollbackni real SQLite/Room bilan tekshir.
 6. Codec 2MiB/10,000 line, bridge 500 component/8MiB va HTTP 8MiB limitlarini outer body overhead bilan local commitdan oldin preflight yoki atomic fragmentation hal qilsin. Hozir local repositoryda bu preflight yo‘q; UI yoqilmasin.
 7. Keyingi 2cda trusted store/capability, existing full/delta pull va stripped `download_db` ham debt-aware bo‘lsin. `acked=-1` yakka himoya emas; metadata coalescing HELD dependencylarini yutmasin. Store GUID/server restore epochni ajrat; source actor mapping/policy network adapterda konkretlashtirilsin.
 8. Har qism test/commit/push/checkpoint bilan tugasin. 3B convergence/restore/contact conflict, 4/5 frontend, 6 returns/report, 7 backup/manual alohida; boshlang‘ich DB convergence testi 3B to‘liq yakunlandi degani emas.
@@ -120,7 +131,7 @@ Foydalanuvchining kichik tugallangan bosqichlarda ishlash talabi sabab 2B ikkiga
 - Ikki uzilgan qurilmada ortiqcha undirishni to‘liq bloklash mumkin emas; pul yozuvlari yo‘qolmasin, excess alohida ko‘rinsin.
 - Sale profitni debt collection bilan ikki marta hisoblama. Cashflow, receivable va revenue alohida.
 - Eski qog‘oz qarz import qilinmaydi; legacy DEBT enumdan taxminiy mijoz qarzi yaratma.
-- To‘liq D01–D27 reja testlari o‘tgan deb yozma: 2A arifmetika, 2B-1 migratsiya/sxema, 2B-2 repository, 3A-1 codec va 3A-2a DB bridge va 3A-2b-1 envelope codec testlari o‘tdi; 3A-2b-2/3A-2c hamda 3B–7 bajarilmagan.
+- To‘liq D01–D27 reja testlari o‘tgan deb yozma: 2A arifmetika, 2B-1 migratsiya/sxema, 2B-2 repository, 3A-1 codec va 3A-2a DB bridge va 3A-2b-1 envelope codec testlari o‘tdi; 3A-2b-2a natijasi yuqorida. 3A-2b-2b/3A-2c hamda 3B–7 bajarilmagan.
 - UI 4/5 tugashi release tayyor degani emas; returns/report/backup integratsiyasi va regressiya gates kerak.
 
 ## Lokal nusxa haqida
