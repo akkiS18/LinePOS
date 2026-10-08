@@ -26,13 +26,13 @@ public static class DebtWire
     public const int MaxLines = 10000;
     private static readonly Encoding Utf8 = new UTF8Encoding(false, true);
     private static void Need(bool ok) { if (!ok) throw new ArgumentException("Invalid debt wire component"); }
-    private static void Id(string value) => Need(System.Guid.TryParseExact(value,"D",out var g) && g!=System.Guid.Empty && g.ToString("D")==value);
+    internal static void Id(string value) => Need(System.Guid.TryParseExact(value,"D",out var g) && g!=System.Guid.Empty && g.ToString("D")==value);
     private static string Num(long n) => n.ToString(CultureInfo.InvariantCulture);
-    private static long Number(string s) {
+    internal static long Number(string s) {
         Need(Regex.IsMatch(s,"\\A(?:0|-?[1-9][0-9]{0,18})\\z"));
         Need(long.TryParse(s,NumberStyles.AllowLeadingSign,CultureInfo.InvariantCulture,out var n) && n!=long.MinValue);return n;
     }
-    private static void Text(string s,int max,bool required=false) => Need(s.Length<=max && (!required || !string.IsNullOrWhiteSpace(s)) && !s.Any(c=>c<' '));
+    internal static void Text(string s,int max,bool required=false) => Need(s.Length<=max && (!required || !string.IsNullOrWhiteSpace(s)) && !s.Any(c=>c<' '));
     private static void Date(string? s) {
         if(s!=null)Need(DateOnly.TryParseExact(s,"yyyy-MM-dd",CultureInfo.InvariantCulture,DateTimeStyles.None,out var d) && d.ToString("yyyy-MM-dd",CultureInfo.InvariantCulture)==s);
     }
@@ -41,12 +41,12 @@ public static class DebtWire
     }
     private static string? Optional(string s) => s.Length==0?null:s;
     public static string Fingerprint(string canonicalWire) => Convert.ToHexString(SHA256.HashData(Utf8.GetBytes(canonicalWire))).ToLowerInvariant();
-    private static string Pack(string tag,IEnumerable<string> fields) {
+    internal static string Pack(string tag,IEnumerable<string> fields,int maxChars=MaxPacketChars) {
         var result="[\""+tag+"\","+string.Join(",",fields.Select(f=>"\""+Convert.ToBase64String(Utf8.GetBytes(f))+"\""))+"]";
-        Need(result.Length<=MaxPacketChars);return result;
+        Need(result.Length<=maxChars);return result;
     }
-    private static string[] Unpack(string wire,string tag,int maxFields) {
-        Need(wire.Length<=MaxPacketChars);
+    internal static string[] Unpack(string wire,string tag,int maxFields,int maxChars=MaxPacketChars) {
+        Need(wire.Length<=maxChars);
         var prefix="[\""+tag+"\",";Need(wire.StartsWith(prefix,StringComparison.Ordinal) && wire.EndsWith("]",StringComparison.Ordinal));
         var parts=wire.Substring(prefix.Length,wire.Length-prefix.Length-1).Split(',');Need(parts.Length<=maxFields);
         var fields=new string[parts.Length];
@@ -55,7 +55,7 @@ public static class DebtWire
             byte[] bytes;try { bytes=Convert.FromBase64String(b64); } catch(FormatException e) { throw new ArgumentException("Invalid base64",e); }
             Need(Convert.ToBase64String(bytes)==b64);fields[i]=Utf8.GetString(bytes);
         }
-        Need(Pack(tag,fields)==wire);return fields;
+        Need(Pack(tag,fields,maxChars)==wire);return fields;
     }
     internal static string[] CommandFields(string payload) => Unpack(payload,"debt-command-v1",12);
     public static void RequirePeer(string expectedStore,string peerStore,IEnumerable<string> peerCapabilities) {

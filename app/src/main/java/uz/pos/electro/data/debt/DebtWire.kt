@@ -26,12 +26,12 @@ object DebtWire {
     const val CAPABILITY = "debtLedgerV1"
     const val MAX_PACKET_CHARS = 2 * 1024 * 1024
     const val MAX_LINES = 10000
-    private fun id(s: String) { require(UUID.fromString(s).toString()==s && s!="00000000-0000-0000-0000-000000000000") }
-    private fun number(s: String): Long {
+    internal fun id(s: String) { require(UUID.fromString(s).toString()==s && s!="00000000-0000-0000-0000-000000000000") }
+    internal fun number(s: String): Long {
         require(s.matches(Regex("0|-?[1-9][0-9]{0,18}")))
         val n=s.toLongOrNull();require(n!=null && n!=Long.MIN_VALUE);return n
     }
-    private fun text(s: String,max: Int,required: Boolean=false) {
+    internal fun text(s: String,max: Int,required: Boolean=false) {
         require(s.length<=max && (!required || s.any { !it.isWhitespace() && it!='\u0085' }) && s.none { it<' ' })
     }
     private fun date(s: String?) {
@@ -47,12 +47,12 @@ object DebtWire {
         StandardCharsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT).onUnmappableCharacter(CodingErrorAction.REPORT).decode(ByteBuffer.wrap(b)).toString()
     } catch(e: CharacterCodingException) { throw IllegalArgumentException("Invalid UTF-8",e) }
     fun fingerprint(canonicalWire: String): String = MessageDigest.getInstance("SHA-256").digest(utf8(canonicalWire)).joinToString("") { "%02x".format(it.toInt() and 255) }
-    private fun pack(tag: String,fields: List<String>): String {
+    internal fun pack(tag: String,fields: List<String>,maxChars: Int=MAX_PACKET_CHARS): String {
         val result="[\"$tag\","+fields.joinToString(",") { "\""+Base64.getEncoder().encodeToString(utf8(it))+"\"" }+"]"
-        require(result.length<=MAX_PACKET_CHARS);return result
+        require(result.length<=maxChars);return result
     }
-    private fun unpack(wire: String,tag: String,maxFields: Int): List<String> {
-        require(wire.length<=MAX_PACKET_CHARS)
+    internal fun unpack(wire: String,tag: String,maxFields: Int,maxChars: Int=MAX_PACKET_CHARS): List<String> {
+        require(wire.length<=maxChars)
         val prefix="[\"$tag\",";require(wire.startsWith(prefix) && wire.endsWith("]"))
         val parts=wire.substring(prefix.length,wire.length-1).split(',');require(parts.size<=maxFields)
         val fields=parts.map { token ->
@@ -60,7 +60,7 @@ object DebtWire {
             val b64=token.substring(1,token.length-1);val bytes=Base64.getDecoder().decode(b64)
             require(Base64.getEncoder().encodeToString(bytes)==b64);decodeUtf8(bytes)
         }
-        require(pack(tag,fields)==wire);return fields
+        require(pack(tag,fields,maxChars)==wire);return fields
     }
     internal fun commandFields(payload: String): List<String> = unpack(payload,"debt-command-v1",12)
     fun requirePeer(expectedStore: String,peerStore: String,peerCapabilities: Collection<String>) {
