@@ -124,3 +124,17 @@ transaction, and opening replay/stock-operation identity validation. Extend this
 receipt/inbox transaction when lifting the opening gate; never add a separate commit.
 Then implement authenticated transport/ACK/full/delta/download gates in 3A-2c.
 Current CI evidence and exact commit are in `DEBT_CHECKPOINT_UZ.md`.
+
+### Android model prerequisite (before the concrete adapter)
+
+Android now reads Room `DEBT` receipts as `PaymentType.DEBT`, rather than silently
+falling back to CASH. Existing receipt/report labels show Nasiya. No customer/account
+is inferred from a legacy DEBT header, and no new checkout option is exposed.
+`SaleRepository.completeSale` rejects DEBT before its writer transaction, including a
+fully paid DEBT request. The concrete ledger sale API must be used once implemented.
+The legacy JSON sale codec rejects DEBT import/export (including an already-known sale
+GUID in a snapshot), so it cannot silently import a debt header as CASH or acknowledge
+that header without its ledger envelope. Snapshot exceptions roll back its existing
+outer transaction/cursor. These guards are not the complete 3A-2c protocol, journal
+coalescing, restored-DB, full/delta or server-side barriers; all remain required before
+feature enablement. The inbox opening gate above remains unchanged.

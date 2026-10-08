@@ -1,6 +1,6 @@
 # Qarz daftari — davom ettirish nuqtasi
 
-Sana: 2026-10-08. Holat: **3A-2b-2a yakunlandi: durable inbox/customer-payment receiver; barcha CI testlari o‘tdi. Sale/stock adapter, local freeze va haqiqiy transport/UI hali ulanmagan**.
+Sana: 2026-10-08. Holat: **3A-2b-2a yakunlandi: durable inbox/customer-payment receiver; barcha CI testlari o‘tdi. Android DEBT tayyorgarligi ham yakunlandi va CI testlari o‘tdi. Sale/stock adapter, local freeze va haqiqiy transport/UI hali ulanmagan**.
 
 ## Asos va branch
 
@@ -112,6 +112,16 @@ Foydalanuvchining kichik tugallangan bosqichlarda ishlash talabi sabab 2B ikkiga
 - SQLite/Room testlari: pending/completed restart, retry/concurrency, atomic outer receipt va inbox delete rollback, customer rollback, original relay, permissions, changed body, count/byte quota, corrupt receipt, HELD va opening gate. Lokal Python 23/23 va whitespace PASS.
 - Kod commit: `1ab3794406921075d5e9de6f7a5de4280d624646`. [Parity CI 37765703483](https://github.com/akkiS18/LinePOS/actions/runs/37765703483) SUCCESS: 97+92+155 natijalar C#/Kotlinda teng. Birinchi full CI `37765703458`da desktop/core SUCCESS. Yakuniy ko‘rikda Android katta body o‘qishi 65,536 belgilab chunk qilindi; >2MiB paket restart/retry testi qo‘shildi. Android placeholder occurrence order bo‘yicha retry error update parametrlari ham to‘g‘rilandi, test reason yangilanishini tekshiradi. Yakuniy commit `ce991c7ea7d3c0aab407d0fa2d657a85caf5c02b`; [Yakuniy full CI 37766843940](https://github.com/akkiS18/LinePOS/actions/runs/37766843940) SUCCESS: core/regressiya, Windows desktop build, Android build, API26/API35 Room instrumentatsiya. Har emulyatorda 17 ta test o‘tdi. [Yakuniy parity CI 37766843884](https://github.com/akkiS18/LinePOS/actions/runs/37766843884) SUCCESS: 97+92+155 natijalar mos. Fizik qurilma/LAN/UI testlari bu bosqichda bajarilmagan.
 - UI/transport/main/release yo‘q; Firebase/CBU o‘zgarmadi. Kontrakt va keyingi scope: [DEBT_INBOX.md](DEBT_INBOX.md).
+
+## 3A-2b-2b tayyorgarligi: Android nasiya chek turi
+
+- Concrete adapter ko‘rigida yangi bloklovchi kamchilik topildi: Room `Converters.toPaymentType("DEBT")` enumda DEBT bo‘lmagani uchun `CASH`ga jim qaytarardi. SQL fixturelarda `DEBT` bor edi, ammo native SaleDao bilan qayta o‘qish tekshirilmagan edi.
+- Android `PaymentType.DEBT` qo‘shildi; Room string saqlash formati/sxema o‘zgarmadi. Hisobot/chek labeli `Nasiya`; yangi kassadagi tanlov/tugma qo‘shilmadi. Legacy DEBTdan taxminiy customer/account/event yaratilmaydi.
+- `SaleRepository.completeSale` DEBTni tranzaksiyadan oldin rad etadi, hatto cash+card totalga teng yuborilsa ham. Qaytarish turlarining oldingi cheklovi ham shu oldindan tekshiruvga ko‘chirildi.
+- `LegacySalePaymentType` mavjud sale-only JSON mappingni ajratadi: DEBT eksporti va numeric 3 / DEBT / string 3 importi rad etiladi, CASHga aylanmaydi. Snapshotda mavjud sale GUID uchun ham tekshiriladi; exception butun snapshot transactionini, jumladan cursorni rollback qiladi. Oddiy to‘lov turlarining mappingi saqlandi. Bu hali to‘liq debt-aware transport yoki restore himoyasi emas.
+- Yangi 3 instrumentatsiya testi: native Room DAO restart/filter orqali DEBTni saqlash, haqiqiy cash/card/profit/FX/receipt identity, legacy mapping va oddiy repositoryda qarz daftarisiz savdo yaratishni rad etish. Lokal Python 23/23 va whitespace PASS.
+- Kod commit: `eb5e40300772d8dc9c6e03672ec21fcf886367bf`. [Full CI 37831090481](https://github.com/akkiS18/LinePOS/actions/runs/37831090481) SUCCESS: core/regressiya, desktop build, Android build va API26/API35 Room instrumentatsiya. Har emulyatorda 20 ta test, jumladan 3 ta yangi test o‘tdi. Fizik qurilma/LAN/UI testi bu qismda bajarilmadi.
+- Limit sabab bu yakunlangan tayyorgarlik qismi alohida checkpoint qilindi. **3A-2b-2b sale/stock adapter va source local freeze hali bajarilmadi**; `WaitingForSaleAdapter` o‘zgarmadi. Nasiya returns/report/backup integratsiyasi ham keyingi reja bosqichlarida qoladi. Firebase/CBUga tegilmadi; main merge/release yo‘q.
 
 ## Keyingi sessiya — 3A-2b-2b: concrete sale/stock adapter + local freeze/preflight
 

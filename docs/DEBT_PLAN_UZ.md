@@ -1,6 +1,6 @@
 # Qarz daftari — texnik va frontend reja
 
-Holat: 1-bosqich reja, 2A hisoblash yadrosi va 2B-1 sxema/migratsiya va 2B-2 lokal repository hamda 3A-1 wire codec/validator va 3A-2a DB component export/atomic receiver yakunlangan. 3A-2b-1 full-envelope codec/validator yakunlandi va CI testlari o‘tdi; 3A-2b-2a durable inbox/customer-payment receiver yakunlandi va CI testlari o‘tdi; concrete sale/stock va local freeze hali yo‘q. Ilovaga integratsiya hali amalga oshirilmagan; joriy holat DEBT_CHECKPOINT_UZ.md da.
+Holat: 1-bosqich reja, 2A hisoblash yadrosi va 2B-1 sxema/migratsiya va 2B-2 lokal repository hamda 3A-1 wire codec/validator va 3A-2a DB component export/atomic receiver yakunlangan. 3A-2b-1 full-envelope codec/validator yakunlandi va CI testlari o‘tdi; 3A-2b-2a durable inbox/customer-payment receiver yakunlandi va CI testlari o‘tdi; Android DEBT model/oddiy checkout/legacy JSON tayyorgarligi alohida kichik qismda bajarildi (natija checkpointda); concrete sale/stock va local freeze hali yo‘q. Ilovaga integratsiya hali amalga oshirilmagan; joriy holat DEBT_CHECKPOINT_UZ.md da.
 Sana: 2026-10-05 (Asia/Tashkent).
 Tekshirilgan asos: main `b631a27241a5eb25501a6e4ab316c4aebdae4460`.
 Ish branchi: `feature/customer-debt`.
