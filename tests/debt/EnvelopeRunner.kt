@@ -37,7 +37,8 @@ object EnvelopeRunner {
             } catch(_: IllegalArgumentException){JSONObject().put("error","invalid")}
             catch(_: ArithmeticException){JSONObject().put("error","invalid")}
             catch(_: DateTimeException){JSONObject().put("error","invalid")}
-            check(result.similar(f.getJSONObject("expected"))){"Envelope ${f.getString("id")}: expected ${f.get("expected")}, got $result"}
+            val expected=f.getJSONObject("expected")
+            check(result.length()==expected.length() && expected.keys().asSequence().all { result.has(it) && result.get(it)==expected.get(it) }){"Envelope ${f.getString("id")}: expected ${f.get("expected")}, got $result"}
             results.put(f.getString("id"),result)
         }
         println("Kotlin: ${fixtures.length()} shared envelope fixtures passed");return results

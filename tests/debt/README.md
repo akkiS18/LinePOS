@@ -12,7 +12,7 @@ Run with .NET 8, JDK 17, Kotlin 2.0.21 and the test-only org.json 20240303 jar:
 
 ```sh
 dotnet run --project tests/Debt.CoreTests -- tests/debt/fixtures.json /tmp/debt-csharp.json
-kotlinc app/src/main/java/uz/pos/electro/data/debt/DebtAccounting.kt app/src/main/java/uz/pos/electro/data/debt/DebtWire.kt tests/debt/KotlinRunner.kt tests/debt/WireRunner.kt -cp /path/to/json.jar -include-runtime -d /tmp/debt-tests.jar
+kotlinc app/src/main/java/uz/pos/electro/data/debt/DebtAccounting.kt app/src/main/java/uz/pos/electro/data/debt/DebtWire.kt app/src/main/java/uz/pos/electro/data/debt/DebtEnvelope.kt tests/debt/KotlinRunner.kt tests/debt/WireRunner.kt tests/debt/EnvelopeRunner.kt -cp /path/to/json.jar -include-runtime -d /tmp/debt-tests.jar
 java -cp /tmp/debt-tests.jar:/path/to/json.jar KotlinRunnerKt tests/debt/fixtures.json /tmp/debt-kotlin.json
 python tests/debt/verify_results.py tests/debt/fixtures.json /tmp/debt-csharp.json /tmp/debt-kotlin.json
 ```
@@ -61,7 +61,22 @@ GitHub Actions also passed with the normal project build: [run 37285212424](http
 ## Stage 3A-1 wire corpus
 
 The runner now also supports two optional trailing arguments: wire fixture input and
-wire result output. Compile both core sources and both Kotlin runners as above.
+wire result output. Compile all production sources and Kotlin runners listed above (the runner references all three corpora).
 See [DEBT_WIRE.md](../../docs/DEBT_WIRE.md) for the 92-vector component contract and
 its explicit transport/authorization boundaries. Current verification is recorded in
 [DEBT_CHECKPOINT_UZ.md](../../docs/DEBT_CHECKPOINT_UZ.md).
+
+## Stage 3A-2b-1 envelope corpus
+
+After the optional wire input/output pair, append one more pair:
+`tests/debt/envelope-fixtures.json /tmp/debt-envelope-result.json`.
+Use different result paths for C# and Kotlin, then run:
+
+```sh
+python tests/debt/verify_results.py tests/debt/envelope-fixtures.json /tmp/csharp-envelope.json /tmp/kotlin-envelope.json
+```
+
+The current complete invocations are in `.github/workflows/debt-core.yml`.
+154 shared vectors cover the pure frozen sale/envelope contract, including exact
+historical money/FX/fee checks and bounded stock deltas. This is not a DB inbox or
+end-to-end Wi-Fi test. See [DEBT_ENVELOPE.md](../../docs/DEBT_ENVELOPE.md).
