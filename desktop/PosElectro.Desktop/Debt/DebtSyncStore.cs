@@ -26,7 +26,7 @@ public sealed class DebtSyncStore
     private static void Need(bool ok) { if(!ok)throw new InvalidOperationException("Debt integrity conflict"); }
     private static long N(object? value) => Convert.ToInt64(value,CultureInfo.InvariantCulture);
     private static string S(object? value) => (string)(value ?? throw new InvalidOperationException("Missing debt field"));
-    private T Write<T>(Func<SqliteConnection,SqliteTransaction,T> action) {
+    internal T Write<T>(Func<SqliteConnection,SqliteTransaction,T> action) {
         using var db=new SqliteConnection(new SqliteConnectionStringBuilder{DataSource=path,ForeignKeys=true,DefaultTimeout=15}.ToString());db.Open();
         using var tx=db.BeginTransaction(deferred:false);
         if(!canSync())throw new UnauthorizedAccessException("Debt sync permission required");
@@ -36,7 +36,7 @@ public sealed class DebtSyncStore
         Need((string?)Scalar(db,tx,"SELECT current_group FROM sync_control WHERE id=1")=="");
         var result=action(db,tx);tx.Commit();return result;
     }
-    private void Authorize(string actor) { if(!canImportActor(actor))throw new UnauthorizedAccessException("Debt source actor rejected"); }
+    internal void Authorize(string actor) { if(!canImportActor(actor))throw new UnauthorizedAccessException("Debt source actor rejected"); }
     private static string SealKey(string kind,string guid) => "debt_wire_v1:"+kind+":"+guid;
     private static void Seal(SqliteConnection db,SqliteTransaction tx,string kind,string guid,string wire) {
         var key=SealKey(kind,guid);var value=DebtWire.Fingerprint(wire)+"\n"+wire;
@@ -46,7 +46,7 @@ public sealed class DebtSyncStore
     private static void Journal(SqliteConnection db,SqliteTransaction tx,string id,string kind,string payload) {
         Exec(db,tx,"INSERT INTO sync_journal(op_id,kind,entity_guid,payload,group_id,acked) VALUES(@p0,@p1,@p2,@p3,@p2,-1)","debt:"+id,kind,id,payload);
     }
-    private string CustomerWire(SqliteConnection db,SqliteTransaction tx,string guid) {
+    internal string CustomerWire(SqliteConnection db,SqliteTransaction tx,string guid) {
         var row=Rows(db,tx,"SELECT store_guid,device_guid FROM debt_customers WHERE guid=@p0",guid).SingleOrDefault();
         if(row==null)throw new DebtDependencyException("Debt customer missing");
         Need(S(row[0])==store);
@@ -54,7 +54,7 @@ public sealed class DebtSyncStore
         Need(payload!=null);var p=S(payload);
         return DebtWire.EncodeCustomer(new(guid,store,S(row[1]),p,DebtWire.Fingerprint(p)),store);
     }
-    private string EventWire(SqliteConnection db,SqliteTransaction tx,string guid) {
+    internal string EventWire(SqliteConnection db,SqliteTransaction tx,string guid) {
         var h=Rows(db,tx,"SELECT request_guid,kind,customer_guid,store_guid,actor_guid,device_guid,device_sequence,occurred_at,payload,payload_hash,cash_minor,card_minor,fee_minor,fee_usd_rate,schema_version,reference_guid FROM debt_events WHERE guid=@p0",guid).SingleOrDefault();
         if(h==null)throw new DebtDependencyException("Debt event missing");
         Need(N(h[14])==1 && h[15]==null && S(h[3])==store);
@@ -75,7 +75,7 @@ public sealed class DebtSyncStore
     }
     public string ExportCustomer(string guid) => Write((db,tx)=>{var wire=CustomerWire(db,tx,guid);Seal(db,tx,"customer",guid,wire);return wire;});
     public string ExportEvent(string guid) => Write((db,tx)=>{var wire=EventWire(db,tx,guid);Seal(db,tx,"event",guid,wire);return wire;});
-    private void Customer(SqliteConnection db,SqliteTransaction tx,DebtWireCustomer c,string wire) {
+    internal void Customer(SqliteConnection db,SqliteTransaction tx,DebtWireCustomer c,string wire) {
         var p=DebtWire.CommandFields(c.Payload);Authorize(p[2]);
         Need(Scalar(db,tx,"SELECT 1 FROM debt_events WHERE request_guid=@p0",c.Guid)==null);
         if(Scalar(db,tx,"SELECT 1 FROM debt_customers WHERE guid=@p0",c.Guid)!=null)Need(CustomerWire(db,tx,c.Guid)==wire);
@@ -88,7 +88,7 @@ public sealed class DebtSyncStore
         }
         Seal(db,tx,"customer",c.Guid,wire);
     }
-    private void Event(SqliteConnection db,SqliteTransaction tx,DebtWireEvent e,string wire,Action<SqliteConnection,SqliteTransaction,DebtWireEvent>? writeSale) {
+    internal void Event(SqliteConnection db,SqliteTransaction tx,DebtWireEvent e,string wire,Action<SqliteConnection,SqliteTransaction,DebtWireEvent>? writeSale) {
         Authorize(e.ActorGuid);
         Need(Scalar(db,tx,"SELECT 1 FROM sync_meta WHERE key=@p0","debt_customer_create:"+e.RequestGuid)==null);
         Need(Scalar(db,tx,"SELECT 1 FROM debt_customers WHERE guid=@p0",e.RequestGuid)==null);

@@ -16,7 +16,7 @@ class DebtSyncStore(private val database: AppDatabase, private val store: String
     private val canSync: () -> Boolean, private val canImportActor: (String) -> Boolean) {
     init { DebtWire.requirePeer(store,store,listOf(DebtWire.CAPABILITY)) }
     private fun need(ok: Boolean) { check(ok) { "Debt integrity conflict" } }
-    private suspend fun <T> write(action: (SupportSQLiteDatabase) -> T): T = database.withTransaction {
+    internal suspend fun <T> write(action: (SupportSQLiteDatabase) -> T): T = database.withTransaction {
         check(canSync()) { "Debt sync permission required" }
         val db=database.openHelper.writableDatabase
         need(scalar(db,"PRAGMA foreign_keys")==1L && scalar(db,"SELECT version FROM debt_schema WHERE id=1")==1L)
@@ -25,7 +25,7 @@ class DebtSyncStore(private val database: AppDatabase, private val store: String
         need(scalar(db,"SELECT current_group FROM sync_control WHERE id=1")=="")
         action(db)
     }
-    private fun authorize(actor: String) { check(canImportActor(actor)) { "Debt source actor rejected" } }
+    internal fun authorize(actor: String) { check(canImportActor(actor)) { "Debt source actor rejected" } }
     private fun sealKey(kind: String,guid: String)="debt_wire_v1:$kind:$guid"
     private fun seal(db: SupportSQLiteDatabase,kind: String,guid: String,wire: String) {
         val key=sealKey(kind,guid);val value=DebtWire.fingerprint(wire)+"\n"+wire
@@ -35,7 +35,7 @@ class DebtSyncStore(private val database: AppDatabase, private val store: String
     private fun journal(db: SupportSQLiteDatabase,id: String,kind: String,payload: String) {
         exec(db,"INSERT INTO sync_journal(op_id,kind,entity_guid,payload,group_id,acked) VALUES(@p0,@p1,@p2,@p3,@p2,-1)","debt:$id",kind,id,payload)
     }
-    private fun customerWire(db: SupportSQLiteDatabase,guid: String): String {
+    internal fun customerWire(db: SupportSQLiteDatabase,guid: String): String {
         val row=rows(db,"SELECT store_guid,device_guid FROM debt_customers WHERE guid=@p0",guid).singleOrNull()
             ?: throw DebtDependencyException("Debt customer missing")
         need(row[0]==store)
@@ -43,7 +43,7 @@ class DebtSyncStore(private val database: AppDatabase, private val store: String
             ?: error("Missing customer creation snapshot")
         return DebtWire.encodeCustomer(DebtWireCustomer(guid,store,row[1] as String,payload,DebtWire.fingerprint(payload)),store)
     }
-    private fun eventWire(db: SupportSQLiteDatabase,guid: String): String {
+    internal fun eventWire(db: SupportSQLiteDatabase,guid: String): String {
         val h=rows(db,"SELECT request_guid,kind,customer_guid,store_guid,actor_guid,device_guid,device_sequence,occurred_at,payload,payload_hash,cash_minor,card_minor,fee_minor,fee_usd_rate,schema_version,reference_guid FROM debt_events WHERE guid=@p0",guid).singleOrNull()
             ?: throw DebtDependencyException("Debt event missing")
         need(h[14]==1L && h[15]==null && h[3]==store)
@@ -61,7 +61,7 @@ class DebtSyncStore(private val database: AppDatabase, private val store: String
     }
     suspend fun exportCustomer(guid: String): String = write { db -> customerWire(db,guid).also { seal(db,"customer",guid,it) } }
     suspend fun exportEvent(guid: String): String = write { db -> eventWire(db,guid).also { seal(db,"event",guid,it) } }
-    private fun customer(db: SupportSQLiteDatabase,c: DebtWireCustomer,wire: String) {
+    internal fun customer(db: SupportSQLiteDatabase,c: DebtWireCustomer,wire: String) {
         val p=DebtWire.commandFields(c.payload);authorize(p[2])
         need(scalar(db,"SELECT 1 FROM debt_events WHERE request_guid=@p0",c.guid)==null)
         if(scalar(db,"SELECT 1 FROM debt_customers WHERE guid=@p0",c.guid)!=null)need(customerWire(db,c.guid)==wire)
@@ -73,7 +73,7 @@ class DebtSyncStore(private val database: AppDatabase, private val store: String
         }
         seal(db,"customer",c.guid,wire)
     }
-    private fun event(db: SupportSQLiteDatabase,e: DebtWireEvent,wire: String,writeSale: ((SupportSQLiteDatabase,DebtWireEvent)->Unit)?) {
+    internal fun event(db: SupportSQLiteDatabase,e: DebtWireEvent,wire: String,writeSale: ((SupportSQLiteDatabase,DebtWireEvent)->Unit)?) {
         authorize(e.actorGuid)
         need(scalar(db,"SELECT 1 FROM sync_meta WHERE key=@p0","debt_customer_create:${e.requestGuid}")==null)
         need(scalar(db,"SELECT 1 FROM debt_customers WHERE guid=@p0",e.requestGuid)==null)
