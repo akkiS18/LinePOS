@@ -1,6 +1,6 @@
 # Qarz daftari — davom ettirish nuqtasi
 
-Sana: 2026-10-09. Holat: **Android frozen sale/stock receiver yakunlandi; barcha CI testlari o‘tdi. Source local freeze va haqiqiy transport/UI hali ulanmagan**.
+Sana: 2026-10-09. Holat: **Qism 1 (3A-2b-2b davomi — local source envelope freeze va preflight) ikkala platformada to‘liq yakunlandi va testdan o‘tdi. Navbatdagi bosqich: Qism 2 (3A-2c LAN transport, capability, push/pull va ACK)**.
 
 ## Asos va branch
 
@@ -142,18 +142,29 @@ Foydalanuvchining kichik tugallangan bosqichlarda ishlash talabi sabab 2B ikkiga
 - API26 SQLite uchun UPSERT o‘rniga ayni writer tranzaksiyasida SELECT + INSERT/UPDATE; REPLACE qilinmaydi. Placeholder argument tartibi tekshirildi; BigDecimal scale farqi numeric `compareTo` bilan hisobga olindi. Tarixiy narx/cost/FX/fee, movement GUID, negative/aggregate stock va HELD markerlar desktop kontraktiga mos.
 - Yangi Room testi: native DAO/report o‘qish, missing user/product/warehouse, default gate retry, restart/concurrent duplicate, changed body/item/movement, unrelated legacy sale, precision rejection va o‘nta write-boundary rollback. Ikkinchi test 1000 itemli >2MiB paketni to‘liq apply qiladi; restartdan keyin exact relay va duplicate stock ta’siri yo‘qligini tekshiradi.
 - Kod commit: `6d362c725ce7dcaed28a4d28ba9df880771ab50d`. Lokal Python 23/23 va whitespace PASS. [Full CI 37913718246](https://github.com/akkiS18/LinePOS/actions/runs/37913718246) SUCCESS: desktop/core regressiyalari, Windows desktop build, Android build va API26/API35 Room instrumentatsiya. Har emulyatorda 22 ta test, jumladan yangi concrete receiver va >2MiB/1000-item testi o‘tdi. [Parity CI 37913718371](https://github.com/akkiS18/LinePOS/actions/runs/37913718371) SUCCESS. Fizik qurilma/LAN/UI testi bu bosqichda bajarilmadi.
-- Ikkala receiver tayyor bo‘lsa ham **3A-2b-2b to‘liq tugamadi**: source local envelope freeze/size/precision preflight qolgan. UI/transport/main/release yo‘q; Firebase/CBU o‘zgarmadi. Kontrakt: [DEBT_SALE_RECEIVER.md](DEBT_SALE_RECEIVER.md).
+- Ikkala receiver tayyor bo‘lgach **Qism 1 (3A-2b-2b source local envelope freeze va preflight)** to‘liq amalga oshirildi.
 
-## Keyingi sessiya — source local envelope freeze/preflight
+## Qism 1 natijasi: jo‘natuvchida o‘zgarmas paketni atomik saqlash va preflight
 
-1. Remote/checkpoint/CI holatini tekshir; `DEBT_SALE_RECEIVER.md`, `DEBT_INBOX.md`, `DEBT_ENVELOPE.md`, `DEBT_DB_BRIDGE.md` va `DEBT_WIRE.md`ni o‘qi. Mavjud core/codec/repository/DB bridge testlarini saqla.
-2. 3A-2 hajmi sabab **2a component DB bridge**, **2b complete frozen envelope/inbox**, **2c handshake/push/pull/ACK**ga ajratildi. 2b-1 codec va 2b-2a inbox/customer-payment receiver tayyor; desktop va Android concrete receiver tayyor, keyingi sessiya source local freeze/preflight; UI/main/release yo‘q.
-3. Sale/items/stock/customer/account/event bir full envelope bo‘lsin. Basket fingerprint va real item/stock/FX/payment type validation, full-envelope hash va durable replay receipt zarur. DB bridge trusted callbackni tekshirilmagan tarmoq body bilan ulama; callback external/asynchronous side effect qilmasin. Inbox hozir internal transaction participantlar orqali bitta writer boundaryda ishlaydi: sale/stock uchun aynan shu boundary kengaytirilsin; ikkinchi tranzaksiyada yozib qo‘yish atomiklikni buzadi.
-4. Asl customer-create va immutable component DB seal ishlatiladi. Receiver `TakePayment`ni qayta chaqirmaydi. Full incoming body durable saqlanmasdan oddiy debt journal relayga yetarli emas; stock effectni hozirgi DB qoldig‘idan qayta taxmin qilma.
-5. Known v1 missing dependency inbox tayyor; default opening gate va UI cheklovi source/transport integratsiyasi tugamaguncha saqlansin. Unknown version/kind quarantine/error siyosati transportda alohida belgilanadi. Butun guruh commit bo‘lmasdan ACK/cursor yo‘q. Qayta urinish, reordered dependency, duplicate/changed body va rollbackni real SQLite/Room bilan tekshir.
-6. Codec 2MiB/10,000 line, bridge 500 component/8MiB va HTTP 8MiB limitlarini outer body overhead bilan local commitdan oldin preflight yoki atomic fragmentation hal qilsin. Hozir local repositoryda bu preflight yo‘q; UI yoqilmasin.
-7. Keyingi 2cda trusted store/capability, existing full/delta pull va stripped `download_db` ham debt-aware bo‘lsin. `acked=-1` yakka himoya emas; metadata coalescing HELD dependencylarini yutmasin. Store GUID/server restore epochni ajrat; source actor mapping/policy network adapterda konkretlashtirilsin.
-8. Har qism test/commit/push/checkpoint bilan tugasin. 3B convergence/restore/contact conflict, 4/5 frontend, 6 returns/report, 7 backup/manual alohida; boshlang‘ich DB convergence testi 3B to‘liq yakunlandi degani emas.
+- C# va Kotlin `DebtRepository`da yangi `OpenSale(DebtOpenSaleCommand)` API joriy etildi. Arbitrary callback o‘rniga to‘liq muzlatilgan snapshot (`DebtSaleSnapshot`) qabul qilinadi; stock deltalari (`-quantity`), movement GUIDlar, UZS/USD kursi, karta komissiyasi va REAL/decimal chegaraviy qiymatlari (±1e18, aniq tiyin, max 1000 items, max 6MiB envelope) local commitdan oldin preflight qilinadi.
+- Bitta writer tranzaksiyasida: `sales`, `sale_items`, `product_stocks`, `products.stock_quantity`, `sync_journal` (original `debt_stock` va `debt-sale:<guid>` markerlari, `acked=-1`, `group_id=cmd.RequestGuid`), `debt_events` (`sale_open`), `debt_accounts`, `debt_command_receipts`, outbox va `sync_meta`da `"debt_wire_v1:event:<guid>"` hamda `"debt_envelope_v1:<guid>"` muhrlanadi. Shuningdek, commitdan oldin `DebtSaleReceiver.Verify` / `verify` chaqirilib, receiver kutgan barcha maydonlar 100% mosligi tasdiqlanadi.
+- `CreateCustomer` va `TakePayment` ham o‘z komponenti va envelope paketini (`debt_envelope_v1:<guid>`) shu biznes tranzaksiyasida `sync_meta`ga muhrlaydi. Natijada `DebtEnvelopeInbox.ExportApplied(requestGuid)` jo‘natuvchi qurilmaning o‘zida ham tashqi navbatlarsiz to‘liq muzlatilgan paketni darhol eksport qila oladi.
+- Jo‘natuvchiga qaytgan echo (`inbox.Receive(wire, at)`): avval saqlangan `sync_meta` muhrini tekshirib, `AlreadyApplied` qaytaradi va pul yoki omborga ikkinchi marta aslo tegmaydi.
+- Yangi C# test to‘plami (`DebtSourceEnvelopeTests.cs`): local commit → export → peer receive → source echo (sale, payment, customer); restart/retry bir xil baytlar; concurrent double submit; historical metadata immutability; xatoda 10 ta jadvalning to‘liq rollbacki; >1000 items va unsafe REAL preflight rad etilishi tekshirildi. Barcha 9 ta C# test to‘plami muvaffaqiyatli o‘tdi.
+- Yangi Android instrumentatsiya testi (`DebtSourceEnvelopeTest.kt`): Room writer tranzaksiyasi, `openSale`, `exportApplied`, peer receive, source echo, restart, rollback, preflight hamda Room native DAO `saleDao().getSaleWithItemsById` orqali `PaymentType.DEBT` o‘qilishi to‘liq tekshirildi. Android Kotlin va test kodlari xatosiz kompilyatsiya qilindi.
+- Lokal Python testlari: 23/23 PASS. `git diff --check` PASS. Desktop Release build: 0 Warning, 0 Error.
+- UI/LAN transport hali ulanmagan; main merge/release yo‘q; Firebase/CBU o‘zgarmadi.
+
+## Keyingi sessiya — Qism 2 (3A-2c): LAN transport, capability, push/pull va ACK
+
+1. Asosiy fayllar:
+   - Desktop: `Services/LocalSyncServer.cs`, `Sync/WifiSyncStore.cs`, `Sync/WifiHttpRequest.cs`.
+   - Android: `data/sync/LocalSyncManager.kt`, `WifiSyncSchema.kt`, `LegacySalePaymentType.kt`.
+   - Sync schema, yangi source export va inbox APIlari.
+2. Juftlangan peerning `debtLedgerV1`, store GUID, source actor policy va history epochi aniq tekshirilsin. Mavjud pairing/token/revocation saqlansin.
+3. Eski peerga debt sale, stock, customer yoki payment oddiy sale/stock paketlari sifatida oqizib yuborilmasin. Oddiy cash sync saqlanadi, ammo dependency va debt guruhlari ajralishi shart.
+4. `pending()`/`freeze()`/`syncOnce()`ni guruhga moslashtiring. Frozen bodydan yuboring, joriy DB qiymatlaridan qayta JSON yig‘mang.
+5. `Applied`/`AlreadyApplied` faqat haqiqiy outermost commitdan so‘ng moliyaviy ACK bo‘lsin. `WaitingForDependency` va `WaitingForSaleAdapter` moliyaviy ACK emas.
 
 ## Muhim cheklovlar
 

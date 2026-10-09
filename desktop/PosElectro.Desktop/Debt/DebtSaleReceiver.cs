@@ -23,21 +23,21 @@ internal sealed class DebtSaleReceiver
         this.products=products;this.stocks=stocks;this.totals=totals;
     }
     private static void Need(bool ok) { if(!ok)throw new InvalidOperationException("Debt sale integrity or precision conflict"); }
-    private static decimal D(string value)=>decimal.Parse(value,NumberStyles.Float,CultureInfo.InvariantCulture);
-    private static decimal Stored(object? value) {
+    internal static decimal D(string value)=>decimal.Parse(value,NumberStyles.Float,CultureInfo.InvariantCulture);
+    internal static decimal Stored(object? value) {
         Need(value is double or long);
         var d=Convert.ToDouble(value,CultureInfo.InvariantCulture);
         Need(double.IsFinite(d) && Math.Abs(d)<=1e18);
         return D(d.ToString("R",CultureInfo.InvariantCulture));
     }
     // Reject precision loss in legacy REAL columns. Rounding a financial snapshot is not repair.
-    private static double Real(decimal value) {
+    internal static double Real(decimal value) {
         Need(Math.Abs(value)<=1000000000000000000m);
         var result=(double)value;Need(Stored(result)==value);return result;
     }
-    private static double Money(long minor)=>Real(minor/100m);
-    private static string Marker(string saleGuid)=>"debt-sale:"+saleGuid;
-    private static string Payload(string wire,long user)=>user.ToString(CultureInfo.InvariantCulture)+":"+DebtWire.Fingerprint(wire);
+    internal static double Money(long minor)=>Real(minor/100m);
+    internal static string Marker(string saleGuid)=>"debt-sale:"+saleGuid;
+    internal static string Payload(string wire,long user)=>user.ToString(CultureInfo.InvariantCulture)+":"+DebtWire.Fingerprint(wire);
 
     internal static DebtSaleReceiver? Prepare(SqliteConnection db,SqliteTransaction tx,string wire,
         DebtWireEvent ev,Func<string,long?> resolveActorUser) {

@@ -15,23 +15,23 @@ internal class DebtSaleReceiver private constructor(
     companion object {
         private val limit=BigDecimal("1000000000000000000")
         private fun need(ok: Boolean) { check(ok) { "Debt sale integrity or precision conflict" } }
-        private fun d(value: String)=BigDecimal(value)
-        private fun same(a: BigDecimal,b: BigDecimal)=a.compareTo(b)==0
-        private fun stored(value: Any?): BigDecimal {
+        internal fun d(value: String)=BigDecimal(value)
+        internal fun same(a: BigDecimal,b: BigDecimal)=a.compareTo(b)==0
+        internal fun stored(value: Any?): BigDecimal {
             need(value is Double || value is Long)
             val v=(value as Number).toDouble()
             need(v.isFinite() && kotlin.math.abs(v)<=1e18)
             return BigDecimal.valueOf(v)
         }
         // Never round an immutable snapshot to make it fit the legacy REAL columns.
-        private fun real(value: BigDecimal): Double {
+        internal fun real(value: BigDecimal): Double {
             need(value.abs()<=limit)
             val result=value.toDouble();need(same(stored(result),value));return result
         }
-        private fun minor(value: Long)=BigDecimal.valueOf(value).movePointLeft(2)
-        private fun money(value: Long)=real(minor(value))
-        private fun marker(guid: String)="debt-sale:$guid"
-        private fun payload(wire: String,user: Long)="$user:${DebtWire.fingerprint(wire)}"
+        internal fun minor(value: Long)=BigDecimal.valueOf(value).movePointLeft(2)
+        internal fun money(value: Long)=real(minor(value))
+        internal fun marker(guid: String)="debt-sale:$guid"
+        internal fun payload(wire: String,user: Long)="$user:${DebtWire.fingerprint(wire)}"
 
         fun prepare(db: SupportSQLiteDatabase,wire: String,ev: DebtWireEvent,
             resolveActorUser: (String)->Long?): DebtSaleReceiver? {
