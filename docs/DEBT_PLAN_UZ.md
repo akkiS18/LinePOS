@@ -1,6 +1,6 @@
 # Qarz daftari — texnik va frontend reja
 
-Holat: 1-bosqich reja, 2A hisoblash yadrosi va 2B-1 sxema/migratsiya va 2B-2 lokal repository hamda 3A-1 wire codec/validator va 3A-2a DB component export/atomic receiver yakunlangan. 3A-2b-1 full-envelope codec/validator yakunlandi va CI testlari o‘tdi; 3A-2b-2a durable inbox/customer-payment receiver yakunlandi va CI testlari o‘tdi; Android DEBT model/oddiy checkout/legacy JSON tayyorgarligi alohida kichik qismda bajarildi (natija checkpointda); desktop concrete sale/stock receiver bajarildi (CI dalili checkpointda); Android receiver va source local freeze hali yo‘q. Ilovaga integratsiya hali amalga oshirilmagan; joriy holat DEBT_CHECKPOINT_UZ.md da.
+Holat: 1-bosqich reja, 2A hisoblash yadrosi va 2B-1 sxema/migratsiya va 2B-2 lokal repository hamda 3A-1 wire codec/validator va 3A-2a DB component export/atomic receiver yakunlangan. 3A-2b-1 full-envelope codec/validator yakunlandi va CI testlari o‘tdi; 3A-2b-2a durable inbox/customer-payment receiver yakunlandi va CI testlari o‘tdi; Android DEBT model/oddiy checkout/legacy JSON tayyorgarligi alohida kichik qismda bajarildi (natija checkpointda); desktop va Android concrete sale/stock receiver bajarildi (CI dalili checkpointda); source local freeze hali yo‘q. Ilovaga integratsiya hali amalga oshirilmagan; joriy holat DEBT_CHECKPOINT_UZ.md da.
 Sana: 2026-10-05 (Asia/Tashkent).
 Tekshirilgan asos: main `b631a27241a5eb25501a6e4ab316c4aebdae4460`.
 Ish branchi: `feature/customer-debt`.
@@ -161,7 +161,7 @@ Har sessiya: kichik yakun → tegishli tekshiruv → commit/push → checkpoint.
 | 3A-2a | DB component export va atomic receiver | Real SQLite/Room replay, ownership, rollback va offline convergence |
 | 3A-2b-1 | To‘liq frozen sale/items/stock/customer/event envelope codec/validator | C#/Kotlin/Androidda bir xil qat’iy tekshiruvlar |
 | 3A-2b-2a | Durable inbox va atomic customer/payment receiver | Restart/replay/rollback, body conflict va capacity; sale opening pending |
-| 3A-2b-2b | Concrete frozen sale/stock adapter + local freeze/preflight (desktop receiver tayyor; Android/source qolgan) | Sale/items/stock/debt/body bitta commit; opening gate faqat testlardan keyin ochiladi |
+| 3A-2b-2b | Concrete frozen sale/stock adapter + local freeze/preflight (ikkala receiver tayyor; source freeze qolgan) | Sale/items/stock/debt/body bitta commit; opening gate faqat testlardan keyin ochiladi |
 | 3A-2c | Protocol capability, push/pull va ACK | ACK yo‘qolishi, eski peer, full/delta/restore yo‘llari |
 | 3B | Parallel qurilmalar, restore epoch, kontakt konflikti | Convergence va restart/restore testlari |
 | 4 | Desktop UI va cashier/payment integratsiyasi | Windows build + jarayon testlari |

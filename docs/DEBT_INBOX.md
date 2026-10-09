@@ -1,10 +1,10 @@
 # Durable debt inbox — 3A-2b-2a
 
 `DebtEnvelopeInbox.cs` / `DebtEnvelopeInbox.kt` persist validated canonical packets and
-atomically receive **customer creation and payment**. The desktop inbox now also
-supports an opt-in concrete opening receiver using a trusted actor/user resolver;
-see `DEBT_SALE_RECEIVER.md`. Without the resolver, desktop openings remain
-`WaitingForSaleAdapter`; Android openings always retain that gate until its port.
+atomically receive **customer creation and payment**. Both inboxes also
+support opt-in concrete opening receivers using a trusted actor/user resolver;
+see `DEBT_SALE_RECEIVER.md`. Without the resolver, both platforms retain `WaitingForSaleAdapter`.
+Android additionally verifies that the mapped local user exists.
 Local before-commit envelope freeze is still missing. No arbitrary sale callback can
 bypass these inbox gates.
 
@@ -120,8 +120,8 @@ A valid >2 MiB opening envelope is persisted, reloaded after a Room restart and
 compared on retry without changing its first timestamp. Test opening dependencies use the prior trusted component fixture callback, not a
 claim that concrete sale/items/stock import is implemented.
 
-Desktop concrete receiver and numeric/replay checks are described in `DEBT_SALE_RECEIVER.md`.
-Next bounded work in **3A-2b-2b**: Android receiver, then local envelope freeze/preflight
+Desktop/Android concrete receivers and numeric/replay checks are described in `DEBT_SALE_RECEIVER.md`.
+Next bounded work in **3A-2b-2b**: local envelope freeze/preflight
 in the same source sale transaction. Extend this SAME
 receipt/inbox transaction when lifting the opening gate; never add a separate commit.
 Then implement authenticated transport/ACK/full/delta/download gates in 3A-2c.
@@ -139,4 +139,4 @@ GUID in a snapshot), so it cannot silently import a debt header as CASH or ackno
 that header without its ledger envelope. Snapshot exceptions roll back its existing
 outer transaction/cursor. These guards are not the complete 3A-2c protocol, journal
 coalescing, restored-DB, full/delta or server-side barriers; all remain required before
-feature enablement. The default desktop and Android opening gates above remain; desktop can explicitly opt in to its tested receiver.
+feature enablement. The default opening gates above remain; both platforms can explicitly opt in to their concrete receivers.

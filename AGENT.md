@@ -173,3 +173,8 @@ C#/Kotlin `DebtSyncStore`: frozen component export, full-body replay va atomic D
 ## Qarz daftari — 2026-10-09, desktop sale receiver
 
 `DebtSaleReceiver.cs` existing inbox writer tranzaksiyasida frozen sale/items/stock/customer/account/event/full receiptni atomik saqlaydi. Optional trusted actor/user resolver desktop openingni yoqadi; default va Android gate hali saqlangan. Desktop users jadvali yo‘q, host attribution mapping beradi; Android port haqiqiy usersni ham tekshirishi kerak. Exact REAL preflight, original movement GUIDli HELD journal, full historical replay validation bor. Source freeze/local preflight va transport/main/UI/release hali yo‘q. Detallar `docs/DEBT_SALE_RECEIVER.md`, CI dalili/keyingi scope `docs/DEBT_CHECKPOINT_UZ.md`da. Firebase/CBU o‘zgarmadi.
+
+
+## Qarz daftari — 2026-10-09, Android sale receiver
+
+`DebtSaleReceiver.kt` desktop frozen sale/stock receiverini Room writer transactioniga ko‘chiradi. Mapped user haqiqiy local users jadvalida bo‘lishi shart; missing dependency qisman yozilmaydi. API26ga mos SELECT + INSERT/UPDATE, original movement GUIDli HELD markerlar va exact body/replay tekshiruvi saqlanadi. Native Room/report, 10 write-boundary rollback va >2MiB/1000-item applied receipt restart testlari qo‘shildi. CI dalili/keyingi source local freeze bosqichi `docs/DEBT_CHECKPOINT_UZ.md`da. Default gate saqlangan; UI/transport/main/release/Firebase/CBUga tegilmadi.

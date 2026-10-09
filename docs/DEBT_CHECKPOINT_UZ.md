@@ -1,6 +1,6 @@
 # Qarz daftari — davom ettirish nuqtasi
 
-Sana: 2026-10-09. Holat: **desktop frozen sale/stock receiver yakunlandi; barcha CI testlari o‘tdi. Android receiver, source local freeze va haqiqiy transport/UI hali ulanmagan**.
+Sana: 2026-10-09. Holat: **Android frozen sale/stock receiver yakunlandi; barcha CI testlari o‘tdi. Source local freeze va haqiqiy transport/UI hali ulanmagan**.
 
 ## Asos va branch
 
@@ -134,13 +134,22 @@ Foydalanuvchining kichik tugallangan bosqichlarda ishlash talabi sabab 2B ikkiga
 - Kod commit: `3274bda3e0158b3d5ace7e7b12193ad1856718f3`. [Full CI 37910217241](https://github.com/akkiS18/LinePOS/actions/runs/37910217241) SUCCESS: yangi desktop receiver testlari, core/regressiya, Windows desktop build, Android build va API26/API35 instrumentatsiya. Har emulyatorda mavjud 20 ta test o‘tdi. [Parity CI 37910217147](https://github.com/akkiS18/LinePOS/actions/runs/37910217147) SUCCESS: 97 hisob + 92 component + 155 envelope natijalari C#/Kotlinda teng. Android concrete receiver hali yo‘qligi uchun bu uning testi emas; fizik qurilma/LAN/UI testi bajarilmadi.
 - Bu faqat desktop receiver yakuni; Android, source local freeze/preflight va 3A-2c tugamadi. Default desktop resolver yo‘q bo‘lsa va Androidda hali `WaitingForSaleAdapter`. UI/main/release yo‘q, Firebase/CBU o‘zgarmadi. Kontrakt: [DEBT_SALE_RECEIVER.md](DEBT_SALE_RECEIVER.md).
 
-## Keyingi sessiya — Android sale/stock receiver, keyin source local freeze
+## 3A-2b-2b Android qismi: Room concrete sale/stock receiver
+
+- `DebtSaleReceiver.kt`: desktopning frozen sale/items/stock/customer/account/event/full receipt adapteri Android Room writer transactioniga ko‘chirildi. Default gate saqlandi; optional trusted actor/user resolver bilan yoqiladi.
+- Androidda mapped positive user ID haqiqiy `users` jadvalida bo‘lishi shart. Sotuvchi, mahsulot yoki ombor yetishmasa `WaitingForDependency`, hech qanday qisman moliyaviy yozuv yo‘q. User 1 fallback yo‘q.
+- API26 SQLite uchun UPSERT o‘rniga ayni writer tranzaksiyasida SELECT + INSERT/UPDATE; REPLACE qilinmaydi. Placeholder argument tartibi tekshirildi; BigDecimal scale farqi numeric `compareTo` bilan hisobga olindi. Tarixiy narx/cost/FX/fee, movement GUID, negative/aggregate stock va HELD markerlar desktop kontraktiga mos.
+- Yangi Room testi: native DAO/report o‘qish, missing user/product/warehouse, default gate retry, restart/concurrent duplicate, changed body/item/movement, unrelated legacy sale, precision rejection va o‘nta write-boundary rollback. Ikkinchi test 1000 itemli >2MiB paketni to‘liq apply qiladi; restartdan keyin exact relay va duplicate stock ta’siri yo‘qligini tekshiradi.
+- Kod commit: `6d362c725ce7dcaed28a4d28ba9df880771ab50d`. Lokal Python 23/23 va whitespace PASS. [Full CI 37913718246](https://github.com/akkiS18/LinePOS/actions/runs/37913718246) SUCCESS: desktop/core regressiyalari, Windows desktop build, Android build va API26/API35 Room instrumentatsiya. Har emulyatorda 22 ta test, jumladan yangi concrete receiver va >2MiB/1000-item testi o‘tdi. [Parity CI 37913718371](https://github.com/akkiS18/LinePOS/actions/runs/37913718371) SUCCESS. Fizik qurilma/LAN/UI testi bu bosqichda bajarilmadi.
+- Ikkala receiver tayyor bo‘lsa ham **3A-2b-2b to‘liq tugamadi**: source local envelope freeze/size/precision preflight qolgan. UI/transport/main/release yo‘q; Firebase/CBU o‘zgarmadi. Kontrakt: [DEBT_SALE_RECEIVER.md](DEBT_SALE_RECEIVER.md).
+
+## Keyingi sessiya — source local envelope freeze/preflight
 
 1. Remote/checkpoint/CI holatini tekshir; `DEBT_SALE_RECEIVER.md`, `DEBT_INBOX.md`, `DEBT_ENVELOPE.md`, `DEBT_DB_BRIDGE.md` va `DEBT_WIRE.md`ni o‘qi. Mavjud core/codec/repository/DB bridge testlarini saqla.
-2. 3A-2 hajmi sabab **2a component DB bridge**, **2b complete frozen envelope/inbox**, **2c handshake/push/pull/ACK**ga ajratildi. 2b-1 codec va 2b-2a inbox/customer-payment receiver tayyor; desktop concrete receiver tayyor, keyingi sessiya Android concrete receiver; keyin alohida source local freeze; UI/main/release yo‘q.
+2. 3A-2 hajmi sabab **2a component DB bridge**, **2b complete frozen envelope/inbox**, **2c handshake/push/pull/ACK**ga ajratildi. 2b-1 codec va 2b-2a inbox/customer-payment receiver tayyor; desktop va Android concrete receiver tayyor, keyingi sessiya source local freeze/preflight; UI/main/release yo‘q.
 3. Sale/items/stock/customer/account/event bir full envelope bo‘lsin. Basket fingerprint va real item/stock/FX/payment type validation, full-envelope hash va durable replay receipt zarur. DB bridge trusted callbackni tekshirilmagan tarmoq body bilan ulama; callback external/asynchronous side effect qilmasin. Inbox hozir internal transaction participantlar orqali bitta writer boundaryda ishlaydi: sale/stock uchun aynan shu boundary kengaytirilsin; ikkinchi tranzaksiyada yozib qo‘yish atomiklikni buzadi.
 4. Asl customer-create va immutable component DB seal ishlatiladi. Receiver `TakePayment`ni qayta chaqirmaydi. Full incoming body durable saqlanmasdan oddiy debt journal relayga yetarli emas; stock effectni hozirgi DB qoldig‘idan qayta taxmin qilma.
-5. Known v1 missing dependency inbox tayyor; opening gate concrete adapter tugamaguncha saqlansin. Unknown version/kind quarantine/error siyosati transportda alohida belgilanadi. Butun guruh commit bo‘lmasdan ACK/cursor yo‘q. Qayta urinish, reordered dependency, duplicate/changed body va rollbackni real SQLite/Room bilan tekshir.
+5. Known v1 missing dependency inbox tayyor; default opening gate va UI cheklovi source/transport integratsiyasi tugamaguncha saqlansin. Unknown version/kind quarantine/error siyosati transportda alohida belgilanadi. Butun guruh commit bo‘lmasdan ACK/cursor yo‘q. Qayta urinish, reordered dependency, duplicate/changed body va rollbackni real SQLite/Room bilan tekshir.
 6. Codec 2MiB/10,000 line, bridge 500 component/8MiB va HTTP 8MiB limitlarini outer body overhead bilan local commitdan oldin preflight yoki atomic fragmentation hal qilsin. Hozir local repositoryda bu preflight yo‘q; UI yoqilmasin.
 7. Keyingi 2cda trusted store/capability, existing full/delta pull va stripped `download_db` ham debt-aware bo‘lsin. `acked=-1` yakka himoya emas; metadata coalescing HELD dependencylarini yutmasin. Store GUID/server restore epochni ajrat; source actor mapping/policy network adapterda konkretlashtirilsin.
 8. Har qism test/commit/push/checkpoint bilan tugasin. 3B convergence/restore/contact conflict, 4/5 frontend, 6 returns/report, 7 backup/manual alohida; boshlang‘ich DB convergence testi 3B to‘liq yakunlandi degani emas.

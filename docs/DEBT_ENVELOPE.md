@@ -97,10 +97,10 @@ to 3A-2b-2; do not interpret rejection as a successful synchronization or ACK.
 ## DB integration status and next bounded stage: 3A-2b-2b
 
 Stage 3A-2b-2a now provides the validated durable inbox and atomic customer/payment
-receiver; see `DEBT_INBOX.md`. Desktop now has the opt-in concrete receiver documented in `DEBT_SALE_RECEIVER.md`;
-Android and default desktop instances still gate openings. Local before-commit
+receiver; see `DEBT_INBOX.md`. Desktop and Android now have the opt-in concrete receivers documented in
+`DEBT_SALE_RECEIVER.md`; default instances still gate openings. Local before-commit
 envelope freeze is still missing. The integration requirements below remain the
-checklist for the Android/source work; desktop receiver coverage is in that document.
+checklist for source integration; receiver coverage is in that document.
 
 - Define and validate trusted product/warehouse/actor dependencies and local numeric
   conversion before any writes. Do not invent missing products or use current costs.

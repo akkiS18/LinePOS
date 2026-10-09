@@ -1,13 +1,14 @@
-# Desktop frozen sale receiver — 3A-2b-2b desktop part
+# Frozen sale receivers — 3A-2b-2b receiver parts
 
-`DebtSaleReceiver.cs` is an internal participant in the existing
-`DebtEnvelopeInbox` writer transaction. It persists the canonical historical sale,
+`DebtSaleReceiver.cs` and `DebtSaleReceiver.kt` are internal participants in the existing
+`DebtEnvelopeInbox` SQLite/Room writer transaction. It persists the canonical historical sale,
 items, stock deltas, ledger opening and full-envelope receipt atomically. No network,
 UI or local checkout source API is connected to it in this stage.
 
 ## Opt-in and dependencies
 
-The desktop inbox constructor accepts an optional `Func<string,long?> resolveActorUser`.
+The inbox constructors accept optional trusted `resolveActorUser` functions
+(`Func<string,long?>` on desktop, `(String) -> Long?` on Android).
 Without it, new opening packets retain `WaitingForSaleAdapter`. Supplying it enables
 the concrete receiver, not an arbitrary sale-writing callback. The existing canSync,
 canImportActor, store, schema and transaction-state checks still apply on receive and
@@ -16,8 +17,8 @@ trusted, side-effect-free host policy, never a value taken from incoming JSON.
 
 Desktop has no users table: the host owns the authenticated source actor GUID to
 positive local attribution ID mapping. Null/nonpositive mapping waits for dependency;
-there is no automatic user 1 fallback. Android's later port must also validate its
-actual local users dependency. Source actor GUID remains in the immutable event.
+there is no automatic user 1 fallback. Android additionally requires the mapped user to exist in its local `users` table
+inside the writer transaction. Source actor GUID remains in the immutable event.
 Transport authentication and forwarded-actor authorization are still stage 3A-2c.
 
 All product and warehouse GUIDs must exist. Missing metadata produces durable
@@ -48,7 +49,7 @@ accepting a sale, so it cannot create a permanently unreceivable financial envel
 The inbox preflights and mutates under the same writer transaction. `applying=1`
 suppresses ordinary sale/product/stock echo triggers. The concrete participant writes:
 
-- `sales` with DEBT=3, historical monetary/FX/time fields and trusted user attribution;
+- `sales` with DEBT=3 on desktop / DEBT text on Android, historical monetary/FX/time fields and trusted user attribution;
 - `sale_items` with original GUIDs, order, product/warehouse identity and snapshots;
 - final `product_stocks` quantities and the product aggregate;
 - one held `debt_stock` journal row per original stock operation GUID, with its frozen
@@ -85,9 +86,17 @@ injected rollback boundaries (including second item, ledger, outer receipt and i
 delete). Existing default opening-gate tests remain unchanged. Exact CI results are
 in `DEBT_CHECKPOINT_UZ.md`.
 
-This is the desktop receiver part only. Android still gates all opening packets.
-Next: port and test the concrete receiver in Room, then add local sale/envelope freeze
-and size/precision preflight in the source transaction. No standalone network ACK,
+`DebtSaleReceiverTest` ports those scenarios to Room, including native SaleDao DEBT
+reading and historical revenue/cash/card/profit. A separate test applies 1000 items in
+a >2MiB envelope, reopens Room, exports the exact full body and verifies replay without
+another stock deduction. The existing chunked receipt reader avoids CursorWindow
+limits. Android uses an existence check plus INSERT/UPDATE inside the SAME writer
+transaction instead of newer SQLite UPSERT syntax, preserving API26 compatibility and
+existing stock row identity. SQL arguments follow placeholder occurrence order.
+
+Both receivers are implemented but remain opt-in; default instances still hold new
+openings. Next: local sale/envelope freeze and size/precision preflight in the source
+transaction, with cross-platform numeric acceptance checks before feature enablement. No standalone network ACK,
 auto retry worker, capability advertisement or journal release is added. Journal
 pruning/coalescing and stripped database download must preserve the durable evidence
 above in 3A-2c. UI, returns, reports, backups and release gates remain in the full plan.
