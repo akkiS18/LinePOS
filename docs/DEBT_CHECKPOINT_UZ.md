@@ -1,6 +1,6 @@
 # Qarz daftari — davom ettirish nuqtasi
 
-Sana: 2026-10-09. Holat: **Qism 2 (3A-2c LAN transport, capability, push/pull va ACK) ikkala platformada to‘liq yakunlandi va testdan o‘tdi. Navbatdagi bosqich: Qism 3 (Bir nechta qurilma, tiklash epochlari va kontaktlar)**.
+Sana: 2026-10-09. Holat: **Qism 3 (Bir nechta qurilma, tiklash epochlari va kontaktlar) ikkala platformada to‘liq yakunlandi va testdan o‘tdi. Navbatdagi bosqich: Qism 4 (Desktop frontend va kassa integratsiyasi)**.
 
 ## Asos va branch
 
@@ -180,13 +180,48 @@ Foydalanuvchining kichik tugallangan bosqichlarda ishlash talabi sabab 2B ikkiga
 - Tekshirilgan kod commit: `2a4af27`.
 - UI/Cashier tugmalari ulanmagan; main merge/release yo‘q; Firebase/CBU o‘zgarmadi.
 
-## Keyingi sessiya — Qism 3: Bir nechta qurilma, tiklash epochlari va kontaktlar
+## Qism 3 natijasi: bir nechta qurilma, tiklash epochlari va kontaktlar (3B-1/3B-2)
 
-1. Asosiy soha: Desktop + bir nechta mobil kassa (3+ qurilma) topologiyasi, tiklash epochlari va kontakt boshqaruvi.
-2. Turli qurilmalarda bir vaqtda qilingan offline to‘lovlar (excess credit, tartibsiz yetib kelish) konvergentsiyasi.
-3. Bir backupdan bir nechta qurilma nusxalanganida writer/device sequence collision bo‘lmasligini ta’minlash.
-4. Server eski zaxira nusxasiga (backup) qaytganda history epoch / cursor rollback aniqlanishi va lokal pendinglar yo‘qolmasligi.
-5. Kontakt (customer) tahriri, nom o‘zgarishi va arxivlanishining moliyaviy voqeliklardan mustaqil bo‘lishi.
+- Kontaktlar boshqaruvi va optimistik konkurentlik:
+  - C# va Kotlin `DebtRepository`da `DebtCustomerRecord`, `DebtCustomerUpdate`, `ReadCustomer`, `UpdateCustomer` (versiya ziddiyatini tekshiruvchi optimistic concurrency: `revision == currentRev`, aks holda `DebtConflictException`), hamda `ArchiveCustomer` (`archived = 1/0`, revision oshishi) to‘liq joriy qilindi.
+  - Arxivlangan mijozga yangi nasiya ochish (`OpenSale`) va mahalliy kassadan to‘lov qabul qilish (`TakePayment`) qat’iy bloklandi. Ammo avval ochilgan qarz hisoblari faol qoladi va tarmoq orqali boshqa qurilmalardan kelgan oflayn to‘lovlar (`Inbox.Receive`) hech qanday xatosiz qabul qilinib, hisob balansini kamaytiradi.
+  - Tarixiy savdolardagi `customer_name_at_sale` mijoz ismi keyinchalik tahrirlanganda ham o‘zgarmas (immutable) bo‘lib qoladi.
+- Tarixiy tiklash epochi (history epoch) va cursor rollback:
+  - Desktop `LocalSyncServer`da `_debtHistoryEpoch` (bazaning `sync_meta.debt_history_epoch` kaliti) o‘rnatildi va `/api/ping`, `/api/v2/pair`, hamda `/api/v2/debt/pull` da e’lon qilinadi.
+  - `/api/v2/debt/pull` da so‘ralgan `cursor` noto‘g‘ri (manfiy yoki mavjud eng yuqori cursordan katta) bo‘lsa, server `{ "cursorRollback": true, "cursor": 0, "historyEpoch": ..., "envelopes": [] }` qaytaradi.
+  - Android `LocalSyncManager`: juftlashuvda `debt_history_epoch` saqlanadi. Sinxronizatsiya vaqtida serverning `historyEpoch`i lokal saqlangandan farq qilsa yoki serverdan `cursorRollback` kelsa: lokal `debt_cursor` nollanadi, avval serverga yuborilib tasdiqlangan (`acked = 1`) barcha qarz guruhlari qayta pending (`acked = -1`) holatiga o‘tkaziladi. Shu bilan birga barcha mavjud pending yozuvlar saqlanadi va serverga qayta push qilinadi; natijada tiklangan serverga barcha yetishmayotgan paketlar qayta yetkaziladi, pul va tovar zaxirasi esa aslo dublikat qilinmaydi.
+- Mustaqil writer epochlar va zaxira klonlari:
+  - Baza zaxirasidan nusxalangan klon qurilmalar `device_guid` qayta generatsiya qilinishi va har repository yangi writer UUID epoch bilan ishga tushishi sababli bir-biri bilan sequence to‘qnashuviga uchramaydi.
+- Testlar:
+  - C# multi-device integratsiya test to‘plami (`tests/Business.CoreTests/DebtMultiDeviceTests.cs`):
+    - 3-qurilma topologiyasi (Desktop + 2 Telefon) konvergentsiyasi: savdo va to‘lovlar har xil tartibda yetib kelganda yakuniy qoldiq (10,000 UZS), kassa tushumi (70,000 UZS), ombor qoldig‘i (18 dona) va eventlar soni (4 ta) aynan bir xil bo‘lishi tasdiqlandi.
+    - Oflayn ortiqcha to‘lov (offline excess payment): ikkita oflayn qurilmada bir vaqtda to‘liq qarz to‘langanda pul yozuvlari yo‘qolmaydi (jami 200,000 UZS kassa), qarz to‘liq yopiladi (0) va mijoz hisobida 100,000 UZS haqdorlik (-10,000,000 tiyin credit) shakllanadi.
+    - Klonlangan baza writer epoch izolatsiyasi: klon nusxalarda alohida `device_guid` va mustaqil 1 dan boshlanuvchi ketma-ketlik kafolatlandi.
+    - Server zaxirasiga qaytish (restore rollback): server eski holatiga qaytganda mijoz cursor ziddiyatini anglab, o‘z lokal pendinglarini yo‘qotmasdan qayta sinxronizatsiya qilishi tekshirildi.
+    - Mijoz GUID izolatsiyasi: bir xil ism va telefonli yangi mijozlar mustaqil hisoblar ochadi.
+    - Mijoz tahriri va arxivlanishi: versiya ziddiyati (optimistic concurrency), arxivlanganda yangi savdo taqiqlanishi va oflayn peer to‘lovining qabul qilinishi tasdiqlandi.
+  - Android yangi instrumentatsiya testi (`DebtMultiDeviceConvergenceTest.kt`): Room writer tranzaksiyasi, 3 qurilma konvergentsiyasi, klon writer izolatsiyasi va arxivlash semantikasi to‘liq qamrab olindi.
+  - Barcha testlar: C# `Business.CoreTests` 10/10 PASS, C# `WifiSync.CoreTests` 20/20 PASS, Python testlari 23/23 PASS, Desktop Debug build: 0 xato, Android compileDebugKotlin va compileDebugAndroidTestKotlin: SUCCESS.
+- UI/Cashier hali ulanmagan; main merge/release yo‘q; Firebase/CBU o‘zgarmadi.
+
+## Keyingi sessiya — Qism 4: Desktop frontend va kassa integratsiyasi
+
+1. Asosiy soha: Desktop kassa va asosiy menyuga Qarz daftari integratsiyasi.
+2. Menyuda: **Kassa / Ombor / Qarzlar / Hisobotlar / Wi-Fi Sinxron**.
+3. `Qarzlar` oynasi va ViewModel:
+   - Jami faol qarz, qarzdorlar soni, muddati o‘tgan qarzlar va ortiqcha to‘lovlar (haqdorlik) sarhisobi.
+   - Mijoz nomi va telefoni bo‘yicha qidiruv.
+   - Filtrlar: "Qarzi bor", "Muddati o‘tgan", "Yopilgan", "Ortiqcha to‘lov", "Barchasi".
+4. Kassa (Cashier) integratsiyasi:
+   - To‘lov turi sifatida "Nasiya" (Debt) modali: mijoz tanlash (yoki yangi yaratish), muddat (due date), avans (boshlang‘ich naqd/karta to‘lovi).
+   - "Kutish rejimi" (Hold basket) nasiya mijozini va muddatini mustaqil saqlashi.
+5. Qarz yig‘ish (Payment Collection) modali:
+   - Naqd / Karta / Aralash to‘lov qabul qilish, avtomatik eng eski nasiyadan yopish (oldest-first) yoki aniq hisobni tanlash.
+   - To‘lov kiritishdan oldin taqsimotni ko‘rib chiqish (preview).
+6. Qat’iy biznes qoidalari:
+   - Takroriy bosishdan himoya (submit disable), mustahkam request GUID / retry kafolati.
+   - Chek chiqarish (printer) yoki Telegram xatosi moliyaviy tranzaksiyani bekor qilmasligi (decoupled).
+   - Qarz yig‘ish yangi tushum (revenue) yoki yangi tovar sotuvi sifatida hisobotga qo‘shilmaydi.
 
 ## Muhim cheklovlar
 

@@ -15,6 +15,8 @@ import java.util.UUID
 
 // Local commands, never receiver-side replay of another device's allocation decision.
 data class DebtCustomerDraft(val guid: String, val name: String, val phone: String, val note: String, val createdAt: Long)
+data class DebtCustomerRecord(val guid: String, val storeGuid: String, val name: String, val phone: String, val note: String, val archived: Boolean, val revision: Long, val createdAt: Long)
+data class DebtCustomerUpdate(val customerGuid: String, val name: String, val phone: String, val note: String, val revision: Long)
 data class DebtSaleCommand(val requestGuid: String, val customerGuid: String, val saleGuid: String, val saleFingerprint: String,
     val totalMinor: Long, val cashMinor: Long, val cardMinor: Long, val occurredAt: Long, val dueDate: String? = null)
 data class DebtPaymentCommand(val requestGuid: String, val customerGuid: String, val cashMinor: Long, val cardMinor: Long,
@@ -136,6 +138,51 @@ class DebtRepository(private val database: AppDatabase, private val store: Strin
     }
     suspend fun readAccounts(customerGuid: String): List<DebtAccount> {
         id(customerGuid);return write { db -> scope(db);customer(db,customerGuid,false);accounts(db,customerGuid) }
+    }
+    suspend fun readCustomer(customerGuid: String): DebtCustomerRecord? {
+        id(customerGuid);return write { db ->
+            scope(db)
+            val row = rows(db,"SELECT guid,store_guid,name,phone,note,archived,revision,created_at FROM debt_customers WHERE guid=@p0 AND store_guid=@p1",customerGuid,store).singleOrNull()
+                ?: return@write null
+            DebtCustomerRecord(
+                guid = row[0] as String,
+                storeGuid = row[1] as String,
+                name = row[2] as String,
+                phone = row[3] as String,
+                note = row[4] as String,
+                archived = (row[5] as Long) != 0L,
+                revision = row[6] as Long,
+                createdAt = row[7] as Long
+            )
+        }
+    }
+    suspend fun updateCustomer(update: DebtCustomerUpdate): Boolean {
+        id(update.customerGuid)
+        text(update.name, 256, true)
+        text(update.phone, 64)
+        text(update.note, 2048)
+        require(update.revision >= 0)
+        return write { db ->
+            scope(db)
+            val existing = rows(db,"SELECT revision FROM debt_customers WHERE guid=@p0 AND store_guid=@p1",update.customerGuid,store).singleOrNull()
+                ?: throw IllegalArgumentException("Mijoz topilmadi")
+            val currentRev = existing[0] as Long
+            require(update.revision == currentRev) { "Customer revision conflict" }
+            exec(db,"UPDATE debt_customers SET name=@p0, phone=@p1, note=@p2, revision=revision+1 WHERE guid=@p3 AND store_guid=@p4",
+                update.name, update.phone, update.note, update.customerGuid, store)
+            true
+        }
+    }
+    suspend fun archiveCustomer(customerGuid: String, archive: Boolean = true): Boolean {
+        id(customerGuid)
+        return write { db ->
+            scope(db)
+            val existing = rows(db,"SELECT 1 FROM debt_customers WHERE guid=@p0 AND store_guid=@p1",customerGuid,store).singleOrNull()
+                ?: throw IllegalArgumentException("Mijoz topilmadi")
+            exec(db,"UPDATE debt_customers SET archived=@p0, revision=revision+1 WHERE guid=@p1 AND store_guid=@p2",
+                if (archive) 1L else 0L, customerGuid, store)
+            true
+        }
     }
     suspend fun openSale(cmd: DebtOpenSaleCommand): String {
         id(cmd.requestGuid);id(cmd.customerGuid);id(cmd.sale.guid);require(cmd.sale.occurredAt>=0)

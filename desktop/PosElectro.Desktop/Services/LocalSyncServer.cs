@@ -87,6 +87,7 @@ namespace PosElectro.Desktop.Services
         private readonly WifiSyncStore store;
         private readonly DebtEnvelopeInbox _debtInbox;
         private readonly string _debtStoreGuid;
+        private readonly string _debtHistoryEpoch;
         private TcpListener? listener;
         private CancellationTokenSource? stop;
         private readonly Dictionary<string, (SyncClientInfo Info, DateTime Seen)> clients = new();
@@ -96,6 +97,8 @@ namespace PosElectro.Desktop.Services
         private int pairingAttempts;
         public int Port => 8080;
         public bool IsRunning => stop is { IsCancellationRequested: false };
+        public string DebtHistoryEpoch => _debtHistoryEpoch;
+        public string DebtStoreGuid => _debtStoreGuid;
         public event Action<string>? LogMessageReceived;
         public event Action<string,string>? ActivityLogged;
         public event Action<SyncClientInfo>? ClientStatusUpdated;
@@ -124,6 +127,16 @@ namespace PosElectro.Desktop.Services
             else
             {
                 _debtStoreGuid = existing;
+            }
+            var existingEpoch = (string?)WifiSyncStore.Scalar(conn, null, "SELECT value FROM sync_meta WHERE key='debt_history_epoch'");
+            if (string.IsNullOrEmpty(existingEpoch))
+            {
+                _debtHistoryEpoch = Guid.NewGuid().ToString("D");
+                WifiSyncStore.Exec(conn, null, "INSERT OR REPLACE INTO sync_meta(key,value) VALUES('debt_history_epoch',@epoch)", ("@epoch", _debtHistoryEpoch));
+            }
+            else
+            {
+                _debtHistoryEpoch = existingEpoch;
             }
             _debtInbox = new DebtEnvelopeInbox(db.DatabaseFilePath, _debtStoreGuid, () => true, actor => !string.IsNullOrWhiteSpace(actor), actor => 1L);
         }
@@ -167,7 +180,7 @@ namespace PosElectro.Desktop.Services
                 string token=Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
                 using var db=store.Open(); WifiSyncStore.Exec(db,null,"INSERT INTO sync_devices(token_hash,device_id,device_name) VALUES(@hash,@id,@name)",("@hash",Hash(token)),("@id",id),("@name",name));
                 pairingCode="";
-                return new JObject { ["token"]=token,["serverId"]=store.ServerId,["protocol"]=2,["capabilities"]=new JArray{ DebtWire.Capability },["storeGuid"]=_debtStoreGuid };
+                return new JObject { ["token"]=token,["serverId"]=store.ServerId,["protocol"]=2,["capabilities"]=new JArray{ DebtWire.Capability },["storeGuid"]=_debtStoreGuid,["historyEpoch"]=_debtHistoryEpoch };
             }
         }
         private async Task MonitorClients(CancellationToken token)
@@ -200,7 +213,7 @@ namespace PosElectro.Desktop.Services
                         // Never allow legacy unauthenticated writes to bypass V2 invariants.
                         var deviceId = Authenticate(request.Headers,(client.Client.RemoteEndPoint as IPEndPoint)?.Address.ToString()??"");
                         if(path=="/api/ping" && request.Method=="GET")
-                        {await Reply(stream,200,new JObject{["protocol"]=2,["serverId"]=store.ServerId,["name"]="Line kassa",["productsCount"]=_db.GetActiveProductsCount(),["salesCount"]=_db.GetTotalSalesCount(),["capabilities"]=new JArray{ DebtWire.Capability },["storeGuid"]=_debtStoreGuid},timeout.Token);return;}
+                        {await Reply(stream,200,new JObject{["protocol"]=2,["serverId"]=store.ServerId,["name"]="Line kassa",["productsCount"]=_db.GetActiveProductsCount(),["salesCount"]=_db.GetTotalSalesCount(),["capabilities"]=new JArray{ DebtWire.Capability },["storeGuid"]=_debtStoreGuid,["historyEpoch"]=_debtHistoryEpoch},timeout.Token);return;}
                         // Bind V2 requests to the paired database before any mutation occurs.
                         if(path.StartsWith("/api/v2/",StringComparison.Ordinal) &&
                            (!request.Headers.TryGetValue("X-LinePOS-Server-Id",out var expectedServer) || expectedServer!=store.ServerId))
@@ -258,7 +271,13 @@ namespace PosElectro.Desktop.Services
                             long cursor=query.TryGetValue("cursor",out var raw)?long.Parse(raw):0;
                             using var db=store.Open(); using var tx=db.BeginTransaction();
                             long high=Convert.ToInt64(WifiSyncStore.Scalar(db,tx,"SELECT COALESCE(MAX(seq),0) FROM sync_journal"));
-                            if(cursor<0 || cursor>high)throw new InvalidOperationException("Sinxron kursori noto'g'ri. Kompyuter bazasi tiklangan bo'lishi mumkin; qayta ulash kerak.");
+                            if(cursor<0 || cursor>high)
+                            {
+                                tx.Commit();
+                                var rollback=new JObject{["protocol"]=2,["serverId"]=store.ServerId,["storeGuid"]=_debtStoreGuid,["historyEpoch"]=_debtHistoryEpoch,["cursorRollback"]=true,["cursor"]=0,["envelopes"]=new JArray()};
+                                await Reply(stream,200,rollback,timeout.Token);
+                                return;
+                            }
                             using var groupCmd=db.CreateCommand(); groupCmd.Transaction=tx;
                             groupCmd.CommandText="SELECT group_id, MIN(seq) as min_seq, MAX(seq) as max_seq FROM sync_journal WHERE kind IN ('debt_customer','debt_event','debt_sale','debt_stock') AND (@since=0 OR seq>@since) AND seq<=@high AND group_id<>'' GROUP BY group_id ORDER BY min_seq";
                             groupCmd.Parameters.AddWithValue("@since",cursor); groupCmd.Parameters.AddWithValue("@high",high);
@@ -276,7 +295,7 @@ namespace PosElectro.Desktop.Services
                             }
                             if(envelopes.Count==0 && groupList.Count==0)returnedCursor=high;
                             tx.Commit();
-                            var reply=new JObject{["protocol"]=2,["serverId"]=store.ServerId,["storeGuid"]=_debtStoreGuid,["cursor"]=returnedCursor,["envelopes"]=envelopes};
+                            var reply=new JObject{["protocol"]=2,["serverId"]=store.ServerId,["storeGuid"]=_debtStoreGuid,["historyEpoch"]=_debtHistoryEpoch,["cursor"]=returnedCursor,["envelopes"]=envelopes};
                             await Reply(stream,200,reply,timeout.Token);
                             return;
                         }

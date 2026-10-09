@@ -137,6 +137,10 @@ class LocalSyncManager @Inject constructor(
                         }
                         putMetadata("debt_store_guid", storeGuid)
                     }
+                    val historyEpoch = reply.optString("historyEpoch").takeIf { it.isNotBlank() }
+                    if (historyEpoch != null) {
+                        putMetadata("debt_history_epoch", historyEpoch)
+                    }
                 }
                 prefs.edit().putString("local_desktop_url", base).putString("wifi_v2_token", reply.getString("token")).commit()
             }
@@ -331,6 +335,18 @@ class LocalSyncManager @Inject constructor(
             }
         }
 
+        val remoteHistoryEpoch = ping.optString("historyEpoch").takeIf { it.isNotBlank() }
+        val localHistoryEpoch = metadata("debt_history_epoch")
+        if (remoteHistoryEpoch != null && localHistoryEpoch != null && remoteHistoryEpoch != localHistoryEpoch) {
+            database.withTransaction {
+                db().execSQL("UPDATE sync_journal SET acked = -1 WHERE kind LIKE 'debt_%' AND acked = 1")
+                putMetadata("debt_cursor", "0")
+                putMetadata("debt_history_epoch", remoteHistoryEpoch)
+            }
+        } else if (remoteHistoryEpoch != null && localHistoryEpoch == null) {
+            putMetadata("debt_history_epoch", remoteHistoryEpoch)
+        }
+
         val inbox = getDebtInbox(storeGuid)
 
         // 1. Debt Push
@@ -387,6 +403,23 @@ class LocalSyncManager @Inject constructor(
         val pullReply = request(base, "/api/v2/debt/pull?cursor=$debtCursor")
         require(pullReply.getString("serverId") == metadata("server_id")) { "Kompyuter bazasi almashgan; qarz sinxron to'xtatildi." }
         require(pullReply.getString("storeGuid") == storeGuid) { "Do'kon qarz doirasi mos emas." }
+
+        if (pullReply.optBoolean("cursorRollback", false)) {
+            val serverEpoch = pullReply.optString("historyEpoch").takeIf { it.isNotBlank() } ?: remoteHistoryEpoch ?: ""
+            database.withTransaction {
+                db().execSQL("UPDATE sync_journal SET acked = -1 WHERE kind LIKE 'debt_%' AND acked = 1")
+                putMetadata("debt_cursor", "0")
+                if (serverEpoch.isNotBlank()) {
+                    putMetadata("debt_history_epoch", serverEpoch)
+                }
+            }
+            return
+        }
+
+        val pulledEpoch = pullReply.optString("historyEpoch").takeIf { it.isNotBlank() }
+        if (pulledEpoch != null && pulledEpoch != metadata("debt_history_epoch")) {
+            putMetadata("debt_history_epoch", pulledEpoch)
+        }
 
         val pulledEnvelopes = pullReply.getJSONArray("envelopes")
         val newCursor = pullReply.getLong("cursor")

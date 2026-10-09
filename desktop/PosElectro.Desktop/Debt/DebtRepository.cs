@@ -10,6 +10,8 @@ using Microsoft.Data.Sqlite;
 namespace PosElectro.Desktop.Debt;
 
 public sealed record DebtCustomerDraft(string Guid, string Name, string Phone, string Note, long CreatedAt);
+public sealed record DebtCustomerRecord(string Guid, string StoreGuid, string Name, string Phone, string Note, bool Archived, long Revision, long CreatedAt);
+public sealed record DebtCustomerUpdate(string CustomerGuid, string Name, string Phone, string Note, long Revision);
 public sealed record DebtSaleCommand(string RequestGuid, string CustomerGuid, string SaleGuid, string SaleFingerprint,
     long TotalMinor, long CashMinor, long CardMinor, long OccurredAt, string? DueDate = null);
 public sealed record DebtPaymentCommand(string RequestGuid, string CustomerGuid, long CashMinor, long CardMinor,
@@ -134,6 +136,43 @@ public sealed class DebtRepository
         }return accounts;
     }
     public IReadOnlyList<DebtAccount> ReadAccounts(string customerGuid) { Id(customerGuid);return Write((c,t)=>{Scope(c,t);Customer(c,t,customerGuid,false);return Accounts(c,t,customerGuid).AsReadOnly();}); }
+    public DebtCustomerRecord? ReadCustomer(string customerGuid) {
+        Id(customerGuid);
+        return Write((c,t)=>{
+            Scope(c,t);
+            var row=Rows(c,t,"SELECT guid,store_guid,name,phone,note,archived,revision,created_at FROM debt_customers WHERE guid=@p0 AND store_guid=@p1",customerGuid,store).SingleOrDefault();
+            if(row==null) return null;
+            return new DebtCustomerRecord((string)row[0]!,(string)row[1]!,(string)row[2]!,(string)row[3]!,(string)row[4]!,Convert.ToInt64(row[5])!=0,Convert.ToInt64(row[6]),Convert.ToInt64(row[7]));
+        });
+    }
+    public bool UpdateCustomer(DebtCustomerUpdate update) {
+        Id(update.CustomerGuid);
+        TextField(update.Name,256,true);
+        TextField(update.Phone,64);
+        TextField(update.Note,2048);
+        Need(update.Revision>=0);
+        return Write((c,t)=>{
+            Scope(c,t);
+            var row=Rows(c,t,"SELECT revision FROM debt_customers WHERE guid=@p0 AND store_guid=@p1",update.CustomerGuid,store).SingleOrDefault();
+            if(row==null) throw new ArgumentException("Mijoz topilmadi");
+            var currentRev=Convert.ToInt64(row[0]);
+            Need(update.Revision==currentRev);
+            Exec(c,t,"UPDATE debt_customers SET name=@p0,phone=@p1,note=@p2,revision=revision+1 WHERE guid=@p3 AND store_guid=@p4",
+                update.Name,update.Phone,update.Note,update.CustomerGuid,store);
+            return true;
+        });
+    }
+    public bool ArchiveCustomer(string customerGuid, bool archive=true) {
+        Id(customerGuid);
+        return Write((c,t)=>{
+            Scope(c,t);
+            var row=Rows(c,t,"SELECT 1 FROM debt_customers WHERE guid=@p0 AND store_guid=@p1",customerGuid,store).SingleOrDefault();
+            if(row==null) throw new ArgumentException("Mijoz topilmadi");
+            Exec(c,t,"UPDATE debt_customers SET archived=@p0,revision=revision+1 WHERE guid=@p1 AND store_guid=@p2",
+                archive?1:0,customerGuid,store);
+            return true;
+        });
+    }
     internal static long StoredMinor(object? value) {
         var d=Convert.ToDouble(value,CultureInfo.InvariantCulture);Need(double.IsFinite(d) && d>=0);
         return checked((long)(decimal.Round(decimal.Parse(d.ToString("R",CultureInfo.InvariantCulture),NumberStyles.Float,CultureInfo.InvariantCulture),2,MidpointRounding.AwayFromZero)*100));
