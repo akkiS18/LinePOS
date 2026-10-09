@@ -168,3 +168,8 @@ C#/Kotlin `DebtSyncStore`: frozen component export, full-body replay va atomic D
 ## Qarz daftari — 2026-10-08, 3A-2b-2a
 
 `DebtEnvelopeInbox.cs/kt`: durable validated v1 inbox, customer/payment + full receipt + pending removal bir writer tranzaksiyada. 128 packet/32MiB pending cap, exact replay va original relay; sale_open faqat WaitingForSaleAdapter, yangi public callback orqali bypass yo‘q. 2b-2b concrete sale/items/stock adapter va local freeze/preflight hali qolgan. Unknown version quarantine ham transport bosqichida; waiting hech qachon moliyaviy ACK emas. UI/main/release/Firebase/CBU yo‘q. Kontrakt `docs/DEBT_INBOX.md`, CI va keyingi scope `docs/DEBT_CHECKPOINT_UZ.md`da.
+
+
+## Qarz daftari — 2026-10-09, desktop sale receiver
+
+`DebtSaleReceiver.cs` existing inbox writer tranzaksiyasida frozen sale/items/stock/customer/account/event/full receiptni atomik saqlaydi. Optional trusted actor/user resolver desktop openingni yoqadi; default va Android gate hali saqlangan. Desktop users jadvali yo‘q, host attribution mapping beradi; Android port haqiqiy usersni ham tekshirishi kerak. Exact REAL preflight, original movement GUIDli HELD journal, full historical replay validation bor. Source freeze/local preflight va transport/main/UI/release hali yo‘q. Detallar `docs/DEBT_SALE_RECEIVER.md`, CI dalili/keyingi scope `docs/DEBT_CHECKPOINT_UZ.md`da. Firebase/CBU o‘zgarmadi.
