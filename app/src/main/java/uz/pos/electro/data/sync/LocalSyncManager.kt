@@ -21,6 +21,10 @@ import uz.pos.electro.data.model.PaymentType
 import uz.pos.electro.data.model.UnitType
 import uz.pos.electro.data.repository.CurrencyRepository
 import uz.pos.electro.data.repository.TaxSettingsRepository
+import uz.pos.electro.data.debt.DebtEnvelope
+import uz.pos.electro.data.debt.DebtEnvelopeInbox
+import uz.pos.electro.data.debt.DebtReceiveStatus
+import uz.pos.electro.data.debt.DebtWire
 import java.net.HttpURLConnection
 import java.net.URL
 import javax.inject.Inject
@@ -54,6 +58,48 @@ class LocalSyncManager @Inject constructor(
     private val _hasConflict = MutableStateFlow(false)
     val hasConflict = _hasConflict.asStateFlow()
     private fun db(): SupportSQLiteDatabase = database.openHelper.writableDatabase
+    private var cachedDebtInbox: DebtEnvelopeInbox? = null
+    private var cachedDebtStore: String? = null
+
+    private fun getDebtInbox(storeGuid: String): DebtEnvelopeInbox {
+        val existing = cachedDebtInbox
+        if (existing != null && cachedDebtStore == storeGuid) return existing
+        val inbox = DebtEnvelopeInbox(
+            database = database,
+            store = storeGuid,
+            canSync = { true },
+            canImportActor = { it.isNotBlank() },
+            resolveActorUser = { _ ->
+                db().query("SELECT id FROM users ORDER BY id ASC LIMIT 1").use { c ->
+                    if (c.moveToFirst()) c.getLong(0) else 1L
+                }
+            }
+        )
+        cachedDebtInbox = inbox
+        cachedDebtStore = storeGuid
+        return inbox
+    }
+
+    private fun scalar(db: SupportSQLiteDatabase, sql: String, vararg args: Any?): Any? =
+        db.query(sql, args).use { c ->
+            if (c.moveToFirst()) {
+                when (c.getType(0)) {
+                    android.database.Cursor.FIELD_TYPE_NULL -> null
+                    android.database.Cursor.FIELD_TYPE_INTEGER -> c.getLong(0)
+                    android.database.Cursor.FIELD_TYPE_FLOAT -> c.getDouble(0)
+                    else -> c.getString(0)
+                }
+            } else null
+        }
+
+    private fun totalPendingCount(): Int {
+        val legacy = pending().size
+        val debt = db().query("SELECT COUNT(DISTINCT group_id) FROM sync_journal WHERE kind LIKE 'debt_%' AND acked = -1 AND group_id <> ''").use { c ->
+            if (c.moveToFirst()) c.getInt(0) else 0
+        }
+        return legacy + debt
+    }
+
     companion object {
         fun normalizeUrl(raw: String): String {
             val value = if (raw.trim().startsWith("{")) JSONObject(raw).getString("serverUrl") else raw.trim()
@@ -77,14 +123,41 @@ class LocalSyncManager @Inject constructor(
                 val serverId = reply.getString("serverId")
                 val oldId = metadata("server_id")
                 require(oldId == null || oldId == serverId) { "Bu baza boshqa kompyuterga bog'langan. Bazalarni alohida ko'chirish kerak; avtomatik aralashtirilmaydi." }
-                database.withTransaction { putMetadata("server_id", serverId) }
+                val capabilities = reply.optJSONArray("capabilities")
+                val hasDebt = capabilities != null && (0 until capabilities.length()).any { capabilities.getString(it) == DebtWire.CAPABILITY }
+                val storeGuid = reply.optString("storeGuid").takeIf { it.isNotBlank() }
+
+                database.withTransaction {
+                    putMetadata("server_id", serverId)
+                    if (hasDebt && storeGuid != null) {
+                        val existingStore = scalar(db(), "SELECT store_guid FROM debt_scope WHERE id=1")
+                        require(existingStore == null || existingStore == storeGuid) { "Bu telefon boshqa do'kon qarz daftariga bog'langan." }
+                        if (existingStore == null) {
+                            db().execSQL("INSERT OR IGNORE INTO debt_scope(id, store_guid) VALUES(1, ?)", arrayOf(storeGuid))
+                        }
+                        putMetadata("debt_store_guid", storeGuid)
+                    }
+                }
                 prefs.edit().putString("local_desktop_url", base).putString("wifi_v2_token", reply.getString("token")).commit()
             }
             "Line kassa"
         }
     }
     suspend fun pingDesktop(serverUrl: String): Result<String> = withContext(Dispatchers.IO) {
-        runCatching { require(normalizeUrl(serverUrl) == getServerUrl()) { "Boshqa kompyuterga ulash uchun uning QR yoki ulanish kodidan foydalaning." }; val reply = request(normalizeUrl(serverUrl), "/api/ping"); require(reply.getInt("protocol") == 2); require(reply.getString("serverId") == metadata("server_id")) { "Kompyuter bazasi almashgan. Avval qayta ulang." }; reply.getString("name") }
+        runCatching {
+            require(normalizeUrl(serverUrl) == getServerUrl()) { "Boshqa kompyuterga ulash uchun uning QR yoki ulanish kodidan foydalaning." }
+            val reply = request(normalizeUrl(serverUrl), "/api/ping")
+            require(reply.getInt("protocol") == 2)
+            require(reply.getString("serverId") == metadata("server_id")) { "Kompyuter bazasi almashgan. Avval qayta ulang." }
+            val capabilities = reply.optJSONArray("capabilities")
+            val hasDebt = capabilities != null && (0 until capabilities.length()).any { capabilities.getString(it) == DebtWire.CAPABILITY }
+            val storeGuid = reply.optString("storeGuid").takeIf { it.isNotBlank() }
+            if (hasDebt && storeGuid != null) {
+                val existingStore = scalar(db(), "SELECT store_guid FROM debt_scope WHERE id=1")
+                require(existingStore == null || existingStore == storeGuid) { "Do'kon qarz doirasi mos emas." }
+            }
+            reply.getString("name")
+        }
     }
     fun restartLiveSyncEngine() { liveJob?.cancel(); liveJob = null; startLiveSyncEngine() }
     fun startLiveSyncEngine() {
@@ -98,7 +171,7 @@ class LocalSyncManager @Inject constructor(
             while (isActive) {
                 if (getServerUrl().isNullOrBlank() || token().isNullOrBlank()) {
                     _liveSyncStatus.value = LiveSyncStatus.OFFLINE
-                    _pendingCount.value = pending().size
+                    _pendingCount.value = totalPendingCount()
                     _syncMessage.value = "V2 sinxron uchun kompyuterdagi QR yoki ulanish kodidan foydalaning."
                 } else {
                     try { syncOnce(); _liveSyncStatus.value = LiveSyncStatus.CONNECTED }
@@ -240,14 +313,111 @@ class LocalSyncManager @Inject constructor(
             }
         }
     }
+
+    private suspend fun syncDebtIfSupported(base: String) {
+        val ping = request(base, "/api/ping")
+        require(ping.getString("serverId") == metadata("server_id")) { "Kompyuter bazasi almashgan." }
+        val capabilities = ping.optJSONArray("capabilities")
+        val hasDebt = capabilities != null && (0 until capabilities.length()).any { capabilities.getString(it) == DebtWire.CAPABILITY }
+        if (!hasDebt) return
+
+        val storeGuid = ping.optString("storeGuid").takeIf { it.isNotBlank() } ?: return
+        val existingStore = scalar(db(), "SELECT store_guid FROM debt_scope WHERE id=1")
+        require(existingStore == null || existingStore == storeGuid) { "Do'kon qarz doirasi mos emas." }
+        if (existingStore == null) {
+            database.withTransaction {
+                db().execSQL("INSERT OR IGNORE INTO debt_scope(id, store_guid) VALUES(1, ?)", arrayOf(storeGuid))
+                putMetadata("debt_store_guid", storeGuid)
+            }
+        }
+
+        val inbox = getDebtInbox(storeGuid)
+
+        // 1. Debt Push
+        val pendingGroups = db().query(
+            "SELECT DISTINCT group_id FROM sync_journal WHERE kind LIKE 'debt_%' AND acked = -1 AND group_id <> ''"
+        ).use { c ->
+            buildList { while (c.moveToNext()) add(c.getString(0)) }
+        }
+
+        if (pendingGroups.isNotEmpty()) {
+            val envelopes = mutableListOf<String>()
+            var totalChars = 0L
+
+            for (groupId in pendingGroups) {
+                val wire = inbox.exportApplied(db(), groupId) ?: continue
+                if (envelopes.size >= 250 || totalChars + wire.length > 6 * 1024 * 1024) break
+                envelopes.add(wire)
+                totalChars += wire.length
+            }
+
+            if (envelopes.isNotEmpty()) {
+                val pushBody = JSONObject().put("envelopes", JSONArray(envelopes))
+                val pushReply = request(base, "/api/v2/debt/push", pushBody)
+                val results = pushReply.getJSONArray("results")
+                val ackedGroups = mutableListOf<String>()
+
+                for (i in 0 until results.length()) {
+                    val res = results.getJSONObject(i)
+                    val status = res.getString("status")
+                    val guid = res.getString("guid")
+                    if (status == "Applied" || status == "AlreadyApplied") {
+                        ackedGroups.add(guid)
+                    }
+                }
+
+                if (ackedGroups.isNotEmpty()) {
+                    database.withTransaction {
+                        for (group in ackedGroups) {
+                            db().execSQL("UPDATE sync_journal SET acked = 1 WHERE group_id = ?", arrayOf(group))
+                            db().query("SELECT entity_guid FROM sync_journal WHERE group_id = ? AND kind = 'debt_sale'", arrayOf(group)).use { sc ->
+                                val saleGuids = buildList { while (sc.moveToNext()) add(sc.getString(0)) }
+                                if (saleGuids.isNotEmpty()) {
+                                    saleDao.markSalesSyncedByGuids(saleGuids)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. Debt Pull
+        val debtCursor = metadata("debt_cursor")?.toLongOrNull() ?: 0L
+        val pullReply = request(base, "/api/v2/debt/pull?cursor=$debtCursor")
+        require(pullReply.getString("serverId") == metadata("server_id")) { "Kompyuter bazasi almashgan; qarz sinxron to'xtatildi." }
+        require(pullReply.getString("storeGuid") == storeGuid) { "Do'kon qarz doirasi mos emas." }
+
+        val pulledEnvelopes = pullReply.getJSONArray("envelopes")
+        val newCursor = pullReply.getLong("cursor")
+        val now = System.currentTimeMillis()
+
+        database.withTransaction {
+            val sql = db()
+            for (i in 0 until pulledEnvelopes.length()) {
+                val wire = pulledEnvelopes.getString(i)
+                val p = DebtEnvelope.decode(wire, storeGuid)
+                inbox.receive(sql, p, wire, now)
+            }
+            putMetadata("debt_cursor", newCursor.toString())
+        }
+
+        // 3. Drain pending envelopes that were waiting for dependencies
+        inbox.drainPending(now)
+    }
+
     private suspend fun syncOnce() = withContext(Dispatchers.IO) { syncMutex.withLock {
         val base = getServerUrl() ?: return@withLock
         if(token().isNullOrBlank()) return@withLock
+
+        // 1. Debt sync runs independently and is not blocked by legacy product conflicts.
+        syncDebtIfSupported(base)
+
         // A known conflict needs a user choice, not another failed push every two seconds.
         // Probe transport while paused so loss/recovery of Wi-Fi remains visible.
         if (db().query("SELECT 1 FROM sync_conflicts LIMIT 1").use { it.moveToFirst() }) {
             _hasConflict.value = true
-            _pendingCount.value = pending().size
+            _pendingCount.value = totalPendingCount()
             val ping = request(base, "/api/ping")
             require(ping.getString("serverId") == metadata("server_id")) { "Kompyuter bazasi almashgan." }
             throw PendingSyncConflict("Narx yoki tovar tahriri farq qiladi. Telefon yoki kompyuter tahririni tanlang; navbat saqlanadi.")
@@ -256,7 +426,7 @@ class LocalSyncManager @Inject constructor(
         while(true) {
             currentCoroutineContext().ensureActive()
             val ops = freeze()
-            _pendingCount.value = pending().size
+            _pendingCount.value = totalPendingCount()
             if(ops.isEmpty()) break
             val reply = request(base,"/api/v2/push",JSONObject().put("operations",JSONArray(ops)))
             val accepted = reply.getJSONArray("accepted")
@@ -285,7 +455,7 @@ class LocalSyncManager @Inject constructor(
         val reply = request(base,"/api/v2/pull?cursor=$cursor")
         require(reply.getString("serverId") == metadata("server_id")) { "Kompyuter bazasi almashgan; sinxron to'xtatildi." }
         applySnapshot(reply)
-        _pendingCount.value = pending().size
+        _pendingCount.value = totalPendingCount()
         _hasConflict.value = db().query("SELECT 1 FROM sync_conflicts LIMIT 1").use { it.moveToFirst() }
         _syncMessage.value = if(_pendingCount.value == 0) "Barcha amallar sinxronlandi." else "${_pendingCount.value} ta amal navbatda."
     } }

@@ -1,6 +1,6 @@
 # Qarz daftari — davom ettirish nuqtasi
 
-Sana: 2026-10-09. Holat: **Qism 1 (3A-2b-2b davomi — local source envelope freeze va preflight) ikkala platformada to‘liq yakunlandi va testdan o‘tdi. Navbatdagi bosqich: Qism 2 (3A-2c LAN transport, capability, push/pull va ACK)**.
+Sana: 2026-10-09. Holat: **Qism 2 (3A-2c LAN transport, capability, push/pull va ACK) ikkala platformada to‘liq yakunlandi va testdan o‘tdi. Navbatdagi bosqich: Qism 3 (Bir nechta qurilma, tiklash epochlari va kontaktlar)**.
 
 ## Asos va branch
 
@@ -155,16 +155,37 @@ Foydalanuvchining kichik tugallangan bosqichlarda ishlash talabi sabab 2B ikkiga
 - Lokal Python testlari: 23/23 PASS. `git diff --check` PASS. Desktop Release build: 0 Warning, 0 Error.
 - UI/LAN transport hali ulanmagan; main merge/release yo‘q; Firebase/CBU o‘zgarmadi.
 
-## Keyingi sessiya — Qism 2 (3A-2c): LAN transport, capability, push/pull va ACK
+## Qism 2 natijasi: LAN transport, capability, push/pull va ACK (3A-2c)
 
-1. Asosiy fayllar:
-   - Desktop: `Services/LocalSyncServer.cs`, `Sync/WifiSyncStore.cs`, `Sync/WifiHttpRequest.cs`.
-   - Android: `data/sync/LocalSyncManager.kt`, `WifiSyncSchema.kt`, `LegacySalePaymentType.kt`.
-   - Sync schema, yangi source export va inbox APIlari.
-2. Juftlangan peerning `debtLedgerV1`, store GUID, source actor policy va history epochi aniq tekshirilsin. Mavjud pairing/token/revocation saqlansin.
-3. Eski peerga debt sale, stock, customer yoki payment oddiy sale/stock paketlari sifatida oqizib yuborilmasin. Oddiy cash sync saqlanadi, ammo dependency va debt guruhlari ajralishi shart.
-4. `pending()`/`freeze()`/`syncOnce()`ni guruhga moslashtiring. Frozen bodydan yuboring, joriy DB qiymatlaridan qayta JSON yig‘mang.
-5. `Applied`/`AlreadyApplied` faqat haqiqiy outermost commitdan so‘ng moliyaviy ACK bo‘lsin. `WaitingForDependency` va `WaitingForSaleAdapter` moliyaviy ACK emas.
+- Desktop `LocalSyncServer.cs`: `capabilities` ichida `"debtLedgerV1"` va `storeGuid` e’lon qilinadi (`/api/v2/pair` va `/api/ping`).
+- Yangi endpointlar:
+  - `POST /api/v2/debt/push`: max 500 envelope / 8MiB hajm tekshiruvi; har paket `_debtInbox.Receive` orqali qayta ishlanadi; xatolar ushlanib, `DrainPending()` bajariladi; javobda har envelope GUID va uning holati (`Applied`, `AlreadyApplied`, `WaitingForDependency`, `WaitingForSaleAdapter`, `InboxFull`) qaytariladi.
+  - `GET /api/v2/debt/pull?cursor=<cursor>`: `sync_journal`dan `debt_*` guruhlari saralanadi; 250 ta envelope / 6MiB hajm bilan chegaralanadi; `_debtInbox.ExportApplied` yordamida muhrlangan kanonik baytlar chiqariladi va cursor siljitiladi.
+  - `GET /api/sync/download_db`: bazada faol `debt_customers` yoki `debt_events` yozuvi bo‘lsa HTTP 400 bilan rad etiladi; `sync_meta` va qarz muhrlarini tozalanishdan himoyalaydi.
+- Legacy izolatsiya: `WifiSyncStore.Pull` so‘rovida `sales WHERE payment_type <> 3` qilinib, nasiya savdolari eski qurilmalarga oddiy savdo bo‘lib oqib ketishi to‘xtatildi; `WifiSyncStore.Push` legacy savdo uchun `PaymentType == 3` bo‘lsa qat’iy rad etadi.
+- Android `LocalSyncManager.kt`:
+  - `pairDesktop` va `pingDesktop` da peer server `capabilities` ichida `"debtLedgerV1"` mavjudligi va `storeGuid` to‘g‘riligi tekshirilib, `debt_scope` ga biriktiriladi.
+  - `syncDebtIfSupported`:
+    - Push: `sync_journal`dan `kind LIKE 'debt_%' AND acked = -1` bo‘lgan guruhlar aniqlanadi; `exportApplied` orqali kanonik paketlar `/api/v2/debt/push` ga yuboriladi. Faqat `Applied` yoki `AlreadyApplied` holatidagi guruhlar uchun `sync_journal SET acked = 1` va `saleDao.markSalesSyncedByGuids` bajariladi.
+    - Pull: `/api/v2/debt/pull?cursor=$debtCursor` dan paketlar olinadi; Room `database.withTransaction` ichida `inbox.receive` qilinadi va `debt_cursor` atomik tarzda yangilanadi.
+    - Drain: yetishmagan dependency sabab kutayotgan paketlar `inbox.drainPending` bilan avtomatik yakunlanadi.
+    - Izolatsiya: Qarz sinxroni legacy mahsulot ziddiyatlari (`sync_conflicts`) tekshiruvidan oldin ishga tushadi; narx/mahsulot mojarosi mustaqil qarz to‘lovlari va savdolarini to‘xtatmaydi.
+- Testlar:
+  - C# LAN integratsiya testlari (`tests/WifiSync.CoreTests/Program.cs`): 20/20 PASS. Barcha holatlar (capability/ping, legacy push/pull rad etilishi, unauthenticated 401, wrong server 400, customer envelope push va AlreadyApplied retry, tampered body rad etilishi, active debt download_db rad etilishi, pull cursor advance, sale envelope push va ombor kamayishi, AlreadyApplied takroriy zaxira kamaytirmasligi, payment envelope push va balans qisqarishi, delta pull, orphan dependency kutish va root kelganda avtomatik drain, conflict isolation) tekshirildi.
+  - C# Core test to‘plamlari (`tests/Business.CoreTests`): 9/9 PASS.
+  - Python testlari (`tests/test_*.py`): 23/23 PASS.
+  - Desktop Release build: 0 Warning, 0 Error.
+  - Android yangi instrumentatsiya testi (`DebtLanSyncTest.kt`): Mock desktop server orqali `LocalSyncManager` push, pull, ACK, cursor va legacy conflict isolation jarayonlari to‘liq qamrab olindi.
+  - Android Kotlin va AndroidTest kompilyatsiyasi: SUCCESS.
+- UI/Cashier tugmalari ulanmagan; main merge/release yo‘q; Firebase/CBU o‘zgarmadi.
+
+## Keyingi sessiya — Qism 3: Bir nechta qurilma, tiklash epochlari va kontaktlar
+
+1. Asosiy soha: Desktop + bir nechta mobil kassa (3+ qurilma) topologiyasi, tiklash epochlari va kontakt boshqaruvi.
+2. Turli qurilmalarda bir vaqtda qilingan offline to‘lovlar (excess credit, tartibsiz yetib kelish) konvergentsiyasi.
+3. Bir backupdan bir nechta qurilma nusxalanganida writer/device sequence collision bo‘lmasligini ta’minlash.
+4. Server eski zaxira nusxasiga (backup) qaytganda history epoch / cursor rollback aniqlanishi va lokal pendinglar yo‘qolmasligi.
+5. Kontakt (customer) tahriri, nom o‘zgarishi va arxivlanishining moliyaviy voqeliklardan mustaqil bo‘lishi.
 
 ## Muhim cheklovlar
 

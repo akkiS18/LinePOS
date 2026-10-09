@@ -55,7 +55,10 @@ public sealed class WifiSyncStore
         var result=new JObject { ["protocol"]=2,["serverId"]=ServerId,["cursor"]=high };
         foreach(var (kind,table,key) in new[]{("product","products","guid"),("warehouse","warehouses","guid"),("sale","sales","guid"),("stock","product_stocks","product_guid")})
         {
-            var rows=Rows(db,tx,$"SELECT * FROM {table} WHERE @since=0 OR {key} IN (SELECT entity_guid FROM sync_journal WHERE seq>@since AND seq<=@high AND kind=@kind)",("@since",since),("@high",high),("@kind",kind));
+            var sql = kind == "sale"
+                ? $"SELECT * FROM {table} WHERE payment_type <> 3 AND (@since=0 OR {key} IN (SELECT entity_guid FROM sync_journal WHERE seq>@since AND seq<=@high AND kind=@kind))"
+                : $"SELECT * FROM {table} WHERE @since=0 OR {key} IN (SELECT entity_guid FROM sync_journal WHERE seq>@since AND seq<=@high AND kind=@kind)";
+            var rows=Rows(db,tx,sql,("@since",since),("@high",high),("@kind",kind));
             foreach(JObject row in rows) { if(kind=="sale")row["Items"]=Rows(db,tx,"SELECT * FROM sale_items WHERE sale_id=@id ORDER BY id",("@id",(long)row["Id"]!)); if(kind is "product" or "warehouse")row["Revision"]=Revision(db,tx,kind,(string)row["Guid"]!); }
             if(kind=="stock")
             {
@@ -135,6 +138,7 @@ public sealed class WifiSyncStore
     {
         if((string?)data["Guid"]!=guid)throw new ArgumentException("Chek GUIDsi mos emas.");
         if ((int?)data["PaymentType"] >= 7) throw new ArgumentException("Qaytarish faqat vakolatli lokal serverda yaratiladi.");
+        if ((int?)data["PaymentType"] == 3) throw new ArgumentException("Nasiya savdosi faqat qarz protokoli orqali yuboriladi.");
         if(Scalar(db,tx,"SELECT 1 FROM sales WHERE guid=@guid",("@guid",guid))!=null)return;
         var columns=new[]{"guid","total_amount","total_cost","payment_type","cash_amount","card_amount","tax_amount","tax_rate","created_at","usd_rate"};
         Exec(db,tx,$"INSERT INTO sales({string.Join(",",columns)},user_id,is_synced) VALUES({string.Join(",",columns.Select(c=>"@"+c))},1,1)",columns.Select(c=>("@"+c,Value(data,Fields[c]) ?? (c=="usd_rate" ? (object)0.0 : null))).ToArray());

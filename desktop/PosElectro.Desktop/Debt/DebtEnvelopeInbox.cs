@@ -42,7 +42,7 @@ public sealed class DebtEnvelopeInbox
         var packet=DebtEnvelope.Decode(wire,store);
         return bridge.Write((db,tx)=>Receive(db,tx,packet,wire,receivedAt));
     }
-    private DebtReceiveStatus Receive(SqliteConnection db,SqliteTransaction tx,DebtEnvelopePacket p,string wire,long receivedAt) {
+    internal DebtReceiveStatus Receive(SqliteConnection db,SqliteTransaction tx,DebtEnvelopePacket p,string wire,long receivedAt) {
         Authorize(p);var old=Rows(db,tx,"SELECT store_guid,payload FROM debt_sync_inbox WHERE packet_guid=@p0",p.Guid);
         if(old.Count>0)Need((string)old[0][0]! ==store && (string)old[0][1]! ==wire);
         var receipt=Scalar(db,tx,"SELECT value FROM sync_meta WHERE key=@p0",Key(p.Guid));
@@ -105,14 +105,40 @@ public sealed class DebtEnvelopeInbox
             return new DebtPendingPacket(wire,Convert.ToInt64(row[0][2],CultureInfo.InvariantCulture),(string)row[0][3]!);
         });
     }
-    public string? ExportApplied(string guid) {
+    public string? ExportApplied(string guid) => bridge.Write<string?>((db,tx)=>ExportApplied(db,tx,guid));
+    internal string? ExportApplied(SqliteConnection db,SqliteTransaction tx,string guid) {
         DebtWire.Id(guid);
-        return bridge.Write<string?>((db,tx)=> {
-            var value=Scalar(db,tx,"SELECT value FROM sync_meta WHERE key=@p0",Key(guid)) as string;
-            if(value==null)return null;
-            Need(value.Length>65 && value[64]=='\n');var wire=value[65..];Need(value==Seal(wire));
-            var p=DebtEnvelope.Decode(wire,store);Need(p.Guid==guid);Authorize(p);VerifyApplied(db,tx,p);
-            Need(Scalar(db,tx,"SELECT 1 FROM debt_sync_inbox WHERE packet_guid=@p0",guid)==null);return wire;
-        });
+        var value=Scalar(db,tx,"SELECT value FROM sync_meta WHERE key=@p0",Key(guid)) as string;
+        if(value==null)return null;
+        Need(value.Length>65 && value[64]=='\n');var wire=value[65..];Need(value==Seal(wire));
+        var p=DebtEnvelope.Decode(wire,store);Need(p.Guid==guid);Authorize(p);VerifyApplied(db,tx,p);
+        Need(Scalar(db,tx,"SELECT 1 FROM debt_sync_inbox WHERE packet_guid=@p0",guid)==null);return wire;
+    }
+
+    public int DrainPending(long now) {
+        if(now<0)throw new ArgumentException("Invalid timestamp");
+        return bridge.Write((db,tx)=>DrainPending(db,tx,now));
+    }
+    internal int DrainPending(SqliteConnection db,SqliteTransaction tx,long now) {
+        if(now<0)throw new ArgumentException("Invalid timestamp");
+        int drained=0;
+        while(true) {
+            var rows=Rows(db,tx,"SELECT packet_guid FROM debt_sync_inbox ORDER BY received_at, packet_guid");
+            if(rows.Count==0)break;
+            bool anyApplied=false;
+            foreach(var r in rows) {
+                var guid=(string)r[0]!;
+                var pendingRow=Rows(db,tx,"SELECT store_guid,payload,received_at,error FROM debt_sync_inbox WHERE packet_guid=@p0",guid);
+                if(pendingRow.Count==0)continue;
+                Need((string)pendingRow[0][0]! ==store);var wire=(string)pendingRow[0][1]!;
+                var p=DebtEnvelope.Decode(wire,store);Need(p.Guid==guid);
+                var status=Receive(db,tx,p,wire,now);
+                if(status is DebtReceiveStatus.Applied or DebtReceiveStatus.AlreadyApplied) {
+                    anyApplied=true;drained++;
+                }
+            }
+            if(!anyApplied)break;
+        }
+        return drained;
     }
 }
