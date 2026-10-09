@@ -202,6 +202,7 @@ Foydalanuvchining kichik tugallangan bosqichlarda ishlash talabi sabab 2B ikkiga
     - Mijoz tahriri va arxivlanishi: versiya ziddiyati (optimistic concurrency), arxivlanganda yangi savdo taqiqlanishi va oflayn peer to‘lovining qabul qilinishi tasdiqlandi.
   - Android yangi instrumentatsiya testi (`DebtMultiDeviceConvergenceTest.kt`): Room writer tranzaksiyasi, 3 qurilma konvergentsiyasi, klon writer izolatsiyasi va arxivlash semantikasi to‘liq qamrab olindi.
   - Barcha testlar: C# `Business.CoreTests` 10/10 PASS, C# `WifiSync.CoreTests` 20/20 PASS, Python testlari 23/23 PASS, Desktop Debug build: 0 xato, Android compileDebugKotlin va compileDebugAndroidTestKotlin: SUCCESS.
+- Tekshirilgan kod commit: `27231d6`.
 - UI/Cashier hali ulanmagan; main merge/release yo‘q; Firebase/CBU o‘zgarmadi.
 
 ## Keyingi sessiya — Qism 4: Desktop frontend va kassa integratsiyasi
