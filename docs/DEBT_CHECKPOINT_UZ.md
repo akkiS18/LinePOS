@@ -8,6 +8,7 @@ Sana: 2026-10-09. Holat: **Android frozen sale/stock receiver yakunlandi; barcha
 - Asos: main `b631a27241a5eb25501a6e4ab316c4aebdae4460`, tree `1f4322888d922eba93338bba224b7963c07e4b24`.
 - Branch: `feature/customer-debt`.
 - To‘liq kontrakt: [DEBT_PLAN_UZ.md](DEBT_PLAN_UZ.md).
+- Boshqa agentga topshirish: [DEBT_AGENT_HANDOFF_UZ.md](DEBT_AGENT_HANDOFF_UZ.md) — qolgan 8 qism, fayllar, testlar va tayyor prompt.
 - Bu checkpoint joylashgan commit — eng yangi bosqich checkpointi; o‘z commit SHA sini fayl ichiga taxminan yozmang, git logdan oling.
 
 ## 1-bosqichda bajarildi
