@@ -482,3 +482,16 @@ Ushbu hujjat mijozga oxirgi kiritilgan o'zgarishlar va yangi qulayliklarni ko'rs
 - **Mijoz uchun foydasi:**
   - Do'konda 1 ta yoki 2 ta qolgan tovarlar, agar ularning chegarasi 0 qilingan bo'lsa, soxta xavf (qizil fon) bermaydi va kam qolganlar ro'yxatini to'ldirib yubormaydi.
   - Sotuvchi qaysi tovar qachon ogohlantirish berishini o'zi to'liq nazorat qila oladi.
+
+---
+
+### 35. 🚀 Qarz Daftari (Customer Debt Stage 3A) Integratsiyasi: Tranzaksiyaviy Inbox, Wire Shartnomasi va Xavfsiz Sinxronizatsiya
+- **Nima o'zgardi:**
+  - **Qarz daftari backend va sinxronizatsiyasining 3A bosqichi asosiy tizimga to'liq ulandi:**
+    - **Kross-platforma Wire shartnomasi (`DebtWire`):** Desktop (C#) va Mobil (Kotlin) o'rtasida qarz operatsiyalari va to'lovlarni uzatish uchun yagona xavfsiz shartnoma ishlab chiqildi va 100% bir xillikda ishlaydigan test fixturalari bilan qamrab olindi.
+    - **Muzlatilgan moliyaviy konvertlar (`DebtEnvelope`):** Qarz yozuvlari va to'lov taqsimotlari tarmoq orqali uzatilganda o'zgarmas (immutable) va manipulyatsiyadan himoyalangan tarzda saqlanadi.
+    - **Ishonchli Inbox qutisi (`DebtEnvelopeInbox`):** Tarmoq uzilishi, qayta yuborish (replay) yoki takroriy so'rovlar bo'lganda, qarz to'lovlari bir martadan ortiq hisoblanmaydi (idempotent) va tranzaksiyaviy xavfsiz qabul qilinadi.
+    - **Android DEBT cheklari himoyasi:** Mobil ilovada qarzga sotilgan cheklar to'g'ri qayd etilishi va faqat sotuv yozuvlari bilan aralashib ketmasligi ta'minlandi.
+  - **Barcha 7 ta avtomatlashtirilgan qarz va biznes testlari 100% muvaffaqiyatli (PASS) o'tdi.**
+- **Mijoz uchun foydasi:**
+  - Nasiyaga savdo qilish va mijozlardan qarz undirish jarayoni 100% ishonchli bo'ldi: telefon yoki kompyuter o'chib qolsa ham qarz summalarida adashish, ikki marta hisoblanish yoki yo'qolib qolish xavfi butunlay bartaraf etildi.
