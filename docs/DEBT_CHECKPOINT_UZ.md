@@ -177,6 +177,7 @@ Foydalanuvchining kichik tugallangan bosqichlarda ishlash talabi sabab 2B ikkiga
   - Desktop Release build: 0 Warning, 0 Error.
   - Android yangi instrumentatsiya testi (`DebtLanSyncTest.kt`): Mock desktop server orqali `LocalSyncManager` push, pull, ACK, cursor va legacy conflict isolation jarayonlari to‘liq qamrab olindi.
   - Android Kotlin va AndroidTest kompilyatsiyasi: SUCCESS.
+- Tekshirilgan kod commit: `2a4af27`.
 - UI/Cashier tugmalari ulanmagan; main merge/release yo‘q; Firebase/CBU o‘zgarmadi.
 
 ## Keyingi sessiya — Qism 3: Bir nechta qurilma, tiklash epochlari va kontaktlar
