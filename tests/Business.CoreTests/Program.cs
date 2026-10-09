@@ -4,6 +4,7 @@ using Microsoft.Data.Sqlite;
 
 DebtSyncStoreTests.Run();
 DebtEnvelopeInboxTests.Run();
+DebtSaleReceiverTests.Run();
 DebtRepositoryTests.Run();
 DebtSchemaTests.Run();
 ReturnAccountingTests.Run();

@@ -12,8 +12,8 @@ public sealed class DebtInboxFullException : InvalidOperationException
     public DebtInboxFullException() : base("Debt inbox capacity exceeded; retain sender packet") { }
 }
 
-// Durable validated inbox + customer/payment receiver. Opening packets are held, NEVER
-// partially applied. No sale callback is exposed until the concrete frozen-stock adapter exists.
+// Durable validated inbox. Desktop openings opt in with a trusted actor/user resolver.
+// No arbitrary sale writer is exposed; all opening effects use DebtSaleReceiver.
 // No transport ACK/cursor or HELD release; callers must distinguish Waiting from Applied.
 public sealed class DebtEnvelopeInbox
 {
@@ -21,8 +21,9 @@ public sealed class DebtEnvelopeInbox
     public const long MaxPendingChars=32L*1024*1024;
     private readonly string store;
     private readonly DebtSyncStore bridge;
-    public DebtEnvelopeInbox(string path,string storeGuid,Func<bool> canSync,Func<string,bool> canImportActor) {
-        store=storeGuid;bridge=new(path,storeGuid,canSync,canImportActor);
+    private readonly Func<string,long?>? resolveActorUser;
+    public DebtEnvelopeInbox(string path,string storeGuid,Func<bool> canSync,Func<string,bool> canImportActor,Func<string,long?>? resolveActorUser=null) {
+        store=storeGuid;bridge=new(path,storeGuid,canSync,canImportActor);this.resolveActorUser=resolveActorUser;
     }
     private static void Need(bool ok) { if(!ok)throw new InvalidOperationException("Debt envelope integrity conflict"); }
     private static string Key(string id)=>"debt_envelope_v1:"+id;
@@ -32,7 +33,7 @@ public sealed class DebtEnvelopeInbox
         if(p.EventWire.Length>0)bridge.Authorize(DebtWire.DecodeEvent(p.EventWire,store).ActorGuid);
     }
     private void VerifyApplied(SqliteConnection db,SqliteTransaction tx,DebtEnvelopePacket p) {
-        Need(p.SaleWire.Length==0); // Opening application is not implemented in this stage.
+        if(p.SaleWire.Length>0)DebtSaleReceiver.Verify(db,tx,p.SaleWire,p.Guid);
         if(p.CustomerWire.Length>0)Need(bridge.CustomerWire(db,tx,DebtWire.DecodeCustomer(p.CustomerWire,store).Guid)==p.CustomerWire);
         if(p.EventWire.Length>0)Need(bridge.EventWire(db,tx,p.Guid)==p.EventWire);
     }
@@ -69,19 +70,25 @@ public sealed class DebtEnvelopeInbox
                 if(account.Count==0)missing=true;else Need((string)account[0][0]! ==e.CustomerGuid && (string)account[0][1]! ==store);
             }
         }
-        if(p.SaleWire.Length>0 || missing) {
-            var reason=p.SaleWire.Length>0?"sale_adapter_pending":"missing_dependency";
+        var gated=p.SaleWire.Length>0 && resolveActorUser==null;
+        DebtSaleReceiver? sale=null;
+        if(p.SaleWire.Length>0 && !gated) {
+            sale=DebtSaleReceiver.Prepare(db,tx,p.SaleWire,DebtWire.DecodeEvent(p.EventWire,store),resolveActorUser!);
+            missing|=sale==null;
+        }
+        if(gated || missing) {
+            var reason=gated?"sale_adapter_pending":"missing_dependency";
             if(old.Count==0) {
                 var count=Convert.ToInt64(Scalar(db,tx,"SELECT COUNT(*) FROM debt_sync_inbox"),CultureInfo.InvariantCulture);
                 var chars=Convert.ToInt64(Scalar(db,tx,"SELECT COALESCE(SUM(length(payload)),0) FROM debt_sync_inbox"),CultureInfo.InvariantCulture);
                 if(count>=MaxPendingPackets || chars>MaxPendingChars-wire.Length)throw new DebtInboxFullException();
                 Exec(db,tx,"INSERT INTO debt_sync_inbox(packet_guid,store_guid,payload,received_at,error) VALUES(@p0,@p1,@p2,@p3,@p4)",p.Guid,store,wire,receivedAt,reason);
             } else Exec(db,tx,"UPDATE debt_sync_inbox SET error=@p0 WHERE packet_guid=@p1",reason,p.Guid);
-            return p.SaleWire.Length>0?DebtReceiveStatus.WaitingForSaleAdapter:DebtReceiveStatus.WaitingForDependency;
+            return gated?DebtReceiveStatus.WaitingForSaleAdapter:DebtReceiveStatus.WaitingForDependency;
         }
         Exec(db,tx,"UPDATE sync_control SET applying=1 WHERE id=1");
         if(p.CustomerWire.Length>0)bridge.Customer(db,tx,DebtWire.DecodeCustomer(p.CustomerWire,store),p.CustomerWire);
-        if(p.EventWire.Length>0)bridge.Event(db,tx,DebtWire.DecodeEvent(p.EventWire,store),p.EventWire,null);
+        if(p.EventWire.Length>0)bridge.Event(db,tx,DebtWire.DecodeEvent(p.EventWire,store),p.EventWire,sale==null?null:(c,t,e)=>sale.Apply(c,t));
         Exec(db,tx,"INSERT INTO sync_meta(key,value) VALUES(@p0,@p1)",Key(p.Guid),Seal(wire));
         Exec(db,tx,"DELETE FROM debt_sync_inbox WHERE packet_guid=@p0",p.Guid);
         Exec(db,tx,"UPDATE sync_control SET applying=0 WHERE id=1");return DebtReceiveStatus.Applied;
