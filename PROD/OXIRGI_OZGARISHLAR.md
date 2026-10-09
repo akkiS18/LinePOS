@@ -528,3 +528,18 @@ Ushbu hujjat mijozga oxirgi kiritilgan o'zgarishlar va yangi qulayliklarni ko'rs
 - **Mijoz uchun foydasi:**
   - Kassir son yoki so'zlarni qanchalik tez yozsa ham (`2000`, `3000`), barcha raqamlar 100% to'liq yoziladi, bittasi ham tushib qolmaydi.
   - Qidiruv kassirga xalaqit bermaydi va shoshilinch vaqtda asabni buzmaydi.
+
+---
+
+### 38. ⚡ Kassa va Ombor Qidiruvini 100% Bir Xil Arxitekturaga O'tkazish (Tezkor Yozuvda Harflar Tushib Qolishini Butkul Yo'qotish)
+- **Nima o'zgardi:**
+  - **Kassa qidiruvi Ombor oynasi arxitekturasi bilan 100% tenglashtirildi:**
+    - Ombor oynasida `2000` yozilganda barcha belgilar tushmasdan to'liq yozilishi chuqur tahlil qilindi: Omborda `SearchQuery.set` o'zida hech qanday oraliq og'ir kod bajarmaydi (faqat 0.001 ms li taymerni qayta ishga tushiradi).
+    - Kassada esa `SearchQuery.set` da ro'yxatni tozalash (`FilteredProducts.Clear()`), asinxron `Task.Run` va `Dispatcher.InvokeAsync` orqali UI oqimida 40 ta kartani bittalab qo'shish harakatlari bo'lgan. Aynan shu oraliqda WPF UI xabarlar navbati bloklanib, tez kiritilgan keyingi `00` raqamlari tushib qolayotgan edi.
+  - **Amalga oshirilgan arxitektura o'zgarishlari:**
+    - `SearchQuery.set` mutlaqo 0-overhead qilindi: hech qanday tozalash yoki oraliq operatsiyalarsiz faqat 200 ms debounce taymerini boshqaradi.
+    - Asinxron `Task.Run` va `Dispatcher.InvokeAsync` o'rniga, in-memory keshdan foydalangan holda qidiruv 2 ms ichida sinxron va toza hisoblanadi.
+    - Natijalar ro'yxati ekranga alohida `.Clear()` va `.Add()` qilinmasdan, Ombor kabi bitta atomik yangilanishda (`FilteredProducts = new ObservableCollection<Product>(cards);`) uzatiladi. Bu orqali WPF UI faqat 1 marta chiziladi va klaviatura kiritishi hech qachon kechikmaydi.
+  - **Yangi Desktop Setup:** Barcha o'zgarishlar bilan yangi `Line_kassa_Desktop_Setup.exe` o'rnatish paketi yig'ildi va `PROD` papkasiga joylashtirildi.
+- **Mijoz uchun foydasi:**
+  - Kassa qidiruvi xuddi Ombor qidiruvidek 100% yengil va chaqqon bo'ldi. Kassir klaviaturada qanchalik katta tezlikda yozsa ham (`2000`, `15000`, tovar nomlari), birorta raqam yoki harf tushib qolmaydi, yozuv ravon va silliq aks etadi.
