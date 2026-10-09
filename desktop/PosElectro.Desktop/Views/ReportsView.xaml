@@ -552,8 +552,7 @@
                               Stroke="#94A3B8" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
                               Width="16" Height="16" HorizontalAlignment="Right" VerticalAlignment="Center"/>
                     </Grid>
-                    <TextBlock Text="{Binding TotalSalesCountText}" Foreground="#F8FAFC" FontSize="22" FontWeight="Bold" Margin="0,4,0,2"/>
-                    <TextBlock Text="{Binding BrakSummary}" FontSize="11" TextWrapping="Wrap" Foreground="#94A3B8" Margin="0,2,0,0"/>
+                    <TextBlock Text="{Binding TotalSalesCountText}" Foreground="#F8FAFC" FontSize="22" FontWeight="Bold" Margin="0,4,0,0"/>
                 </StackPanel>
             </Border>
 

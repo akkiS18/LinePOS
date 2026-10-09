@@ -280,7 +280,7 @@ namespace PosElectro.Desktop.ViewModels
         public string TotalProfitText => TotalProfit < 0
             ? $"{TotalProfit:N0} so'm"
             : $"+{TotalProfit:N0} so'm";
-        public string TotalProfitUsdText => _reportLines.All(i => i.ProfitUsd.HasValue) ? $"(${TotalProfitUsd:N2})" : "$ — (eski kurs yo‘q)";
+        public string TotalProfitUsdText => _reportLines.Any() && _reportLines.All(i => i.ProfitUsd.HasValue) && Math.Abs(TotalProfitUsd) > 0.001 ? $"(${TotalProfitUsd:N2})" : string.Empty;
         public bool IsProfitNegative => TotalProfit < 0;
         public string TotalSalesCountText => $"{TotalSalesCount} ta chek";
         public string TotalItemsCountText => $"{TotalItemsCount:0.##} ta/m";
@@ -468,7 +468,7 @@ namespace PosElectro.Desktop.ViewModels
             int salesCount = detailedItems.Where(i => !i.IsBrak && !i.IsReturn).Select(i => i.SaleId).Distinct().Count();
 
             periodTitle += $" | Brak: {detailedItems.Where(i => i.IsBrak).Select(i => i.SaleId).Distinct().Count()} ta, {detailedItems.Where(i => i.IsBrak).Sum(i => i.TotalCost):N2} so‘m";
-            periodTitle += detailedItems.All(i => i.ProfitUsd.HasValue) ? $" | USD foyda: ${detailedItems.Sum(i => i.ProfitUsd ?? 0):N2}" : " | USD foyda: noma’lum (eski kurs saqlanmagan)";
+            periodTitle += detailedItems.All(i => i.ProfitUsd.HasValue) && detailedItems.Sum(i => i.ProfitUsd ?? 0) > 0 ? $" | USD foyda: ${detailedItems.Sum(i => i.ProfitUsd ?? 0):N2}" : string.Empty;
             bool exported = ExcelExportService.ExportReport(periodTitle, rev, cost, prof, salesCount, detailedItems, catFilter ?? "Barchasi", whTitle);
             if (exported)
             {

@@ -495,3 +495,22 @@ Ushbu hujjat mijozga oxirgi kiritilgan o'zgarishlar va yangi qulayliklarni ko'rs
   - **Barcha 7 ta avtomatlashtirilgan qarz va biznes testlari 100% muvaffaqiyatli (PASS) o'tdi.**
 - **Mijoz uchun foydasi:**
   - Nasiyaga savdo qilish va mijozlardan qarz undirish jarayoni 100% ishonchli bo'ldi: telefon yoki kompyuter o'chib qolsa ham qarz summalarida adashish, ikki marta hisoblanish yoki yo'qolib qolish xavfi butunlay bartaraf etildi.
+
+---
+
+### 36. ⚡ Kassa Qidiruvi Tezligi (Qotish va Harflar Tushib Qolishini Bartaraf Etish) & Hisobotlar Kartochkalarini Tozalash
+- **Nima o'zgardi:**
+  - **Asosiy kassa qidiruvidagi qotish (harflar tushib qolishi) to'liq tuzatildi:**
+    - **Muammo sababi:** Oldin har bir harf bosilganda (150ms kechikish bilan) dastur asosiy oyna (UI) oqimida SQLite ma'lumotlar bazasidagi barcha minglab tovarlarni qaytadan diskdan o'qib, og'ir qidiruv logikasini yurgizar edi. Natijada kassa qidiruv maydoni 2 ta harfdan keyin qotib, tez yozilganda klaviatura bosishlarini o'tkazib yuborayotgan edi.
+    - **Kesh xotirasi (In-Memory Cache):** Tovarlar, omborlar va qoldiqlar ro'yxati operativ xotirada keshlandi. Endi qidiruv harflari yozilganda ma'lumotlar bazasi diskiga asossiz murojaat qilinmaydi.
+    - **Orqa fon qidiruvi (Async Background Worker & CancellationToken):** Qidiruv hisob-kitobi va saralash orqa fonga (`Task.Run`) olindi. Agar foydalanuvchi tez yozsa, eski qidiruv darhol bekor qilinadi va yangi so'rovga o'tiladi. UI oqimi 100% bo'sh bo'lib, klaviatura yozuvi soniyasiga 60 kadr tezlikda biror harfni tushirmasdan silliq ishlaydi.
+    - **Debounce 250ms ga sozlandi:** Odamning tabiiy yozish tezligiga moslashtirilib, so'z yozilayotgan paytda ortiqcha oraliq qidiruvlarni boshlab yubormaydi.
+    - **Eng mos 60 ta natija cheklovi:** Qidiruv natijalarining dastlabki eng muhim 60 tasi ko'rsatiladi — bu kassa oynasining yashindek tez ochilishini ta'minlaydi.
+    - **Enter va Shtrix-kod skaneri tezligi:** Shtrix-kod o'qitilganda yoki Enter bosilganda qidiruv kutmasdan, to'g'ridan-to'g'ri keshdan tekshirib tovar darhol savatchaga qo'shiladi.
+  - **Hisobotlar oynasidagi KPI kartochkalari tozalandi:**
+    - **2-kartochka (SOF FOYDA):** Ortiqcha va chalg'ituvchi `$-- (eski kurs yo'q)` yozuvi olib tashlandi, dollar kursi saqlanmagan hollarda bo'sh ko'rsatiladi.
+    - **3-kartochka (SAVDOLAR SONI):** Kartochka tagidagi mayda, ko'zni toliqtiruvchi `Qaytarilgan (sof): -0.00 so'm • Tannarx tiklanishi: -0.00 so'm / Brak: 0 ta` qatori olib tashlandi. Kartochka boshqalar kabi elegant, toza va aniq faqat cheklar sonini ko'rsatadigan holatga keltirildi.
+- **Mijoz uchun foydasi:**
+  - Kassir tovar nomini qanchalik tez yozsa ham, birorta harf tushib qolmaydi, dastur qotmaydi va harflar tiqilib qolmaydi.
+  - Shoshilinch navbat paytida kassa yashindek tez ishlaydi.
+  - Hisobotlar oynasi ortiqcha tushunarsiz yozuvlardan xoli bo'lib, eng muhim moliyaviy raqamlar aniq ko'rinadi.

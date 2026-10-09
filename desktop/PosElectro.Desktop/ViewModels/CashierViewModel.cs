@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using PosElectro.Desktop.Data;
@@ -397,6 +399,11 @@ namespace PosElectro.Desktop.ViewModels
         private string _toastMessage = string.Empty;
         private System.Windows.Threading.DispatcherTimer? _toastTimer;
         private readonly System.Windows.Threading.DispatcherTimer _searchDebounceTimer;
+        private CancellationTokenSource? _searchCts;
+        private List<Product>? _cachedAllProducts;
+        private List<Warehouse>? _cachedActiveWarehouses;
+        private Dictionary<(string, string), double>? _cachedStockMap;
+        private Warehouse? _cachedPrimaryWarehouse;
 
         public bool IsToastVisible
         {
@@ -524,12 +531,12 @@ namespace PosElectro.Desktop.ViewModels
 
             _searchDebounceTimer = new System.Windows.Threading.DispatcherTimer
             {
-                Interval = TimeSpan.FromMilliseconds(150)
+                Interval = TimeSpan.FromMilliseconds(250)
             };
             _searchDebounceTimer.Tick += (s, e) =>
             {
                 _searchDebounceTimer.Stop();
-                RefreshProducts();
+                TriggerSearchAsync();
             };
 
             AddToCartCommand = new RelayCommand<Product>(p => 
@@ -600,7 +607,16 @@ namespace PosElectro.Desktop.ViewModels
                 if (SetProperty(ref _searchQuery, fixedVal))
                 {
                     _searchDebounceTimer.Stop();
-                    _searchDebounceTimer.Start();
+                    if (string.IsNullOrWhiteSpace(fixedVal))
+                    {
+                        _searchCts?.Cancel();
+                        IsShowingTopSellers = true;
+                        FilteredProducts.Clear();
+                    }
+                    else
+                    {
+                        _searchDebounceTimer.Start();
+                    }
                 }
             }
         }
@@ -703,6 +719,7 @@ namespace PosElectro.Desktop.ViewModels
         public void HandleSearchQueryEnter()
         {
             _searchDebounceTimer.Stop();
+            _searchCts?.Cancel();
             var q = SearchQuery.Trim().Replace("\r", "").Replace("\n", "");
             if (string.IsNullOrWhiteSpace(q)) return;
 
@@ -741,6 +758,31 @@ namespace PosElectro.Desktop.ViewModels
                 AddToCart(singleProduct);
                 SearchQuery = string.Empty;
                 StatusMessage = $"✅ '{singleProduct.Name}' savatchaga qo'shildi";
+                return;
+            }
+
+            // 3b. Agar FilteredProducts hali async yuklanib ulgurmagan bo'lsa (foydalanuvchi tez Enter bosgan bo'lsa), keshdan tezkor tekshirish
+            EnsureProductCache();
+            var cachedProds = _cachedAllProducts ?? new List<Product>();
+            var exactOrSingleMatches = SmartSearchHelper.FilterAndRank(
+                cachedProds,
+                q,
+                p => p.Name,
+                p => p.Barcode,
+                p => p.Note
+            );
+            if (exactOrSingleMatches.Count == 1)
+            {
+                var singleProduct = exactOrSingleMatches[0];
+                AddToCart(singleProduct);
+                SearchQuery = string.Empty;
+                StatusMessage = $"✅ '{singleProduct.Name}' savatchaga qo'shildi";
+                return;
+            }
+            else if (exactOrSingleMatches.Count > 1)
+            {
+                TriggerSearchAsync();
+                StatusMessage = $"🔍 {exactOrSingleMatches.Count} ta tovar topildi. Keraklisini tanlang.";
                 return;
             }
 
@@ -1339,13 +1381,35 @@ namespace PosElectro.Desktop.ViewModels
             }
         }
 
+        public void InvalidateProductCache()
+        {
+            _cachedAllProducts = null;
+            _cachedActiveWarehouses = null;
+            _cachedStockMap = null;
+            _cachedPrimaryWarehouse = null;
+        }
+
+        private void EnsureProductCache()
+        {
+            if (_cachedAllProducts == null || _cachedActiveWarehouses == null || _cachedStockMap == null || _cachedPrimaryWarehouse == null)
+            {
+                _cachedActiveWarehouses = _db.GetWarehouses(includeDeleted: false);
+                _cachedStockMap = _db.GetAllActiveProductWarehouseStocks();
+                _cachedPrimaryWarehouse = _cachedActiveWarehouses.FirstOrDefault(w => w.IsPrimary) 
+                                ?? _cachedActiveWarehouses.FirstOrDefault() 
+                                ?? new Warehouse { Guid = "main-default-warehouse", Name = "Do'kondagi ombor", IsPrimary = true };
+                _cachedAllProducts = _db.GetAllProducts(includeDeleted: false);
+            }
+        }
+
         public void RefreshProducts()
         {
-            var activeWarehouses = _db.GetWarehouses(includeDeleted: false);
-            var stockMap = _db.GetAllActiveProductWarehouseStocks();
-            var primaryWh = activeWarehouses.FirstOrDefault(w => w.IsPrimary) 
-                            ?? activeWarehouses.FirstOrDefault() 
-                            ?? new Warehouse { Guid = "main-default-warehouse", Name = "Do'kondagi ombor", IsPrimary = true };
+            InvalidateProductCache();
+            EnsureProductCache();
+
+            var activeWarehouses = _cachedActiveWarehouses!;
+            var stockMap = _cachedStockMap!;
+            var primaryWh = _cachedPrimaryWarehouse!;
 
             if (string.IsNullOrWhiteSpace(SearchQuery))
             {
@@ -1361,22 +1425,69 @@ namespace PosElectro.Desktop.ViewModels
                 return;
             }
 
-            // Qidiruv rejimi (Aqlli tartibsiz ko'p so'zli va kril/lotin qidiruvi)
-            IsShowingTopSellers = false;
-            var rawList = _db.GetAllProducts(includeDeleted: false);
-            var list = SmartSearchHelper.FilterAndRank(
-                rawList,
-                SearchQuery,
-                p => p.Name,
-                p => p.Barcode,
-                p => p.Note
-            );
+            TriggerSearchAsync();
+        }
 
-            FilteredProducts.Clear();
-            foreach (var p in list)
+        private void TriggerSearchAsync()
+        {
+            var query = SearchQuery?.Trim();
+            if (string.IsNullOrWhiteSpace(query))
             {
-                ExpandProductForWarehouses(p, activeWarehouses, stockMap, primaryWh, FilteredProducts);
+                _searchCts?.Cancel();
+                IsShowingTopSellers = true;
+                FilteredProducts.Clear();
+                return;
             }
+
+            _searchCts?.Cancel();
+            _searchCts = new CancellationTokenSource();
+            var token = _searchCts.Token;
+
+            EnsureProductCache();
+            var allProducts = _cachedAllProducts ?? new List<Product>();
+            var activeWarehouses = _cachedActiveWarehouses ?? new List<Warehouse>();
+            var stockMap = _cachedStockMap ?? new Dictionary<(string, string), double>();
+            var primaryWh = _cachedPrimaryWarehouse ?? new Warehouse { Guid = "main-default-warehouse", Name = "Do'kondagi ombor", IsPrimary = true };
+
+            Task.Run(() =>
+            {
+                if (token.IsCancellationRequested) return;
+
+                var ranked = SmartSearchHelper.FilterAndRank(
+                    allProducts,
+                    query,
+                    p => p.Name,
+                    p => p.Barcode,
+                    p => p.Note
+                );
+
+                if (token.IsCancellationRequested) return;
+
+                // Eng mos kelgan 60 ta natijani olamiz (WPF UI va layout yengil bo'lishi uchun)
+                var topResults = ranked.Take(60).ToList();
+
+                var expandedCards = new List<Product>(topResults.Count * 2);
+                foreach (var p in topResults)
+                {
+                    if (token.IsCancellationRequested) return;
+                    ExpandProductForWarehouses(p, activeWarehouses, stockMap, primaryWh, expandedCards);
+                }
+
+                if (token.IsCancellationRequested) return;
+
+                Application.Current?.Dispatcher.InvokeAsync(() =>
+                {
+                    if (token.IsCancellationRequested) return;
+                    if (SearchQuery?.Trim() != query) return;
+
+                    IsShowingTopSellers = false;
+                    FilteredProducts.Clear();
+                    foreach (var card in expandedCards)
+                    {
+                        FilteredProducts.Add(card);
+                    }
+                }, System.Windows.Threading.DispatcherPriority.Background);
+            }, token);
         }
 
         private static void ExpandProductForWarehouses(
@@ -1384,7 +1495,7 @@ namespace PosElectro.Desktop.ViewModels
             List<Warehouse> activeWarehouses, 
             Dictionary<(string, string), double> stockMap, 
             Warehouse primaryWh, 
-            System.Collections.ObjectModel.ObservableCollection<Product> targetCollection)
+            ICollection<Product> targetCollection)
         {
             if (activeWarehouses.Count <= 1)
             {
