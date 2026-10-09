@@ -38,9 +38,9 @@ public sealed class DebtRepository
         var cmd=c.CreateCommand();cmd.Transaction=t;cmd.CommandText=sql;
         for(int i=0;i<args.Length;i++)cmd.Parameters.AddWithValue("@p"+i,args[i]??DBNull.Value);return cmd;
     }
-    private static void Exec(SqliteConnection c,SqliteTransaction t,string sql,params object?[] args) { using var cmd=Command(c,t,sql,args);cmd.ExecuteNonQuery(); }
-    private static object? Scalar(SqliteConnection c,SqliteTransaction t,string sql,params object?[] args) { using var cmd=Command(c,t,sql,args);var v=cmd.ExecuteScalar();return v==DBNull.Value?null:v; }
-    private static List<object?[]> Rows(SqliteConnection c,SqliteTransaction t,string sql,params object?[] args) {
+    internal static void Exec(SqliteConnection c,SqliteTransaction t,string sql,params object?[] args) { using var cmd=Command(c,t,sql,args);cmd.ExecuteNonQuery(); }
+    internal static object? Scalar(SqliteConnection c,SqliteTransaction t,string sql,params object?[] args) { using var cmd=Command(c,t,sql,args);var v=cmd.ExecuteScalar();return v==DBNull.Value?null:v; }
+    internal static List<object?[]> Rows(SqliteConnection c,SqliteTransaction t,string sql,params object?[] args) {
         using var cmd=Command(c,t,sql,args);using var r=cmd.ExecuteReader();var rows=new List<object?[]>();
         while(r.Read()){var row=new object[r.FieldCount];r.GetValues(row);rows.Add(row.Select(v=>v==DBNull.Value?null:v).ToArray());}return rows;
     }
@@ -105,7 +105,7 @@ public sealed class DebtRepository
         }return accounts;
     }
     public IReadOnlyList<DebtAccount> ReadAccounts(string customerGuid) { Id(customerGuid);return Write((c,t)=>{Scope(c,t);Customer(c,t,customerGuid,false);return Accounts(c,t,customerGuid).AsReadOnly();}); }
-    private static long StoredMinor(object? value) {
+    internal static long StoredMinor(object? value) {
         var d=Convert.ToDouble(value,CultureInfo.InvariantCulture);Need(double.IsFinite(d) && d>=0);
         return checked((long)(decimal.Round(decimal.Parse(d.ToString("R",CultureInfo.InvariantCulture),NumberStyles.Float,CultureInfo.InvariantCulture),2,MidpointRounding.AwayFromZero)*100));
     }

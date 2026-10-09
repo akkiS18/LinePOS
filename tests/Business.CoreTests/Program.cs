@@ -2,6 +2,8 @@ using PosElectro.Desktop.Data;
 using PosElectro.Desktop.Models;
 using Microsoft.Data.Sqlite;
 
+DebtSyncStoreTests.Run();
+DebtEnvelopeInboxTests.Run();
 DebtRepositoryTests.Run();
 DebtSchemaTests.Run();
 ReturnAccountingTests.Run();

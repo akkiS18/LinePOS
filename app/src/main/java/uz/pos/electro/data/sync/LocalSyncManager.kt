@@ -342,6 +342,8 @@ class LocalSyncManager @Inject constructor(
             for(i in 0 until root.getJSONArray("sales").length()) {
                 val s = root.getJSONArray("sales").getJSONObject(i)
                 val guid = s.getString("Guid")
+                // Validate even an existing GUID: never ACK a debt header without its envelope.
+                LegacySalePaymentType.decode(s.opt("PaymentType"))
                 if(saleDao.getSaleByGuid(guid) == null) {
                     val sale = parseSaleJson(s)
                     saleDao.insertSaleWithItems(sale,parseSaleItemsJson(s.getJSONArray("Items"),guid))
@@ -454,14 +456,7 @@ class LocalSyncManager @Inject constructor(
             put("TotalAmount", sale.totalAmount)
             put("TotalCost", sale.totalCost)
             put("UsdRate", sale.usdRate)
-            put("PaymentType", when (sale.paymentType) {
-                PaymentType.CASH -> 0
-                PaymentType.CARD -> 1
-                PaymentType.SPLIT -> 2
-                PaymentType.BRAK -> 6
-                PaymentType.RETURN -> 7
-                PaymentType.RETURN_REVERSAL -> 8
-            })
+            put("PaymentType", LegacySalePaymentType.encode(sale.paymentType))
             put("CashAmount", sale.cashAmount)
             put("CardAmount", sale.cardAmount)
             put("TaxAmount", sale.taxAmount)
@@ -525,25 +520,7 @@ class LocalSyncManager @Inject constructor(
     }
 
     private fun parseSaleJson(sJson: JSONObject): SaleEntity {
-        val paymentType = when (val raw = sJson.opt("PaymentType")) {
-            is Number -> when (raw.toInt()) {
-                1 -> PaymentType.CARD
-                2 -> PaymentType.SPLIT
-                6 -> PaymentType.BRAK
-                7 -> PaymentType.RETURN
-                8 -> PaymentType.RETURN_REVERSAL
-                else -> PaymentType.CASH
-            }
-            is String -> when (raw.uppercase()) {
-                "CARD" -> PaymentType.CARD
-                "SPLIT" -> PaymentType.SPLIT
-                "BRAK" -> PaymentType.BRAK
-                "RETURN" -> PaymentType.RETURN
-                "RETURN_REVERSAL" -> PaymentType.RETURN_REVERSAL
-                else -> PaymentType.CASH
-            }
-            else -> PaymentType.CASH
-        }
+        val paymentType = LegacySalePaymentType.decode(sJson.opt("PaymentType"))
         return SaleEntity(
             id = 0L,
             guid = sJson.optString("Guid", java.util.UUID.randomUUID().toString()),

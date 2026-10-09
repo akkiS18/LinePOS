@@ -64,6 +64,7 @@ fun CheckoutPaymentDialog(
     var cardInput by remember { mutableStateOf((totalAmount - (totalAmount / 2.0).toInt()).toInt().toString()) }
 
     val calculatedCardTax: Double = when (selectedType) {
+        PaymentType.DEBT -> error("Nasiya uchun alohida to‘lov oynasi kerak")
         PaymentType.CASH -> 0.0
         PaymentType.CARD -> totalAmount * (cardTaxRate / 100.0)
         PaymentType.SPLIT -> {
@@ -162,6 +163,7 @@ fun CheckoutPaymentDialog(
                 Spacer(modifier = Modifier.height(14.dp))
 
                 when (selectedType) {
+                    PaymentType.DEBT -> error("Nasiya uchun alohida to‘lov oynasi kerak")
                     PaymentType.CASH, PaymentType.RETURN, PaymentType.RETURN_REVERSAL, PaymentType.BRAK -> {
                         Surface(
                             shape = RoundedCornerShape(10.dp),
@@ -274,6 +276,7 @@ fun CheckoutPaymentDialog(
                 enabled = !isSubmitting,
                 onClick = {
                     val (cash, card) = when (selectedType) {
+                        PaymentType.DEBT -> error("Nasiya uchun alohida to‘lov oynasi kerak")
                         PaymentType.CASH -> Pair(totalAmount, 0.0)
                         PaymentType.CARD -> Pair(0.0, totalAmount)
                         PaymentType.SPLIT -> {

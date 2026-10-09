@@ -150,3 +150,21 @@ Umumiy debt schema v1, Android Room 13→14 va desktop pre-migration snapshot qo
 ## Qarz daftari — 2026-10-07, 2B-2
 
 C#/Kotlin local transactional repository: customer creation, nasiya ochish, payment allocation, durable request replay va HELD outbox. Savdo callbacki bir SQLite tranzaksiyasida ishlashi shart; request o‘zgarsa rad etiladi, parallel bir xil to‘lov bir marta yoziladi. Host actor/store/permission va cashier adapter hali UIga ulanmagan. `acked=-1` eski full-pull yo‘llarini to‘liq bloklamaydi: stage3 capability/atomic group tugamasdan UI/cashierga ulash yoki release qilish mumkin emas. API chegaralari `docs/DEBT_REPOSITORY.md`, yakuniy CI dalili va keyingi kichik scope `docs/DEBT_CHECKPOINT_UZ.md`da. Main’ga merge yo‘q; Firebase/CBU o‘zgarmadi.
+
+
+## Qarz daftari — 2026-10-07, 3A-1
+
+C#/Kotlin canonical wire component codec va validator qo‘shildi: customer-create, sale_open, payment; aniq integer pul, frozen allocation, payload/header mosligi va to‘liq komponent fingerprint. 92 ta bir xil fixture C#/JVM/Android uchun; mavjud 97 ta arifmetika saqlangan. Bu full envelope/DB receiver/ACK emas, `debtLedgerV1` hali ilovada e’lon qilinmaydi. HELD navbat ochilmagan; main/UI/release yo‘q. Transport auditida full pull va sync_meta’ni strip qiladigan desktop download_db yo‘li alohida integration gate deb qayd etildi. Kontrakt: `docs/DEBT_WIRE.md`; test dalili va keyingi kichik bosqich: `docs/DEBT_CHECKPOINT_UZ.md`.
+
+
+## Qarz daftari — 2026-10-08, 3A-2a
+
+C#/Kotlin `DebtSyncStore`: frozen component export, full-body replay va atomic DB import; haqiqiy bazalarda offline to‘lovlar birlashishi, qayta yuborish, ownership/permission va rollback testlari. To‘liq body+hash seali sync_meta’da saqlanadi, HELD navbat ochilmagan. Bu to‘liq sale/stock envelope, durable inbox yoki network ACK emas; trusted callbackni tarmoq bodyga to‘g‘ridan-to‘g‘ri ulash mumkin emas. Scope 3A-2a DB component, 2b full envelope/inbox, 2c transport/ACKga ajratildi. `docs/DEBT_DB_BRIDGE.md` va `docs/DEBT_CHECKPOINT_UZ.md` keyingi ish uchun asos; main/UI/release yo‘q.
+
+## Qarz daftari — 2026-10-08, 3A-2b-1
+
+`DebtEnvelope.cs/kt`: pure frozen financial envelope codec va sale/items/stock/FX/fee validation, 155 umumiy fixture. 3A-2b ikkiga bo‘lindi: 2b-1 codec, 2b-2 local freeze/preflight + atomic full-envelope DB receiver/inbox. Bu bosqich DB/network/UIga ulanmaydi, HELD/navbat ochilmaydi, main/release yo‘q. Keyingi ish uchun `docs/DEBT_ENVELOPE.md` va yakuniy CI dalillari bilan `docs/DEBT_CHECKPOINT_UZ.md`ni o‘qi. Local SaleFingerprint endi canonical sale wire hashiga bog‘lanishi shart; arbitrary old test fingerprintni production envelopega aylantirma.
+
+## Qarz daftari — 2026-10-08, 3A-2b-2a
+
+`DebtEnvelopeInbox.cs/kt`: durable validated v1 inbox, customer/payment + full receipt + pending removal bir writer tranzaksiyada. 128 packet/32MiB pending cap, exact replay va original relay; sale_open faqat WaitingForSaleAdapter, yangi public callback orqali bypass yo‘q. 2b-2b concrete sale/items/stock adapter va local freeze/preflight hali qolgan. Unknown version quarantine ham transport bosqichida; waiting hech qachon moliyaviy ACK emas. UI/main/release/Firebase/CBU yo‘q. Kontrakt `docs/DEBT_INBOX.md`, CI va keyingi scope `docs/DEBT_CHECKPOINT_UZ.md`da.
