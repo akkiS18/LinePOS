@@ -531,7 +531,7 @@ namespace PosElectro.Desktop.ViewModels
 
             _searchDebounceTimer = new System.Windows.Threading.DispatcherTimer
             {
-                Interval = TimeSpan.FromMilliseconds(250)
+                Interval = TimeSpan.FromMilliseconds(400)
             };
             _searchDebounceTimer.Tick += (s, e) =>
             {
@@ -607,14 +607,24 @@ namespace PosElectro.Desktop.ViewModels
                 if (SetProperty(ref _searchQuery, fixedVal))
                 {
                     _searchDebounceTimer.Stop();
-                    if (string.IsNullOrWhiteSpace(fixedVal))
+                    var trimmed = fixedVal?.Trim();
+                    if (string.IsNullOrWhiteSpace(trimmed))
                     {
+                        _searchCts?.Cancel();
+                        IsShowingTopSellers = true;
+                        FilteredProducts.Clear();
+                    }
+                    else if (trimmed.Length < 2)
+                    {
+                        // 1 ta belgi bo'lganda (masalan: faqat '2' yoki 'k') og'ir qidiruv boshlanmaydi va interfeys qotmaydi.
+                        // Eng ko'p sotilgan tovarlar ekranda silliq ko'rinib turaveradi.
                         _searchCts?.Cancel();
                         IsShowingTopSellers = true;
                         FilteredProducts.Clear();
                     }
                     else
                     {
+                        // Kamida 2 ta belgi bo'lgandagina 400ms debounce taymeri ishga tushadi
                         _searchDebounceTimer.Start();
                     }
                 }
@@ -1431,7 +1441,7 @@ namespace PosElectro.Desktop.ViewModels
         private void TriggerSearchAsync()
         {
             var query = SearchQuery?.Trim();
-            if (string.IsNullOrWhiteSpace(query))
+            if (string.IsNullOrWhiteSpace(query) || query.Length < 2)
             {
                 _searchCts?.Cancel();
                 IsShowingTopSellers = true;
@@ -1463,8 +1473,8 @@ namespace PosElectro.Desktop.ViewModels
 
                 if (token.IsCancellationRequested) return;
 
-                // Eng mos kelgan 60 ta natijani olamiz (WPF UI va layout yengil bo'lishi uchun)
-                var topResults = ranked.Take(60).ToList();
+                // Eng mos kelgan dastlabki 24 ta natijani olamiz (WPF UI rendering bir zumda bo'lishi va 0ms lag bo'lishi uchun)
+                var topResults = ranked.Take(24).ToList();
 
                 var expandedCards = new List<Product>(topResults.Count * 2);
                 foreach (var p in topResults)

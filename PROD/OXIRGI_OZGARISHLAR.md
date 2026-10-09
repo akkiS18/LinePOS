@@ -514,3 +514,17 @@ Ushbu hujjat mijozga oxirgi kiritilgan o'zgarishlar va yangi qulayliklarni ko'rs
   - Kassir tovar nomini qanchalik tez yozsa ham, birorta harf tushib qolmaydi, dastur qotmaydi va harflar tiqilib qolmaydi.
   - Shoshilinch navbat paytida kassa yashindek tez ishlaydi.
   - Hisobotlar oynasi ortiqcha tushunarsiz yozuvlardan xoli bo'lib, eng muhim moliyaviy raqamlar aniq ko'rinadi.
+
+---
+
+### 37. ⚡ Kassa Qidiruvi: Professional Debounce (400ms), 2-Belgi Chegarasi va Fokus Himoyasi
+- **Nima o'zgardi:**
+  - **400 ms professional Debounce kechikishi:** Oldingi 250 ms kechikish o'rniga xalqaro standart 400 ms kechikish joriy qilindi. Endi foydalanuvchi `2000` yoki boshqa so'zlarni klaviaturada shoshilinch yozayotgan paytda oraliq qidiruvlar mutlaqo boshlanmaydi va harflar tiqilib qolmaydi. Tizim faqat kassir yozishdan to'xtaganidan keyingina qidiruvni boshlaydi.
+  - **Kamida 2 ta belgi qoidasi (`Length >= 2`):** Faqat `2` yoki bitta harf yozilganda og'ir qidiruv boshlanmaydi — ekranda eng ko'p sotilgan tovarlar ro'yxati silliq turadi. 2-belgi kiritilgach (masalan: `20`, `2000` yoki `ka`), 400ms to'xtashdan so'ng qidiruv natijalari yengil ochiladi.
+  - **Klaviatura fokusi himoyasi (`Focusable="False"`):** Qidiruv natijalari chiqqanda yoki yangilanganda klaviatura fokusi qidiruv maydonidan (`SearchBox`) chiqib ketmasligi uchun tovarlar kartalari paneli klaviatura fokusini tortib olmaydigan qilindi.
+  - **Top 24 ta eng mos natija:** Natijalar soni 60 tadan eng yuqori reytingli 24 taga keltirildi — bu qidiruv ro'yxatining 0 ms kechikish bilan yashindek ochilishini ta'minlaydi.
+  - **Shtrix-kod skaneri va Enter qulayligi:** Skaner o'qitilganda yoki Enter bosilganda 1 ta belgida ham hech qanday taymer kutmasdan tovar darhol savatchaga qo'shiladi va qidiruv maydoni tozalanadi.
+  - **Yangi Desktop Setup:** Barcha yangiliklar bilan to'liq Inno Setup o'rnatish paketi (`Line_kassa_Desktop_Setup.exe`) yangidan yig'ildi.
+- **Mijoz uchun foydasi:**
+  - Kassir son yoki so'zlarni qanchalik tez yozsa ham (`2000`, `3000`), barcha raqamlar 100% to'liq yoziladi, bittasi ham tushib qolmaydi.
+  - Qidiruv kassirga xalaqit bermaydi va shoshilinch vaqtda asabni buzmaydi.

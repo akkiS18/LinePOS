@@ -62,6 +62,8 @@
                              ItemsSource="{Binding TopSellingProducts}"
                              Background="Transparent"
                              BorderThickness="0"
+                             Focusable="False"
+                             KeyboardNavigation.TabNavigation="None"
                              ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                         <ListBox.ItemsPanel>
                             <ItemsPanelTemplate>
@@ -70,6 +72,7 @@
                         </ListBox.ItemsPanel>
                         <ListBox.ItemContainerStyle>
                             <Style TargetType="ListBoxItem">
+                                <Setter Property="Focusable" Value="False"/>
                                 <Setter Property="Padding" Value="0"/>
                                 <Setter Property="Margin" Value="0"/>
                                 <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
@@ -162,6 +165,8 @@
                          ItemsSource="{Binding FilteredProducts}"
                          Background="Transparent"
                          BorderThickness="0"
+                         Focusable="False"
+                         KeyboardNavigation.TabNavigation="None"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                          Visibility="{Binding IsShowingSearch, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <ListBox.ItemsPanel>
@@ -171,6 +176,7 @@
                     </ListBox.ItemsPanel>
                     <ListBox.ItemContainerStyle>
                         <Style TargetType="ListBoxItem">
+                            <Setter Property="Focusable" Value="False"/>
                             <Setter Property="Padding" Value="0"/>
                             <Setter Property="Margin" Value="0"/>
                             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
