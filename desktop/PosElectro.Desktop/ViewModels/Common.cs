@@ -89,4 +89,69 @@ namespace PosElectro.Desktop.ViewModels
             return false;
         }
     }
+
+    public class MinorToUzConverter : System.Windows.Data.IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+        {
+            if (value is long l) return l / 100.0;
+            if (value is int i) return i / 100.0;
+            return 0.0;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+        {
+            if (value is double d) return (long)Math.Round(d * 100.0);
+            return 0L;
+        }
+    }
+
+    public class GreaterThanZeroConverter : System.Windows.Data.IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+        {
+            if (value is long l) return l > 0;
+            if (value is int i) return i > 0;
+            if (value is double d) return d > 0;
+            return false;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) => false;
+    }
+
+    public class LessThanZeroConverter : System.Windows.Data.IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+        {
+            if (value is long l) return l < 0;
+            if (value is int i) return i < 0;
+            if (value is double d) return d < 0;
+            return false;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) => false;
+    }
+
+    public class EmptyStringToVisibilityConverter : System.Windows.Data.IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+        {
+            return string.IsNullOrWhiteSpace(value as string) ? System.Windows.Visibility.Collapsed : System.Windows.Visibility.Visible;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) => null!;
+    }
+
+    public class InverseBooleanConverter : System.Windows.Data.IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+        {
+            return value is bool b ? !b : true;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+        {
+            return value is bool b ? !b : false;
+        }
+    }
 }

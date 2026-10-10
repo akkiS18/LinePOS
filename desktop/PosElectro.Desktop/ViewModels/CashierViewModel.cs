@@ -6,6 +6,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Input;
 using PosElectro.Desktop.Data;
+using PosElectro.Desktop.Debt;
 using PosElectro.Desktop.Models;
 using PosElectro.Desktop.Services;
 using PosElectro.Desktop.Views;
@@ -123,6 +124,14 @@ namespace PosElectro.Desktop.ViewModels
         public int ItemCount => Items.Count;
         public DateTime HeldAt { get; set; } = DateTime.Now;
         public string DisplayText => $"{Name} ({ItemCount} ta - {TotalAmount:N0} so'm)";
+
+        // Nasiya holati
+        public string? CustomerGuid { get; set; }
+        public string? CustomerName { get; set; }
+        public string? DueDate { get; set; }
+        public int SelectedPaymentType { get; set; } = 0;
+        public string DebtCashAdvance { get; set; } = "0";
+        public string DebtCardAdvance { get; set; } = "0";
     }
 
     public class CashierViewModel : ViewModelBase
@@ -131,6 +140,8 @@ namespace PosElectro.Desktop.ViewModels
         private readonly ProductService _productService;
         private readonly CurrencyService _currencyService;
         private readonly PrinterService _printerService;
+        private readonly DebtService _debtService;
+        private bool _isSubmittingSale;
         private string _searchQuery = string.Empty;
         private string _selectedCategory = ProductService.CATEGORY_ALL;
         private string _statusMessage = "Kassa tayyor";
@@ -429,7 +440,7 @@ namespace PosElectro.Desktop.ViewModels
             set => SetProperty(ref _isPaymentModalOpen, value);
         }
 
-        private int _selectedPaymentType = 0; // 0 = Cash, 1 = Card, 2 = Split
+        private int _selectedPaymentType = 0; // 0 = Cash, 1 = Card, 2 = Split, 3 = Debt
         public int SelectedPaymentType
         {
             get => _selectedPaymentType;
@@ -440,6 +451,11 @@ namespace PosElectro.Desktop.ViewModels
                     OnPropertyChanged(nameof(IsCashSelected));
                     OnPropertyChanged(nameof(IsCardSelected));
                     OnPropertyChanged(nameof(IsSplitSelected));
+                    OnPropertyChanged(nameof(IsDebtSelected));
+                    if (value == 3)
+                    {
+                        RefreshActiveCustomers();
+                    }
                     RecalculatePaymentAmounts();
                     NotifyPreviewProperties();
                 }
@@ -449,6 +465,135 @@ namespace PosElectro.Desktop.ViewModels
         public bool IsCashSelected => SelectedPaymentType == 0;
         public bool IsCardSelected => SelectedPaymentType == 1;
         public bool IsSplitSelected => SelectedPaymentType == 2;
+        public bool IsDebtSelected => SelectedPaymentType == 3;
+
+        // --- NASIYA (DEBT) MAYDONLARI ---
+        public ObservableCollection<DebtCustomerItemDto> ActiveCustomers { get; } = new();
+
+        private DebtCustomerItemDto? _selectedDebtCustomer;
+        public DebtCustomerItemDto? SelectedDebtCustomer
+        {
+            get => _selectedDebtCustomer;
+            set
+            {
+                if (SetProperty(ref _selectedDebtCustomer, value))
+                {
+                    OnPropertyChanged(nameof(HasSelectedDebtCustomer));
+                    OnPropertyChanged(nameof(CustomerDebtBalanceText));
+                    NotifyPreviewProperties();
+                }
+            }
+        }
+
+        public bool HasSelectedDebtCustomer => SelectedDebtCustomer != null;
+
+        public string CustomerDebtBalanceText
+        {
+            get
+            {
+                if (SelectedDebtCustomer == null) return string.Empty;
+                if (SelectedDebtCustomer.BalanceMinor > 0)
+                    return $"Mavjud qarzi: {SelectedDebtCustomer.BalanceMinor / 100.0:N0} so'm";
+                if (SelectedDebtCustomer.BalanceMinor < 0)
+                    return $"Haqdorligi: +{Math.Abs(SelectedDebtCustomer.BalanceMinor) / 100.0:N0} so'm";
+                return "Qarzi yo'q (0 so'm)";
+            }
+        }
+
+        private string _debtCashAdvanceInput = "0";
+        public string DebtCashAdvanceInput
+        {
+            get => _debtCashAdvanceInput;
+            set
+            {
+                if (SetProperty(ref _debtCashAdvanceInput, value))
+                {
+                    OnPropertyChanged(nameof(DebtRemainingAmount));
+                    OnPropertyChanged(nameof(DebtRemainingAmountText));
+                    NotifyPreviewProperties();
+                }
+            }
+        }
+
+        private string _debtCardAdvanceInput = "0";
+        public string DebtCardAdvanceInput
+        {
+            get => _debtCardAdvanceInput;
+            set
+            {
+                if (SetProperty(ref _debtCardAdvanceInput, value))
+                {
+                    OnPropertyChanged(nameof(DebtRemainingAmount));
+                    OnPropertyChanged(nameof(DebtRemainingAmountText));
+                    NotifyPreviewProperties();
+                }
+            }
+        }
+
+        private static string CleanNumber(string? s) => (s ?? string.Empty).Replace(" ", "").Replace("\u00A0", "").Replace(',', '.').Trim();
+
+        public double DebtRemainingAmount
+        {
+            get
+            {
+                double.TryParse(CleanNumber(DebtCashAdvanceInput), NumberStyles.Any, CultureInfo.InvariantCulture, out var cashAdv);
+                double.TryParse(CleanNumber(DebtCardAdvanceInput), NumberStyles.Any, CultureInfo.InvariantCulture, out var cardAdv);
+                return Math.Max(0, TotalAmount - (Math.Max(0, cashAdv) + Math.Max(0, cardAdv)));
+            }
+        }
+
+        public string DebtRemainingAmountText => $"{DebtRemainingAmount:N0} so'm";
+
+        private DateTime? _debtDueDate;
+        public DateTime? DebtDueDate
+        {
+            get => _debtDueDate;
+            set
+            {
+                if (SetProperty(ref _debtDueDate, value))
+                {
+                    NotifyPreviewProperties();
+                }
+            }
+        }
+
+        private string _debtNote = string.Empty;
+        public string DebtNote
+        {
+            get => _debtNote;
+            set => SetProperty(ref _debtNote, value);
+        }
+
+        // Quick customer modal in cashier
+        private bool _isQuickCustomerModalOpen;
+        public bool IsQuickCustomerModalOpen { get => _isQuickCustomerModalOpen; set => SetProperty(ref _isQuickCustomerModalOpen, value); }
+
+        private string _quickCustomerName = string.Empty;
+        public string QuickCustomerName { get => _quickCustomerName; set => SetProperty(ref _quickCustomerName, value); }
+
+        private string _quickCustomerPhone = string.Empty;
+        public string QuickCustomerPhone { get => _quickCustomerPhone; set => SetProperty(ref _quickCustomerPhone, value); }
+
+        private string _quickCustomerNote = string.Empty;
+        public string QuickCustomerNote { get => _quickCustomerNote; set => SetProperty(ref _quickCustomerNote, value); }
+
+        private string _quickCustomerErrorMessage = string.Empty;
+        public string QuickCustomerErrorMessage
+        {
+            get => _quickCustomerErrorMessage;
+            set
+            {
+                if (SetProperty(ref _quickCustomerErrorMessage, value))
+                {
+                    OnPropertyChanged(nameof(HasQuickCustomerError));
+                }
+            }
+        }
+        public bool HasQuickCustomerError => !string.IsNullOrWhiteSpace(QuickCustomerErrorMessage);
+
+        public ICommand OpenQuickCustomerModalCommand { get; }
+        public ICommand CloseQuickCustomerModalCommand { get; }
+        public ICommand SaveQuickCustomerModalCommand { get; }
 
         private string _cashAmountInput = string.Empty;
         public string CashAmountInput
@@ -501,12 +646,17 @@ namespace PosElectro.Desktop.ViewModels
         public ICommand SelectPaymentTypeCommand { get; }
         public ICommand ConfirmSaleCommand { get; }
 
-        public CashierViewModel(DatabaseContext db, ProductService productService, CurrencyService currencyService)
+        public CashierViewModel(DatabaseContext db, ProductService productService, CurrencyService currencyService, DebtService? debtService = null)
         {
             _db = db;
             _productService = productService;
             _currencyService = currencyService;
+            _debtService = debtService ?? new DebtService(_db);
             _printerService = new PrinterService(_db);
+
+            OpenQuickCustomerModalCommand = new RelayCommand(OpenQuickCustomerModal);
+            CloseQuickCustomerModalCommand = new RelayCommand(() => IsQuickCustomerModalOpen = false);
+            SaveQuickCustomerModalCommand = new RelayCommand(SaveQuickCustomerModal);
 
             _searchDebounceTimer = new System.Windows.Threading.DispatcherTimer
             {
@@ -878,6 +1028,12 @@ namespace PosElectro.Desktop.ViewModels
             var held = new HeldCartModel
             {
                 Name = $"{customName} ({DateTime.Now:HH:mm})",
+                CustomerGuid = SelectedDebtCustomer?.CustomerGuid,
+                CustomerName = SelectedDebtCustomer?.FullName,
+                DueDate = DebtDueDate?.ToString("yyyy-MM-dd"),
+                SelectedPaymentType = SelectedPaymentType,
+                DebtCashAdvance = DebtCashAdvanceInput,
+                DebtCardAdvance = DebtCardAdvanceInput,
                 Items = CartItems.Select(i => new CartItemModel(
                     i.Product, 
                     i.Quantity, 
@@ -890,6 +1046,12 @@ namespace PosElectro.Desktop.ViewModels
 
             HeldCarts.Add(held);
             CartItems.Clear();
+            SelectedDebtCustomer = null;
+            DebtDueDate = null;
+            DebtCashAdvanceInput = "0";
+            DebtCardAdvanceInput = "0";
+            DebtNote = string.Empty;
+
             NotifyTotals();
             OnPropertyChanged(nameof(HasHeldCarts));
             IsHoldModalOpen = false;
@@ -904,6 +1066,12 @@ namespace PosElectro.Desktop.ViewModels
                 var autoHeld = new HeldCartModel
                 {
                     Name = $"Mijoz (Avto) ({DateTime.Now:HH:mm})",
+                    CustomerGuid = SelectedDebtCustomer?.CustomerGuid,
+                    CustomerName = SelectedDebtCustomer?.FullName,
+                    DueDate = DebtDueDate?.ToString("yyyy-MM-dd"),
+                    SelectedPaymentType = SelectedPaymentType,
+                    DebtCashAdvance = DebtCashAdvanceInput,
+                    DebtCardAdvance = DebtCardAdvanceInput,
                     Items = CartItems.Select(i => new CartItemModel(
                         i.Product, 
                         i.Quantity, 
@@ -922,6 +1090,27 @@ namespace PosElectro.Desktop.ViewModels
             {
                 CartItems.Add(item);
             }
+
+            SelectedPaymentType = held.SelectedPaymentType;
+            if (!string.IsNullOrEmpty(held.CustomerGuid))
+            {
+                RefreshActiveCustomers();
+                SelectedDebtCustomer = ActiveCustomers.FirstOrDefault(c => c.CustomerGuid == held.CustomerGuid);
+            }
+            else
+            {
+                SelectedDebtCustomer = null;
+            }
+            if (!string.IsNullOrEmpty(held.DueDate) && DateTime.TryParse(held.DueDate, out var dt))
+            {
+                DebtDueDate = dt;
+            }
+            else
+            {
+                DebtDueDate = null;
+            }
+            DebtCashAdvanceInput = held.DebtCashAdvance ?? "0";
+            DebtCardAdvanceInput = held.DebtCardAdvance ?? "0";
 
             NotifyTotals();
             OnPropertyChanged(nameof(HasHeldCarts));
@@ -985,6 +1174,60 @@ namespace PosElectro.Desktop.ViewModels
             _editingCartItem = null;
         }
 
+        // --- NASIYA VA MIJOZ METODLARI ---
+        public void OpenQuickCustomerModal()
+        {
+            QuickCustomerName = string.Empty;
+            QuickCustomerPhone = string.Empty;
+            QuickCustomerNote = string.Empty;
+            QuickCustomerErrorMessage = string.Empty;
+            IsQuickCustomerModalOpen = true;
+        }
+
+        public void SaveQuickCustomerModal()
+        {
+            if (string.IsNullOrWhiteSpace(QuickCustomerName))
+            {
+                QuickCustomerErrorMessage = "Mijoz ismi kiritilishi shart!";
+                return;
+            }
+
+            try
+            {
+                var newCustomerGuid = _debtService.CreateCustomer(QuickCustomerName.Trim(), QuickCustomerPhone?.Trim() ?? "", QuickCustomerNote?.Trim() ?? "");
+                RefreshActiveCustomers();
+                SelectedDebtCustomer = ActiveCustomers.FirstOrDefault(c => c.CustomerGuid == newCustomerGuid);
+                IsQuickCustomerModalOpen = false;
+                ShowToast("Mijoz qo'shildi", $"'{QuickCustomerName.Trim()}' muvaffaqiyatli saqlandi");
+            }
+            catch (Exception ex)
+            {
+                QuickCustomerErrorMessage = ex.Message;
+            }
+        }
+
+        public void RefreshActiveCustomers()
+        {
+            var prevGuid = SelectedDebtCustomer?.CustomerGuid;
+            ActiveCustomers.Clear();
+            var list = _debtService.GetActiveCustomers();
+            foreach (var c in list)
+            {
+                ActiveCustomers.Add(c);
+            }
+            if (!string.IsNullOrEmpty(prevGuid))
+            {
+                SelectedDebtCustomer = ActiveCustomers.FirstOrDefault(c => c.CustomerGuid == prevGuid);
+            }
+        }
+
+        public void SetDebtCustomer(DebtCustomerItemDto customer)
+        {
+            SelectedPaymentType = 3;
+            RefreshActiveCustomers();
+            SelectedDebtCustomer = ActiveCustomers.FirstOrDefault(c => c.CustomerGuid == customer.CustomerGuid);
+        }
+
         // --- YAGONA SOTISH VA TO'LOV MANTIG'I ---
         public void OpenPaymentModal()
         {
@@ -1016,15 +1259,24 @@ namespace PosElectro.Desktop.ViewModels
                 _cardAmountInput = TotalAmount.ToString("0");
                 PreviewCardTax = TotalAmount * (CurrentCardTaxRate / 100.0);
             }
-            else // Aralash
+            else if (SelectedPaymentType == 2) // Aralash
             {
                 var half = Math.Round(TotalAmount / 2.0);
                 _cashAmountInput = half.ToString("0");
                 _cardAmountInput = (TotalAmount - half).ToString("0");
                 PreviewCardTax = (TotalAmount - half) * (CurrentCardTaxRate / 100.0);
             }
+            else // Nasiya (3)
+            {
+                _cashAmountInput = DebtCashAdvanceInput;
+                _cardAmountInput = DebtCardAdvanceInput;
+                double.TryParse(CleanNumber(DebtCardAdvanceInput), NumberStyles.Any, CultureInfo.InvariantCulture, out var cardAdv);
+                PreviewCardTax = Math.Max(0, cardAdv) * (CurrentCardTaxRate / 100.0);
+            }
             OnPropertyChanged(nameof(CashAmountInput));
             OnPropertyChanged(nameof(CardAmountInput));
+            OnPropertyChanged(nameof(DebtRemainingAmount));
+            OnPropertyChanged(nameof(DebtRemainingAmountText));
         }
 
         private void UpdateSplitFromCash()
@@ -1054,6 +1306,17 @@ namespace PosElectro.Desktop.ViewModels
         public void ConfirmSale()
         {
             if (CartItems.Count == 0) return;
+            if (_isSubmittingSale) return;
+
+            if (SelectedPaymentType == 3 && SelectedDebtCustomer == null)
+            {
+                MessageBox.Show(
+                    "⚠️ Nasiya savdoni amalga oshirish uchun mijoz tanlanishi shart!\n\nIltimos, ro'yxatdan mijozni tanlang yoki '+ Yangi' tugmasi orqali yangi mijoz qo'shing.",
+                    "Mijoz tanlanmagan",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
 
             // 1. Printer tekshiruvi (Agar printer tanlangan bo'lsa, u ulangan bo'lishi shart!)
             if (SelectedReceiptPrintOption == 1) // Chek printeri
@@ -1083,41 +1346,110 @@ namespace PosElectro.Desktop.ViewModels
                 }
             }
 
-            var sale = BuildCurrentCartSale();
-            _db.InsertSale(sale);
-            _checkoutGuid = Guid.NewGuid().ToString();
-
-            if (SelectedReceiptPrintOption == 1)
+            _isSubmittingSale = true;
+            try
             {
-                try
+                Sale sale;
+                if (SelectedPaymentType == 3) // Nasiya
                 {
-                    var targetPrinter = SelectedReceiptPrinter ?? _printerService.FindReceiptPrinter();
-                    _printerService.PrintReceipt(sale, targetPrinter);
-                }
-                catch (Exception pex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"Receipt print error: {pex.Message}");
-                }
-            }
-            else if (SelectedReceiptPrintOption == 2)
-            {
-                try
-                {
-                    _printerService.PrintInvoiceA4(sale, System.Windows.Application.Current?.MainWindow);
-                }
-                catch (Exception pex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"A4 print error: {pex.Message}");
-                }
-            }
+                    double.TryParse(CleanNumber(DebtCashAdvanceInput), NumberStyles.Any, CultureInfo.InvariantCulture, out var cashAdv);
+                    double.TryParse(CleanNumber(DebtCardAdvanceInput), NumberStyles.Any, CultureInfo.InvariantCulture, out var cardAdv);
+                    cashAdv = Math.Clamp(double.IsFinite(cashAdv) ? cashAdv : 0, 0, TotalAmount);
+                    cardAdv = Math.Clamp(double.IsFinite(cardAdv) ? cardAdv : 0, 0, TotalAmount - cashAdv);
 
-            var totalFormatted = sale.TotalAmount.ToString("N0");
-            var itemsCount = sale.Items.Count;
-            IsPaymentModalOpen = false;
-            ClearCart();
-            RefreshProducts();
-            StatusMessage = $"🎉 Savdo muvaffaqiyatli yakunlandi! Jami: {totalFormatted} so'm ({sale.PaymentTypeDisplay})";
-            ShowToast("To'lov muvaffaqiyatli amalga oshirildi! 🎉", $"Jami summa: {totalFormatted} so'm • {sale.PaymentTypeDisplay}");
+                    var cashMinor = (long)Math.Round(cashAdv * 100);
+                    var cardMinor = (long)Math.Round(cardAdv * 100);
+
+                    var saleGuid = _checkoutGuid;
+                    var occurredAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                    var snapshot = DebtService.BuildSaleSnapshot(
+                        saleGuid,
+                        occurredAt,
+                        CartItems.Select(i => new DebtCartItemDto(
+                            i.Product.Guid,
+                            i.Product.Name,
+                            i.Product.Category,
+                            i.UnitDisplay,
+                            i.WarehouseGuid,
+                            i.WarehouseName,
+                            i.Quantity,
+                            i.PriceAtSale,
+                            i.Product.CostPrice,
+                            i.Product.CostCurrency)).ToList(),
+                        cashMinor,
+                        cardMinor,
+                        _currencyService.GetCachedUsdRate(),
+                        CurrentCardTaxRate);
+
+                    var dueDateStr = DebtDueDate?.ToString("yyyy-MM-dd");
+                    var requestGuid = Guid.NewGuid().ToString("D");
+
+                    _debtService.OpenDebtSale(
+                        requestGuid,
+                        SelectedDebtCustomer!.CustomerGuid,
+                        snapshot,
+                        dueDateStr,
+                        null,
+                        1L);
+
+                    sale = BuildCurrentCartSale();
+                }
+                else
+                {
+                    sale = BuildCurrentCartSale();
+                    _db.InsertSale(sale);
+                }
+
+                _checkoutGuid = Guid.NewGuid().ToString();
+
+                if (SelectedReceiptPrintOption == 1)
+                {
+                    try
+                    {
+                        var targetPrinter = SelectedReceiptPrinter ?? _printerService.FindReceiptPrinter();
+                        _printerService.PrintReceipt(sale, targetPrinter);
+                    }
+                    catch (Exception pex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Receipt print error: {pex.Message}");
+                    }
+                }
+                else if (SelectedReceiptPrintOption == 2)
+                {
+                    try
+                    {
+                        _printerService.PrintInvoiceA4(sale, System.Windows.Application.Current?.MainWindow);
+                    }
+                    catch (Exception pex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"A4 print error: {pex.Message}");
+                    }
+                }
+
+                var totalFormatted = sale.TotalAmount.ToString("N0");
+                var itemsCount = sale.Items.Count;
+                IsPaymentModalOpen = false;
+                ClearCart();
+                RefreshProducts();
+
+                // Reset debt fields
+                SelectedDebtCustomer = null;
+                DebtCashAdvanceInput = "0";
+                DebtCardAdvanceInput = "0";
+                DebtDueDate = null;
+                DebtNote = string.Empty;
+
+                StatusMessage = $"🎉 Savdo muvaffaqiyatli yakunlandi! Jami: {totalFormatted} so'm ({sale.PaymentTypeDisplay})";
+                ShowToast("To'lov muvaffaqiyatli amalga oshirildi! 🎉", $"Jami summa: {totalFormatted} so'm • {sale.PaymentTypeDisplay}");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Xatolik yuz berdi: {ex.Message}", "Xatolik", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                _isSubmittingSale = false;
+            }
         }
 
         public void OpenBrakModal()
@@ -1222,7 +1554,7 @@ namespace PosElectro.Desktop.ViewModels
                 cash = 0;
                 card = TotalAmount;
             }
-            else
+            else if (SelectedPaymentType == 2)
             {
                 var cleanCash = (CashAmountInput ?? "").Replace(" ", "").Replace("\u00A0", "").Replace(',', '.');
                 var cleanCard = (CardAmountInput ?? "").Replace(" ", "").Replace("\u00A0", "").Replace(',', '.');
@@ -1235,6 +1567,14 @@ namespace PosElectro.Desktop.ViewModels
                     if (cash <= TotalAmount) card = TotalAmount - cash;
                     else { cash = TotalAmount; card = 0; }
                 }
+            }
+
+            else if (SelectedPaymentType == 3)
+            {
+                double.TryParse(CleanNumber(DebtCashAdvanceInput), NumberStyles.Any, CultureInfo.InvariantCulture, out cash);
+                double.TryParse(CleanNumber(DebtCardAdvanceInput), NumberStyles.Any, CultureInfo.InvariantCulture, out card);
+                cash = SaleAccounting.Money(Math.Clamp(double.IsFinite(cash) ? cash : 0, 0, TotalAmount));
+                card = SaleAccounting.Money(Math.Clamp(double.IsFinite(card) ? card : 0, 0, TotalAmount - cash));
             }
 
             var saleRate = _currencyService.GetCachedUsdRate();
@@ -1252,6 +1592,7 @@ namespace PosElectro.Desktop.ViewModels
                 {
                     1 => PaymentType.CARD,
                     2 => PaymentType.SPLIT,
+                    3 => PaymentType.DEBT,
                     _ => PaymentType.CASH
                 },
                 CashAmount = cash,

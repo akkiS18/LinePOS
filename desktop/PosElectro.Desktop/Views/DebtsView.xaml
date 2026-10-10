@@ -1,0 +1,777 @@
+<UserControl x:Class="PosElectro.Desktop.Views.DebtsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:vm="clr-namespace:PosElectro.Desktop.ViewModels"
+             mc:Ignorable="d" 
+             d:DesignHeight="750" d:DesignWidth="1100"
+             Background="#0F172A">
+
+    <UserControl.Resources>
+        <!-- Filter Chip Button Stili -->
+        <Style x:Key="FilterChipButton" TargetType="Button">
+            <Setter Property="Background" Value="#1E293B"/>
+            <Setter Property="BorderBrush" Value="#334155"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="#94A3B8"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="16" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Sub-tab Button Stili -->
+        <Style x:Key="SubTabButton" TargetType="Button">
+            <Setter Property="Background" Value="#1E293B"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="#94A3B8"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="14,8"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Payment Type Selector Button Stili -->
+        <Style x:Key="PaymentTypeSelectorButton" TargetType="Button">
+            <Setter Property="Background" Value="#0F172A"/>
+            <Setter Property="BorderBrush" Value="#334155"/>
+            <Setter Property="BorderThickness" Value="1.5"/>
+            <Setter Property="Foreground" Value="#94A3B8"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Rounded Action Button Stili -->
+        <Style x:Key="RoundedActionButton" TargetType="Button">
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <vm:MinorToUzConverter x:Key="MinorToUzConverter"/>
+        <vm:GreaterThanZeroConverter x:Key="GreaterThanZeroConverter"/>
+        <vm:LessThanZeroConverter x:Key="LessThanZeroConverter"/>
+        <vm:EmptyStringToVisibilityConverter x:Key="EmptyStringToVisibilityConverter"/>
+        <vm:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
+    </UserControl.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <!-- 0: KPI Summary Kartalari -->
+            <RowDefinition Height="Auto"/>
+            <!-- 1: Qidiruv va Filtrlar paneli -->
+            <RowDefinition Height="Auto"/>
+            <!-- 2: Asosiy Maydon (Chapda mijozlar, o'ngda tafsilotlar) -->
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- 0: KPI SUMMARY KARTALARI -->
+        <Grid Grid.Row="0" Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Jami qarz -->
+            <Border Grid.Column="0" Background="#1E293B" CornerRadius="12" Padding="16,12" Margin="0,0,8,0" BorderBrush="#334155" BorderThickness="1">
+                <StackPanel>
+                    <TextBlock Text="Jami faol qarz" Foreground="#94A3B8" FontSize="12" FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding TotalActiveDebtText}" Foreground="#F87171" FontSize="20" FontWeight="Bold" Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Qarzdorlar soni -->
+            <Border Grid.Column="1" Background="#1E293B" CornerRadius="12" Padding="16,12" Margin="4,0,4,0" BorderBrush="#334155" BorderThickness="1">
+                <StackPanel>
+                    <TextBlock Text="Qarzdorlar soni" Foreground="#94A3B8" FontSize="12" FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding DebtorsCountText}" Foreground="#38BDF8" FontSize="20" FontWeight="Bold" Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Muddati o'tgan qarz -->
+            <Border Grid.Column="2" Background="#1E293B" CornerRadius="12" Padding="16,12" Margin="4,0,4,0" BorderBrush="#334155" BorderThickness="1">
+                <StackPanel>
+                    <TextBlock Text="Muddati o'tgan qarz" Foreground="#94A3B8" FontSize="12" FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding OverdueDebtText}" Foreground="#FBBF24" FontSize="20" FontWeight="Bold" Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Ortiqcha to'lov / Kredit -->
+            <Border Grid.Column="3" Background="#1E293B" CornerRadius="12" Padding="16,12" Margin="8,0,0,0" BorderBrush="#334155" BorderThickness="1">
+                <StackPanel>
+                    <TextBlock Text="Ortiqcha to'lov (Kredit)" Foreground="#94A3B8" FontSize="12" FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding TotalCreditText}" Foreground="#34D399" FontSize="20" FontWeight="Bold" Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- 1: QIDIRUV VA FILTRLAR PANELI -->
+        <Border Grid.Row="1" Background="#1E293B" CornerRadius="12" Padding="14,10" Margin="0,0,0,16" BorderBrush="#334155" BorderThickness="1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <!-- Qidiruv input -->
+                    <ColumnDefinition Width="280"/>
+                    <!-- Filtr chiplari -->
+                    <ColumnDefinition Width="*"/>
+                    <!-- Yangi mijoz qo'shish va Refresh -->
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Qidiruv -->
+                <Border Grid.Column="0" Background="#0F172A" CornerRadius="8" BorderBrush="#334155" BorderThickness="1" Padding="10,6">
+                    <Grid>
+                        <TextBlock Text="🔍 Mijoz yoki telefon..." Foreground="#64748B" FontSize="13" VerticalAlignment="Center"
+                                   Visibility="{Binding SearchQuery, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                        <TextBox Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"
+                                 Background="Transparent" Foreground="#F8FAFC" BorderThickness="0" FontSize="13" VerticalAlignment="Center"/>
+                    </Grid>
+                </Border>
+
+                <!-- Filtr Chiplari -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
+                    <!-- Qarzi bor -->
+                    <Button Content="🔴 Qarzi bor" Command="{Binding SetFilterCommand}" CommandParameter="ActiveDebt" Margin="0,0,6,0">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource FilterChipButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsFilterActiveDebt}" Value="True">
+                                        <Setter Property="Background" Value="#991B1B"/>
+                                        <Setter Property="BorderBrush" Value="#EF4444"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+
+                    <!-- Muddati o'tgan -->
+                    <Button Content="⚠️ Muddati o'tgan" Command="{Binding SetFilterCommand}" CommandParameter="Overdue" Margin="0,0,6,0">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource FilterChipButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsFilterOverdue}" Value="True">
+                                        <Setter Property="Background" Value="#92400E"/>
+                                        <Setter Property="BorderBrush" Value="#F59E0B"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+
+                    <!-- Yopilgan -->
+                    <Button Content="⚪ Yopilgan" Command="{Binding SetFilterCommand}" CommandParameter="Settled" Margin="0,0,6,0">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource FilterChipButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsFilterSettled}" Value="True">
+                                        <Setter Property="Background" Value="#334155"/>
+                                        <Setter Property="BorderBrush" Value="#64748B"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+
+                    <!-- Ortiqcha to'lov -->
+                    <Button Content="🟢 Ortiqcha to'lov" Command="{Binding SetFilterCommand}" CommandParameter="Credit" Margin="0,0,6,0">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource FilterChipButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsFilterCredit}" Value="True">
+                                        <Setter Property="Background" Value="#065F46"/>
+                                        <Setter Property="BorderBrush" Value="#10B981"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+
+                    <!-- Barchasi -->
+                    <Button Content="Barchasi" Command="{Binding SetFilterCommand}" CommandParameter="All">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource FilterChipButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsFilterAll}" Value="True">
+                                        <Setter Property="Background" Value="#0B6477"/>
+                                        <Setter Property="BorderBrush" Value="#2DD4BF"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                </StackPanel>
+
+                <!-- Yangi mijoz & Refresh -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="🔄 Yangilash" Command="{Binding RefreshCommand}"
+                            Style="{StaticResource RoundedActionButton}" Background="#334155" Foreground="#F8FAFC"
+                            Padding="12,8" Margin="0,0,8,0"/>
+                    <Button Content="➕ Yangi mijoz" Command="{Binding OpenCreateCustomerModalCommand}"
+                            Style="{StaticResource RoundedActionButton}" Background="#16A34A" Foreground="White"
+                            FontWeight="Bold" Padding="14,8"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- 2: ASOSIY ISH MAYDONI: CHAPDA MIJOZLAR, O'NGDA TAFSILOTLAR -->
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <!-- Chap ustun: Mijozlar ro'yxati -->
+                <ColumnDefinition Width="400"/>
+                <!-- Vertikal ajratgich -->
+                <ColumnDefinition Width="16"/>
+                <!-- O'ng ustun: Mijoz profili va tafsilotlari -->
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- MIJOZLAR RO'YXATI -->
+            <Border Grid.Column="0" Background="#1E293B" CornerRadius="14" Padding="12" BorderBrush="#334155" BorderThickness="1">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="{Binding Customers.Count, StringFormat='Mijozlar ({0} ta)'}"
+                               Foreground="#94A3B8" FontSize="13" FontWeight="SemiBold" Margin="4,0,0,8"/>
+
+                    <ListBox Grid.Row="1" ItemsSource="{Binding Customers}" SelectedItem="{Binding SelectedCustomer}"
+                             Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="Padding" Value="0"/>
+                                <Setter Property="Margin" Value="0,0,0,8"/>
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListBoxItem">
+                                            <Border x:Name="itemBorder" Background="#0F172A" CornerRadius="10" Padding="12,10"
+                                                    BorderBrush="#334155" BorderThickness="1" Cursor="Hand">
+                                                <ContentPresenter/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="itemBorder" Property="Background" Value="#1E293B"/>
+                                                    <Setter TargetName="itemBorder" Property="BorderBrush" Value="#0B6477"/>
+                                                </Trigger>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter TargetName="itemBorder" Property="Background" Value="#042F2E"/>
+                                                    <Setter TargetName="itemBorder" Property="BorderBrush" Value="#10B981"/>
+                                                    <Setter TargetName="itemBorder" Property="BorderThickness" Value="1.5"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <!-- Nomi va Status Badge -->
+                                    <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Name}" Foreground="#F8FAFC" FontSize="14" FontWeight="Bold" Margin="0,0,6,0"/>
+                                        <Border CornerRadius="4" Padding="4,1" Margin="0,0,0,0" Background="#26334155">
+                                            <TextBlock Text="{Binding StatusBadge}" FontSize="10" FontWeight="SemiBold" Foreground="#94A3B8"/>
+                                        </Border>
+                                    </StackPanel>
+
+                                    <!-- Telefon -->
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding PhoneDisplay}" Foreground="#94A3B8" FontSize="12" Margin="0,4,0,0"/>
+
+                                    <!-- Balans -->
+                                    <TextBlock Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Text="{Binding BalanceDisplay}"
+                                               FontSize="14" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Right">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Foreground" Value="#F8FAFC"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding BalanceMinor, Converter={StaticResource GreaterThanZeroConverter}}" Value="True">
+                                                        <Setter Property="Foreground" Value="#F87171"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding BalanceMinor, Converter={StaticResource LessThanZeroConverter}}" Value="True">
+                                                        <Setter Property="Foreground" Value="#34D399"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Border>
+
+            <!-- O'NG USTUN: MIJOZ PROFILI VA TAFSILOTLARI -->
+            <Border Grid.Column="2" Background="#1E293B" CornerRadius="14" Padding="20" BorderBrush="#334155" BorderThickness="1">
+                <Grid>
+                    <!-- Tanlanmagan holat placeholder -->
+                    <Grid Visibility="{Binding IsCustomerSelected, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <TextBlock Text="👤" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                            <TextBlock Text="Mijoz tanlanmagan" Foreground="#F8FAFC" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Qarz yoki to'lov tarixini ko'rish uchun chapdagi ro'yxatdan mijozni tanlang"
+                                       Foreground="#64748B" FontSize="13" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Tanlangan mijoz tafsilotlari -->
+                    <Grid Visibility="{Binding IsCustomerSelected, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Grid.RowDefinitions>
+                            <!-- Mijoz Header Card (Ismi, Telefon, Balans, Tugmalar) -->
+                            <RowDefinition Height="Auto"/>
+                            <!-- Sub-tabs: Cheklar / Tarix -->
+                            <RowDefinition Height="Auto"/>
+                            <!-- Sub-tab tarkibi -->
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Header Card -->
+                        <Border Grid.Row="0" Background="#0F172A" CornerRadius="12" Padding="18,14" Margin="0,0,0,16" BorderBrush="#334155" BorderThickness="1">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Chap qism: Mijoz ma'lumotlari -->
+                                <StackPanel Grid.Column="0">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding SelectedCustomer.Name}" Foreground="#F8FAFC" FontSize="20" FontWeight="Bold" Margin="0,0,10,0"/>
+                                        <Border CornerRadius="6" Padding="8,2" Background="#1E293B" BorderBrush="#334155" BorderThickness="1">
+                                            <TextBlock Text="{Binding SelectedCustomer.StatusBadge}" Foreground="#38BDF8" FontSize="11" FontWeight="Bold"/>
+                                        </Border>
+                                    </StackPanel>
+
+                                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                        <TextBlock Text="📞 " Foreground="#64748B" FontSize="13"/>
+                                        <TextBlock Text="{Binding SelectedCustomer.PhoneDisplay}" Foreground="#94A3B8" FontSize="13" FontWeight="SemiBold" Margin="0,0,16,0"/>
+                                        <TextBlock Text="📝 " Foreground="#64748B" FontSize="13"/>
+                                        <TextBlock Text="{Binding SelectedCustomer.Note}" Foreground="#94A3B8" FontSize="13"/>
+                                    </StackPanel>
+
+                                    <!-- Balans va faol qarz -->
+                                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0" VerticalAlignment="Center">
+                                        <TextBlock Text="Joriy holat: " Foreground="#64748B" FontSize="13" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding SelectedCustomer.BalanceDisplay}" FontSize="16" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,16,0">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="#F8FAFC"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding SelectedCustomer.BalanceMinor, Converter={StaticResource GreaterThanZeroConverter}}" Value="True">
+                                                            <Setter Property="Foreground" Value="#F87171"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding SelectedCustomer.BalanceMinor, Converter={StaticResource LessThanZeroConverter}}" Value="True">
+                                                            <Setter Property="Foreground" Value="#34D399"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+
+                                        <TextBlock Text="Jami savdo: " Foreground="#64748B" FontSize="13" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding SelectedCustomer.OriginalDebtMinor, StringFormat='{}{0:N0} so\'m', Converter={StaticResource MinorToUzConverter}}"
+                                                   Foreground="#CBD5E1" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,16,0"/>
+
+                                        <TextBlock Text="To'langan: " Foreground="#64748B" FontSize="13" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding SelectedCustomer.TotalPaidMinor, StringFormat='{}{0:N0} so\'m', Converter={StaticResource MinorToUzConverter}}"
+                                                   Foreground="#34D399" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <!-- O'ng qism: Amallar tugmalari -->
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Button Content="💰 To'lov olish" Command="{Binding OpenPaymentModalCommand}"
+                                            Style="{StaticResource RoundedActionButton}" Background="#10B981" Foreground="White" FontWeight="Bold"
+                                            Padding="14,10" Margin="0,0,8,0"/>
+
+                                    <Button Content="🛒 Kassada nasiya" Command="{Binding GoToCashierForCustomerCommand}"
+                                            Style="{StaticResource RoundedActionButton}" Background="#0B6477" Foreground="White" FontWeight="Bold"
+                                            Padding="12,10" Margin="0,0,8,0"/>
+
+                                    <Button Content="✏️ Tahrirlash" Command="{Binding OpenEditCustomerModalCommand}"
+                                            Style="{StaticResource RoundedActionButton}" Background="#334155" Foreground="#F8FAFC"
+                                            Padding="10,10" Margin="0,0,8,0"/>
+
+                                    <Button Content="📦 Arxiv" Command="{Binding ToggleArchiveCustomerCommand}"
+                                            Style="{StaticResource RoundedActionButton}" Background="#1E293B" Foreground="#94A3B8" BorderBrush="#334155" BorderThickness="1"
+                                            Padding="10,10"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- Sub-tabs: Cheklar / Tarix -->
+                        <Border Grid.Row="1" Margin="0,0,0,12">
+                            <StackPanel Orientation="Horizontal">
+                                <Button Content="📋 Nasiyalar (Cheklar)" Command="{Binding SelectDetailTabCommand}" CommandParameter="0" Margin="0,0,8,0">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource SubTabButton}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsAccountsTabSelected}" Value="True">
+                                                    <Setter Property="Background" Value="#0B6477"/>
+                                                    <Setter Property="Foreground" Value="White"/>
+                                                    <Setter Property="FontWeight" Value="Bold"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+
+                                <Button Content="📜 To'lovlar va Tarix" Command="{Binding SelectDetailTabCommand}" CommandParameter="1">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource SubTabButton}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsHistoryTabSelected}" Value="True">
+                                                    <Setter Property="Background" Value="#0B6477"/>
+                                                    <Setter Property="Foreground" Value="White"/>
+                                                    <Setter Property="FontWeight" Value="Bold"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- TAB 0: NASIYALAR / CHEKLAR JADVALI -->
+                        <DataGrid Grid.Row="2" ItemsSource="{Binding SelectedCustomerAccounts}" AutoGenerateColumns="False"
+                                  Visibility="{Binding IsAccountsTabSelected, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                  Background="#0F172A" BorderBrush="#334155" BorderThickness="1"
+                                  RowBackground="#0F172A" AlternatingRowBackground="#162032"
+                                  Foreground="#F8FAFC" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#1E293B"
+                                  HeadersVisibility="Column" CanUserAddRows="False" IsReadOnly="True"
+                                  FontSize="13" RowHeight="38">
+                            <DataGrid.ColumnHeaderStyle>
+                                <Style TargetType="DataGridColumnHeader">
+                                    <Setter Property="Background" Value="#1E293B"/>
+                                    <Setter Property="Foreground" Value="#94A3B8"/>
+                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                    <Setter Property="Padding" Value="10,8"/>
+                                    <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                                    <Setter Property="BorderBrush" Value="#334155"/>
+                                </Style>
+                            </DataGrid.ColumnHeaderStyle>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Chek raqami" Binding="{Binding ReceiptNumber}" Width="150"/>
+                                <DataGridTextColumn Header="Sana" Binding="{Binding CreatedAtDisplay}" Width="140"/>
+                                <DataGridTextColumn Header="Boshlang'ich qarz" Binding="{Binding OriginalDebtUz, StringFormat='{}{0:N0} so\'m'}" Width="140"/>
+                                <DataGridTextColumn Header="Qoldiq" Binding="{Binding BalanceDisplay}" Width="140">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="FontWeight" Value="Bold"/>
+                                            <Setter Property="Foreground" Value="#F87171"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding BalanceMinor}" Value="0">
+                                                    <Setter Property="Foreground" Value="#94A3B8"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Muddati" Binding="{Binding DueDateDisplay}" Width="120"/>
+                                <DataGridTextColumn Header="Holati" Binding="{Binding StatusText}" Width="*"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+
+                        <!-- TAB 1: TO'LOVLAR VA TARIX JADVALI -->
+                        <DataGrid Grid.Row="2" ItemsSource="{Binding SelectedCustomerEvents}" AutoGenerateColumns="False"
+                                  Visibility="{Binding IsHistoryTabSelected, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                  Background="#0F172A" BorderBrush="#334155" BorderThickness="1"
+                                  RowBackground="#0F172A" AlternatingRowBackground="#162032"
+                                  Foreground="#F8FAFC" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#1E293B"
+                                  HeadersVisibility="Column" CanUserAddRows="False" IsReadOnly="True"
+                                  FontSize="13" RowHeight="38">
+                            <DataGrid.ColumnHeaderStyle>
+                                <Style TargetType="DataGridColumnHeader">
+                                    <Setter Property="Background" Value="#1E293B"/>
+                                    <Setter Property="Foreground" Value="#94A3B8"/>
+                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                    <Setter Property="Padding" Value="10,8"/>
+                                    <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                                    <Setter Property="BorderBrush" Value="#334155"/>
+                                </Style>
+                            </DataGrid.ColumnHeaderStyle>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Vaqt" Binding="{Binding OccurredAtDisplay}" Width="140"/>
+                                <DataGridTextColumn Header="Amal turi" Binding="{Binding KindDisplay}" Width="160"/>
+                                <DataGridTextColumn Header="Summa" Binding="{Binding AmountDisplay}" Width="140">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="FontWeight" Value="Bold"/>
+                                            <Setter Property="Foreground" Value="#34D399"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Naqd" Binding="{Binding CashMinor, StringFormat='{}{0:N0} so\'m', Converter={StaticResource MinorToUzConverter}}" Width="120"/>
+                                <DataGridTextColumn Header="Karta" Binding="{Binding CardMinor, StringFormat='{}{0:N0} so\'m', Converter={StaticResource MinorToUzConverter}}" Width="120"/>
+                                <DataGridTextColumn Header="Tafsilot" Binding="{Binding Lines.Count, StringFormat='{}{0} ta chekka taqsimlangan'}" Width="*"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- ================= MODAL: YANGI MIJOZ / TAHRIRLASH ================= -->
+        <Border Grid.Row="0" Grid.RowSpan="3" Background="#CC000000" Panel.ZIndex="200"
+                Visibility="{Binding IsCustomerModalOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Border Background="#1E293B" CornerRadius="16" BorderBrush="#0B6477" BorderThickness="1.5"
+                    Width="440" Padding="24" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel>
+                    <Grid Margin="0,0,0,16">
+                        <TextBlock Text="{Binding CustomerModalTitle}" Foreground="#F8FAFC" FontSize="18" FontWeight="Bold"/>
+                        <Button Content="✕" Command="{Binding CloseCustomerModalCommand}" HorizontalAlignment="Right"
+                                Background="Transparent" Foreground="#94A3B8" BorderThickness="0" FontSize="16" Cursor="Hand"/>
+                    </Grid>
+
+                    <TextBlock Text="Mijoz ismi va familiyasi *" Foreground="#94A3B8" FontSize="12" Margin="0,0,0,4"/>
+                    <TextBox Text="{Binding ModalCustomerName, UpdateSourceTrigger=PropertyChanged}"
+                             Background="#0F172A" Foreground="#F8FAFC" BorderBrush="#334155" Padding="10,8" FontSize="13" Margin="0,0,0,12"/>
+
+                    <TextBlock Text="Telefon raqami" Foreground="#94A3B8" FontSize="12" Margin="0,0,0,4"/>
+                    <TextBox Text="{Binding ModalCustomerPhone, UpdateSourceTrigger=PropertyChanged}"
+                             Background="#0F172A" Foreground="#F8FAFC" BorderBrush="#334155" Padding="10,8" FontSize="13" Margin="0,0,0,12"/>
+
+                    <TextBlock Text="Izoh (manzil yoki qo'shimcha ma'lumot)" Foreground="#94A3B8" FontSize="12" Margin="0,0,0,4"/>
+                    <TextBox Text="{Binding ModalCustomerNote, UpdateSourceTrigger=PropertyChanged}"
+                             Background="#0F172A" Foreground="#F8FAFC" BorderBrush="#334155" Padding="10,8" FontSize="13" Height="60" TextWrapping="Wrap" Margin="0,0,0,16"/>
+
+                    <TextBlock Text="{Binding ModalCustomerErrorMessage}" Foreground="#EF4444" FontSize="12" Margin="0,0,0,12"
+                               Visibility="{Binding ModalCustomerErrorMessage, Converter={StaticResource EmptyStringToVisibilityConverter}}"/>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Content="Bekor qilish" Command="{Binding CloseCustomerModalCommand}"
+                                Style="{StaticResource RoundedActionButton}" Background="#334155" Foreground="#F8FAFC" Padding="12,10" Margin="0,0,6,0"/>
+                        <Button Grid.Column="1" Content="Saqlash" Command="{Binding SaveCustomerModalCommand}"
+                                Style="{StaticResource RoundedActionButton}" Background="#16A34A" Foreground="White" FontWeight="Bold" Padding="12,10" Margin="6,0,0,0"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Border>
+
+        <!-- ================= MODAL: QARZ TO'LOVI QABUL QILISH ================= -->
+        <Border Grid.Row="0" Grid.RowSpan="3" Background="#CC000000" Panel.ZIndex="210"
+                Visibility="{Binding IsPaymentModalOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Border Background="#1E293B" CornerRadius="16" BorderBrush="#10B981" BorderThickness="1.5"
+                    Width="520" Padding="24" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel>
+                    <Grid Margin="0,0,0,14">
+                        <TextBlock Text="💰 Qarz to'lovini qabul qilish" Foreground="#F8FAFC" FontSize="18" FontWeight="Bold"/>
+                        <Button Content="✕" Command="{Binding ClosePaymentModalCommand}" HorizontalAlignment="Right"
+                                Background="Transparent" Foreground="#94A3B8" BorderThickness="0" FontSize="16" Cursor="Hand"/>
+                    </Grid>
+
+                    <!-- Mijoz va Mavjud Qarz qutisi -->
+                    <Border Background="#0F172A" CornerRadius="10" Padding="14,10" Margin="0,0,0,14" BorderBrush="#334155" BorderThickness="1">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="{Binding SelectedCustomer.Name}" Foreground="#F8FAFC" FontSize="15" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding SelectedCustomer.PhoneDisplay}" Foreground="#94A3B8" FontSize="12" Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" HorizontalAlignment="Right">
+                                <TextBlock Text="Mavjud qarz:" Foreground="#94A3B8" FontSize="11" HorizontalAlignment="Right"/>
+                                <TextBlock Text="{Binding SelectedCustomer.BalanceDisplay}" Foreground="#F87171" FontSize="16" FontWeight="Bold" HorizontalAlignment="Right"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- To'lov turi tanlash (Naqd, Karta, Aralash) -->
+                    <TextBlock Text="To'lov turi:" Foreground="#94A3B8" FontSize="12" Margin="0,0,0,6"/>
+                    <Grid Margin="0,0,0,14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Button Grid.Column="0" Content="Naqd" Command="{Binding SelectPaymentTypeCommand}" CommandParameter="0" Margin="0,0,4,0" Padding="0,8" Cursor="Hand">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource PaymentTypeSelectorButton}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsPaymentCash}" Value="True">
+                                            <Setter Property="Background" Value="#064E3B"/>
+                                            <Setter Property="BorderBrush" Value="#10B981"/>
+                                            <Setter Property="Foreground" Value="White"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+
+                        <Button Grid.Column="1" Content="Karta" Command="{Binding SelectPaymentTypeCommand}" CommandParameter="1" Margin="4,0,4,0" Padding="0,8" Cursor="Hand">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource PaymentTypeSelectorButton}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsPaymentCard}" Value="True">
+                                            <Setter Property="Background" Value="#0C4A6E"/>
+                                            <Setter Property="BorderBrush" Value="#38BDF8"/>
+                                            <Setter Property="Foreground" Value="White"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+
+                        <Button Grid.Column="2" Content="Aralash" Command="{Binding SelectPaymentTypeCommand}" CommandParameter="2" Margin="4,0,0,0" Padding="0,8" Cursor="Hand">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource PaymentTypeSelectorButton}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsPaymentSplit}" Value="True">
+                                            <Setter Property="Background" Value="#581C87"/>
+                                            <Setter Property="BorderBrush" Value="#A855F7"/>
+                                            <Setter Property="Foreground" Value="White"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                    </Grid>
+
+                    <!-- To'lov summasi kiritish -->
+                    <Grid Margin="0,0,0,12" Visibility="{Binding IsPaymentSplit, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                        <StackPanel>
+                            <TextBlock Text="To'lov summasi (so'm) *" Foreground="#94A3B8" FontSize="12" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding PaymentAmountInput, UpdateSourceTrigger=PropertyChanged}"
+                                     Background="#0F172A" Foreground="#F8FAFC" BorderBrush="#334155" Padding="12,10" FontSize="16" FontWeight="Bold"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Aralash bo'lsa Naqd va Karta alohida -->
+                    <Grid Margin="0,0,0,12" Visibility="{Binding IsPaymentSplit, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Margin="0,0,6,0">
+                            <TextBlock Text="Naqd qismi (so'm) *" Foreground="#94A3B8" FontSize="12" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding PaymentCashInput, UpdateSourceTrigger=PropertyChanged}"
+                                     Background="#0F172A" Foreground="#F8FAFC" BorderBrush="#334155" Padding="10,8" FontSize="14" FontWeight="Bold"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Margin="6,0,0,0">
+                            <TextBlock Text="Karta qismi (so'm) *" Foreground="#94A3B8" FontSize="12" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding PaymentCardInput, UpdateSourceTrigger=PropertyChanged}"
+                                     Background="#0F172A" Foreground="#F8FAFC" BorderBrush="#334155" Padding="10,8" FontSize="14" FontWeight="Bold"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Taqsimot (Oldest-first yoki Aniq chek) -->
+                    <TextBlock Text="Taqsimlash tartibi:" Foreground="#94A3B8" FontSize="12" Margin="0,0,0,4"/>
+                    <ComboBox ItemsSource="{Binding AvailableAccountsForPayment}" SelectedItem="{Binding SelectedTargetAccount}"
+                              Background="#0F172A" Foreground="#F8FAFC" BorderBrush="#334155" Padding="8" Margin="0,0,0,12">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding ReceiptNumber, StringFormat='{}Chek: {0}'}"/>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+
+                    <!-- Jonli Taqsimot Preview qutisi -->
+                    <Border Background="#0F172A" CornerRadius="10" Padding="12" Margin="0,0,0,14" BorderBrush="#334155" BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock Text="Jonli taqsimot ko'rinishi:" Foreground="#64748B" FontSize="11" Margin="0,0,0,6"/>
+                            <ItemsControl ItemsSource="{Binding AllocationPreviewLines}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,2">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="{Binding ReceiptNumber}" Foreground="#94A3B8" FontSize="12"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding PaidMinor, StringFormat='-{0:N0} so\'m', Converter={StaticResource MinorToUzConverter}}"
+                                                       Foreground="#34D399" FontSize="12" FontWeight="Bold"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Text="{Binding PreviewRemainingDebtText}" Foreground="#FBBF24" FontSize="12" FontWeight="Bold" Margin="0,6,0,0"
+                                       Visibility="{Binding PreviewRemainingDebtText, Converter={StaticResource EmptyStringToVisibilityConverter}}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Text="{Binding PaymentErrorMessage}" Foreground="#EF4444" FontSize="12" Margin="0,0,0,12"
+                               Visibility="{Binding PaymentErrorMessage, Converter={StaticResource EmptyStringToVisibilityConverter}}"/>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Content="Bekor qilish" Command="{Binding ClosePaymentModalCommand}"
+                                Style="{StaticResource RoundedActionButton}" Background="#334155" Foreground="#F8FAFC" Padding="12,10" Margin="0,0,6,0"/>
+                        <Button Grid.Column="1" Content="Tasdiqlash va qabul qilish" Command="{Binding ConfirmPaymentCommand}"
+                                Style="{StaticResource RoundedActionButton}" Background="#10B981" Foreground="White" FontWeight="Bold" Padding="12,10" Margin="6,0,0,0"
+                                IsEnabled="{Binding IsSubmittingPayment, Converter={StaticResource InverseBooleanConverter}}"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Border>
+    </Grid>
+</UserControl>

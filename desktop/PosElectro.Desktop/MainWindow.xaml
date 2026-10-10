@@ -119,6 +119,22 @@
                         </Button.Style>
                     </Button>
 
+                    <!-- Qarzlar -->
+                    <Button Content="📒 Qarzlar" 
+                            Command="{Binding NavigateDebtsCommand}">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource NavTabButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsDebtsSelected}" Value="True">
+                                        <Setter Property="Background" Value="White"/>
+                                        <Setter Property="Foreground" Value="#0B6477"/>
+                                        <Setter Property="FontWeight" Value="Bold"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+
                     <!-- Hisobotlar -->
                     <Button Content="📊 Hisobotlar" 
                             Command="{Binding NavigateReportsCommand}">
@@ -215,6 +231,8 @@
                                Visibility="{Binding DataContext.IsCashierSelected, RelativeSource={RelativeSource AncestorType={x:Type Window}}, Converter={StaticResource BooleanToVisibilityConverter}}"/>
             <views:InventoryView DataContext="{Binding InventoryVM}"
                                  Visibility="{Binding DataContext.IsInventorySelected, RelativeSource={RelativeSource AncestorType={x:Type Window}}, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+            <views:DebtsView DataContext="{Binding DebtsVM}"
+                             Visibility="{Binding DataContext.IsDebtsSelected, RelativeSource={RelativeSource AncestorType={x:Type Window}}, Converter={StaticResource BooleanToVisibilityConverter}}"/>
             <views:ReportsView DataContext="{Binding ReportsVM}"
                                Visibility="{Binding DataContext.IsReportsSelected, RelativeSource={RelativeSource AncestorType={x:Type Window}}, Converter={StaticResource BooleanToVisibilityConverter}}"/>
             <views:SyncView DataContext="{Binding SyncVM}"

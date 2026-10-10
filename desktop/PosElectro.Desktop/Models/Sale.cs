@@ -35,6 +35,7 @@ namespace PosElectro.Desktop.Models
             PaymentType.CASH => "Naqd",
             PaymentType.CARD => "Karta",
             PaymentType.SPLIT => $"Aralash (N: {CashAmount:N0} / K: {CardAmount:N0})",
+            PaymentType.DEBT => "Nasiya",
             PaymentType.RETURN => "Qaytarish",
             PaymentType.RETURN_REVERSAL => "Qaytarishni bekor qilish",
             PaymentType.BRAK => "⚠️ Brak (Spisanie)",

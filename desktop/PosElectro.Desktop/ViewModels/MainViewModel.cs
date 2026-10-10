@@ -21,11 +21,13 @@ namespace PosElectro.Desktop.ViewModels
 
         public CashierViewModel CashierVM { get; }
         public InventoryViewModel InventoryVM { get; }
+        public DebtsViewModel DebtsVM { get; }
         public ReportsViewModel ReportsVM { get; }
         public SyncViewModel SyncVM { get; }
 
         public ICommand NavigateCashierCommand { get; }
         public ICommand NavigateInventoryCommand { get; }
+        public ICommand NavigateDebtsCommand { get; }
         public ICommand NavigateReportsCommand { get; }
         public ICommand NavigateSyncCommand { get; }
         public ICommand BackupDatabaseCommand { get; }
@@ -118,6 +120,15 @@ namespace PosElectro.Desktop.ViewModels
             };
 
             ReportsVM = new ReportsViewModel(Database, CurrencyService);
+            DebtsVM = new DebtsViewModel(Database);
+            DebtsVM.RequestOpenCashierForCustomer += customer =>
+            {
+                App.Current?.Dispatcher.Invoke(() =>
+                {
+                    CashierVM.SetDebtCustomer(customer);
+                    CurrentView = CashierVM;
+                });
+            };
             SyncVM = new SyncViewModel(SyncServer, Database);
 
             SyncServer.LiveClientsCountChanged += count =>
@@ -144,6 +155,12 @@ namespace PosElectro.Desktop.ViewModels
             {
                 InventoryVM.Refresh();
                 CurrentView = InventoryVM;
+            });
+            NavigateDebtsCommand = new RelayCommand(() =>
+            {
+                DebtsVM.RefreshSummary();
+                DebtsVM.RefreshCustomers();
+                CurrentView = DebtsVM;
             });
             NavigateReportsCommand = new RelayCommand(() =>
             {
@@ -298,6 +315,8 @@ namespace PosElectro.Desktop.ViewModels
                     CashierVM.RefreshProducts();
                     InventoryVM.Refresh();
                     ReportsVM.LoadData();
+                    DebtsVM.RefreshSummary();
+                    DebtsVM.RefreshCustomers();
                 });
             };
 
@@ -319,6 +338,8 @@ namespace PosElectro.Desktop.ViewModels
                     CashierVM.RefreshProducts();
                     InventoryVM.Refresh();
                     ReportsVM.LoadData();
+                    DebtsVM.RefreshSummary();
+                    DebtsVM.RefreshCustomers();
                 });
             };
         }
@@ -375,6 +396,7 @@ namespace PosElectro.Desktop.ViewModels
                 {
                     OnPropertyChanged(nameof(IsCashierSelected));
                     OnPropertyChanged(nameof(IsInventorySelected));
+                    OnPropertyChanged(nameof(IsDebtsSelected));
                     OnPropertyChanged(nameof(IsReportsSelected));
                     OnPropertyChanged(nameof(IsSyncSelected));
                 }
@@ -383,6 +405,7 @@ namespace PosElectro.Desktop.ViewModels
 
         public bool IsCashierSelected => CurrentView == CashierVM;
         public bool IsInventorySelected => CurrentView == InventoryVM;
+        public bool IsDebtsSelected => CurrentView == DebtsVM;
         public bool IsReportsSelected => CurrentView == ReportsVM;
         public bool IsSyncSelected => CurrentView == SyncVM;
 

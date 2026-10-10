@@ -859,10 +859,11 @@
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
 
                                 <!-- Naqd -->
-                                <Button Grid.Column="0" Command="{Binding SelectPaymentTypeCommand}" CommandParameter="0" Margin="0,0,4,0" Padding="0,10" Cursor="Hand">
+                                <Button Grid.Column="0" Command="{Binding SelectPaymentTypeCommand}" CommandParameter="0" Margin="0,0,3,0" Padding="0,10" Cursor="Hand">
                                     <Button.Style>
                                         <Style TargetType="Button">
                                             <Setter Property="Background" Value="#0F172A"/>
@@ -874,8 +875,8 @@
                                                         <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="10" Padding="{TemplateBinding Padding}">
                                                             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                                                                 <Path Data="M21 6H3C1.89 6 1 6.89 1 8V16C1 17.11 1.89 18 3 18H21C22.11 18 23 17.11 23 16V8C23 6.89 22.11 6 21 6ZM21 16H3V8H21V16ZM12 9C10.34 9 9 10.34 9 12C9 13.66 10.34 15 12 15C13.66 15 15 13.66 15 12C15 10.34 13.66 9 12 9Z" 
-                                                                      Fill="#10B981" Width="20" Height="20" Stretch="Uniform" Margin="0,0,0,4" HorizontalAlignment="Center"/>
-                                                                <TextBlock Text="Naqd" FontWeight="Bold" FontSize="13" Foreground="White" HorizontalAlignment="Center"/>
+                                                                      Fill="#10B981" Width="18" Height="18" Stretch="Uniform" Margin="0,0,0,4" HorizontalAlignment="Center"/>
+                                                                <TextBlock Text="Naqd" FontWeight="Bold" FontSize="12" Foreground="White" HorizontalAlignment="Center"/>
                                                             </StackPanel>
                                                         </Border>
                                                     </ControlTemplate>
@@ -892,7 +893,7 @@
                                 </Button>
 
                                 <!-- Karta -->
-                                <Button Grid.Column="1" Command="{Binding SelectPaymentTypeCommand}" CommandParameter="1" Margin="4,0,4,0" Padding="0,10" Cursor="Hand">
+                                <Button Grid.Column="1" Command="{Binding SelectPaymentTypeCommand}" CommandParameter="1" Margin="3,0,3,0" Padding="0,10" Cursor="Hand">
                                     <Button.Style>
                                         <Style TargetType="Button">
                                             <Setter Property="Background" Value="#0F172A"/>
@@ -904,8 +905,8 @@
                                                         <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="10" Padding="{TemplateBinding Padding}">
                                                             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                                                                 <Path Data="M20 4H4C2.89 4 2.01 4.89 2.01 6L2 18C2 19.1 2.89 20 4 20H20C21.1 20 22 19.1 22 18V6C22 4.89 21.1 4 20 4ZM20 18H4V12H20V18ZM20 8H4V6H20V8Z" 
-                                                                      Fill="#38BDF8" Width="20" Height="20" Stretch="Uniform" Margin="0,0,0,4" HorizontalAlignment="Center"/>
-                                                                <TextBlock Text="Karta" FontWeight="Bold" FontSize="13" Foreground="White" HorizontalAlignment="Center"/>
+                                                                      Fill="#38BDF8" Width="18" Height="18" Stretch="Uniform" Margin="0,0,0,4" HorizontalAlignment="Center"/>
+                                                                <TextBlock Text="Karta" FontWeight="Bold" FontSize="12" Foreground="White" HorizontalAlignment="Center"/>
                                                             </StackPanel>
                                                         </Border>
                                                     </ControlTemplate>
@@ -922,7 +923,7 @@
                                 </Button>
 
                                 <!-- Aralash -->
-                                <Button Grid.Column="2" Command="{Binding SelectPaymentTypeCommand}" CommandParameter="2" Margin="4,0,0,0" Padding="0,10" Cursor="Hand">
+                                <Button Grid.Column="2" Command="{Binding SelectPaymentTypeCommand}" CommandParameter="2" Margin="3,0,3,0" Padding="0,10" Cursor="Hand">
                                     <Button.Style>
                                         <Style TargetType="Button">
                                             <Setter Property="Background" Value="#0F172A"/>
@@ -934,8 +935,8 @@
                                                         <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="10" Padding="{TemplateBinding Padding}">
                                                             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                                                                 <Path Data="M6.99 11L3 15L6.99 19V16H14V14H6.99V11ZM21 9L17.01 5V8H10V10H17.01V13L21 9Z" 
-                                                                      Fill="#F59E0B" Width="20" Height="20" Stretch="Uniform" Margin="0,0,0,4" HorizontalAlignment="Center"/>
-                                                                <TextBlock Text="Aralash" FontWeight="Bold" FontSize="13" Foreground="White" HorizontalAlignment="Center"/>
+                                                                      Fill="#F59E0B" Width="18" Height="18" Stretch="Uniform" Margin="0,0,0,4" HorizontalAlignment="Center"/>
+                                                                <TextBlock Text="Aralash" FontWeight="Bold" FontSize="12" Foreground="White" HorizontalAlignment="Center"/>
                                                             </StackPanel>
                                                         </Border>
                                                     </ControlTemplate>
@@ -945,6 +946,35 @@
                                                 <DataTrigger Binding="{Binding IsSplitSelected}" Value="True">
                                                     <Setter Property="Background" Value="#78350F"/>
                                                     <Setter Property="BorderBrush" Value="#F59E0B"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+
+                                <!-- Nasiya -->
+                                <Button Grid.Column="3" Command="{Binding SelectPaymentTypeCommand}" CommandParameter="3" Margin="3,0,0,0" Padding="0,10" Cursor="Hand">
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Setter Property="Background" Value="#0F172A"/>
+                                            <Setter Property="BorderBrush" Value="#334155"/>
+                                            <Setter Property="BorderThickness" Value="1.5"/>
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="10" Padding="{TemplateBinding Padding}">
+                                                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                                <TextBlock Text="📒" FontSize="15" Margin="0,0,0,4" HorizontalAlignment="Center"/>
+                                                                <TextBlock Text="Nasiya" FontWeight="Bold" FontSize="12" Foreground="White" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </Border>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsDebtSelected}" Value="True">
+                                                    <Setter Property="Background" Value="#581C87"/>
+                                                    <Setter Property="BorderBrush" Value="#A855F7"/>
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
@@ -984,6 +1014,71 @@
                                         <Run Text="Kartadan soliq ("/><Run Text="{Binding CurrentCardTaxRate, Mode=OneWay}"/><Run Text="%): "/><Run Text="{Binding PreviewCardTax, StringFormat='-{0:N0} so\'m', Mode=OneWay}" FontWeight="Bold"/>
                                     </TextBlock>
                                 </Border>
+                            </StackPanel>
+
+                            <!-- Nasiya to'lov maydonlari -->
+                            <StackPanel Visibility="{Binding IsDebtSelected, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <!-- Mijoz tanlash va Yangi qo'shish -->
+                                <TextBlock Text="Mijozni tanlang:" Foreground="#F8FAFC" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="8"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <ComboBox Grid.Column="0" ItemsSource="{Binding ActiveCustomers}"
+                                              SelectedItem="{Binding SelectedDebtCustomer, Mode=TwoWay}"
+                                              DisplayMemberPath="FullName"
+                                              Height="36" VerticalContentAlignment="Center"/>
+                                    <Button Grid.Column="2" Content="+ Yangi" Command="{Binding OpenQuickCustomerModalCommand}"
+                                            Style="{StaticResource ModernButton}" Background="#8B5CF6" Height="36" Padding="12,0" Cursor="Hand"/>
+                                </Grid>
+
+                                <!-- Mijoz joriy qarzdorligi -->
+                                <Border Background="#1E1B4B" BorderBrush="#818CF8" BorderThickness="1" CornerRadius="6" Padding="10,6" Margin="0,0,0,8"
+                                        Visibility="{Binding HasSelectedDebtCustomer, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <TextBlock Text="{Binding CustomerDebtBalanceText}" Foreground="#C7D2FE" FontSize="12" FontWeight="Bold"/>
+                                </Border>
+
+                                <!-- Oldindan to'lov (Avans) -->
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="8"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Naqd avans (so'm):" Foreground="#94A3B8" FontSize="11" Margin="0,0,0,2"/>
+                                        <TextBox Style="{StaticResource ModernTextBox}"
+                                                 Text="{Binding DebtCashAdvanceInput, UpdateSourceTrigger=PropertyChanged}"
+                                                 FontSize="13" FontWeight="Bold" Padding="8,4"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="Karta avans (so'm):" Foreground="#94A3B8" FontSize="11" Margin="0,0,0,2"/>
+                                        <TextBox Style="{StaticResource ModernTextBox}"
+                                                 Text="{Binding DebtCardAdvanceInput, UpdateSourceTrigger=PropertyChanged}"
+                                                 FontSize="13" FontWeight="Bold" Padding="8,4"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- Qolgan nasiya summasi va to'lov muddati -->
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="8"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Nasiyaga qolgan:" Foreground="#94A3B8" FontSize="11" Margin="0,0,0,2"/>
+                                        <Border Background="#0F172A" BorderBrush="#334155" BorderThickness="1" CornerRadius="6" Padding="8,6">
+                                            <TextBlock Text="{Binding DebtRemainingAmountText}" Foreground="#F43F5E" FontSize="13" FontWeight="Bold"/>
+                                        </Border>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="To'lash muddati:" Foreground="#94A3B8" FontSize="11" Margin="0,0,0,2"/>
+                                        <DatePicker SelectedDate="{Binding DebtDueDate, Mode=TwoWay}" Height="34" VerticalContentAlignment="Center"/>
+                                    </StackPanel>
+                                </Grid>
                             </StackPanel>
                         </StackPanel>
 
@@ -1371,6 +1466,53 @@
                                 Background="#F59E0B" Foreground="#0F172A" FontWeight="Bold"
                                 Style="{StaticResource ModernButton}" 
                                 Padding="0,12" Cursor="Hand"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Border>
+
+        <!-- ========================================================= -->
+        <!-- TEZKOR MIJOZ QO'SHISH MODAL OYNASI (QUICK CUSTOMER MODAL) -->
+        <!-- ========================================================= -->
+        <Border Background="#BF000000" Panel.ZIndex="150"
+                Visibility="{Binding IsQuickCustomerModalOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Border Background="#1E293B" BorderBrush="#8B5CF6" BorderThickness="1.5"
+                    CornerRadius="14" Padding="24" Width="440" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="30" ShadowDepth="10" Direction="270" Color="#000000" Opacity="0.8"/>
+                </Border.Effect>
+                <StackPanel>
+                    <TextBlock Text="👤 Yangi mijoz qo'shish" FontSize="18" FontWeight="Bold" Foreground="#F8FAFC" Margin="0,0,0,16"/>
+
+                    <!-- Xato xabari -->
+                    <Border Background="#450A0A" BorderBrush="#EF4444" BorderThickness="1" CornerRadius="8" Padding="10,6" Margin="0,0,0,12"
+                            Visibility="{Binding HasQuickCustomerError, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <TextBlock Text="{Binding QuickCustomerErrorMessage}" Foreground="#FCA5A5" FontSize="12" TextWrapping="Wrap"/>
+                    </Border>
+
+                    <TextBlock Text="Mijoz F.I.SH / Ismi *" Foreground="#94A3B8" FontSize="12" Margin="0,0,0,4"/>
+                    <TextBox Style="{StaticResource ModernTextBox}" Text="{Binding QuickCustomerName, UpdateSourceTrigger=PropertyChanged}"
+                             FontSize="14" Padding="10,8" Margin="0,0,0,12"/>
+
+                    <TextBlock Text="Telefon raqami" Foreground="#94A3B8" FontSize="12" Margin="0,0,0,4"/>
+                    <TextBox Style="{StaticResource ModernTextBox}" Text="{Binding QuickCustomerPhone, UpdateSourceTrigger=PropertyChanged}"
+                             FontSize="14" Padding="10,8" Margin="0,0,0,12"/>
+
+                    <TextBlock Text="Izoh / Manzil" Foreground="#94A3B8" FontSize="12" Margin="0,0,0,4"/>
+                    <TextBox Style="{StaticResource ModernTextBox}" Text="{Binding QuickCustomerNote, UpdateSourceTrigger=PropertyChanged}"
+                             FontSize="14" Padding="10,8" Margin="0,0,0,20"/>
+
+                    <!-- Tugmalar -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="12"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Content="Bekor qilish" Command="{Binding CloseQuickCustomerModalCommand}"
+                                Background="#334155" Style="{StaticResource ModernButton}" Padding="0,10" Cursor="Hand"/>
+                        <Button Grid.Column="2" Content="Saqlash" Command="{Binding SaveQuickCustomerModalCommand}"
+                                Background="#8B5CF6" Style="{StaticResource ModernButton}" Padding="0,10" Cursor="Hand"/>
                     </Grid>
                 </StackPanel>
             </Border>

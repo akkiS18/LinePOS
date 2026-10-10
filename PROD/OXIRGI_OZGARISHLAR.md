@@ -1,6 +1,6 @@
-# 📋 LinePOS — Oxirgi 2 ta Yangilanish
+# 📋 LinePOS — Oxirgi Yangilanishlar
 
-Ushbu qisqacha qo'llanma mijozga oxirgi kiritilgan 2 ta qulaylikni ko'rsatish uchun tayyorlandi:
+Ushbu qisqacha qo'llanma mijozga oxirgi kiritilgan qulayliklarni ko'rsatish uchun tayyorlandi:
 
 ---
 
@@ -26,3 +26,16 @@ Ushbu qisqacha qo'llanma mijozga oxirgi kiritilgan 2 ta qulaylikni ko'rsatish uc
 - **Nima o'zgardi:** Yangi tovar qo'shganda yoki tahrirlaganda, tovar nomini yozish bilan birinchi harf avtomatik tarzda **KATTA** harf qilib olinadi (masalan: `kabel` deb yozilsa, darhol `Kabel` bo'lib yoziladi).
 - **Mijoz uchun foydasi:** Har safar bosh harf yozish uchun `Shift` tugmasini bosib o'tirish shart emas, yozish juda tezlashadi va qulay bo'ladi.
 - **Muhim jihati:** Agar tovar nomi raqam bilan boshlansa (masalan: `2_ombor` yoki `10mm sim`), o'z holicha saqlanadi, raqam buzilmaydi. Bazaga ham bosh harf bilan chiroyli tartibda saqlanadi.
+
+---
+
+### 3. 📒 "Qarzlar" (Qarz daftari) yangi bo'limi va kassada Nasiya savdosi
+- **Nima o'zgardi:**
+  - Asosiy menyuda yangi **📒 Qarzlar** bo'limi paydo bo'ldi.
+  - Kassada to'lov turlariga **📒 Nasiya** varianti qo'shildi: mijozni tanlash (yoki joyida yangi qo'shish), avans to'lovi (naqd yoki karta), qoladigan qarz miqdori va to'lash muddatini belgilash imkoniyati yaratildi.
+  - "Qarzlar" bo'limida barcha qarzdorlar ro'yxati, jami faol qarz, muddati o'tgan qarzlar, qidiruv va qulay filtrlar ("Qarzi bor", "Muddati o'tgan", "Yopilgan", "Ortiqcha to'lov", "Barchasi") o'rnatildi.
+  - Qarz to'lovini qabul qilishda summani kiritish bilan qaysi nasiyalardan qancha yopilishi jonli ravishda oldindan ko'rsatiladi (preview), ortiqcha to'lov xatolik bilan kiritilishidan himoyalangan.
+- **Mijoz uchun foydasi:** 
+  - Nasiyaga savdo qilish va qarz yig'ish 100% oflayn rejimda, internet va Wi-Fi bo'lmaganda ham mustaqil ishlaydi.
+  - Har bir mijoz bo'yicha to'liq cheklar va to'lovlar tarixi bir joyda shaffof ko'rinib turadi.
+

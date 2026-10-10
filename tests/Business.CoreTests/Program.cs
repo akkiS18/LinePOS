@@ -9,6 +9,7 @@ DebtSourceEnvelopeTests.Run();
 DebtRepositoryTests.Run();
 DebtSchemaTests.Run();
 DebtMultiDeviceTests.Run();
+DebtDesktopIntegrationTests.Run();
 ReturnAccountingTests.Run();
 ReturnStoreTests.Run();
 

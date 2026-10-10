@@ -205,24 +205,52 @@ Foydalanuvchining kichik tugallangan bosqichlarda ishlash talabi sabab 2B ikkiga
 - Tekshirilgan kod commit: `27231d6`.
 - UI/Cashier hali ulanmagan; main merge/release yo‘q; Firebase/CBU o‘zgarmadi.
 
-## Keyingi sessiya — Qism 4: Desktop frontend va kassa integratsiyasi
+## Qism 4 natijasi: Desktop frontend va kassa integratsiyasi (4)
 
-1. Asosiy soha: Desktop kassa va asosiy menyuga Qarz daftari integratsiyasi.
-2. Menyuda: **Kassa / Ombor / Qarzlar / Hisobotlar / Wi-Fi Sinxron**.
-3. `Qarzlar` oynasi va ViewModel:
-   - Jami faol qarz, qarzdorlar soni, muddati o‘tgan qarzlar va ortiqcha to‘lovlar (haqdorlik) sarhisobi.
-   - Mijoz nomi va telefoni bo‘yicha qidiruv.
-   - Filtrlar: "Qarzi bor", "Muddati o‘tgan", "Yopilgan", "Ortiqcha to‘lov", "Barchasi".
-4. Kassa (Cashier) integratsiyasi:
-   - To‘lov turi sifatida "Nasiya" (Debt) modali: mijoz tanlash (yoki yangi yaratish), muddat (due date), avans (boshlang‘ich naqd/karta to‘lovi).
-   - "Kutish rejimi" (Hold basket) nasiya mijozini va muddatini mustaqil saqlashi.
-5. Qarz yig‘ish (Payment Collection) modali:
-   - Naqd / Karta / Aralash to‘lov qabul qilish, avtomatik eng eski nasiyadan yopish (oldest-first) yoki aniq hisobni tanlash.
-   - To‘lov kiritishdan oldin taqsimotni ko‘rib chiqish (preview).
-6. Qat’iy biznes qoidalari:
-   - Takroriy bosishdan himoya (submit disable), mustahkam request GUID / retry kafolati.
-   - Chek chiqarish (printer) yoki Telegram xatosi moliyaviy tranzaksiyani bekor qilmasligi (decoupled).
-   - Qarz yig‘ish yangi tushum (revenue) yoki yangi tovar sotuvi sifatida hisobotga qo‘shilmaydi.
+- Desktop Qarz xizmati (`PosElectro.Desktop/Debt/DebtService.cs`):
+  - `DebtRepository` ustiga xavfsiz va UI-dan ajratilgan (decoupled) application service qatlami qurildi.
+  - Xizmat o‘z konstruktorida `InstallSyncSchema(conn)` va `DebtSchema.Install(conn)` orqali barcha zaruriy metadata (`sync_meta`, `sync_control`, `sync_journal`) va qarz jadvallarini kafolatlaydi.
+  - Barcha hisob-kitoblar qat'iy tiyin (minor units, 1 UZS = 100 tiyin) da yuritiladi.
+  - `GetSummary()`: jami faol qarz, qarzdorlar soni, muddati o‘tgan qarzlar, ortiqcha to‘lovlar (kredit/haqdorlik) va umumiy to‘langan summani hisoblaydi.
+  - `GetCustomerList(search, filter)`: mijozlarni qidiruv (ism va telefon) hamda 5 ta filtr bo‘yicha ajratadi (`ActiveDebt`, `Overdue`, `Settled`, `Credit`, `All`).
+  - `GetCustomerDetails(customerGuid)`: mijoz ma'lumotlari, uning barcha nasiya hisoblari (`Accounts`) va to‘liq o‘zgarmas moliyaviy voqealar xronologiyasi (`Events`).
+  - `PreviewPayment(customerGuid, paymentMinor, targetAccountGuid)`: to‘lov summasi kiritilganda ortiqcha to‘lovni (overpayment) input darajasida bloklaydi, oldest-first FIFO yoki tanlangan hisob bo‘yicha jonli taqsimot satrlarini (`Lines`) hisoblab beradi.
+  - `RecordPayment(...)`: to‘lovni atomik qabul qiladi; takroriy yuborishda (retry/replay) avvalgi `occurred_at` ni saqlab, `DebtRepository.Replay` bilan 100% idempotent ishlaydi.
+  - `BuildSaleSnapshot(...)` va `OpenDebtSale(...)`: kassa savatchasi elementlarini (`DebtCartItemDto`) qat'iy canonical UUIDlar, `StockDelta = -quantity`, tannarx valyutasi va kurs bilan muzlatilgan snapshotga aylantiradi; manfiy qoldiq (negative stock) ruxsatini saqlaydi.
+  - `CreateCustomer`, `UpdateCustomer` (versiya nazorati bilan) va `ArchiveCustomer` integratsiyasi.
+
+- Kassa integratsiyasi (`PosElectro.Desktop/ViewModels/CashierViewModel.cs` & `Views/CashierView.xaml`):
+  - 4-to‘lov turi: "📒 Nasiya" (`SelectedPaymentType == 3`).
+  - Nasiya tanlanganda kassa oynasida mijoz tanlash (qidiruvli ComboBox + "+ Yangi" tezkor mijoz qo‘shish modali), mijozning oldingi qarzi, avans to‘lovlari (naqd/karta), qoladigan qarz nishoni (badge) va to‘lash muddati (due date) ko‘rsatiladi.
+  - Hold savatlar (`HeldCartModel`): har bir kutishdagi savat o‘zining tanlangan mijozi, muddati va avans summasini mustaqil saqlaydi va qayta tiklaydi.
+  - `ConfirmSale()`: Nasiya savdolarini `_debtService.OpenDebtSale` orqali to‘liq atomik va xavfsiz amalga oshiradi; bazaga dublikat yozilishining oldi olindi; takroriy bosishdan himoyalovchi `_isSubmittingSale` kiritildi; chek printeri yoki kvitansiya xatolari moliyaviy tranzaksiyaga ta'sir qilmaydi (decoupled error handling).
+
+- Qarzlar boshqaruvi oynasi (`PosElectro.Desktop/ViewModels/DebtsViewModel.cs` & `Views/DebtsView.xaml`):
+  - Zamonaviy Dark Theme Apple/Fluent UI dizayni: 4 ta KPI kartasi, qidiruv paneli va 5 ta filtr chiplari.
+  - Chap tomonda mijozlar ro‘yxati (balans nishoni, muddati o‘tganlik ogohlantirishi, arxiv holati), o‘ng tomonda tanlangan mijozning batafsil paneli (Nasiyalar va Tarix tablari).
+  - Yangi mijoz qo‘shish va tahrirlash modali (telefon va izoh ixtiyoriy, ism majburiy, ziddiyat tekshiruvi).
+  - Qarz to‘lovini qabul qilish modali: Naqd / Karta / Aralash to‘lov, jonli preview va tugmani o‘chirib qo‘yish (submit disable).
+  - "🛒 Kassada yangi nasiya ochish" tugmasi: mijoz tanlangan holda to‘g‘ridan-to‘g‘ri Kassaga o‘tish va savatni saqlab qolish.
+
+- Asosiy oyna navigatsiyasi (`MainWindow.xaml` & `MainViewModel.cs`):
+  - Menyu: **Kassa / Ombor / 📒 Qarzlar / Hisobotlar / Wi-Fi Sinxron**. Tablar orasida erkin va silliq o‘tish.
+
+- Testlar:
+  - C# Desktop integratsiya test to‘plami (`tests/Business.CoreTests/DebtDesktopIntegrationTests.cs`):
+    - Service summary, customer revision concurrency, debt sale snapshot, manfiy ombor qoldig‘i (10 - 15 = -5), cashier hold/open, idempotency replay, payment allocation preview, ortiqcha to‘lov bloklanishi, qarzni to‘liq yopish (settle) va arxivlash.
+  - Barcha testlar:
+    - C# `Business.CoreTests`: 11/11 test to‘plamlari PASS (100%).
+    - C# `WifiSync.CoreTests`: 20/20 testlar PASS (100%).
+    - Python `test_sync_schema.py`: 7/7 testlar PASS.
+    - `PosElectro.Desktop.csproj` kompilatsiyasi: 0 xato, 0 ogohlantirish.
+
+## Keyingi bosqich — Qism 5: Mobil frontend va offline kassa integratsiyasi
+
+1. Mobil pastki menyu: **Kassa / Ombor / Qarzlar / Hisobotlar / Sozlamalar**.
+2. Yangi Room DAO/Entity va `DebtService` Kotlin porti.
+3. Yangi Compose ekranlar: `DebtsScreen.kt`, `CustomerDetailScreen.kt`, `PaymentCollectionDialog.kt`.
+4. `CashierScreen.kt` va `CheckoutPaymentDialog.kt` ga Nasiya to‘lov variantini ulash; offline hold/resume.
+5. Android instrumentatsiya testlari orqali tekshirish.
 
 ## Muhim cheklovlar
 
@@ -231,9 +259,5 @@ Foydalanuvchining kichik tugallangan bosqichlarda ishlash talabi sabab 2B ikkiga
 - Ikki uzilgan qurilmada ortiqcha undirishni to‘liq bloklash mumkin emas; pul yozuvlari yo‘qolmasin, excess alohida ko‘rinsin.
 - Sale profitni debt collection bilan ikki marta hisoblama. Cashflow, receivable va revenue alohida.
 - Eski qog‘oz qarz import qilinmaydi; legacy DEBT enumdan taxminiy mijoz qarzi yaratma.
-- To‘liq D01–D27 reja testlari o‘tgan deb yozma: 2A arifmetika, 2B-1 migratsiya/sxema, 2B-2 repository, 3A-1 codec va 3A-2a DB bridge va 3A-2b-1 envelope codec testlari o‘tdi; 3A-2b-2a natijasi yuqorida. 3A-2b-2b/3A-2c hamda 3B–7 bajarilmagan.
+- To‘liq D01–D27 reja testlari o‘tgan deb yozma.
 - UI 4/5 tugashi release tayyor degani emas; returns/report/backup integratsiyasi va regressiya gates kerak.
-
-## Lokal nusxa haqida
-
-Tekshiruv paytida `LinePOS-business-fixes` checkouti dirty edi va lokal HEAD remote main emas edi. Unga tegilmadi. Hujjatlar alohida `LinePOS-debt-plan/docs` ichida tayyorlandi; GitHub commit bevosita tekshirilgan main tree asosida faqat shu ikki hujjatni qo‘shadi. Eski lokal nusxani yangi branch asosi deb qabul qilmang.
