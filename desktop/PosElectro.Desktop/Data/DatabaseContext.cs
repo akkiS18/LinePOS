@@ -1735,6 +1735,14 @@ namespace PosElectro.Desktop.Data
                 (string.IsNullOrWhiteSpace(warehouseGuidFilter) || warehouseGuidFilter == "all" || item.WarehouseGuid == warehouseGuidFilter)).ToList();
         }
 
+        public Debt.DebtPeriodSummary GetDebtPeriodSummary(DateTime from, DateTime to)
+        {
+            var fromMs = new DateTimeOffset(from).ToUnixTimeMilliseconds();
+            var toMs = new DateTimeOffset(to).ToUnixTimeMilliseconds();
+            using var conn = CreateConnection();
+            return Debt.DebtReportProjection.Query(conn, fromMs, toMs);
+        }
+
         private static Product ReadProduct(SqliteDataReader r) => new()
         {
             Id = r.GetInt64(r.GetOrdinal("id")),

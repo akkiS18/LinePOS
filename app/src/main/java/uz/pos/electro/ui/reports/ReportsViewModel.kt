@@ -38,7 +38,8 @@ class ReportsViewModel @Inject constructor(
     private val productRepository: ProductRepository,
     private val warehouseRepository: WarehouseRepository,
     private val currencyRepository: CurrencyRepository,
-    val returnSync: uz.pos.electro.data.sync.LocalSyncManager
+    val returnSync: uz.pos.electro.data.sync.LocalSyncManager,
+    private val debtService: uz.pos.electro.data.debt.DebtService
 ) : ViewModel() {
 
     private val _selectedFilter = MutableStateFlow(TimeRangeFilter.TODAY)
@@ -122,7 +123,23 @@ class ReportsViewModel @Inject constructor(
         val ids = lines.map { it.saleId }.toSet()
         _salesList.value = matched.filter { it.sale.id in ids }
         _detailedReportItems.value = lines
-        _summary.value = uz.pos.electro.data.model.SaleAccounting.summary(lines, _usdRate.value)
+        val baseSummary = uz.pos.electro.data.model.SaleAccounting.summary(lines, _usdRate.value)
+        _summary.value = baseSummary
+        viewModelScope.launch {
+            val debtPeriod = debtService.getDebtPeriodSummary(rangeStart, rangeEnd)
+            _summary.value = baseSummary.copy(
+                debtCollected = debtPeriod.netDebtCollectedTotalUz,
+                debtCollectedCash = debtPeriod.netDebtCashCollectedUz,
+                debtCollectedCard = debtPeriod.netDebtCardCollectedUz,
+                debtCollectedFee = debtPeriod.netDebtFeeUz,
+                debtReturnOffset = debtPeriod.debtReturnOffsetUz,
+                totalCashflow = baseSummary.totalCashAmount + debtPeriod.netDebtCashCollectedUz + baseSummary.totalCardAmount + debtPeriod.netDebtCardCollectedUz,
+                netCashInflow = baseSummary.totalCashAmount + debtPeriod.netDebtCashCollectedUz,
+                netCardInflow = baseSummary.totalCardAmount + debtPeriod.netDebtCardCollectedUz,
+                activeDebtTotal = debtPeriod.closingDebtUz,
+                activeCreditTotal = debtPeriod.closingCreditUz
+            )
+        }
     }
 
     private var reportCollectionJob: Job? = null
@@ -278,7 +295,20 @@ class ReportsViewModel @Inject constructor(
             }
 
             periodTitle += " | ${_recordKind.value}"
-            val exportSummary = uz.pos.electro.data.model.SaleAccounting.summary(detailedItems, _usdRate.value)
+            val debtPeriod = debtService.getDebtPeriodSummary(start, end)
+            val baseExportSummary = uz.pos.electro.data.model.SaleAccounting.summary(detailedItems, _usdRate.value)
+            val exportSummary = baseExportSummary.copy(
+                debtCollected = debtPeriod.netDebtCollectedTotalUz,
+                debtCollectedCash = debtPeriod.netDebtCashCollectedUz,
+                debtCollectedCard = debtPeriod.netDebtCardCollectedUz,
+                debtCollectedFee = debtPeriod.netDebtFeeUz,
+                debtReturnOffset = debtPeriod.debtReturnOffsetUz,
+                totalCashflow = detailedItems.sumOf { it.cashAmount } + debtPeriod.netDebtCashCollectedUz + detailedItems.sumOf { it.cardAmount } + debtPeriod.netDebtCardCollectedUz,
+                netCashInflow = detailedItems.sumOf { it.cashAmount } + debtPeriod.netDebtCashCollectedUz,
+                netCardInflow = detailedItems.sumOf { it.cardAmount } + debtPeriod.netDebtCardCollectedUz,
+                activeDebtTotal = debtPeriod.closingDebtUz,
+                activeCreditTotal = debtPeriod.closingCreditUz
+            )
 
             val result = ExcelExporter.exportAndShareReport(
                 context = context,

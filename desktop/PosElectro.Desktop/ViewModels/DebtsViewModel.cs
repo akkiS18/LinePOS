@@ -290,6 +290,7 @@ public class DebtsViewModel : ViewModelBase
     public ICommand TransferCreditCommand { get; }
 
     public ICommand GoToCashierForCustomerCommand { get; }
+    public ICommand PrintStatementCommand { get; }
 
     public DebtsViewModel(DatabaseContext db, DebtService? debtService = null)
     {
@@ -349,7 +350,27 @@ public class DebtsViewModel : ViewModelBase
             }
         });
 
+        PrintStatementCommand = new RelayCommand(PrintStatement);
+
         RefreshAll();
+    }
+
+    private void PrintStatement()
+    {
+        if (SelectedCustomer == null || SelectedCustomerDetails == null) return;
+        var printer = new PosElectro.Desktop.Services.PrinterService(_db);
+        var res = printer.PrintCustomerStatement(SelectedCustomerDetails);
+
+        if (res.Success)
+        {
+            MessageBox.Show("Mijoz hisob ko'chirmasi printerga yuborildi.", "Ko'chirma chop etish", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        else
+        {
+            var statementText = DebtReceiptFormatter.BuildCustomerStatementText(SelectedCustomerDetails);
+            try { Clipboard.SetText(statementText); } catch { }
+            MessageBox.Show($"Printerga ulanib bo'lmadi ({res.ErrorMessage}).\n\nHisob ko'chirmasi matni xotiraga (Clipboard) nusxalandi:\n\n{statementText}", "Ko'chirma", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
     }
 
     public void RefreshAll()

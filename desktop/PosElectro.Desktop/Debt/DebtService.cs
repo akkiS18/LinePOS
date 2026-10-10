@@ -123,6 +123,10 @@ public sealed record DebtEventItemDto(
     };
     public bool CanReverse => Kind == "payment" && !IsReversed;
     public double TotalPaymentUz => (CashMinor + CardMinor) / 100.0;
+    public double CashUz => CashMinor / 100.0;
+    public double CardUz => CardMinor / 100.0;
+    public double FeeUz => FeeMinor / 100.0;
+    public double AmountUz => TotalPaymentUz;
     public string AmountDisplay => TotalPaymentUz != 0 ? $"{TotalPaymentUz:N0} so'm" : "-";
 }
 
@@ -572,7 +576,8 @@ public sealed class DebtService
         long cardMinor,
         string? targetAccountGuid = null,
         string? requestGuid = null,
-        long? occurredAt = null)
+        long? occurredAt = null,
+        long feeMinor = 0)
     {
         var req = requestGuid ?? Guid.NewGuid().ToString("D");
         long timestamp = occurredAt ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -591,7 +596,7 @@ public sealed class DebtService
             customerGuid,
             cashMinor,
             cardMinor,
-            0,
+            feeMinor,
             timestamp,
             targetAccountGuid);
 

@@ -708,6 +708,29 @@ private fun CustomerDetailView(
                         Text("Kassada ochish", fontWeight = FontWeight.Bold)
                     }
                 }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                val context = androidx.compose.ui.platform.LocalContext.current
+                OutlinedButton(
+                    onClick = {
+                        if (details != null) {
+                            val text = uz.pos.electro.data.debt.DebtReceiptFormatter.buildCustomerStatementText(details)
+                            val sendIntent = android.content.Intent().apply {
+                                action = android.content.Intent.ACTION_SEND
+                                putExtra(android.content.Intent.EXTRA_TEXT, text)
+                                type = "text/plain"
+                            }
+                            context.startActivity(android.content.Intent.createChooser(sendIntent, "Hisob ko'chirmasini ulashish"))
+                        }
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(imageVector = Icons.Default.ReceiptLong, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Ko'chirmani ulashish (Sverka)", fontWeight = FontWeight.Bold)
+                }
             }
         }
 

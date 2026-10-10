@@ -340,6 +340,10 @@ class DebtService @Inject constructor(
         } catch (_: Throwable) { }
     }
 
+    suspend fun getDebtPeriodSummary(startMs: Long, endMs: Long): DebtPeriodSummary = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        DebtReportProjection.query(database.openHelper.readableDatabase, startMs, endMs)
+    }
+
     suspend fun getSummary(): DebtSummaryDto {
         ensureRepo()
         val db = database.openHelper.readableDatabase

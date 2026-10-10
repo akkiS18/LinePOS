@@ -49,7 +49,9 @@ object SaleAccounting {
                 category = item.categoryAtSale.ifBlank { "Tarixiy kategoriya noma’lum" },
                 warehouseGuid = item.warehouseGuid, warehouseName = item.warehouseName.ifBlank { "Ombor noma’lum" },
                 receiptNumber = sale.receiptNumber, totalCost = cost[index], taxAmount = tax[index],
-                cashAmount = cash[index], cardAmount = card[index], profitUsd = rate?.let { profit / it },
+                cashAmount = cash[index], cardAmount = card[index],
+                debtAmount = BigDecimal.valueOf(revenue[index]).subtract(BigDecimal.valueOf(cash[index])).subtract(BigDecimal.valueOf(card[index])).toDouble().coerceAtLeast(0.0),
+                profitUsd = rate?.let { profit / it },
                 isReturn = sale.paymentType == PaymentType.RETURN || sale.paymentType == PaymentType.RETURN_REVERSAL,
                 isBrak = sale.paymentType == PaymentType.BRAK)
         }
@@ -68,5 +70,6 @@ object SaleAccounting {
         brakCost = lines.filter { it.isBrak }.sumOf { it.totalCost },
         totalItemsCount = lines.filterNot { it.isBrak || it.isReturn }.sumOf { it.quantity }, usdRate = displayRate,
         totalCashAmount = lines.sumOf { it.cashAmount }, totalCardAmount = lines.sumOf { it.cardAmount },
+        totalDebtAmount = lines.sumOf { it.debtAmount },
         totalTaxAmount = lines.sumOf { it.taxAmount })
 }

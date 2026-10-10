@@ -193,6 +193,30 @@ namespace PosElectro.Desktop.Services
             return RawPrinterHelper.SendBytesToPrinter(targetPrinter, bytes, $"Chek #{sale.ReceiptNumber}");
         }
 
+        public (bool Success, string? ErrorMessage) PrintCustomerStatement(
+            PosElectro.Desktop.Debt.DebtCustomerDetailDto customer,
+            string? printerName = null)
+        {
+            var targetPrinter = printerName ?? FindReceiptPrinter();
+            if (string.IsNullOrWhiteSpace(targetPrinter))
+            {
+                return (false, "Chek printeri topilmadi yoki sozlanmagan");
+            }
+
+            string text = Debt.DebtReceiptFormatter.BuildCustomerStatementText(customer);
+
+            using var ms = new MemoryStream();
+            using var bw = new BinaryWriter(ms);
+            bw.Write(new byte[] { 0x1B, 0x40 });
+            bw.Write(new byte[] { 0x1B, 0x74, 17 });
+            WriteCp866(bw, text);
+            bw.Write(new byte[] { 0x1D, 0x56, 0x42, 0x00 });
+            byte[] bytes = ms.ToArray();
+
+            bool ok = RawPrinterHelper.SendBytesToPrinter(targetPrinter, bytes, $"Ko'chirma - {customer.Customer.Name}");
+            return (ok, ok ? null : "Printerga chop etishda xatolik yuz berdi");
+        }
+
         private byte[] BuildEscPosReceipt(Sale sale)
         {
             using var ms = new MemoryStream();
@@ -306,54 +330,12 @@ namespace PosElectro.Desktop.Services
         /// <summary>
         /// 58 mm kassa chekining matnli ko'rinishini hosil qilish (Oldindan ko'rish - Preview uchun)
         /// </summary>
-        public static string BuildReceiptText(Sale sale)
-        {
-            var sb = new StringBuilder();
-            sb.AppendLine("          SMART KASSA           ");
-            sb.AppendLine("    Elektr jihozlari do'koni    ");
-            sb.AppendLine("--------------------------------");
-            sb.AppendLine($"Chek: #{sale.ReceiptNumber}");
-            if (!string.IsNullOrEmpty(sale.OriginalReceiptNumber)) sb.AppendLine($"Asl chek: {sale.OriginalReceiptNumber}");
-            sb.AppendLine($"Sana: {sale.CreatedDateTime:dd.MM.yyyy HH:mm}");
-            sb.AppendLine($"To'lov turi: {sale.PaymentTypeDisplay}");
-            sb.AppendLine("--------------------------------");
-            sb.AppendLine("Tovar              Miqd.    Jami");
-            sb.AppendLine("--------------------------------");
+        public static string BuildReceiptText(Sale sale) => Debt.DebtReceiptFormatter.BuildReceiptText(sale);
 
-            foreach (var item in sale.Items)
-            {
-                string name = item.ProductName;
-                if (name.Length > 30) name = name.Substring(0, 27) + "...";
-                sb.AppendLine(name);
-
-                string qtyStr = $"{item.Quantity:0.##}";
-                string totalStr = $"{item.TotalPrice:N0}";
-                string lineLeft = $"  {item.PriceAtSale:N0} x {qtyStr}";
-                string lineRight = totalStr;
-
-                int space = 32 - lineLeft.Length - lineRight.Length;
-                if (space < 1) space = 1;
-                sb.AppendLine(lineLeft + new string(' ', space) + lineRight);
-            }
-
-            sb.AppendLine("--------------------------------");
-            string totalTitle = "JAMI:";
-            string totalVal = $"{sale.TotalAmount:N0} so'm";
-            int totalSpace = 32 - totalTitle.Length - totalVal.Length;
-            if (totalSpace < 1) totalSpace = 1;
-            sb.AppendLine(totalTitle + new string(' ', totalSpace) + totalVal);
-
-            if (sale.PaymentType == PaymentType.SPLIT)
-            {
-                sb.AppendLine($"  Naqd:  {sale.CashAmount:N0} so'm");
-                sb.AppendLine($"  Karta: {sale.CardAmount:N0} so'm");
-            }
-
-            sb.AppendLine("--------------------------------");
-            sb.AppendLine("    Rahmat, xaridingiz uchun!   ");
-            sb.AppendLine("       Yana tashrif buyuring!   ");
-            return sb.ToString();
-        }
+        /// <summary>
+        /// Mijoz qarz daftari ko'chirmasi matnini shakllantirish (58mm/80mm yoki ko'rish uchun)
+        /// </summary>
+        public static string BuildCustomerStatementText(Debt.DebtCustomerDetailDto customer) => Debt.DebtReceiptFormatter.BuildCustomerStatementText(customer);
 
         /// <summary>
         /// A4 formatdagi tovar hisob-fakturasini chop etish (Standard Windows printer or PDF)

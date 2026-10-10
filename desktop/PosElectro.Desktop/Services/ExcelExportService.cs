@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Windows;
 using Microsoft.Win32;
@@ -19,7 +20,8 @@ namespace PosElectro.Desktop.Services
             int salesCount, 
             List<SaleReportItem> items,
             string categoryTitle = "Barchasi",
-            string warehouseTitle = "Barcha omborlar")
+            string warehouseTitle = "Barcha omborlar",
+            PosElectro.Desktop.Debt.DebtPeriodSummary? debtSummary = null)
         {
             try
             {
@@ -68,45 +70,86 @@ namespace PosElectro.Desktop.Services
 <body>
     <table>
         <tr>
-            <td colspan=""12"" class=""title"" style=""border:none;"">LINE KASSA - SAVDO VA FOYDA HISOBOTI</td>
+            <td colspan=""13"" class=""title"" style=""border:none;"">LINE KASSA - SAVDO VA FOYDA HISOBOTI</td>
         </tr>
         <tr>
-            <td colspan=""12"" style=""border:none; font-size: 11pt;""><b>Hisobot davri:</b> " + periodTitle + @"</td>
+            <td colspan=""13"" style=""border:none; font-size: 11pt;""><b>Hisobot davri:</b> " + periodTitle + @"</td>
         </tr>
         <tr>
-            <td colspan=""12"" style=""border:none; font-size: 10pt;""><b>Kategoriya:</b> " + categoryTitle + @" | <b>Ombor:</b> " + warehouseTitle + @"</td>
+            <td colspan=""13"" style=""border:none; font-size: 10pt;""><b>Kategoriya:</b> " + categoryTitle + @" | <b>Ombor:</b> " + warehouseTitle + @"</td>
         </tr>
         <tr>
-            <td colspan=""12"" style=""border:none; font-size: 10pt; color: #64748B;""><b>Yaratilgan vaqt:</b> " + DateTime.Now.ToString("dd.MM.yyyy HH:mm") + @"</td>
+            <td colspan=""13"" style=""border:none; font-size: 10pt; color: #64748B;""><b>Yaratilgan vaqt:</b> " + DateTime.Now.ToString("dd.MM.yyyy HH:mm") + @"</td>
         </tr>
-        <tr><td colspan=""12"" style=""border:none;""></td></tr>
+        <tr><td colspan=""13"" style=""border:none;""></td></tr>
         
         <!-- KPI Xulosa -->
         <tr>
             <td colspan=""5"" class=""kpi-title"">UMUMIY MOLIYAVIY XULOSA</td>
-            <td colspan=""7"" class=""kpi-title"">KO'RSATKICH</td>
+            <td colspan=""8"" class=""kpi-title"">KO'RSATKICH</td>
         </tr>
         <tr>
             <td colspan=""5"">Jami Tushum:</td>
-            <td colspan=""7"" class=""kpi-val"">" + totalRevenue.ToString("N0") + @" so'm</td>
+            <td colspan=""8"" class=""kpi-val"">" + totalRevenue.ToString("N0") + @" so'm</td>
         </tr>
         <tr>
             <td colspan=""5"">Jami Tan Narxi:</td>
-            <td colspan=""7"" class=""kpi-val"">" + totalCost.ToString("N0") + @" so'm</td>
+            <td colspan=""8"" class=""kpi-val"">" + totalCost.ToString("N0") + @" so'm</td>
         </tr>
         <tr>
             <td colspan=""5"">Sof Foyda (karta solig‘idan keyin):</td>
-            <td colspan=""7"" class=""profit-val"">" + netProfit.ToString("N0") + @" so'm</td>
+            <td colspan=""8"" class=""profit-val"">" + netProfit.ToString("N0") + @" so'm</td>
         </tr>
         <tr>
             <td colspan=""5"">Rentabellik (Marja):</td>
-            <td colspan=""7"" class=""kpi-val"">" + (totalRevenue > 0 ? $"{(netProfit / totalRevenue * 100):0.1f}%" : "0%") + @"</td>
+            <td colspan=""8"" class=""kpi-val"">" + (totalRevenue > 0 ? $"{(netProfit / totalRevenue * 100):0.1f}%" : "0%") + @"</td>
         </tr>
         <tr>
             <td colspan=""5"">Jami Cheklar Soni:</td>
-            <td colspan=""7"" class=""kpi-val"">" + salesCount + @" ta chek</td>
+            <td colspan=""8"" class=""kpi-val"">" + salesCount + @" ta chek</td>
+        </tr>");
+
+                if (debtSummary != null)
+                {
+                    double cashflow = items.Sum(i => i.CashAmount + i.CardAmount) + debtSummary.NetDebtCollectedTotalUz;
+                    html.Append($@"
+        <tr><td colspan=""13"" style=""border:none;""></td></tr>
+        <tr>
+            <td colspan=""5"" class=""kpi-title"" style=""background-color:#E2E8F0;"">QARZ VA CASHFLOW (PUL OQIMI)</td>
+            <td colspan=""8"" class=""kpi-title"" style=""background-color:#E2E8F0;"">KO'RSATKICH</td>
         </tr>
-        <tr><td colspan=""12"" style=""border:none;""></td></tr>
+        <tr>
+            <td colspan=""5"">Yangi Berilgan Nasiya:</td>
+            <td colspan=""8"" class=""kpi-val"">{debtSummary.NewDebtIssuedUz:N0} so'm</td>
+        </tr>
+        <tr>
+            <td colspan=""5"">Undirilgan Qarz (Yig'im):</td>
+            <td colspan=""8"" class=""kpi-val"">{debtSummary.NetDebtCollectedTotalUz:N0} so'm (Naqd: {debtSummary.NetDebtCashCollectedUz:N0}, Karta: {debtSummary.NetDebtCardCollectedUz:N0})</td>
+        </tr>
+        <tr>
+            <td colspan=""5"">Undiruv Karta Komissiyasi:</td>
+            <td colspan=""8"" class=""kpi-val"">{debtSummary.NetDebtFeeUz:N0} so'm</td>
+        </tr>
+        <tr>
+            <td colspan=""5"">Qaytarishdan Qarz Yopilishi:</td>
+            <td colspan=""8"" class=""kpi-val"">{debtSummary.DebtReturnOffsetUz:N0} so'm</td>
+        </tr>
+        <tr>
+            <td colspan=""5"">Kassa Pul Oqimi (Savdo + Qarz Yig'imi):</td>
+            <td colspan=""8"" class=""kpi-val"" style=""color:#0284C7;"">{cashflow:N0} so'm</td>
+        </tr>
+        <tr>
+            <td colspan=""5"">Davr Yakunidagi Faol Qarz:</td>
+            <td colspan=""8"" class=""kpi-val"" style=""color:#DC2626;"">{debtSummary.ClosingDebtUz:N0} so'm ({debtSummary.ActiveDebtorsCount} ta mijoz)</td>
+        </tr>
+        <tr>
+            <td colspan=""5"">Davr Yakunidagi Mijoz Haqi (Kredit):</td>
+            <td colspan=""8"" class=""kpi-val"" style=""color:#7C3AED;"">{debtSummary.ClosingCreditUz:N0} so'm</td>
+        </tr>");
+                }
+
+                html.Append(@"
+        <tr><td colspan=""13"" style=""border:none;""></td></tr>
 
         <!-- Jadval sarlavhasi -->
         <tr class=""header"">
@@ -121,6 +164,7 @@ namespace PosElectro.Desktop.Services
             <td>Tan Narxi (so'm)</td>
             <td>Sotish Narxi (so'm)</td>
             <td>Jami Summa (so'm)</td>
+            <td>Nasiya (so'm)</td>
             <td>Sof Foyda (so'm)</td>
         </tr>");
 
@@ -132,6 +176,7 @@ namespace PosElectro.Desktop.Services
                         ? $"${item.OriginalCost:N2} ({item.CostPrice:N0})"
                         : item.CostPrice.ToString("N0");
                     var whLabel = string.IsNullOrWhiteSpace(item.WarehouseName) ? "Do'kondagi ombor" : item.WarehouseName;
+                    var debtLabel = item.DebtAmount > 0 ? item.DebtAmount.ToString("N0") : "-";
 
                     html.Append($@"
         <tr>
@@ -146,6 +191,7 @@ namespace PosElectro.Desktop.Services
             <td class=""num"">{costLabel}</td>
             <td class=""num"">{item.SellingPrice:N0}</td>
             <td class=""num""><b>{item.TotalPrice:N0}</b></td>
+            <td class=""num"">{debtLabel}</td>
             <td class=""num"" style=""color:#10B981;""><b>{item.Profit:N2}</b></td>
         </tr>");
                 }

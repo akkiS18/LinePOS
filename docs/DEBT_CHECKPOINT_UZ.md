@@ -1,6 +1,6 @@
 # Qarz daftari — davom ettirish nuqtasi
 
-Sana: 2026-10-10. Holat: **Qism 6 (Return/Reversal, LAN authority, Credit Refund va Credit Transfer) to‘liq yakunlandi va testdan o‘tdi. Navbatdagi bosqich: Qism 7 (Hisobotlar, foyda, Excel va chek/ko‘chirma)**.
+Sana: 2026-10-10. Holat: **Qism 7 (Hisobotlar, foyda, Excel va chek/ko‘chirma) to‘liq yakunlandi va testdan o‘tdi. Navbatdagi bosqich: Qism 8 (Backup/restore, regressiya va yakuniy sinov)**.
 
 ## Asos va branch
 
@@ -321,12 +321,44 @@ Foydalanuvchining kichik tugallangan bosqichlarda ishlash talabi sabab 2B ikkiga
   - Android loyihasi: `compileDebugKotlin` va `compileDebugAndroidTestKotlin` 0 xato bilan BUILD SUCCESSFUL.
 - Tekshirilgan kod commit: `90c7a2a`.
 
-## Keyingi bosqich — Qism 7: Hisobotlar, foyda, Excel va chek/ko‘chirma
-1. `SaleAccounting` (desktop va Android): Savdo sanasida to'liq revenue/cost/profit 1 marta; keyingi qarz to'lovi faqat cashflow va fee deb hisoblanadi (savdo timestampi yoki revenue o'zgarmaydi).
-2. Naqd, karta, kredit va qarz summalari hisobotlarda aniq ajratilishi; mijoz krediti do'konning boshqa qarzlarini kamaytirib ko'rsatmasligi.
-3. Davriy hisobotlar: `[start inclusive, end exclusive)`, do'kon vaqti bo'yicha; `opening + periodChanges = closing`.
-4. Chek va ko'chirma (Statement): Initial paid, original debt, later payments, returns, current balance/status va credit; stable LP/RT/RV GUIDlar; UZS/USD profit va cashflow pariteti.
-5. Excel eksport helperlari: UI va Excel bir xil projectiondan foydalanishi.
+## Qism 7 natijasi: Hisobotlar, foyda, Excel va chek/ko‘chirma
+- Buxgalteriya va P&L intizomi (`SaleAccounting.cs` va `SaleAccounting.kt`):
+  - Savdo sanasida to'liq revenue/cost/profit bir marta hisoblanadi.
+  - Qarz to'lovi (`TakePayment`) savdo daromadi deb hisoblanmaydi (`RevenueMinor = 0`); u faqat kassa pul oqimi (cashflow) va undirilgan kundagi bank komissiyasini hosil qiladi.
+  - Nasiya tovar qaytarilganda (`return_offset`) savdo daromadi kamaytiriladi, lekin pul chiqimi (refund) bo'lmagani uchun cashflow o'zgarmaydi.
+- Davriy hisobotlar va tahliliy proyeksiyalar (`DebtReportProjection.cs` va `DebtReportProjection.kt`):
+  - Davr chegarasi qat'iy `[start inclusive, end exclusive)` mahalliy vaqt bo'yicha;
+  - `opening + periodChanges = closing` matematik balansi kafolatlandi;
+  - Faol qarzdorlik (`ClosingDebtUz`) va ortiqcha to'lovlar/haqdorlik (`ClosingCreditUz`) aslo bir-biri bilan to'qnashtirilib (netting) yashirilmaydi, alohida ko'rsatiladi;
+  - `GetDebtPeriodSummary` va `GetDebtCustomerHistory`: yangi nasiya, undirilgan naqd/karta qarzlar, to'langan bank komissiyasi, boshlang'ich va yakuniy qoldiqlar.
+- Desktop UI va Excel eksporti (`PosElectro.Desktop`):
+  - `ReportsViewModel.cs` va `ReportsView.xaml`: "QARZ VA PUL OQIMI (CASHFLOW)" kartalari (Berilgan Nasiya, Undirilgan Qarz, Kassa Pul Oqimi, Faol Qarzdorlik / Haqdorlik);
+  - `ExcelExportService.cs`: "QARZ VA CASHFLOW (PUL OQIMI)" analitik bloki va savdolar jadvalida "Nasiya (so'm)" ustuni qo'shildi;
+  - `PrinterService.cs` va `DebtsViewModel.cs`: Mijoz batafsil sahifasida "🖨️ Ko'chirma" tugmasi orqali to'liq sverka aktini 80mm/58mm chek printeriga chiqarish yoki clipboardga nusxalash imkoniyati yaratildi.
+- Android UI va Excel eksporti (`app/src/main/java/uz/pos/electro/`):
+  - `DebtReceiptFormatter.kt`: 32-ustunli hisob-kitob ko'chirmasi matn formateri;
+  - `DebtService.kt`: `getDebtPeriodSummary` Room/SQLite so'rovi;
+  - `ReportsViewModel.kt` va `ReportsScreen.kt`: Hisobotlar ekraniga "Qarz va Kassa Pul Oqimi" kartasi qo'shildi;
+  - `ExcelExporter.kt`: Excelga Qarz va Cashflow bo'limi hamda "Nasiya (so'm)" ustuni integratsiya qilindi;
+  - `DebtsScreen.kt`: "Ko'chirmani ulashish (Sverka)" tugmasi orqali mijoz ko'chirmasini Telegram/SMS orqali ulashish (share intent) kiritildi.
+- Testlar va verifikatsiya:
+  - C# `Business.CoreTests` yangi D17–D20 va D26 test to'plami (`DebtReportTests.cs`):
+    - D17: Bugun nasiya / ertaga to'lov -> savdo kuni revenue bor/cashflow 0, ertaga revenue 0/cashflow to'liq; fee ikki marta olinmasligi — PASS.
+    - D18: Oldingi davr qarzi yopilganda savdo daromadi 0 bo'lishi; safe credit holati — PASS.
+    - D19: Midnight va davriy filtrlar `[start, end)` aniq ishlashi — PASS.
+    - D20: Excel eksporti va UI hisoboti bir xil davriy formuladan foydalanishi — PASS.
+    - D26: Mijoz hisob-kitob ko'chirmasi (Statement) to'liq formati — PASS.
+    - Barcha test to'plamlari: `Business.CoreTests` 13/13 test to'plamlari 100% PASS.
+  - C# `WifiSync.CoreTests`: 20/20 testlar PASS (100%).
+  - Python testlari: 23/23 testlar PASS (100%).
+  - Desktop loyihasi: `net8.0-windows` 0 xato, 0 ogohlantirish bilan build bo'ldi.
+  - Android loyihasi: `compileDebugKotlin` va `compileDebugAndroidTestKotlin` 0 xato bilan BUILD SUCCESSFUL.
+
+## Keyingi bosqich — Qism 8: Backup/restore, regressiya va yakuniy sinov
+1. Snapshot bir tranzaksiyada barcha qarz jadvallarini (`debt_schema`, `debt_scope`, `debt_customers`, `debt_accounts`, `debt_events`, `debt_event_lines`, `debt_command_receipts`, `debt_sync_inbox`, `sync_journal`, `sync_meta` seallari) qamrab olishi.
+2. Faqat to'lov bo'lgan kun, uzilgan holatdagi lokal amallar, missing dependency inbox va >2MiB applied body bilan restore sinovi.
+3. Yangi writer epoch va server history/cursor reconciliation tiklangan nusxani eski amallarni qayta yozmasligini tekshirish.
+4. D01–D27 bo'yicha to'liq yakuniy test va regressiya verifikatsiyasi.
 
 ## Muhim cheklovlar
 

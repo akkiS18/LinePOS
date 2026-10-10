@@ -64,4 +64,24 @@ Ushbu qisqacha qo'llanma mijozga oxirgi kiritilgan qulayliklarni ko'rsatish uchu
   - Kassir xatolik bilan qarz tovarini qaytarganda mijozga do'kon hisobidan ortiqcha naqd pul berib yuborish xavfi 100% bartaraf etildi.
   - Mijoz haqdor bo'lib qolgan holatlarda pulni qaytarish yoki boshqa nasiyaga yo'naltirish to'liq avtomatlashtirildi.
 
+---
 
+### 6. 📊 Qarzlar va Pul oqimi (Cashflow) hisoboti, Excel eksporti va mijoz ko'chirmasi (Sverka)
+- **Nima o'zgardi:**
+  - Hisobotlar oynasiga yangi **"Qarz va Pul Oqimi (Cashflow)"** bo'limi qo'shildi:
+    - **Berilgan nasiya:** Davr ichida xaridorlarga berilgan jami yangi nasiya summasi.
+    - **Undirilgan qarz:** Davr ichida undirilgan qarzlar (Naqd va Karta alohida, bank komissiyasi bilan).
+    - **Kassa pul oqimi (Cashflow):** Haqiqiy kassa/hisobga kirgan pul (oddiy savdolar + undirilgan qarzlar).
+    - **Faol qarzdorlik va Haqdorlik:** Davr oxiridagi xaridorlarning sof umumiy qarzi va ortiqcha to'lovlari (haqdorlik) alohida ko'rsatiladi.
+  - **Daromad va Foyda (P&L) qat'iy buxgalteriya intizomi:**
+    - Nasiya savdosi amalga oshirilgan kuni to'liq sotuv summasi va foyda 1 marta hisoblanadi. Keyinchalik qarz undirilganda u qayta daromad yoki sotuv deb hisoblanmaydi (dublikat daromad ko'rsatish xavfi 100% yo'qotildi).
+    - Qarz to'lovi faqat kassa pul oqimiga (cashflow) va undirilgan kungi bank komissiyasiga ta'sir qiladi.
+  - **Excel eksporti:**
+    - Excel faylida "QARZ VA CASHFLOW (PUL OQIMI)" maxsus tahliliy blok qo'shildi.
+    - Savdolar jadvalida yangi **"Nasiya (so'm)"** ustuni joylashtirildi.
+  - **🖨️ / 📤 Mijoz hisob-kitob ko'chirmasi (Sverka akti):**
+    - Desktopda "Qarzlar" bo'limida mijoz sahifasida **"🖨️ Ko'chirma"** tugmasi paydo bo'ldi: 80mm/58mm chek printeriga yoki nusxalash orqali mijozning barcha nasiyalari, to'lovlari, tovar qaytarishlari va yakuniy qoldig'i 1 tugma bilan chop etiladi.
+    - Android mobil ilovasida **"Ko'chirmani ulashish (Sverka)"** tugmasi qo'shildi: Telegram, WhatsApp yoki SMS orqali mijozga to'liq cheklar va to'lovlar ko'chirmasini matn ko'rinishida yuborish imkoniyati yaratildi.
+- **Mijoz uchun foydasi:**
+  - Do'kon egasi kunlik yoki oylik kassasidagi haqiqiy naqd pul oqimi (cashflow) bilan sof tovar daromadini hech qachon chalkashtirmaydi.
+  - Xaridor bilan qarz bo'yicha bahslashuv yuzaga kelsa, joyida to'liq va shaffof hisob-kitob ko'chirmasi (sverka) chiqarib beriladi.

@@ -459,6 +459,11 @@
                                             Style="{StaticResource RoundedActionButton}" Background="#0B6477" Foreground="White" FontWeight="Bold"
                                             Padding="12,10" Margin="0,0,8,0"/>
 
+                                    <Button Content="🖨️ Ko'chirma" Command="{Binding PrintStatementCommand}"
+                                            ToolTip="Mijoz hisob ko'chirmasini (sverka) chop etish yoki xotiraga nusxalash"
+                                            Style="{StaticResource RoundedActionButton}" Background="#475569" Foreground="White" FontWeight="Bold"
+                                            Padding="12,10" Margin="0,0,8,0"/>
+
                                     <Button Content="✏️ Tahrirlash" Command="{Binding OpenEditCustomerModalCommand}"
                                             Style="{StaticResource RoundedActionButton}" Background="#334155" Foreground="#F8FAFC"
                                             Padding="10,10" Margin="0,0,8,0"/>

@@ -19,6 +19,8 @@ data class SaleReportItem(
     val taxAmount: Double = 0.0,
     val cashAmount: Double = 0.0,
     val cardAmount: Double = 0.0,
+    val debtAmount: Double = 0.0,
+    val isDebt: Boolean = debtAmount > 0.0,
     val profitUsd: Double? = null,
     val isReturn: Boolean = false,
     val isBrak: Boolean = false
@@ -34,6 +36,7 @@ data class ReportsSummary(
     val usdRate: Double = 12850.0,
     val totalCashAmount: Double = 0.0,
     val totalCardAmount: Double = 0.0,
+    val totalDebtAmount: Double = 0.0,
     val totalTaxAmount: Double = 0.0,
     val usdComplete: Boolean = true,
     val brakCount: Int = 0,
@@ -41,7 +44,17 @@ data class ReportsSummary(
     val refundedAmount: Double = 0.0,
     val costReversal: Double = 0.0,
     val grossSales: Double = 0.0,
-    val brakCost: Double = 0.0
+    val brakCost: Double = 0.0,
+    val debtCollected: Double = 0.0,
+    val debtCollectedCash: Double = 0.0,
+    val debtCollectedCard: Double = 0.0,
+    val debtCollectedFee: Double = 0.0,
+    val debtReturnOffset: Double = 0.0,
+    val totalCashflow: Double = 0.0,
+    val netCashInflow: Double = 0.0,
+    val netCardInflow: Double = 0.0,
+    val activeDebtTotal: Double = 0.0,
+    val activeCreditTotal: Double = 0.0
 )
 
 enum class TimeRangeFilter(val displayName: String) {
