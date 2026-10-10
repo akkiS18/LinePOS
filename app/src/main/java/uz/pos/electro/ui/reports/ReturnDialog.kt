@@ -51,13 +51,23 @@ fun ReturnDialog(receipt: SaleWithItems, viewModel: ReportsViewModel, onDismiss:
         }
         return sum
     }
+    val isDebt = quote?.optString("DebtAccountGuid")?.isNotBlank() == true
     fun payload(): JSONObject {
         val items = JSONArray()
         quantities.forEach { (guid, text) -> val qty = number(text); if (qty.signum() != 0) items.put(JSONObject()
             .put("SaleItemGuid", guid).put("Quantity", qty.toPlainString())
             .put("WarehouseGuid", destinations[guid] ?: "").put("Resellable", damaged[guid] != true)) }
         require(items.length() > 0 && reason.isNotBlank()) { "Mahsulot miqdori va sababni kiriting" }
-        require(number(cash) + number(card) == refund()) { "Naqd va karta yig'indisini tekshiring" }
+        val totalSum = refund()
+        if (isDebt) {
+            val totalMinor = totalSum.movePointRight(2).setScale(0, RoundingMode.HALF_UP).longValueExact()
+            val balMinor = quote?.optLong("AccountBalanceMinor") ?: 0L
+            val split = uz.pos.electro.data.debt.DebtAccounting.splitReturn(totalMinor, balMinor)
+            val expectedRefund = BigDecimal.valueOf(split.refundMinor).movePointLeft(2)
+            require(number(cash) + number(card) == expectedRefund) { "Naqd va karta yig'indisini tekshiring" }
+        } else {
+            require(number(cash) + number(card) == totalSum) { "Naqd va karta yig'indisini tekshiring" }
+        }
         return JSONObject().put("RequestGuid", requestId).put("SaleGuid", receipt.sale.guid).put("Reason", reason)
             .put("CashRefund", number(cash).toPlainString()).put("CardRefund", number(card).toPlainString())
             .put("FeeReversal", number(fee).toPlainString()).put("Items", items)
@@ -110,8 +120,19 @@ fun ReturnDialog(receipt: SaleWithItems, viewModel: ReportsViewModel, onDismiss:
                     }
                     OutlinedTextField(reason, { reason = it }, enabled = editable, label = { Text("Sabab") })
                     val amount = runCatching { refund().toPlainString() }.getOrNull()
-                    Text("Qaytariladigan summa: ${amount ?: "Miqdorni tekshiring"}")
-                    TextButton(enabled = editable && amount != null, onClick = { cash = amount ?: "0"; card = "0" }) { Text("Barchasi naqd") }
+                    Text("Qaytariladigan tovar summasi: ${amount ?: "Miqdorni tekshiring"} so‘m")
+                    val expectedRefundStr = if (isDebt && quote != null && amount != null) {
+                        val totalMinor = runCatching { number(amount).movePointRight(2).setScale(0, RoundingMode.HALF_UP).longValueExact() }.getOrDefault(0L)
+                        val balMinor = quote?.optLong("AccountBalanceMinor") ?: 0L
+                        val split = uz.pos.electro.data.debt.DebtAccounting.splitReturn(totalMinor, balMinor)
+                        val debtOffsetStr = BigDecimal.valueOf(split.debtOffsetMinor).movePointLeft(2).toPlainString()
+                        val refundStr = BigDecimal.valueOf(split.refundMinor).movePointLeft(2).toPlainString()
+                        Text("Qarzdan chegiriladi: $debtOffsetStr so‘m | Mijozga to'lanadi: $refundStr so‘m", color = MaterialTheme.colorScheme.primary)
+                        refundStr
+                    } else {
+                        amount ?: "0"
+                    }
+                    TextButton(enabled = editable && amount != null, onClick = { cash = expectedRefundStr; card = "0" }) { Text("Barchasi naqd") }
                     OutlinedTextField(cash, { cash = it }, enabled = editable, label = { Text("Naqd, so‘m") })
                     OutlinedTextField(card, { card = it }, enabled = editable, label = { Text("Karta, so‘m") })
                     OutlinedTextField(fee, { fee = it }, enabled = editable, label = { Text("Qaytgan karta xarajati (odatda 0)") })

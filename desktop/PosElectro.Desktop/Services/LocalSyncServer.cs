@@ -232,6 +232,46 @@ namespace PosElectro.Desktop.Services
                           // A notification failure cannot turn a committed return into a failed payout.
                           try { DataSynced?.Invoke(); } catch { }
                           await Reply(stream,200,JObject.FromObject(result),timeout.Token);return; }
+                        if (path == "/api/v2/debt/reverse_payment" && request.Method == "POST")
+                        {
+                            var body = JObject.Parse(request.Body);
+                            var paymentEventGuid = WifiSyncStore.Required(body, "PaymentEventGuid");
+                            var reason = WifiSyncStore.Required(body, "Reason");
+                            var fee = body["RefundedFeeMinor"] != null ? (long)body["RefundedFeeMinor"]! : 0L;
+                            var debtService = new DebtService(_db);
+                            var resultGuid = debtService.ReversePayment(paymentEventGuid, reason, fee);
+                            try { DataSynced?.Invoke(); } catch { }
+                            await Reply(stream, 200, new JObject { ["resultGuid"] = resultGuid }, timeout.Token);
+                            return;
+                        }
+                        if (path == "/api/v2/debt/refund_credit" && request.Method == "POST")
+                        {
+                            var body = JObject.Parse(request.Body);
+                            var customerGuid = WifiSyncStore.Required(body, "CustomerGuid");
+                            var accountGuid = WifiSyncStore.Required(body, "AccountGuid");
+                            var cash = body["CashMinor"] != null ? (long)body["CashMinor"]! : 0L;
+                            var card = body["CardMinor"] != null ? (long)body["CardMinor"]! : 0L;
+                            var reason = WifiSyncStore.Required(body, "Reason");
+                            var debtService = new DebtService(_db);
+                            var resultGuid = debtService.RefundCredit(customerGuid, accountGuid, cash, card, reason);
+                            try { DataSynced?.Invoke(); } catch { }
+                            await Reply(stream, 200, new JObject { ["resultGuid"] = resultGuid }, timeout.Token);
+                            return;
+                        }
+                        if (path == "/api/v2/debt/transfer_credit" && request.Method == "POST")
+                        {
+                            var body = JObject.Parse(request.Body);
+                            var customerGuid = WifiSyncStore.Required(body, "CustomerGuid");
+                            var sourceAccountGuid = WifiSyncStore.Required(body, "SourceAccountGuid");
+                            var targetAccountGuid = WifiSyncStore.Required(body, "TargetAccountGuid");
+                            var amount = body["AmountMinor"] != null ? (long)body["AmountMinor"]! : 0L;
+                            var reason = WifiSyncStore.Required(body, "Reason");
+                            var debtService = new DebtService(_db);
+                            var resultGuid = debtService.TransferCredit(customerGuid, sourceAccountGuid, targetAccountGuid, amount, reason);
+                            try { DataSynced?.Invoke(); } catch { }
+                            await Reply(stream, 200, new JObject { ["resultGuid"] = resultGuid }, timeout.Token);
+                            return;
+                        }
                         if(path=="/api/v2/debt/push" && request.Method=="POST")
                         {
                             var body=JObject.Parse(request.Body);

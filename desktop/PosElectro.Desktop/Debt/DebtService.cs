@@ -106,20 +106,24 @@ public sealed record DebtEventItemDto(
     long CardMinor,
     long FeeMinor,
     string DeviceGuid,
-    List<DebtEventLineDto> Lines)
+    List<DebtEventLineDto> Lines,
+    bool IsReversed = false)
 {
     public string OccurredAtDisplay => DateTimeOffset.FromUnixTimeMilliseconds(OccurredAt).LocalDateTime.ToString("dd.MM.yyyy HH:mm");
     public string KindDisplay => Kind switch
     {
         "sale_open" => "🛒 Nasiya savdo",
-        "payment" => "💰 Qarz to'lovi",
-        "return_offset" => "↩️ Qaytarish hisobidan",
-        "credit_refund" => "💸 Kredit qaytarish",
-        "credit_transfer" => "🔁 Kredit o'tkazish",
+        "payment" => IsReversed ? "❌ To'lov (Bekor qilingan)" : "💰 Qarz to'lovi",
+        "return_offset" => IsReversed ? "↩️ Qaytarish (Bekor qilingan)" : "↩️ Qaytarish hisobidan",
+        "return_reversal" => "🔄 Qaytarish bekor qilindi",
+        "payment_reversal" => "❌ To'lov bekor qilindi",
+        "credit_refund" => "💸 Pulni qaytarish (Kredit)",
+        "credit_transfer" => "🔁 Boshqa chekka o'tkazish",
         _ => Kind
     };
+    public bool CanReverse => Kind == "payment" && !IsReversed;
     public double TotalPaymentUz => (CashMinor + CardMinor) / 100.0;
-    public string AmountDisplay => TotalPaymentUz > 0 ? $"{TotalPaymentUz:N0} so'm" : "-";
+    public string AmountDisplay => TotalPaymentUz != 0 ? $"{TotalPaymentUz:N0} so'm" : "-";
 }
 
 public sealed record DebtEventLineDto(
@@ -431,6 +435,19 @@ public sealed class DebtService
         }
 
         // 2. Events & Lines
+        var reversedRefs = new HashSet<string>(StringComparer.Ordinal);
+        using (var refCmd = conn.CreateCommand())
+        {
+            refCmd.CommandText = "SELECT reference_guid FROM debt_events WHERE customer_guid=@cust AND store_guid=@store AND kind IN ('payment_reversal', 'return_reversal') AND reference_guid IS NOT NULL";
+            refCmd.Parameters.AddWithValue("@cust", customerGuid);
+            refCmd.Parameters.AddWithValue("@store", _storeGuid);
+            using var refReader = refCmd.ExecuteReader();
+            while (refReader.Read())
+            {
+                if (!refReader.IsDBNull(0)) reversedRefs.Add(refReader.GetString(0));
+            }
+        }
+
         var events = new List<DebtEventItemDto>();
         using (var cmd = conn.CreateCommand())
         {
@@ -454,8 +471,9 @@ public sealed class DebtService
                 var fee = reader.GetInt64(6);
                 var dev = reader.GetString(7);
 
+                bool isReversed = reversedRefs.Contains(evGuid);
                 events.Add(new DebtEventItemDto(
-                    evGuid, reqGuid, kind, occurredAt, cash, card, fee, dev, new List<DebtEventLineDto>()));
+                    evGuid, reqGuid, kind, occurredAt, cash, card, fee, dev, new List<DebtEventLineDto>(), isReversed));
             }
         }
 
@@ -681,6 +699,30 @@ public sealed class DebtService
     {
         var cmd = new DebtOpenSaleCommand(requestGuid, customerGuid, saleSnapshot, dueDate, newCustomer, userId);
         return _repo.OpenSale(cmd);
+    }
+
+    public string ReversePayment(string paymentEventGuid, string reason, long refundedFeeMinor = 0)
+    {
+        var req = Guid.NewGuid().ToString("D");
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var cmd = new DebtPaymentReversalCommand(req, paymentEventGuid, reason, refundedFeeMinor, timestamp);
+        return _repo.ReversePayment(cmd);
+    }
+
+    public string RefundCredit(string customerGuid, string accountGuid, long cashMinor, long cardMinor, string reason)
+    {
+        var req = Guid.NewGuid().ToString("D");
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var cmd = new DebtCreditRefundCommand(req, customerGuid, accountGuid, cashMinor, cardMinor, timestamp, reason);
+        return _repo.RefundCredit(cmd);
+    }
+
+    public string TransferCredit(string customerGuid, string sourceAccountGuid, string targetAccountGuid, long amountMinor, string reason)
+    {
+        var req = Guid.NewGuid().ToString("D");
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var cmd = new DebtCreditTransferCommand(req, customerGuid, sourceAccountGuid, targetAccountGuid, amountMinor, timestamp, reason);
+        return _repo.TransferCredit(cmd);
     }
 
     private static void InstallSyncSchema(SqliteConnection conn)

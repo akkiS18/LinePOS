@@ -18,6 +18,12 @@ public sealed record DebtPaymentCommand(string RequestGuid, string CustomerGuid,
     long FeeMinor, long OccurredAt, string? TargetAccountGuid = null, string? FeeUsdRate = null);
 public sealed record DebtOpenSaleCommand(string RequestGuid, string CustomerGuid, DebtSaleSnapshot Sale,
     string? DueDate = null, DebtCustomerDraft? NewCustomer = null, long? UserId = null);
+public sealed record DebtPaymentReversalCommand(string RequestGuid, string PaymentEventGuid, string Reason,
+    long RefundedFeeMinor, long OccurredAt);
+public sealed record DebtCreditRefundCommand(string RequestGuid, string CustomerGuid, string AccountGuid,
+    long CashMinor, long CardMinor, long OccurredAt, string Reason);
+public sealed record DebtCreditTransferCommand(string RequestGuid, string CustomerGuid, string SourceAccountGuid,
+    string TargetAccountGuid, long AmountMinor, long OccurredAt, string Reason);
 
 // Local command boundary. The host supplies an authenticated actor/store and permission check.
 // UI/sync adapters are deliberately not wired yet. Remote events must NOT call these local
@@ -363,6 +369,92 @@ public sealed class DebtRepository
             var envelopeWire=DebtEnvelope.Encode(envelope,store);
             Exec(c,t,"INSERT INTO sync_meta(key,value) VALUES(@p0,@p1)","debt_envelope_v1:"+q.RequestGuid,DebtWire.Fingerprint(envelopeWire)+"\n"+envelopeWire);
 
+            return q.RequestGuid;
+        });
+    }
+
+    public string ReversePayment(DebtPaymentReversalCommand q) {
+        Id(q.RequestGuid); Id(q.PaymentEventGuid); TextField(q.Reason, 1000, true); Need(q.OccurredAt >= 0);
+        Need(q.RefundedFeeMinor >= 0);
+        var payload = Canonical("payment_reversal", store, actor, q.RequestGuid, q.PaymentEventGuid, Number(q.RefundedFeeMinor), Number(q.OccurredAt), q.Reason);
+        return Write((c, t) => {
+            Scope(c, t); var replay = Replay(c, t, q.RequestGuid, payload); if (replay != null) return replay;
+            Need(Scalar(c, t, "SELECT 1 FROM debt_events WHERE kind='payment_reversal' AND reference_guid=@p0", q.PaymentEventGuid) == null);
+            var evRow = Rows(c, t, "SELECT customer_guid, cash_minor, card_minor, fee_minor, fee_usd_rate FROM debt_events WHERE guid=@p0 AND kind='payment' AND store_guid=@p1", q.PaymentEventGuid, store).SingleOrDefault();
+            Need(evRow != null);
+            var customerGuid = (string)evRow![0]!;
+            var cashMinor = Convert.ToInt64(evRow[1]);
+            var cardMinor = Convert.ToInt64(evRow[2]);
+            var feeMinor = Convert.ToInt64(evRow[3]);
+            var feeUsdRate = (string?)evRow[4];
+
+            var lineRows = Rows(c, t, "SELECT account_guid, debt_delta_minor FROM debt_event_lines WHERE event_guid=@p0 ORDER BY line_index", q.PaymentEventGuid);
+            Need(lineRows.Count > 0);
+            var origLines = lineRows.Select(r => new DebtLine((string)r[0]!, Convert.ToInt64(r[1]))).ToList();
+            var origEffect = new DebtEffect(origLines, cashMinor, cardMinor, feeMinor);
+            var revEffect = DebtAccounting.ReversePayment(origEffect, q.RefundedFeeMinor);
+
+            var seq = checked(Convert.ToInt64(Scalar(c, t, "SELECT COALESCE(MAX(device_sequence),0) FROM debt_events WHERE device_guid=@p0", device)) + 1);
+            Exec(c, t, "INSERT INTO debt_events(guid,request_guid,schema_version,kind,customer_guid,store_guid,actor_guid,device_guid,device_sequence,occurred_at,payload,payload_hash,cash_minor,card_minor,fee_minor,fee_usd_rate,reference_guid) VALUES(@p0,@p0,1,'payment_reversal',@p1,@p2,@p3,@p4,@p5,@p6,@p7,@p8,@p9,@p10,@p11,@p12,@p13)",
+                q.RequestGuid, customerGuid, store, actor, device, seq, q.OccurredAt, payload, Hash(payload), revEffect.CashMinor, revEffect.CardMinor, revEffect.FeeExpenseMinor, feeUsdRate, q.PaymentEventGuid);
+
+            for (int i = 0; i < revEffect.Lines.Count; i++) {
+                Exec(c, t, "INSERT INTO debt_event_lines(event_guid,line_index,account_guid,customer_guid,store_guid,debt_delta_minor) VALUES(@p0,@p1,@p2,@p3,@p4,@p5)",
+                    q.RequestGuid, i, revEffect.Lines[i].AccountGuid, customerGuid, store, revEffect.Lines[i].DeltaMinor);
+            }
+
+            Finish(c, t, q.RequestGuid, payload);
+            return q.RequestGuid;
+        });
+    }
+
+    public string RefundCredit(DebtCreditRefundCommand q) {
+        Id(q.RequestGuid); Id(q.CustomerGuid); Id(q.AccountGuid); TextField(q.Reason, 1000, true); Need(q.OccurredAt >= 0);
+        Need(q.CashMinor >= 0 && q.CardMinor >= 0); var total = checked(q.CashMinor + q.CardMinor); Need(total > 0);
+        var payload = Canonical("credit_refund", store, actor, q.RequestGuid, q.CustomerGuid, q.AccountGuid, Number(q.CashMinor), Number(q.CardMinor), Number(q.OccurredAt), q.Reason);
+        return Write((c, t) => {
+            Scope(c, t); var replay = Replay(c, t, q.RequestGuid, payload); if (replay != null) return replay;
+            Customer(c, t, q.CustomerGuid, false);
+            var accList = Accounts(c, t, q.CustomerGuid);
+            var account = accList.SingleOrDefault(a => a.AccountGuid == q.AccountGuid);
+            Need(account != null);
+            var effect = DebtAccounting.RefundCredit(account!, q.CashMinor, q.CardMinor);
+
+            var seq = checked(Convert.ToInt64(Scalar(c, t, "SELECT COALESCE(MAX(device_sequence),0) FROM debt_events WHERE device_guid=@p0", device)) + 1);
+            Exec(c, t, "INSERT INTO debt_events(guid,request_guid,schema_version,kind,customer_guid,store_guid,actor_guid,device_guid,device_sequence,occurred_at,payload,payload_hash,cash_minor,card_minor,fee_minor,fee_usd_rate,reference_guid) VALUES(@p0,@p0,1,'credit_refund',@p1,@p2,@p3,@p4,@p5,@p6,@p7,@p8,@p9,@p10,0,NULL,NULL)",
+                q.RequestGuid, q.CustomerGuid, store, actor, device, seq, q.OccurredAt, payload, Hash(payload), effect.CashMinor, effect.CardMinor);
+
+            Exec(c, t, "INSERT INTO debt_event_lines(event_guid,line_index,account_guid,customer_guid,store_guid,debt_delta_minor) VALUES(@p0,0,@p1,@p2,@p3,@p4)",
+                q.RequestGuid, effect.Lines[0].AccountGuid, q.CustomerGuid, store, effect.Lines[0].DeltaMinor);
+
+            Finish(c, t, q.RequestGuid, payload);
+            return q.RequestGuid;
+        });
+    }
+
+    public string TransferCredit(DebtCreditTransferCommand q) {
+        Id(q.RequestGuid); Id(q.CustomerGuid); Id(q.SourceAccountGuid); Id(q.TargetAccountGuid); TextField(q.Reason, 1000, true);
+        Need(q.OccurredAt >= 0); Need(q.AmountMinor > 0);
+        var payload = Canonical("credit_transfer", store, actor, q.RequestGuid, q.CustomerGuid, q.SourceAccountGuid, q.TargetAccountGuid, Number(q.AmountMinor), Number(q.OccurredAt), q.Reason);
+        return Write((c, t) => {
+            Scope(c, t); var replay = Replay(c, t, q.RequestGuid, payload); if (replay != null) return replay;
+            Customer(c, t, q.CustomerGuid, false);
+            var accList = Accounts(c, t, q.CustomerGuid);
+            var source = accList.SingleOrDefault(a => a.AccountGuid == q.SourceAccountGuid);
+            var target = accList.SingleOrDefault(a => a.AccountGuid == q.TargetAccountGuid);
+            Need(source != null && target != null);
+            var effect = DebtAccounting.TransferCredit(source!, target!, q.AmountMinor);
+
+            var seq = checked(Convert.ToInt64(Scalar(c, t, "SELECT COALESCE(MAX(device_sequence),0) FROM debt_events WHERE device_guid=@p0", device)) + 1);
+            Exec(c, t, "INSERT INTO debt_events(guid,request_guid,schema_version,kind,customer_guid,store_guid,actor_guid,device_guid,device_sequence,occurred_at,payload,payload_hash,cash_minor,card_minor,fee_minor,fee_usd_rate,reference_guid) VALUES(@p0,@p0,1,'credit_transfer',@p1,@p2,@p3,@p4,@p5,@p6,@p7,@p8,0,0,0,NULL,NULL)",
+                q.RequestGuid, q.CustomerGuid, store, actor, device, seq, q.OccurredAt, payload, Hash(payload));
+
+            for (int i = 0; i < effect.Lines.Count; i++) {
+                Exec(c, t, "INSERT INTO debt_event_lines(event_guid,line_index,account_guid,customer_guid,store_guid,debt_delta_minor) VALUES(@p0,@p1,@p2,@p3,@p4,@p5)",
+                    q.RequestGuid, i, effect.Lines[i].AccountGuid, q.CustomerGuid, store, effect.Lines[i].DeltaMinor);
+            }
+
+            Finish(c, t, q.RequestGuid, payload);
             return q.RequestGuid;
         });
     }

@@ -83,12 +83,18 @@ public class DebtsViewModel : ViewModelBase
             if (SetProperty(ref _selectedCustomer, value))
             {
                 OnPropertyChanged(nameof(IsCustomerSelected));
+                OnPropertyChanged(nameof(HasCredit));
+                OnPropertyChanged(nameof(HasActiveDebt));
+                OnPropertyChanged(nameof(CanTransferCredit));
                 LoadSelectedCustomerDetails();
             }
         }
     }
 
     public bool IsCustomerSelected => SelectedCustomer != null;
+    public bool HasCredit => SelectedCustomer != null && SelectedCustomer.BalanceMinor < 0;
+    public bool HasActiveDebt => SelectedCustomer != null && SelectedCustomer.BalanceMinor > 0;
+    public bool CanTransferCredit => HasCredit && SelectedCustomerAccounts.Any(a => a.BalanceMinor > 0);
 
     // --- CUSTOMER DETAILS (RIGHT PANEL) ---
     private DebtCustomerDetailDto? _selectedCustomerDetails;
@@ -242,6 +248,25 @@ public class DebtsViewModel : ViewModelBase
     private bool _isSubmittingPayment;
     public bool IsSubmittingPayment { get => _isSubmittingPayment; set => SetProperty(ref _isSubmittingPayment, value); }
 
+    // --- MODAL: CREDIT REFUND ---
+    private bool _isRefundCreditModalOpen;
+    public bool IsRefundCreditModalOpen { get => _isRefundCreditModalOpen; set => SetProperty(ref _isRefundCreditModalOpen, value); }
+
+    private string _refundCreditCashInput = "0";
+    public string RefundCreditCashInput { get => _refundCreditCashInput; set => SetProperty(ref _refundCreditCashInput, value); }
+
+    private string _refundCreditCardInput = "0";
+    public string RefundCreditCardInput { get => _refundCreditCardInput; set => SetProperty(ref _refundCreditCardInput, value); }
+
+    private string _refundCreditMaxAmountText = string.Empty;
+    public string RefundCreditMaxAmountText { get => _refundCreditMaxAmountText; set => SetProperty(ref _refundCreditMaxAmountText, value); }
+
+    private string _refundCreditErrorMessage = string.Empty;
+    public string RefundCreditErrorMessage { get => _refundCreditErrorMessage; set => SetProperty(ref _refundCreditErrorMessage, value); }
+
+    private bool _isSubmittingRefundCredit;
+    public bool IsSubmittingRefundCredit { get => _isSubmittingRefundCredit; set => SetProperty(ref _isSubmittingRefundCredit, value); }
+
     // --- COMMANDS ---
     public ICommand SetFilterCommand { get; }
     public ICommand RefreshCommand { get; }
@@ -257,6 +282,12 @@ public class DebtsViewModel : ViewModelBase
     public ICommand ClosePaymentModalCommand { get; }
     public ICommand SelectPaymentTypeCommand { get; }
     public ICommand ConfirmPaymentCommand { get; }
+
+    public ICommand ReversePaymentCommand { get; }
+    public ICommand OpenRefundCreditModalCommand { get; }
+    public ICommand CloseRefundCreditModalCommand { get; }
+    public ICommand ConfirmRefundCreditCommand { get; }
+    public ICommand TransferCreditCommand { get; }
 
     public ICommand GoToCashierForCustomerCommand { get; }
 
@@ -299,6 +330,12 @@ public class DebtsViewModel : ViewModelBase
             }
         });
         ConfirmPaymentCommand = new RelayCommand(ConfirmPayment);
+
+        ReversePaymentCommand = new RelayCommand<DebtEventItemDto>(ReversePayment);
+        OpenRefundCreditModalCommand = new RelayCommand(OpenRefundCreditModal);
+        CloseRefundCreditModalCommand = new RelayCommand(() => IsRefundCreditModalOpen = false);
+        ConfirmRefundCreditCommand = new RelayCommand(ConfirmRefundCredit);
+        TransferCreditCommand = new RelayCommand(TransferCredit);
 
         GoToCashierForCustomerCommand = new RelayCommand(() =>
         {
@@ -389,6 +426,10 @@ public class DebtsViewModel : ViewModelBase
                 SelectedCustomerEvents.Add(e);
             }
         }
+
+        OnPropertyChanged(nameof(HasCredit));
+        OnPropertyChanged(nameof(HasActiveDebt));
+        OnPropertyChanged(nameof(CanTransferCredit));
     }
 
     // --- CUSTOMER MODAL LOGIC ---
@@ -634,6 +675,158 @@ public class DebtsViewModel : ViewModelBase
         finally
         {
             IsSubmittingPayment = false;
+        }
+    }
+
+    private void ReversePayment(DebtEventItemDto? ev)
+    {
+        if (ev == null || !ev.CanReverse) return;
+
+        var result = MessageBox.Show(
+            $"Haqiqatan ham {ev.OccurredAtDisplay} dagi {ev.AmountDisplay} lik qarz to'lovini bekor qilmoqchimisiz?\n\nBu amal qarz qoldig'ini tiklaydi va bekor qilish yozuvini kiritadi.",
+            "To'lovni bekor qilish",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+
+        if (result != MessageBoxResult.Yes) return;
+
+        try
+        {
+            _debtService.ReversePayment(ev.EventGuid, "Kassir tomonidan bekor qilindi", ev.FeeMinor);
+            RefreshAll();
+            MessageBox.Show("✅ To'lov muvaffaqiyatli bekor qilindi!", "Bekor qilindi", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Xatolik yuz berdi: {ex.Message}", "Xatolik", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void OpenRefundCreditModal()
+    {
+        if (SelectedCustomer == null || SelectedCustomer.BalanceMinor >= 0) return;
+
+        var creditAccount = SelectedCustomerAccounts.FirstOrDefault(a => a.BalanceMinor < 0);
+        if (creditAccount == null)
+        {
+            MessageBox.Show("Haqdorlik mavjud bo'lgan alohida chek/hisob topilmadi.", "Ma'lumot", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var maxRefund = Math.Abs(creditAccount.BalanceMinor) / 100.0;
+        RefundCreditMaxAmountText = $"Maksimal qaytarish: {maxRefund:N0} so'm ({creditAccount.ReceiptNumber})";
+        RefundCreditCashInput = maxRefund.ToString("0", CultureInfo.InvariantCulture);
+        RefundCreditCardInput = "0";
+        RefundCreditErrorMessage = string.Empty;
+        IsRefundCreditModalOpen = true;
+    }
+
+    private void ConfirmRefundCredit()
+    {
+        if (SelectedCustomer == null) return;
+        if (IsSubmittingRefundCredit) return;
+
+        var creditAccount = SelectedCustomerAccounts.FirstOrDefault(a => a.BalanceMinor < 0);
+        if (creditAccount == null)
+        {
+            RefundCreditErrorMessage = "Haqdorlik mavjud bo'lgan chek topilmadi.";
+            return;
+        }
+
+        double.TryParse(CleanNumber(RefundCreditCashInput), NumberStyles.Any, CultureInfo.InvariantCulture, out var cash);
+        double.TryParse(CleanNumber(RefundCreditCardInput), NumberStyles.Any, CultureInfo.InvariantCulture, out var card);
+
+        if (cash < 0 || card < 0 || (cash + card) <= 0)
+        {
+            RefundCreditErrorMessage = "Iltimos, qaytariladigan summani to'g'ri kiriting!";
+            return;
+        }
+
+        long cashMinor = checked((long)Math.Round(cash * 100));
+        long cardMinor = checked((long)Math.Round(card * 100));
+        long totalMinor = cashMinor + cardMinor;
+        long maxAvailableMinor = Math.Abs(creditAccount.BalanceMinor);
+
+        if (totalMinor > maxAvailableMinor)
+        {
+            RefundCreditErrorMessage = $"Qaytarish summasi mavjud haqdorlikdan ({maxAvailableMinor / 100.0:N0} so'm) ko'p bo'lishi mumkin emas!";
+            return;
+        }
+
+        IsSubmittingRefundCredit = true;
+        RefundCreditErrorMessage = string.Empty;
+
+        try
+        {
+            _debtService.RefundCredit(
+                SelectedCustomer.Guid,
+                creditAccount.AccountGuid,
+                cashMinor,
+                cardMinor,
+                "Kassadan ortiqcha to'lov qaytarildi");
+
+            IsRefundCreditModalOpen = false;
+            RefreshAll();
+
+            MessageBox.Show(
+                $"✅ '{SelectedCustomer.Name}' uchun {totalMinor / 100.0:N0} so'm ortiqcha to'lov muvaffaqiyatli qaytarildi!",
+                "Pul qaytarildi",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            RefundCreditErrorMessage = $"Xatolik: {ex.Message}";
+        }
+        finally
+        {
+            IsSubmittingRefundCredit = false;
+        }
+    }
+
+    private void TransferCredit()
+    {
+        if (SelectedCustomer == null) return;
+
+        var source = SelectedCustomerAccounts.FirstOrDefault(a => a.BalanceMinor < 0);
+        var target = SelectedCustomerAccounts.FirstOrDefault(a => a.BalanceMinor > 0);
+
+        if (source == null || target == null)
+        {
+            MessageBox.Show("O'tkazish uchun bir vaqtning o'zida ham haqdorlik (kredit) va ham qarzdorlik bo'lgan cheklar mavjud bo'lishi kerak.", "O'tkazish mumkin emas", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        long transferMinor = Math.Min(Math.Abs(source.BalanceMinor), target.BalanceMinor);
+
+        var res = MessageBox.Show(
+            $"'{source.ReceiptNumber}' dagi {transferMinor / 100.0:N0} so'm ortiqcha to'lov (haqdorlik) '{target.ReceiptNumber}' dagi qarzni yopishga o'tkazilsinmi?",
+            "Haqdorlikni qarzga o'tkazish",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
+
+        if (res != MessageBoxResult.Yes) return;
+
+        try
+        {
+            _debtService.TransferCredit(
+                SelectedCustomer.Guid,
+                source.AccountGuid,
+                target.AccountGuid,
+                transferMinor,
+                "Haqdorlik boshqa chekka o'tkazildi");
+
+            RefreshAll();
+
+            MessageBox.Show(
+                $"✅ {transferMinor / 100.0:N0} so'm muvaffaqiyatli o'tkazildi va qarz kamaytirildi!",
+                "O'tkazildi",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Xatolik yuz berdi: {ex.Message}", "Xatolik", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 }

@@ -441,7 +441,18 @@
                                 <!-- O'ng qism: Amallar tugmalari -->
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                     <Button Content="💰 To'lov olish" Command="{Binding OpenPaymentModalCommand}"
+                                            Visibility="{Binding HasActiveDebt, Converter={StaticResource BooleanToVisibilityConverter}}"
                                             Style="{StaticResource RoundedActionButton}" Background="#10B981" Foreground="White" FontWeight="Bold"
+                                            Padding="14,10" Margin="0,0,8,0"/>
+
+                                    <Button Content="💸 Pulni qaytarish" Command="{Binding OpenRefundCreditModalCommand}"
+                                            Visibility="{Binding HasCredit, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                            Style="{StaticResource RoundedActionButton}" Background="#D97706" Foreground="White" FontWeight="Bold"
+                                            Padding="14,10" Margin="0,0,8,0"/>
+
+                                    <Button Content="🔁 Qarzga o'tkazish" Command="{Binding TransferCreditCommand}"
+                                            Visibility="{Binding CanTransferCredit, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                            Style="{StaticResource RoundedActionButton}" Background="#2563EB" Foreground="White" FontWeight="Bold"
                                             Padding="14,10" Margin="0,0,8,0"/>
 
                                     <Button Content="🛒 Kassada nasiya" Command="{Binding GoToCashierForCustomerCommand}"
@@ -564,6 +575,24 @@
                                 <DataGridTextColumn Header="Naqd" Binding="{Binding CashMinor, StringFormat='{}{0:N0} so\'m', Converter={StaticResource MinorToUzConverter}}" Width="120"/>
                                 <DataGridTextColumn Header="Karta" Binding="{Binding CardMinor, StringFormat='{}{0:N0} so\'m', Converter={StaticResource MinorToUzConverter}}" Width="120"/>
                                 <DataGridTextColumn Header="Tafsilot" Binding="{Binding Lines.Count, StringFormat='{}{0} ta chekka taqsimlangan'}" Width="*"/>
+                                <DataGridTemplateColumn Header="Amallar" Width="105">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Button Content="Bekor qilish"
+                                                    Command="{Binding DataContext.ReversePaymentCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                    CommandParameter="{Binding}"
+                                                    Visibility="{Binding CanReverse, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                    Background="#7F1D1D" Foreground="#FCA5A5" BorderBrush="#EF4444" BorderThickness="1"
+                                                    FontSize="11" FontWeight="SemiBold" Padding="8,3" Cursor="Hand">
+                                                <Button.Resources>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="CornerRadius" Value="6"/>
+                                                    </Style>
+                                                </Button.Resources>
+                                            </Button>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
                             </DataGrid.Columns>
                         </DataGrid>
                     </Grid>
@@ -769,6 +798,51 @@
                         <Button Grid.Column="1" Content="Tasdiqlash va qabul qilish" Command="{Binding ConfirmPaymentCommand}"
                                 Style="{StaticResource RoundedActionButton}" Background="#10B981" Foreground="White" FontWeight="Bold" Padding="12,10" Margin="6,0,0,0"
                                 IsEnabled="{Binding IsSubmittingPayment, Converter={StaticResource InverseBooleanConverter}}"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Border>
+
+        <!-- ================= MODAL: PULNI QAYTARISH (KREDIT / HAQDORLIK) ================= -->
+        <Border Grid.Row="0" Grid.RowSpan="3" Background="#CC000000" Panel.ZIndex="200"
+                Visibility="{Binding IsRefundCreditModalOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Border Background="#1E293B" CornerRadius="16" BorderBrush="#D97706" BorderThickness="1.5"
+                    Width="440" Padding="24" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel>
+                    <Grid Margin="0,0,0,14">
+                        <TextBlock Text="💸 Ortiqcha pulni mijozga qaytarish" Foreground="#F8FAFC" FontSize="18" FontWeight="Bold"/>
+                        <Button Content="✕" Command="{Binding CloseRefundCreditModalCommand}" HorizontalAlignment="Right"
+                                Background="Transparent" Foreground="#94A3B8" BorderThickness="0" FontSize="16" Cursor="Hand"/>
+                    </Grid>
+
+                    <Border Background="#0F172A" CornerRadius="10" Padding="14,10" Margin="0,0,0,14" BorderBrush="#334155" BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock Text="{Binding SelectedCustomer.Name}" Foreground="#F8FAFC" FontSize="15" FontWeight="Bold"/>
+                            <TextBlock Text="{Binding RefundCreditMaxAmountText}" Foreground="#34D399" FontSize="13" FontWeight="SemiBold" Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Text="Naqd qaytariladigan summa (so'm):" Foreground="#94A3B8" FontSize="12" Margin="0,0,0,4"/>
+                    <TextBox Text="{Binding RefundCreditCashInput, UpdateSourceTrigger=PropertyChanged}"
+                             Background="#0F172A" Foreground="#F8FAFC" BorderBrush="#334155" Padding="10,8" FontSize="14" FontWeight="Bold" Margin="0,0,0,12"/>
+
+                    <TextBlock Text="Karta orqali qaytariladigan summa (so'm):" Foreground="#94A3B8" FontSize="12" Margin="0,0,0,4"/>
+                    <TextBox Text="{Binding RefundCreditCardInput, UpdateSourceTrigger=PropertyChanged}"
+                             Background="#0F172A" Foreground="#F8FAFC" BorderBrush="#334155" Padding="10,8" FontSize="14" FontWeight="Bold" Margin="0,0,0,12"/>
+
+                    <TextBlock Text="{Binding RefundCreditErrorMessage}" Foreground="#EF4444" FontSize="12" Margin="0,0,0,12"
+                               Visibility="{Binding RefundCreditErrorMessage, Converter={StaticResource EmptyStringToVisibilityConverter}}"/>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Content="Bekor qilish" Command="{Binding CloseRefundCreditModalCommand}"
+                                Style="{StaticResource RoundedActionButton}" Background="#334155" Foreground="#F8FAFC" Padding="12,10" Margin="0,0,6,0"/>
+                        <Button Grid.Column="1" Content="Tasdiqlash" Command="{Binding ConfirmRefundCreditCommand}"
+                                Style="{StaticResource RoundedActionButton}" Background="#D97706" Foreground="White" FontWeight="Bold" Padding="12,10" Margin="6,0,0,0"
+                                IsEnabled="{Binding IsSubmittingRefundCredit, Converter={StaticResource InverseBooleanConverter}}"/>
                     </Grid>
                 </StackPanel>
             </Border>

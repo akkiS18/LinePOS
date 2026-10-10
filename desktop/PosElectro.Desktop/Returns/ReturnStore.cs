@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Data.Sqlite;
+using PosElectro.Desktop.Debt;
 using PosElectro.Desktop.Models;
 
 namespace PosElectro.Desktop.Returns;
@@ -13,10 +14,12 @@ namespace PosElectro.Desktop.Returns;
 public sealed record ReturnSelection(string SaleItemGuid, decimal Quantity, string WarehouseGuid, bool Resellable);
 public sealed record ReturnRequest(string RequestGuid, string SaleGuid, string Reason, decimal CashRefund,
     decimal CardRefund, decimal FeeReversal, List<ReturnSelection> Items);
-public sealed record ReturnResult(string Guid, string SaleGuid, decimal Refund, decimal CostReversal, long CreatedAt);
+public sealed record ReturnResult(string Guid, string SaleGuid, decimal Refund, decimal CostReversal, long CreatedAt,
+    decimal DebtOffset = 0, string? DebtEventGuid = null);
 public sealed record ReturnLine(string Guid, string ProductName, string WarehouseGuid, decimal Sold,
     decimal Returned, decimal Revenue, decimal Cost, decimal Refunded, decimal CostBasis);
-public sealed record ReturnQuote(string SaleGuid, List<ReturnLine> Lines, decimal RemainingFee);
+public sealed record ReturnQuote(string SaleGuid, List<ReturnLine> Lines, decimal RemainingFee,
+    long AccountBalanceMinor = 0, string? DebtAccountGuid = null, string? CustomerGuid = null);
 
 /// <summary>Single LAN authority. All validation, stock, financial and idempotency writes share an immediate transaction.</summary>
 public sealed partial class ReturnStore
@@ -118,7 +121,26 @@ public sealed partial class ReturnStore
                 prior.Quantity, (decimal)financials[i].TotalPrice, (decimal)financials[i].TotalCost, prior.Refund, prior.CostBasis));
         }
         var fee = (decimal)sale.TaxAmount - Convert.ToDecimal(Scalar(c, tx, "SELECT COALESCE(SUM(fee_reversal),0) FROM returns WHERE sale_guid=@p0", saleGuid));
-        return new ReturnQuote(saleGuid, lines, fee);
+        long accountBalanceMinor = 0; string? debtAccountGuid = null; string? customerGuid = null;
+        if (sale.PaymentType == PaymentType.DEBT)
+        {
+            using var accCmd = Command(c, tx, "SELECT guid, customer_guid, original_debt_minor FROM debt_accounts WHERE sale_guid=@p0", saleGuid);
+            using var accR = accCmd.ExecuteReader();
+            if (accR.Read())
+            {
+                debtAccountGuid = accR.GetString(0);
+                customerGuid = accR.GetString(1);
+                var origDebt = accR.GetInt64(2);
+                accR.Close();
+
+                using var linesCmd = Command(c, tx, "SELECT debt_delta_minor FROM debt_event_lines WHERE account_guid=@p0", debtAccountGuid);
+                using var linesR = linesCmd.ExecuteReader();
+                var deltas = new List<long>();
+                while (linesR.Read()) deltas.Add(linesR.GetInt64(0));
+                accountBalanceMinor = DebtAccounting.Balance(origDebt, deltas);
+            }
+        }
+        return new ReturnQuote(saleGuid, lines, fee, accountBalanceMinor, debtAccountGuid, customerGuid);
     }
 
     public ReturnResult Commit(ReturnRequest request, string operatorGuid, string authorityGuid)
@@ -168,9 +190,82 @@ public sealed partial class ReturnStore
         }
         var total = entries.Sum(e => e.Amount.Refund); var cost = entries.Sum(e => e.Amount.CostReversal);
         var priorFee = Convert.ToDecimal(Scalar(c, tx, "SELECT COALESCE(SUM(fee_reversal),0) FROM returns WHERE sale_guid=@p0", sale.Guid), CultureInfo.InvariantCulture);
-        ReturnAccounting.ValidatePayment(total, request.CashRefund, request.CardRefund, request.FeeReversal, (decimal)sale.TaxAmount, priorFee);
+
+        DebtReturnSplit? debtSplit = null;
+        string? debtAccountGuid = null;
+        string? customerGuid = null;
+        string? openingEventGuid = null;
+        string? storeGuid = null;
+        decimal debtOffset = 0;
+        string? debtEventGuid = null;
+
+        if (sale.PaymentType == PaymentType.DEBT)
+        {
+            using (var accCmd = Command(c, tx, "SELECT guid, customer_guid, store_guid, opening_event_guid, original_debt_minor FROM debt_accounts WHERE sale_guid=@p0", sale.Guid))
+            using (var accR = accCmd.ExecuteReader())
+            {
+                if (accR.Read())
+                {
+                    debtAccountGuid = accR.GetString(0);
+                    customerGuid = accR.GetString(1);
+                    storeGuid = accR.GetString(2);
+                    openingEventGuid = accR.GetString(3);
+                    var origDebt = accR.GetInt64(4);
+                    accR.Close();
+
+                    using var linesCmd = Command(c, tx, "SELECT debt_delta_minor FROM debt_event_lines WHERE account_guid=@p0", debtAccountGuid);
+                    using var linesR = linesCmd.ExecuteReader();
+                    var deltas = new List<long>();
+                    while (linesR.Read()) deltas.Add(linesR.GetInt64(0));
+                    linesR.Close();
+
+                    var currentBalance = DebtAccounting.Balance(origDebt, deltas);
+                    var returnedValueMinor = checked((long)Math.Round(total * 100, MidpointRounding.AwayFromZero));
+                    debtSplit = DebtAccounting.SplitReturn(returnedValueMinor, currentBalance);
+                    debtOffset = debtSplit.DebtOffsetMinor / 100m;
+
+                    var requestRefundMinor = checked((long)Math.Round((request.CashRefund + request.CardRefund) * 100, MidpointRounding.AwayFromZero));
+                    if (debtSplit.RefundMinor != requestRefundMinor)
+                        throw new InvalidOperationException("Qarz to'lovi amalga oshirilgani sababli hisob balansi o'zgardi. Qaytarishni qayta hisoblang.");
+
+                    ReturnAccounting.ValidatePayment(debtSplit.RefundMinor / 100m, request.CashRefund, request.CardRefund, request.FeeReversal, (decimal)sale.TaxAmount, priorFee);
+                }
+                else
+                {
+                    ReturnAccounting.ValidatePayment(total, request.CashRefund, request.CardRefund, request.FeeReversal, (decimal)sale.TaxAmount, priorFee);
+                }
+            }
+        }
+        else
+        {
+            ReturnAccounting.ValidatePayment(total, request.CashRefund, request.CardRefund, request.FeeReversal, (decimal)sale.TaxAmount, priorFee);
+        }
+
         var guid = System.Guid.NewGuid().ToString(); var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        var result = new ReturnResult(guid, sale.Guid, total, cost, now);
+
+        if (debtSplit != null && debtSplit.DebtOffsetMinor > 0)
+        {
+            debtEventGuid = System.Guid.NewGuid().ToString("D");
+            var returnDebtRequestGuid = "return_offset:" + request.RequestGuid;
+            var debtSeq = checked(Convert.ToInt64(Scalar(c, tx, "SELECT COALESCE(MAX(device_sequence),0) FROM debt_events WHERE device_guid=@p0", authorityGuid)) + 1);
+            var debtPayload = PosElectro.Desktop.Debt.DebtRepository.Canonical("return_offset", storeGuid!, operatorGuid, returnDebtRequestGuid, customerGuid!, sale.Guid, debtSplit.DebtOffsetMinor.ToString(CultureInfo.InvariantCulture), now.ToString(CultureInfo.InvariantCulture));
+            var debtHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(debtPayload))).ToLowerInvariant();
+            var cashMinor = -checked((long)Math.Round(request.CashRefund * 100, MidpointRounding.AwayFromZero));
+            var cardMinor = -checked((long)Math.Round(request.CardRefund * 100, MidpointRounding.AwayFromZero));
+            var feeMinor = -checked((long)Math.Round(request.FeeReversal * 100, MidpointRounding.AwayFromZero));
+
+            Exec(c, tx, @"INSERT INTO debt_events(guid,request_guid,schema_version,kind,customer_guid,store_guid,actor_guid,device_guid,device_sequence,occurred_at,payload,payload_hash,cash_minor,card_minor,fee_minor,fee_usd_rate,reference_guid)
+VALUES(@p0,@p1,1,'return_offset',@p2,@p3,@p4,@p5,@p6,@p7,@p8,@p9,@p10,@p11,@p12,NULL,@p13)",
+                debtEventGuid, returnDebtRequestGuid, customerGuid!, storeGuid!, operatorGuid, authorityGuid, debtSeq, now,
+                debtPayload, debtHash, cashMinor, cardMinor, feeMinor, openingEventGuid!);
+
+            Exec(c, tx, @"INSERT INTO debt_event_lines(event_guid,line_index,account_guid,customer_guid,store_guid,debt_delta_minor)
+VALUES(@p0,0,@p1,@p2,@p3,@p4)",
+                debtEventGuid, debtAccountGuid!, customerGuid!, storeGuid!, -debtSplit.DebtOffsetMinor);
+        }
+
+        var actualRefund = request.CashRefund + request.CardRefund;
+        var result = new ReturnResult(guid, sale.Guid, actualRefund, cost, now, debtOffset, debtEventGuid);
         Exec(c, tx, @"INSERT INTO returns VALUES(@p0,@p1,@p2,@p3,@p4,'confirmed',@p5,@p6,@p7,@p8,@p9,@p10,@p11)",
             guid, sale.Guid, now, operatorGuid, request.Reason, (double)request.CashRefund, (double)request.CardRefund,
             (double)request.FeeReversal, request.RequestGuid, authorityGuid, hash, JsonSerializer.Serialize(result));

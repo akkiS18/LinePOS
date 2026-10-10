@@ -34,7 +34,54 @@ FROM returns r JOIN sales s ON s.guid=r.guid WHERE r.guid=@p0 AND r.status='conf
             saleGuid=r.GetString(0); refund=r.GetDecimal(1); cost=-r.GetDecimal(2); rate=r.GetDouble(3);
         }
         var guid=Guid.NewGuid().ToString(); var now=DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        var result=new ReturnResult(guid,saleGuid,-refund,-cost,now);
+
+        ReturnResult? origResult = null;
+        try {
+            var origResultJson = Convert.ToString(Scalar(c, tx, "SELECT result_json FROM returns WHERE guid=@p0", request.ReturnGuid));
+            if (!string.IsNullOrEmpty(origResultJson))
+                origResult = JsonSerializer.Deserialize<ReturnResult>(origResultJson);
+        } catch { }
+
+        if (origResult?.DebtEventGuid != null)
+        {
+            var debtOffsetGuid = origResult.DebtEventGuid;
+            if (Scalar(c, tx, "SELECT 1 FROM debt_events WHERE kind='return_reversal' AND reference_guid=@p0", debtOffsetGuid) != null)
+                throw new ArgumentException("Bu qaytarish allaqachon bekor qilingan");
+
+            string custGuid, strGuid; long origCash, origCard, origFee;
+            using (var dCmd = Command(c, tx, "SELECT customer_guid, store_guid, cash_minor, card_minor, fee_minor FROM debt_events WHERE guid=@p0", debtOffsetGuid))
+            using (var dR = dCmd.ExecuteReader())
+            {
+                if (!dR.Read()) throw new ArgumentException("Asl qaytarish qarz yozuvi topilmadi");
+                custGuid = dR.GetString(0); strGuid = dR.GetString(1);
+                origCash = dR.GetInt64(2); origCard = dR.GetInt64(3); origFee = dR.GetInt64(4);
+            }
+
+            string accGuid; long origDelta;
+            using (var lCmd = Command(c, tx, "SELECT account_guid, debt_delta_minor FROM debt_event_lines WHERE event_guid=@p0", debtOffsetGuid))
+            using (var lR = lCmd.ExecuteReader())
+            {
+                if (!lR.Read()) throw new ArgumentException("Asl qaytarish qarz qatori topilmadi");
+                accGuid = lR.GetString(0); origDelta = lR.GetInt64(1);
+            }
+
+            var revDebtEventGuid = Guid.NewGuid().ToString("D");
+            var revDebtRequestGuid = "return_reversal:" + request.RequestGuid;
+            var revDebtSeq = checked(Convert.ToInt64(Scalar(c, tx, "SELECT COALESCE(MAX(device_sequence),0) FROM debt_events WHERE device_guid=@p0", authorityGuid)) + 1);
+            var revPayload = PosElectro.Desktop.Debt.DebtRepository.Canonical("return_reversal", strGuid, operatorGuid, revDebtRequestGuid, custGuid, debtOffsetGuid, now.ToString(CultureInfo.InvariantCulture), request.Reason);
+            var revHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(revPayload))).ToLowerInvariant();
+
+            Exec(c, tx, @"INSERT INTO debt_events(guid,request_guid,schema_version,kind,customer_guid,store_guid,actor_guid,device_guid,device_sequence,occurred_at,payload,payload_hash,cash_minor,card_minor,fee_minor,fee_usd_rate,reference_guid)
+VALUES(@p0,@p1,1,'return_reversal',@p2,@p3,@p4,@p5,@p6,@p7,@p8,@p9,@p10,@p11,@p12,NULL,@p13)",
+                revDebtEventGuid, revDebtRequestGuid, custGuid, strGuid, operatorGuid, authorityGuid, revDebtSeq, now,
+                revPayload, revHash, -origCash, -origCard, -origFee, debtOffsetGuid);
+
+            Exec(c, tx, @"INSERT INTO debt_event_lines(event_guid,line_index,account_guid,customer_guid,store_guid,debt_delta_minor)
+VALUES(@p0,0,@p1,@p2,@p3,@p4)",
+                revDebtEventGuid, accGuid, custGuid, strGuid, -origDelta);
+        }
+
+        var result=new ReturnResult(guid,saleGuid,-refund,-cost,now,origResult!=null?-origResult.DebtOffset:0);
         Exec(c,tx,@"INSERT INTO returns(guid,sale_guid,created_at,operator_guid,reason,status,cash_refund,card_refund,fee_reversal,request_guid,authority_guid,request_hash,result_json)
 SELECT @p0,sale_guid,@p1,@p2,@p3,@p4,-cash_refund,-card_refund,-fee_reversal,@p5,@p6,@p7,@p8 FROM returns WHERE guid=@p9",
             guid,now,operatorGuid,request.Reason,"reversal:"+request.ReturnGuid,request.RequestGuid,authorityGuid,hash,JsonSerializer.Serialize(result),request.ReturnGuid);

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using PosElectro.Desktop.Data;
+using PosElectro.Desktop.Debt;
 using PosElectro.Desktop.Models;
 using PosElectro.Desktop.Returns;
 using PosElectro.Desktop.Sync;
@@ -74,8 +75,17 @@ public sealed class ReturnDialog : Window
             foreach (var row in rows) { var qty = Number(row.Quantity.Text); if (qty == 0) continue;
                 var l = row.Line; sum += ReturnAccounting.Calculate(l.Sold, l.Revenue, l.Cost,
                     new(l.Returned, l.Refunded, l.CostBasis), qty, row.Damaged.IsChecked != true).Refund; }
-            total.Text = $"Qaytariladigan summa: {sum:N2} so‘m";
-            cash.Text = sum.ToString(CultureInfo.InvariantCulture); card.Text = "0";
+            if (quote.DebtAccountGuid != null) {
+                var sumMinor = checked((long)Math.Round(sum * 100, MidpointRounding.AwayFromZero));
+                var split = DebtAccounting.SplitReturn(sumMinor, quote.AccountBalanceMinor);
+                var offset = split.DebtOffsetMinor / 100.0m;
+                var refund = split.RefundMinor / 100.0m;
+                total.Text = $"Qaytariladigan tovar: {sum:N2} so‘m | Qarzdan chegiriladi: {offset:N2} so‘m | To‘lanadi: {refund:N2} so‘m";
+                cash.Text = refund.ToString(CultureInfo.InvariantCulture); card.Text = "0";
+            } else {
+                total.Text = $"Qaytariladigan summa: {sum:N2} so‘m";
+                cash.Text = sum.ToString(CultureInfo.InvariantCulture); card.Text = "0";
+            }
         } catch (Exception e) { total.Text = e.Message; }
     }
     void Confirm(object sender, RoutedEventArgs args)
@@ -92,7 +102,10 @@ public sealed class ReturnDialog : Window
             store.FinishDesktopDraft(requestId,result);
             saved = true;
             try { db.RaiseProductsChanged(); } catch { }
-            MessageBox.Show(this, $"Qaytarish saqlandi: RT-{result.Guid.Replace("-", "").ToUpperInvariant()}\nSumma: {result.Refund:N2} so‘m", "Qaytarish");
+            var msg = result.DebtOffset > 0
+                ? $"Qaytarish saqlandi: RT-{result.Guid.Replace("-", "").ToUpperInvariant()}\nQarzdan chegirildi: {result.DebtOffset:N2} so‘m\nXaridorga qaytarildi: {result.Refund:N2} so‘m"
+                : $"Qaytarish saqlandi: RT-{result.Guid.Replace("-", "").ToUpperInvariant()}\nSumma: {result.Refund:N2} so‘m";
+            MessageBox.Show(this, msg, "Qaytarish");
             store.FinishDesktopDraft(requestId,null);
             DialogResult = true;
         } catch (ArgumentException e) {

@@ -23,6 +23,12 @@ data class DebtPaymentCommand(val requestGuid: String, val customerGuid: String,
     val feeMinor: Long, val occurredAt: Long, val targetAccountGuid: String? = null, val feeUsdRate: String? = null)
 data class DebtOpenSaleCommand(val requestGuid: String, val customerGuid: String, val sale: DebtSaleSnapshot,
     val dueDate: String? = null, val newCustomer: DebtCustomerDraft? = null, val userId: Long? = null)
+data class DebtPaymentReversalCommand(val requestGuid: String, val paymentEventGuid: String, val reason: String,
+    val refundedFeeMinor: Long, val occurredAt: Long)
+data class DebtCreditRefundCommand(val requestGuid: String, val customerGuid: String, val accountGuid: String,
+    val cashMinor: Long, val cardMinor: Long, val occurredAt: Long, val reason: String)
+data class DebtCreditTransferCommand(val requestGuid: String, val customerGuid: String, val sourceAccountGuid: String,
+    val targetAccountGuid: String, val amountMinor: Long, val occurredAt: Long, val reason: String)
 
 class DebtRepository(private val database: AppDatabase, private val store: String, private val actor: String, private val canWrite: () -> Boolean) {
     // New writer epoch each instance: a copied/restored DB cannot reuse device sequence pairs.
@@ -378,6 +384,98 @@ class DebtRepository(private val database: AppDatabase, private val store: Strin
                 val envelopeWire=DebtEnvelope.encode(envelope,store)
                 exec(db,"INSERT INTO sync_meta(key,value) VALUES(@p0,@p1)","debt_envelope_v1:${q.requestGuid}",DebtWire.fingerprint(envelopeWire)+"\n"+envelopeWire)
 
+                q.requestGuid
+            }
+        }
+    }
+
+    suspend fun reversePayment(q: DebtPaymentReversalCommand): String {
+        id(q.requestGuid); id(q.paymentEventGuid); text(q.reason, 1000, true); require(q.occurredAt >= 0)
+        require(q.refundedFeeMinor >= 0)
+        val payload = canonical("payment_reversal", store, actor, q.requestGuid, q.paymentEventGuid, q.refundedFeeMinor.toString(), q.occurredAt.toString(), q.reason)
+        return write { db ->
+            scope(db); val old = replay(db, q.requestGuid, payload)
+            if (old != null) old else {
+                require(scalar(db, "SELECT 1 FROM debt_events WHERE kind='payment_reversal' AND reference_guid=@p0", q.paymentEventGuid) == null)
+                val evRow = rows(db, "SELECT customer_guid, cash_minor, card_minor, fee_minor, fee_usd_rate FROM debt_events WHERE guid=@p0 AND kind='payment' AND store_guid=@p1", q.paymentEventGuid, store).singleOrNull()
+                require(evRow != null)
+                val customerGuid = evRow[0] as String
+                val cashMinor = evRow[1] as Long
+                val cardMinor = evRow[2] as Long
+                val feeMinor = evRow[3] as Long
+                val feeUsdRate = evRow[4] as? String
+
+                val lineRows = rows(db, "SELECT account_guid, debt_delta_minor FROM debt_event_lines WHERE event_guid=@p0 ORDER BY line_index", q.paymentEventGuid)
+                require(lineRows.isNotEmpty())
+                val origLines = lineRows.map { DebtLine(it[0] as String, it[1] as Long) }
+                val origEffect = DebtEffect(origLines, cashMinor, cardMinor, feeMinor)
+                val revEffect = DebtAccounting.reversePayment(origEffect, q.refundedFeeMinor)
+
+                val seq = Math.addExact(scalar(db, "SELECT COALESCE(MAX(device_sequence),0) FROM debt_events WHERE device_guid=@p0", device) as Long, 1L)
+                exec(db, "INSERT INTO debt_events(guid,request_guid,schema_version,kind,customer_guid,store_guid,actor_guid,device_guid,device_sequence,occurred_at,payload,payload_hash,cash_minor,card_minor,fee_minor,fee_usd_rate,reference_guid) VALUES(@p0,@p0,1,'payment_reversal',@p1,@p2,@p3,@p4,@p5,@p6,@p7,@p8,@p9,@p10,@p11,@p12,@p13)",
+                    q.requestGuid, customerGuid, store, actor, device, seq, q.occurredAt, payload, hash(payload), revEffect.cashMinor, revEffect.cardMinor, revEffect.feeExpenseMinor, feeUsdRate, q.paymentEventGuid)
+
+                revEffect.lines.forEachIndexed { i, line ->
+                    exec(db, "INSERT INTO debt_event_lines(event_guid,line_index,account_guid,customer_guid,store_guid,debt_delta_minor) VALUES(@p0,@p1,@p2,@p3,@p4,@p5)",
+                        q.requestGuid, i, line.accountGuid, customerGuid, store, line.deltaMinor)
+                }
+
+                finish(db, q.requestGuid, payload)
+                q.requestGuid
+            }
+        }
+    }
+
+    suspend fun refundCredit(q: DebtCreditRefundCommand): String {
+        id(q.requestGuid); id(q.customerGuid); id(q.accountGuid); text(q.reason, 1000, true); require(q.occurredAt >= 0)
+        require(q.cashMinor >= 0 && q.cardMinor >= 0); val total = Math.addExact(q.cashMinor, q.cardMinor); require(total > 0)
+        val payload = canonical("credit_refund", store, actor, q.requestGuid, q.customerGuid, q.accountGuid, q.cashMinor.toString(), q.cardMinor.toString(), q.occurredAt.toString(), q.reason)
+        return write { db ->
+            scope(db); val old = replay(db, q.requestGuid, payload)
+            if (old != null) old else {
+                customer(db, q.customerGuid, false)
+                val accList = accounts(db, q.customerGuid)
+                val account = accList.singleOrNull { it.accountGuid == q.accountGuid }
+                require(account != null)
+                val effect = DebtAccounting.refundCredit(account, q.cashMinor, q.cardMinor)
+
+                val seq = Math.addExact(scalar(db, "SELECT COALESCE(MAX(device_sequence),0) FROM debt_events WHERE device_guid=@p0", device) as Long, 1L)
+                exec(db, "INSERT INTO debt_events(guid,request_guid,schema_version,kind,customer_guid,store_guid,actor_guid,device_guid,device_sequence,occurred_at,payload,payload_hash,cash_minor,card_minor,fee_minor,fee_usd_rate,reference_guid) VALUES(@p0,@p0,1,'credit_refund',@p1,@p2,@p3,@p4,@p5,@p6,@p7,@p8,@p9,@p10,0,NULL,NULL)",
+                    q.requestGuid, q.customerGuid, store, actor, device, seq, q.occurredAt, payload, hash(payload), effect.cashMinor, effect.cardMinor)
+
+                exec(db, "INSERT INTO debt_event_lines(event_guid,line_index,account_guid,customer_guid,store_guid,debt_delta_minor) VALUES(@p0,0,@p1,@p2,@p3,@p4)",
+                    q.requestGuid, effect.lines[0].accountGuid, q.customerGuid, store, effect.lines[0].deltaMinor)
+
+                finish(db, q.requestGuid, payload)
+                q.requestGuid
+            }
+        }
+    }
+
+    suspend fun transferCredit(q: DebtCreditTransferCommand): String {
+        id(q.requestGuid); id(q.customerGuid); id(q.sourceAccountGuid); id(q.targetAccountGuid); text(q.reason, 1000, true)
+        require(q.occurredAt >= 0); require(q.amountMinor > 0)
+        val payload = canonical("credit_transfer", store, actor, q.requestGuid, q.customerGuid, q.sourceAccountGuid, q.targetAccountGuid, q.amountMinor.toString(), q.occurredAt.toString(), q.reason)
+        return write { db ->
+            scope(db); val old = replay(db, q.requestGuid, payload)
+            if (old != null) old else {
+                customer(db, q.customerGuid, false)
+                val accList = accounts(db, q.customerGuid)
+                val source = accList.singleOrNull { it.accountGuid == q.sourceAccountGuid }
+                val target = accList.singleOrNull { it.accountGuid == q.targetAccountGuid }
+                require(source != null && target != null)
+                val effect = DebtAccounting.transferCredit(source, target, q.amountMinor)
+
+                val seq = Math.addExact(scalar(db, "SELECT COALESCE(MAX(device_sequence),0) FROM debt_events WHERE device_guid=@p0", device) as Long, 1L)
+                exec(db, "INSERT INTO debt_events(guid,request_guid,schema_version,kind,customer_guid,store_guid,actor_guid,device_guid,device_sequence,occurred_at,payload,payload_hash,cash_minor,card_minor,fee_minor,fee_usd_rate,reference_guid) VALUES(@p0,@p0,1,'credit_transfer',@p1,@p2,@p3,@p4,@p5,@p6,@p7,@p8,0,0,0,NULL,NULL)",
+                    q.requestGuid, q.customerGuid, store, actor, device, seq, q.occurredAt, payload, hash(payload))
+
+                effect.lines.forEachIndexed { i, line ->
+                    exec(db, "INSERT INTO debt_event_lines(event_guid,line_index,account_guid,customer_guid,store_guid,debt_delta_minor) VALUES(@p0,@p1,@p2,@p3,@p4,@p5)",
+                        q.requestGuid, i, line.accountGuid, q.customerGuid, store, line.deltaMinor)
+                }
+
+                finish(db, q.requestGuid, payload)
                 q.requestGuid
             }
         }

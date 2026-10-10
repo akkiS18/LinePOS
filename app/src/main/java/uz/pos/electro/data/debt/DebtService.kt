@@ -83,15 +83,20 @@ data class DebtEventItemDto(
     val occurredAt: Long,
     val cashMinor: Long,
     val cardMinor: Long,
-    val lines: List<DebtEventLineDto>
+    val lines: List<DebtEventLineDto>,
+    val isReversed: Boolean = false
 ) {
     val kindDisplay: String get() = when (kind) {
         "sale_open" -> "Nasiya savdo"
-        "payment" -> "Qarz to'lovi"
-        "return_offset" -> "Qaytarish chegirildi"
+        "payment" -> if (isReversed) "To'lov (Bekor qilingan)" else "Qarz to'lovi"
+        "return_offset" -> if (isReversed) "Qaytarish (Bekor qilingan)" else "Qaytarish chegirildi"
+        "return_reversal" -> "Qaytarish bekor qilindi"
         "payment_reversal" -> "To'lov bekor qilindi"
+        "credit_refund" -> "Kredit qaytarildi"
+        "credit_transfer" -> "Kredit o'tkazildi"
         else -> kind
     }
+    val canReverse: Boolean get() = kind == "payment" && !isReversed
     val totalPaymentUz: Double get() = (cashMinor + cardMinor) / 100.0
 }
 
@@ -541,6 +546,17 @@ class DebtService @Inject constructor(
             )
         }
 
+        val reversedRefs = mutableSetOf<String>()
+        val revRows = DebtRepository.rows(
+            db,
+            "SELECT reference_guid FROM debt_events WHERE customer_guid = ? AND kind IN ('payment_reversal', 'return_reversal') AND reference_guid IS NOT NULL",
+            customerGuid
+        )
+        for (r in revRows) {
+            val ref = r[0] as? String
+            if (!ref.isNullOrBlank()) reversedRefs.add(ref)
+        }
+
         val eventsList = mutableListOf<DebtEventItemDto>()
         val evRows = DebtRepository.rows(
             db,
@@ -577,7 +593,8 @@ class DebtService @Inject constructor(
                     occurredAt = occurredAt,
                     cashMinor = cash,
                     cardMinor = card,
-                    lines = lines
+                    lines = lines,
+                    isReversed = reversedRefs.contains(eGuid)
                 )
             )
         }
@@ -738,5 +755,29 @@ class DebtService @Inject constructor(
     suspend fun archiveCustomer(customerGuid: String, archive: Boolean): Boolean {
         val repo = ensureRepo()
         return repo.archiveCustomer(customerGuid, archive)
+    }
+
+    suspend fun reversePayment(paymentEventGuid: String, reason: String, refundedFeeMinor: Long = 0L): String {
+        val repo = ensureRepo()
+        val req = UUID.randomUUID().toString()
+        val timestamp = System.currentTimeMillis()
+        val cmd = DebtPaymentReversalCommand(req, paymentEventGuid, reason, refundedFeeMinor, timestamp)
+        return repo.reversePayment(cmd)
+    }
+
+    suspend fun refundCredit(customerGuid: String, accountGuid: String, cashMinor: Long, cardMinor: Long, reason: String): String {
+        val repo = ensureRepo()
+        val req = UUID.randomUUID().toString()
+        val timestamp = System.currentTimeMillis()
+        val cmd = DebtCreditRefundCommand(req, customerGuid, accountGuid, cashMinor, cardMinor, timestamp, reason)
+        return repo.refundCredit(cmd)
+    }
+
+    suspend fun transferCredit(customerGuid: String, sourceAccountGuid: String, targetAccountGuid: String, amountMinor: Long, reason: String): String {
+        val repo = ensureRepo()
+        val req = UUID.randomUUID().toString()
+        val timestamp = System.currentTimeMillis()
+        val cmd = DebtCreditTransferCommand(req, customerGuid, sourceAccountGuid, targetAccountGuid, amountMinor, timestamp, reason)
+        return repo.transferCredit(cmd)
     }
 }

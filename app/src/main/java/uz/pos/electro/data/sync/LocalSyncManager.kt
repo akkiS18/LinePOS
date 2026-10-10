@@ -205,7 +205,25 @@ class LocalSyncManager @Inject constructor(
             lines.put(JSONObject().put("Guid",item.guid).put("ProductName",item.productName).put("WarehouseGuid",item.warehouseGuid)
                 .put("Sold",item.quantity).put("Returned",quantity.toPlainString()).put("Refunded",refunded.toPlainString()).put("Revenue",financials[i].totalPrice))
         }
-        JSONObject().put("SaleGuid",receipt.sale.guid).put("Lines",lines)
+        val res = JSONObject().put("SaleGuid",receipt.sale.guid).put("Lines",lines)
+        if (receipt.sale.paymentType == uz.pos.electro.data.model.PaymentType.DEBT) {
+            db().query("SELECT guid, customer_guid, original_debt_minor FROM debt_accounts WHERE sale_guid=?", arrayOf(receipt.sale.guid)).use { c ->
+                if (c.moveToFirst()) {
+                    val accGuid = c.getString(0)
+                    val custGuid = c.getString(1)
+                    val origDebt = c.getLong(2)
+                    val deltas = mutableListOf<Long>()
+                    db().query("SELECT debt_delta_minor FROM debt_event_lines WHERE account_guid=?", arrayOf(accGuid)).use { lc ->
+                        while (lc.moveToNext()) deltas.add(lc.getLong(0))
+                    }
+                    val bal = uz.pos.electro.data.debt.DebtAccounting.balance(origDebt, deltas)
+                    res.put("DebtAccountGuid", accGuid)
+                    res.put("CustomerGuid", custGuid)
+                    res.put("AccountBalanceMinor", bal)
+                }
+            }
+        }
+        res
     }
     suspend fun returnHistory(receiptGuid: String): String = withContext(Dispatchers.IO) {
         val original = db().query("SELECT sale_guid FROM returns WHERE guid=?",arrayOf(receiptGuid)).use { if(it.moveToFirst()) it.getString(0) else null }
@@ -261,6 +279,41 @@ class LocalSyncManager @Inject constructor(
     suspend fun acknowledgeReturn(saleGuid: String) = withContext(Dispatchers.IO) {
         syncMutex.withLock { db().execSQL("DELETE FROM return_drafts WHERE sale_guid=? AND state='confirmed'",arrayOf(saleGuid)) }
     }
+
+    suspend fun reversePaymentOnDesktop(paymentEventGuid: String, reason: String, refundedFeeMinor: Long = 0L): String = withContext(Dispatchers.IO) {
+        val server = getServerUrl() ?: error("Mahalliy kompyuterga ulang")
+        val payload = JSONObject().put("PaymentEventGuid", paymentEventGuid)
+            .put("Reason", reason)
+            .put("RefundedFeeMinor", refundedFeeMinor)
+        val res = request(server, "/api/v2/debt/reverse_payment", payload)
+        try { syncOnce() } catch (_: Exception) { }
+        res.getString("resultGuid")
+    }
+
+    suspend fun refundCreditOnDesktop(customerGuid: String, accountGuid: String, cashMinor: Long, cardMinor: Long, reason: String): String = withContext(Dispatchers.IO) {
+        val server = getServerUrl() ?: error("Mahalliy kompyuterga ulang")
+        val payload = JSONObject().put("CustomerGuid", customerGuid)
+            .put("AccountGuid", accountGuid)
+            .put("CashMinor", cashMinor)
+            .put("CardMinor", cardMinor)
+            .put("Reason", reason)
+        val res = request(server, "/api/v2/debt/refund_credit", payload)
+        try { syncOnce() } catch (_: Exception) { }
+        res.getString("resultGuid")
+    }
+
+    suspend fun transferCreditOnDesktop(customerGuid: String, sourceAccountGuid: String, targetAccountGuid: String, amountMinor: Long, reason: String): String = withContext(Dispatchers.IO) {
+        val server = getServerUrl() ?: error("Mahalliy kompyuterga ulang")
+        val payload = JSONObject().put("CustomerGuid", customerGuid)
+            .put("SourceAccountGuid", sourceAccountGuid)
+            .put("TargetAccountGuid", targetAccountGuid)
+            .put("AmountMinor", amountMinor)
+            .put("Reason", reason)
+        val res = request(server, "/api/v2/debt/transfer_credit", payload)
+        try { syncOnce() } catch (_: Exception) { }
+        res.getString("resultGuid")
+    }
+
     private class ReturnRejected(message: String): IllegalArgumentException(message)
     private data class Pending(val seq: Long, val id: String, val kind: String, val guid: String, val warehouse: String, val delta: Double, val base: Long, val payload: String?, val group: String)
     private fun pending(): List<Pending> = db().query("SELECT seq,op_id,kind,entity_guid,warehouse_guid,delta,base_revision,payload,group_id FROM sync_journal WHERE acked=0 ORDER BY seq").use { c ->
