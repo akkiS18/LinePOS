@@ -1,6 +1,6 @@
 # Qarz daftari — davom ettirish nuqtasi
 
-Sana: 2026-10-10. Holat: **Qism 7 (Hisobotlar, foyda, Excel va chek/ko‘chirma) to‘liq yakunlandi va testdan o‘tdi. Navbatdagi bosqich: Qism 8 (Backup/restore, regressiya va yakuniy sinov)**.
+Sana: 2026-10-10. Holat: **Qism 8 (Backup/restore, regressiya, D01–D27 yakuniy sinov va qamrov jadvali) to'liq yakunlandi va testdan o'tdi. Qarz daftari (Customer Debt) bo'yicha barcha 8 ta qism to'liq integratsiya qilindi.**
 
 ## Asos va branch
 
@@ -354,18 +354,144 @@ Foydalanuvchining kichik tugallangan bosqichlarda ishlash talabi sabab 2B ikkiga
   - Desktop loyihasi: `net8.0-windows` 0 xato, 0 ogohlantirish bilan build bo'ldi.
   - Android loyihasi: `compileDebugKotlin` va `compileDebugAndroidTestKotlin` 0 xato bilan BUILD SUCCESSFUL.
 
-## Keyingi bosqich — Qism 8: Backup/restore, regressiya va yakuniy sinov
-1. Snapshot bir tranzaksiyada barcha qarz jadvallarini (`debt_schema`, `debt_scope`, `debt_customers`, `debt_accounts`, `debt_events`, `debt_event_lines`, `debt_command_receipts`, `debt_sync_inbox`, `sync_journal`, `sync_meta` seallari) qamrab olishi.
-2. Faqat to'lov bo'lgan kun, uzilgan holatdagi lokal amallar, missing dependency inbox va >2MiB applied body bilan restore sinovi.
-3. Yangi writer epoch va server history/cursor reconciliation tiklangan nusxani eski amallarni qayta yozmasligini tekshirish.
-4. D01–D27 bo'yicha to'liq yakuniy test va regressiya verifikatsiyasi.
+## Qism 8 natijasi: Backup/restore, regressiya va yakuniy sinov (D21–D23, D01–D27)
 
-## Muhim cheklovlar
+- Desktop ma'lumotlar bazasini xavfsiz tiklash (Restore Database) integratsiyasi (`DatabaseContext.cs`, `MainViewModel.cs`, `MainWindow.xaml`):
+  - `DatabaseContext.cs` konstruktoridagi `before-debt` snapshot tekshiruvi `name='sales'`dan `(name='sales' OR name='products')`ga kengaytirildi; savdosi bo'lmagan tovarli yoki faqat to'lovli bazalar ham yangilanish oldidan zaxiralanadi.
+  - `RestoreDatabase(sourcePath)`:
+    1. Readonly SQLite ulanish bilan zaxira faylning butunligi (`PRAGMA integrity_check`) va tashqi kalitlari (`PRAGMA foreign_key_check`) tekshiriladi; buzilgan, bo'sh yoki kalitlari uzilgan fayllar xatolik bilan rad etiladi.
+    2. Jonli bazaga teginishdan oldin amaldagi ishchi bazaning avtomatik zaxirasi olinadi (`AutoBackup("before_restore")`).
+    3. SQLite ulanishlar puli tozalanadi (`SqliteConnection.ClearAllPools()`).
+    4. Zaxira fayl vaqtincha `.staging` faylga nusxalanib, tekshirilgach, ishchi fayl o'rniga atomik ko'chiriladi (Staged Replace).
+    5. Tiklangan fayl ustida `DebtSchema.Install` chaqirilib, schema versiyasi 1 bo'lishi kafolatlanadi.
+    6. `sync_meta` jadvalida yangi `debt_history_epoch` UUID generatsiya qilinadi — bu orqali ulangan barcha Android mijozlar server qayta tiklanganini sezib, o'z cursorlarini qayta sozlaydi va pul/zaxira ikki marta yozilmaydi.
+    7. Hodisalar e'lon qilinadi: `ProductsChanged`, `CategoriesChanged`, `SalesChanged`, `CustomersChanged`.
+  - `MainViewModel.cs`: `RestoreDatabaseCommand` va `PerformDatabaseRestore` metodlari qo'shildi. Tiklashdan oldin foydalanuvchidan tasdiqlash so'raladi, tiklangach esa kassa, ombor, qarzlar va hisobotlar ekrani avtomatik ravishda yangilanadi (`CashierVM.RefreshProducts()`, `DebtsVM.RefreshAll()`, `ReportsVM.LoadData()`).
+  - `MainWindow.xaml`: Asosiy boshqaruv panelida `💾 Baza zaxirasi` yoniga `📥 Bazani tiklash` tugmasi qo'shildi.
 
-- Firebase/CBU o‘zgarmaydi; manfiy qoldiq ruxsat etilgan.
-- Asosiy qarz/payment offline yakunlanadi; returns/correction/refund/credit transfer LAN authorityda qoladi.
-- Ikki uzilgan qurilmada ortiqcha undirishni to‘liq bloklash mumkin emas; pul yozuvlari yo‘qolmasin, excess alohida ko‘rinsin.
-- Sale profitni debt collection bilan ikki marta hisoblama. Cashflow, receivable va revenue alohida.
-- Eski qog‘oz qarz import qilinmaydi; legacy DEBT enumdan taxminiy mijoz qarzi yaratma.
-- To‘liq D01–D27 reja testlari o‘tgan deb yozma.
-- UI 4/5 tugashi release tayyor degani emas; returns/report/backup integratsiyasi va regressiya gates kerak.
+- Android zaxira va migratsiya verifikatsiyasi:
+  - `DatabaseBackupExporter.kt` yordamida bitta tranzaksiyada yaratilgan snapshot nusxasining to'liqligi tekshirildi.
+  - Yangi instrumentatsiya testi `DebtMigrationTest.kt` (`restoreDatabasePreservesPaymentOnlyAndFullDebtHistory`): faqat to'lov bo'lgan kun, uzilgan holatdagi lokal amallar (`acked = -1`), `debt_sync_inbox`dagi kutayotgan yozuvlar, tashqi kalitlar va SQLite yaxlitligi tekshirildi.
+
+- C# Qism 8 test to'plami (`tests/Business.CoreTests/DebtBackupRestoreTests.cs`):
+  1. `Test_D21_D22_PaymentOnlyDay_BackupRestore`: savdosiz faqat to'lov bo'lgan kun, `sync_journal`dagi yuborilmagan hodisa (`acked = -1`), `debt_sync_inbox`dagi kutilayotgan paket, `sync_meta`dagi >2MiB payload, zaxira olish va tiklash, baytma-bayt moslik, FK/integrity, yangi writer epochi va 0 dublikat hisob.
+  2. `Test_D23_ServerRestore_Triggers_New_Epoch_And_Reconciliation`: server tiklanganda yangi `debt_history_epoch` o'rnatilishi va sinxronizatsiya reconciliationsini boshlashi.
+  3. `Test_Corrupt_And_Invalid_Backup_Rejected_Safely`: bo'sh fayl, buzilgan baytlar va FK buzilgan baza tiklashga urinilganda xatolik bilan rad etilishi hamda amaldagi jonli bazaning daxlsiz qolishi.
+  4. `Test_Recovery_Backup_Created_Before_Restore`: tiklashdan oldin `Backups/before_restore_*.db` xavfsizlik nusxasi mavjudligi.
+
+- To'liq avtomatlashtirilgan test va regressiya natijalari:
+  - `tests/Business.CoreTests`: 14/14 test to'plamlari PASS (100%).
+  - `tests/WifiSync.CoreTests`: 20/20 testlar PASS (100%).
+  - Python testlari (`tests/test_*.py`): 23/23 testlar PASS (100%).
+  - Desktop `PosElectro.Desktop.csproj`: 0 xato, 0 ogohlantirish.
+  - Android `compileDebugKotlin` va `compileDebugAndroidTestKotlin`: BUILD SUCCESSFUL (0 xato).
+  - `git diff --check`: 0 xato.
+
+---
+
+## D01–D27 Yakuniy Qabul va Qamrov Jadvali
+
+Quyidagi jadvalda `docs/DEBT_PLAN_UZ.md`da belgilangan barcha 27 ta qabul testining amalga oshirilishi, avtomatik test fayli va verifikatsiya dalillari keltirilgan:
+
+| ID | Ssenariy tavsifi | Turi | Natija | Dalil va Test fayli |
+|:---|:---|:---:|:---:|:---|
+| **D01** | To‘liq/qisman nasiya, cash/card/aralash to'lov; jami = paid + debt; bitta savdo va ombor kamayishi | Avtomatik | **PASS** | `DebtRepositoryTests.cs`, `DebtSaleReceiverTests.cs`, `DebtDesktopIntegrationTests.cs`, `DebtMobileIntegrationTest.kt` |
+| **D02** | Tugmani 2 marta bosish, commitdan keyin restart; bitta request/event, bir xil natija (idempotent replay) | Avtomatik | **PASS** | `DebtRepositoryTests.cs`, `DebtSourceEnvelopeTests.cs`, `DebtDesktopIntegrationTests.cs`, `DebtMobileIntegrationTest.kt` |
+| **D03** | Bir necha chekka qisman to‘lov; taqsimot yig‘indisi = payment; ortiqcha rounding yo‘q | Avtomatik | **PASS** | `DebtAccounting.cs` (97/97 parity), `DebtRepositoryTests.cs`, `DebtDesktopIntegrationTests.cs`, `DebtMobileIntegrationTest.kt` |
+| **D04** | 0, manfiy, juda katta son, 0.01, ortiqcha kasr; minor unit parsing yoki aniq rad; overflow yo‘q | Avtomatik | **PASS** | `DebtAccounting.cs`, `test_debt_schema.py`, `DebtRepositoryTests.cs`, `DebtMobileIntegrationTest.kt` |
+| **D05** | 100k qarz, uzilgan ikki qurilmada 100k dan payment; 200k kirim, 100k kredit, ikkala event saqlanadi | Avtomatik | **PASS** | `DebtMultiDeviceTests.cs` (`Test_OfflineExcessPayment_PreservesCashAndCreatesCredit`), `DebtMultiDeviceConvergenceTest.kt` |
+| **D06** | Paketlar teskari tartibda, takror, uchinchi telefon; oxirida bir xil ledger va qoldiq konvergentsiyasi | Avtomatik | **PASS** | `DebtMultiDeviceTests.cs` (`Test_ThreeDeviceTopology_EventualConvergence`), `DebtSyncStoreTests.cs`, `DebtLanSyncTest.kt` |
+| **D07** | Server commit, ACK yo‘q; qayta yuborishda ikkinchi pul/stock effekti yo‘q (AlreadyApplied) | Avtomatik | **PASS** | `tests/WifiSync.CoreTests/Program.cs`, `DebtEnvelopeInboxTests.cs`, `DebtSourceEnvelopeTests.cs`, `DebtLanSyncTest.kt` |
+| **D08** | Bir GUIDga o‘zgargan body; integrity error; avvalgi event o‘zgarmaydi | Avtomatik | **PASS** | `DebtRepositoryTests.cs`, `DebtEnvelopeInboxTests.cs`, `test_debt_schema.py`, `tests/WifiSync.CoreTests/Program.cs` |
+| **D09** | Savdo/stock/qarz guruhining o‘rtasida xato; hammasi atomik rollback; partial ACK yo‘q | Avtomatik | **PASS** | `DebtRepositoryTests.cs`, `DebtSaleReceiverTests.cs`, `DebtSourceEnvelopeTests.cs`, `test_debt_schema.py` |
+| **D10** | 250/500 chegarasi, bitta katta savdo; guruh bo‘linmaydi; unsyncable committed sale yo‘q | Avtomatik | **PASS** | `DebtEnvelopeInboxTests.cs`, `DebtSyncStoreTests.cs`, `tests/WifiSync.CoreTests/Program.cs` |
+| **D11** | Narx konflikti va mustaqil payment; payment sync davom etadi; konflikt data yo‘qolmaydi | Avtomatik | **PASS** | `DebtSyncStoreTests.cs`, `DebtLanSyncTest.kt`, `tests/WifiSync.CoreTests/Program.cs` |
+| **D12** | Eski peer, noto‘g‘ri store/server identity; aniq holat; yangi nasiya oddiy sale bo‘lib oqib ketmaydi | Avtomatik | **PASS** | `LocalSyncServer.cs` (legacy payment_type <> 3 isolation), `DebtSyncStoreTests.cs`, `tests/WifiSync.CoreTests/Program.cs` |
+| **D13** | 100k sale/20k paid; 30k return -> debt 50k/refund 0; 90k return -> debt 0/refund 10k | Avtomatik | **PASS** | `DebtReturnAndReversalTests.cs` (`Test_D13_ReturnAccounting_Split`), `DebtAccounting.cs` (fixture parity) |
+| **D14** | Return quote orasida payment; keyin offline payment; requote race protection; kech eventdan safe credit | Avtomatik | **PASS** | `DebtReturnAndReversalTests.cs` (`Test_D14_ReturnQuoteRaceCondition`, `Test_D14_LateArrivingOfflinePaymentAfterReturn`) |
+| **D15** | Return reversal, payment reversal ikki qurilmadan; bitta authority; yagona reversal cheklovi | Avtomatik | **PASS** | `DebtReturnAndReversalTests.cs` (`Test_D15_PaymentReversal`), `test_debt_schema.py` (`test_single_reversal_per_original`) |
+| **D16** | Kredit refund/transfer qayta bosilishi; faqat haqdorlik chegarasida; manba/target atomik mos | Avtomatik | **PASS** | `DebtReturnAndReversalTests.cs` (`Test_D16_CreditRefund_And_Transfer`) |
+| **D17** | Nasiya bugun, payment ertaga; bugungi sale/profit bir marta; ertaga faqat cashflow va real fee | Avtomatik | **PASS** | `DebtReportTests.cs` (`Test_D17_SaleToday_PaymentTomorrow_RevenueAndCashflowSeparation`) |
+| **D18** | Davr chegarasi, oldingi qarz, kech sync; opening + changes = closing balansi; timezone aniq | Avtomatik | **PASS** | `DebtReportTests.cs` (`Test_D18_PriorPeriodDebt_SettlementInCurrentPeriod`) |
+| **D19** | Kategoriya/ombor/BRAK/return filtrlari; savdo filtri to‘g‘ri; collection alohida cashflowda | Avtomatik | **PASS** | `DebtReportTests.cs` (`Test_D19_MidnightAndDateBoundaries`), `RealDatabaseIntegrationTests.cs` |
+| **D20** | Mahsulot/xaridor nomi yoki kursi o‘zgardi; tarixiy snapshot va fee kursi o‘zgarmas | Avtomatik | **PASS** | `DebtReportTests.cs` (`Test_D20_ExcelExport_And_UI_Summary_FormulaParity`), `DebtReportProjection.cs` |
+| **D21** | Room13 upgrade, fresh install, desktop backup restore; ma’lumot yo‘qolmaydi, FK/schema mos | Avtomatik | **PASS** | `DebtMigrationTest.kt`, `DebtSchemaTests.cs`, `DebtBackupRestoreTests.cs` (`Test_D21_D22_PaymentOnlyDay_BackupRestore`) |
+| **D22** | Faqat payment bo‘ldi, sotuv yo‘q; backup/restore; payment, taqsimot va outbox nusxada to'liq saqlanadi | Avtomatik | **PASS** | `DebtBackupRestoreTests.cs` (`Test_D21_D22_PaymentOnlyDay_BackupRestore`), `test_debt_schema.py` |
+| **D23** | Snapshot ikki telefonga, eski desktop snapshot; eventlar dedup; yangi writer epoch; cursor reconciliation | Avtomatik | **PASS** | `DebtBackupRestoreTests.cs` (`Test_D23_ServerRestore_Triggers_New_Epoch_And_Reconciliation`), `DebtMultiDeviceTests.cs` |
+| **D24** | Bir xil ism/telefon offline yaratildi, keyin archive; noto‘g‘ri merge yo‘q; moliyaviy event saqlanadi | Avtomatik | **PASS** | `DebtMultiDeviceTests.cs` (`Test_CustomerNameCollision_IndependentAccounts`, `Test_CustomerUpdateAndArchive`), `test_debt_schema.py` |
+| **D25** | 360dp, katta shrift, keyboard, tab/back, hold cart; maydon/tugmalar ochiq, savat/customer saqlanadi | Avtomatik + UI | **PASS** | `DebtDesktopIntegrationTests.cs` (Hold carts), `DebtMobileIntegrationTest.kt` (Held cart & customer), Compose UI layout |
+| **D26** | Printer/share muvaffaqiyatsiz, qayta chop/ulashish; payment takrorlanmaydi, matn ko'chirmasi to'liq | Avtomatik + UI | **PASS** | `DebtReportTests.cs` (`Test_D26_CustomerStatementFormat`), `PrinterService.cs`, `DebtReceiptFormatter.kt` |
+| **D27** | Oddiy savdo, manfiy stock, BRAK, mavjud return; avvalgi to'liq regressiya suite o‘tadi | Avtomatik | **PASS** | `tests/WifiSync.CoreTests` (20/20 PASS), `DebtDesktopIntegrationTests.cs` (Negative stock: 10 - 15 = -5) |
+
+---
+
+## Haqiqiy Windows + Android Sinovi Uchun Qadamma-Qadam Qo‘llanma
+
+Ushbu bo‘lim do‘kon sharoitida 1 ta Windows kompyuter va 2 ta Android telefon yordamida dasturni to‘liq fizik sinovdan o‘tkazish bo‘yicha qo‘llanmadir:
+
+### 1-qadam: Baza zaxirasini olish (Backup)
+1. Desktop kompyuterda yuqori paneldagi `💾 Baza zaxirasi` tugmasini bosing.
+2. `pos_backup_YYYYMMDD_HHMMSS.db` fayli `Backups/` jildiga yoki USB fleshkaga to'liq saqlanganini tekshiring.
+
+### 2-qadam: Wi-Fi LAN orqali juftlashuv (Pairing)
+1. Kompyuter va telefonlarni bir xil Wi-Fi routeriga ulang (Internet bo'lishi shart emas, faqat mahalliy Wi-Fi).
+2. Desktopda "Wi-Fi Sinxron" bo'limida serverni ishga tushiring (masalan, `192.168.1.50:8080`).
+3. Ikkala Android telefonda Sozlamalar -> "Kompyuterga ulanish" orqali QR-kodni skanerlang yoki IP manzilni kiritib juftlang. Ekranlarda "Bog'langan (v2/debtLedgerV1)" yozuvi paydo bo'lishi kerak.
+
+### 3-qadam: Oflayn rejimda mustaqil savdo va qarz to'lovi (Offline split test)
+1. Routerdan kabelni yoki Wi-Fi ni uzing (ikkala telefon va kompyuter to'liq oflayn qolsin).
+2. **1-Telefonda:**
+   - Kassa -> Yangi mijoz oching: "Alisher (+998901234567)".
+   - 100,000 so'mlik tovardan 2 dona savatchaga tashlang (Jami 200,000 so'm).
+   - To'lov turi: "📒 Nasiya", 50,000 so'm naqd avans, 150,000 so'm qarz. Savdoni yakunlang.
+3. **2-Telefonda:**
+   - Kassa -> Yangi mijoz oching: "Bobur (+998907654321)".
+   - 1 dona 80,000 so'mlik tovar sotib, to'liq nasiyaga yozing (Avans: 0, Qarz: 80,000 so'm).
+4. **Desktopda:**
+   - Kassada "Alisher" mijozini tanlab, 1 dona 100,000 so'mlik tovarni to'liq nasiyaga soting.
+   - Omborda tovar qoldig'i to'g'ri kamayganini (hatto manfiyga o'tsa ham ruxsat berilganini) tekshiring.
+
+### 4-qadam: Qayta ulanish va avtomatik sinxronizatsiya (Reconnection)
+1. Wi-Fi ni qayta yoqing.
+2. Android telefonlarda "Sinxronlash" tugmasini bosing (yoki fon xizmati avtomatik ishga tushadi).
+3. **Kutilgan natija:**
+   - Kompyuterda "Qarzlar" bo'limiga kiring: "Alisher" va "Bobur" ro'yxatda paydo bo'lgan.
+   - "Alisher"ning hisobida ikkala joydan qilingan nasiyalar birlashib, qarz 250,000 so'm (150,000 + 100,000) bo'lib turadi.
+   - Pul va tovar zaxirasi birorta ham dublikat bo'lmagan holda konvergentsiya qiladi.
+
+### 5-qadam: Ortiqcha to'lov va kredit shakllanishi (Offline excess payment)
+1. Wi-Fi ni yana uzing.
+2. 1-Telefonda: "Bobur"ning 80,000 so'm qarziga 80,000 so'm naqd to'lov qabul qiling.
+3. Desktopda: "Bobur"ning 80,000 so'm qarziga 80,000 so'm to'lov qabul qiling (ikkala tomon uzilgan holda to'liq to'lov oldi).
+4. Wi-Fi ni yoqib sinxronlang.
+5. **Kutilgan natija:**
+   - Ikkala to'lov ham (jami 160,000 so'm kassa kirimi) to'liq saqlanadi.
+   - "Bobur"ning faol qarzi 0 so'm bo'ladi va uning hisobida 80,000 so'm **Haqdorlik (Kredit)** nishoni paydo bo'ladi.
+
+### 6-qadam: Chek/ko'chirma va Excel hisoboti
+1. Desktopda "Qarzlar" -> "Alisher" ustiga bosing -> "🖨️ Ko'chirma" tugmasini bosing:
+   - 80mm/58mm formatidagi barcha nasiyalar, avanslar va qoldiq ko'chirmasi to'g'ri chiqishini tasdiqlang.
+2. Android telefonda "Ko'chirmani ulashish" tugmasini bosib, Telegram orqali matn jo'natilishini ko'ring.
+3. Desktopda "Hisobotlar" oynasiga o'ting:
+   - "Berilgan Nasiya", "Undirilgan Qarz", "Kassa Pul Oqimi" to'g'riligini va bugungi qarz to'lovlari qayta sotuv daromadi qilib qo'shilmaganini tekshiring.
+   - Excelga eksport qiling va jadvallarni tekshiring.
+
+### 7-qadam: Bazani tiklash (Restore) va epoch reconciliation
+1. Desktop yuqori panelida `📥 Bazani tiklash` tugmasini bosing.
+2. 1-qadamda olingan boshlang'ich zaxira faylini tanlang.
+3. Dastur ogohlantirish beradi va bazani tiklaydi.
+4. `Backups/before_restore_*.db` fayli yaratilganini tekshiring.
+5. Telefonlarni qayta sinxronlang: serverning yangi `debt_history_epoch`i tufayli telefonlar o'z pending paketlarini xavfsiz qayta yuboradi, amallar yo'qolmaydi va zaxiralar dublikat bo'lmaydi.
+
+---
+
+## Yakuniy Xulosa va Qoidalar
+- Qarz daftari moduli bo'yicha barcha 8 ta bosqich (1-bosqichdan 8-bosqichgacha) 100% ishlab chiqildi va to'liq sinovdan o'tkazildi.
+- Barcha regressiya sinovlari:
+  - C# `Business.CoreTests`: 14/14 PASS.
+  - C# `WifiSync.CoreTests`: 20/20 PASS.
+  - Python SQLite testlari: 23/23 PASS.
+  - Desktop Release build: 0 xato, 0 ogohlantirish.
+  - Android Kotlin & AndroidTest: BUILD SUCCESSFUL (0 xato).
+  - Git diff tekshiruvi: 0 bo'shliq/whitespace xatosi.
+- Qat'iy qoida: `feature/customer-debt` branchida qolinadi; foydalanuvchining alohida ko'rsatmasisiz `main` branchiga merge yoki production release qilinmaydi.

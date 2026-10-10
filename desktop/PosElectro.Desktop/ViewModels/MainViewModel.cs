@@ -31,6 +31,7 @@ namespace PosElectro.Desktop.ViewModels
         public ICommand NavigateReportsCommand { get; }
         public ICommand NavigateSyncCommand { get; }
         public ICommand BackupDatabaseCommand { get; }
+        public ICommand RestoreDatabaseCommand { get; }
 
         // Jonli Wi-Fi sinxron holati
         private int _liveClientsCount;
@@ -169,6 +170,7 @@ namespace PosElectro.Desktop.ViewModels
             });
             NavigateSyncCommand = new RelayCommand(() => CurrentView = SyncVM);
             BackupDatabaseCommand = new RelayCommand(PerformDatabaseBackup);
+            RestoreDatabaseCommand = new RelayCommand(PerformDatabaseRestore);
 
             OpenPinModalCommand = new RelayCommand(() =>
             {
@@ -384,6 +386,52 @@ namespace PosElectro.Desktop.ViewModels
             catch (Exception ex)
             {
                 MessageBox.Show($"Zaxira nusxa olishda xatolik yuz berdi:\n{ex.Message}", "Xatolik", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        public void PerformDatabaseRestore()
+        {
+            try
+            {
+                var ofd = new Microsoft.Win32.OpenFileDialog
+                {
+                    Title = "SMART Kassa ma'lumotlar bazasini tiklash (Zaxira fayldan)",
+                    Filter = "SQLite Baza fayli (*.db)|*.db|Barcha fayllar (*.*)|*.*"
+                };
+
+                if (ofd.ShowDialog() == true)
+                {
+                    var confirm = MessageBox.Show(
+                        "DIQQAT: Zaxira fayldan tiklash amaldagi ma'lumotlarni o'sha zaxira holatiga qaytaradi.\n\n" +
+                        "Tiklashdan oldin hozirgi bazangizning xavfsiz avtomatik nusxasi olinadi.\n\n" +
+                        "Tiklashni davom ettirasizmi?",
+                        "Bazani tiklashni tasdiqlash",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Warning);
+
+                    if (confirm != MessageBoxResult.Yes) return;
+
+                    Database.RestoreDatabase(ofd.FileName);
+
+                    // Re-initialize view models
+                    CashierVM.RefreshProducts();
+                    CashierVM.RefreshCategories();
+                    CashierVM.RefreshActiveCustomers();
+                    InventoryVM.Refresh();
+                    DebtsVM.RefreshAll();
+                    ReportsVM.LoadData();
+
+                    MessageBox.Show(
+                        "✅ Ma'lumotlar bazasi zaxiradan muvaffaqiyatli tiklandi!\n\n" +
+                        "Barcha tovarlar, qarzlar va hisobotlar yangilandi.",
+                        "Muvaffaqiyatli tiklandi",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Bazani tiklashda xatolik yuz berdi:\n{ex.Message}", "Xatolik", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 

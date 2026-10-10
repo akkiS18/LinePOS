@@ -210,6 +210,18 @@
                         </Button.Resources>
                     </Button>
 
+                    <Button Content="📥 Bazani tiklash"
+                            Command="{Binding RestoreDatabaseCommand}"
+                            ToolTip="Avval saqlangan zaxira nusxadan (Fleshka yoki kompyuterdan) ma'lumotlarni qayta tiklash"
+                            Background="#25FFFFFF" Foreground="#F8FAFC" BorderBrush="#45FFFFFF" BorderThickness="1"
+                            FontWeight="SemiBold" FontSize="13" Padding="12,6" Cursor="Hand" Margin="0,0,10,0">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="8"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
+
                     <Button Content="📞 Bog'lanish" 
                             Command="{Binding OpenContactModalCommand}"
                             ToolTip="Ishlab chiqaruvchi bilan bog'lanish"

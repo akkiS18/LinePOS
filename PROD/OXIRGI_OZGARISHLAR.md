@@ -85,3 +85,16 @@ Ushbu qisqacha qo'llanma mijozga oxirgi kiritilgan qulayliklarni ko'rsatish uchu
 - **Mijoz uchun foydasi:**
   - Do'kon egasi kunlik yoki oylik kassasidagi haqiqiy naqd pul oqimi (cashflow) bilan sof tovar daromadini hech qachon chalkashtirmaydi.
   - Xaridor bilan qarz bo'yicha bahslashuv yuzaga kelsa, joyida to'liq va shaffof hisob-kitob ko'chirmasi (sverka) chiqarib beriladi.
+
+---
+
+### 7. 📥 Ma'lumotlar bazasini xavfsiz zaxiradan qayta tiklash (Database Restore)
+- **Nima o'zgardi:**
+  - Asosiy boshqaruv panelida **"📥 Bazani tiklash"** tugmasi qo'shildi (fleshka yoki kompyuter diskidagi `.db` zaxira nusxasidan ma'lumotlarni to'liq qayta tiklash).
+  - Tiklash jarayoni 4 bosqichli xavfsizlik nazoratidan o'tadi:
+    1. **Butunlik tekshiruvi:** Tanlangan faylning SQLite butunligi (`PRAGMA integrity_check`) va bog'lanishlari (`PRAGMA foreign_key_check`) o'qish rejimida tekshiriladi; buzilgan yoki begona fayllar qat'iy rad etiladi.
+    2. **Avtomatik himoya zaxirasi:** Tiklash boshlanishidan oldin joriy ishchi bazaning alohida `before_restore` xavfsizlik nusxasi avtomatik yaratiladi.
+    3. **Bosqichma-bosqich xavfsiz almashtirish (Staged Replace):** Baza avval vaqtincha joyda tekshirilib, so'ng atomik tarzda almashtiriladi; biror xatolik bo'lsa ishchi baza o'z o'rnida daxlsiz qoladi.
+    4. **Sinxronizatsiya muvofiqligi:** Tiklangandan so'ng yangi tarix epochi (`debt_history_epoch`) belgilanib, kassir, ombor, qarzlar va hisobotlar ekrani avtomatik yangilanadi. Ulangan Android telefonlar bilan ziddiyatsiz qayta tekshiruv (reconciliation) kafolatlanadi — pul va qoldiqlar ikki marta hisoblanmaydi.
+- **Mijoz uchun foydasi:**
+  - Kompyuter almashtirilganda, Windows qayta o'rnatilganda yoki zaxira nusxadan ma'lumotlarni qaytarish zarurati tug'ilganda dastur ichidan 1 tugma bilan xavfsiz va yo'qotishlarsiz tiklash mumkin.

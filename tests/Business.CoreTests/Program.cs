@@ -14,6 +14,7 @@ ReturnAccountingTests.Run();
 ReturnStoreTests.Run();
 DebtReturnAndReversalTests.Run();
 DebtReportTests.Run();
+DebtBackupRestoreTests.Run();
 
 var path = Path.Combine(Path.GetTempPath(), "LinePOS_business_" + Guid.NewGuid() + ".db");
 void Check(bool condition, string message) { if (!condition) throw new Exception(message); }
