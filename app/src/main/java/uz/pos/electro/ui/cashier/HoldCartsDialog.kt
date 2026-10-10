@@ -184,6 +184,22 @@ fun HoldCartsDialog(
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
+                                        if (!cart.customerName.isNullOrBlank()) {
+                                            Spacer(modifier = Modifier.height(3.dp))
+                                            Surface(
+                                                shape = RoundedCornerShape(6.dp),
+                                                color = Color(0xFFFEF3C7),
+                                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF59E0B))
+                                            ) {
+                                                Text(
+                                                    text = "📒 ${cart.customerName} (Nasiya)",
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color(0xFFB45309),
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                )
+                                            }
+                                        }
                                         Spacer(modifier = Modifier.height(4.dp))
                                         Text(
                                             text = "${numberFormat.format(cart.totalAmount)} so'm",

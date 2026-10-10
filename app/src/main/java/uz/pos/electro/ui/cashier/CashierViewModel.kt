@@ -34,13 +34,92 @@ class CashierViewModel @Inject constructor(
     private val productRepository: ProductRepository,
     private val saleRepository: SaleRepository,
     private val taxSettingsRepository: uz.pos.electro.data.repository.TaxSettingsRepository,
-    private val warehouseRepository: uz.pos.electro.data.repository.WarehouseRepository
+    private val warehouseRepository: uz.pos.electro.data.repository.WarehouseRepository,
+    private val debtService: uz.pos.electro.data.debt.DebtService,
+    private val currencyRepository: uz.pos.electro.data.repository.CurrencyRepository
 ) : ViewModel() {
 
     // Savatdagi tovarlar
     private val checkoutGate = java.util.concurrent.atomic.AtomicBoolean(false)
     private val _isCompletingSale = MutableStateFlow(false)
     val isCompletingSale = _isCompletingSale.asStateFlow()
+
+    // Nasiya (Debt) holatlari
+    private val _activeDebtCustomers = MutableStateFlow<List<uz.pos.electro.data.debt.DebtCustomerItemDto>>(emptyList())
+    val activeDebtCustomers: StateFlow<List<uz.pos.electro.data.debt.DebtCustomerItemDto>> = _activeDebtCustomers.asStateFlow()
+
+    private val _selectedDebtCustomer = MutableStateFlow<uz.pos.electro.data.debt.DebtCustomerItemDto?>(null)
+    val selectedDebtCustomer: StateFlow<uz.pos.electro.data.debt.DebtCustomerItemDto?> = _selectedDebtCustomer.asStateFlow()
+
+    private val _debtDueDate = MutableStateFlow<String?>(null)
+    val debtDueDate: StateFlow<String?> = _debtDueDate.asStateFlow()
+
+    private val _debtCashAdvance = MutableStateFlow("0")
+    val debtCashAdvance: StateFlow<String> = _debtCashAdvance.asStateFlow()
+
+    private val _debtCardAdvance = MutableStateFlow("0")
+    val debtCardAdvance: StateFlow<String> = _debtCardAdvance.asStateFlow()
+
+    private val _isQuickAddCustomerOpen = MutableStateFlow(false)
+    val isQuickAddCustomerOpen: StateFlow<Boolean> = _isQuickAddCustomerOpen.asStateFlow()
+
+    init {
+        refreshActiveDebtCustomers()
+    }
+
+    fun refreshActiveDebtCustomers() {
+        viewModelScope.launch {
+            try {
+                _activeDebtCustomers.value = debtService.getActiveCustomers()
+            } catch (_: Throwable) { }
+        }
+    }
+
+    fun selectDebtCustomer(customer: uz.pos.electro.data.debt.DebtCustomerItemDto?) {
+        _selectedDebtCustomer.value = customer
+    }
+
+    fun setDebtCustomerByGuid(guid: String) {
+        viewModelScope.launch {
+            refreshActiveDebtCustomers()
+            _selectedDebtCustomer.value = _activeDebtCustomers.value.find { it.guid == guid }
+        }
+    }
+
+    fun setDebtDueDate(dateStr: String?) {
+        _debtDueDate.value = dateStr
+    }
+
+    fun setDebtCashAdvance(value: String) {
+        _debtCashAdvance.value = value
+    }
+
+    fun setDebtCardAdvance(value: String) {
+        _debtCardAdvance.value = value
+    }
+
+    fun openQuickAddCustomer() {
+        _isQuickAddCustomerOpen.value = true
+    }
+
+    fun closeQuickAddCustomer() {
+        _isQuickAddCustomerOpen.value = false
+    }
+
+    fun saveQuickCustomer(name: String, phone: String, note: String) {
+        if (name.isBlank()) return
+        viewModelScope.launch {
+            try {
+                val newGuid = debtService.createCustomer(name, phone, note)
+                refreshActiveDebtCustomers()
+                _selectedDebtCustomer.value = _activeDebtCustomers.value.find { it.guid == newGuid }
+                _isQuickAddCustomerOpen.value = false
+                _toastEvent.emit("Yangi mijoz qo'shildi: $name")
+            } catch (e: Throwable) {
+                _toastEvent.emit("Mijoz qo'shishda xatolik: ${e.message}")
+            }
+        }
+    }
 
     private val _cartItems = MutableStateFlow<List<CartItemModel>>(emptyList())
     val cartItems: StateFlow<List<CartItemModel>> = _cartItems.asStateFlow()
@@ -254,11 +333,21 @@ class CashierViewModel @Inject constructor(
 
         val heldCart = HeldCart(
             name = cartName,
-            items = currentItems
+            items = currentItems,
+            selectedPaymentType = if (_selectedDebtCustomer.value != null) PaymentType.DEBT else PaymentType.CASH,
+            customerGuid = _selectedDebtCustomer.value?.guid,
+            customerName = _selectedDebtCustomer.value?.name,
+            dueDate = _debtDueDate.value,
+            debtCashAdvance = _debtCashAdvance.value,
+            debtCardAdvance = _debtCardAdvance.value
         )
 
         _heldCarts.value = _heldCarts.value + heldCart
         _cartItems.value = emptyList()
+        _selectedDebtCustomer.value = null
+        _debtDueDate.value = null
+        _debtCashAdvance.value = "0"
+        _debtCardAdvance.value = "0"
 
         viewModelScope.launch {
             _toastEvent.emit("Savat muzlatildi: $cartName")
@@ -273,7 +362,13 @@ class CashierViewModel @Inject constructor(
             val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
             val autoHold = HeldCart(
                 name = "Mijoz (Avto) ${timeFormat.format(Date())}",
-                items = currentActiveItems
+                items = currentActiveItems,
+                selectedPaymentType = if (_selectedDebtCustomer.value != null) PaymentType.DEBT else PaymentType.CASH,
+                customerGuid = _selectedDebtCustomer.value?.guid,
+                customerName = _selectedDebtCustomer.value?.name,
+                dueDate = _debtDueDate.value,
+                debtCashAdvance = _debtCashAdvance.value,
+                debtCardAdvance = _debtCardAdvance.value
             )
             _heldCarts.value = (_heldCarts.value.filterNot { it.id == heldCart.id }) + autoHold
         } else {
@@ -281,6 +376,14 @@ class CashierViewModel @Inject constructor(
         }
 
         _cartItems.value = heldCart.items
+        if (!heldCart.customerGuid.isNullOrBlank()) {
+            setDebtCustomerByGuid(heldCart.customerGuid)
+        } else {
+            _selectedDebtCustomer.value = null
+        }
+        _debtDueDate.value = heldCart.dueDate
+        _debtCashAdvance.value = heldCart.debtCashAdvance ?: "0"
+        _debtCardAdvance.value = heldCart.debtCardAdvance ?: "0"
         _isHoldCartsDialogVisible.value = false
 
         viewModelScope.launch {
@@ -347,6 +450,72 @@ class CashierViewModel @Inject constructor(
                 _isCheckoutDialogVisible.value = false
                 _cartItems.value = emptyList()
                 _toastEvent.emit("Savdo muvaffaqiyatli amalga oshirildi!")
+            } catch (e: Exception) {
+                _toastEvent.emit("Xatolik: ${e.localizedMessage}")
+            } finally {
+                _isCompletingSale.value = false
+                checkoutGate.set(false)
+            }
+        }
+    }
+
+    /**
+     * Nasiya (Qarz) savdosini yakunlash
+     */
+    fun completeDebtSale(
+        customerGuid: String,
+        dueDate: String? = null,
+        cashAdvance: Double = 0.0,
+        cardAdvance: Double = 0.0
+    ) {
+        val items = _cartItems.value
+        if (items.isEmpty() || !checkoutGate.compareAndSet(false, true)) return
+        _isCompletingSale.value = true
+        viewModelScope.launch {
+            try {
+                val totalAmount = uz.pos.electro.data.model.SaleAccounting.money(items.sumOf { it.totalPrice })
+                val cashMinor = Math.round(cashAdvance * 100).toLong()
+                val cardMinor = Math.round(cardAdvance * 100).toLong()
+                val usdRate = currencyRepository.getCachedUsdRate()
+                val effectiveTaxRate = cardTaxRate.value
+
+                val saleGuid = java.util.UUID.randomUUID().toString()
+                val requestGuid = java.util.UUID.randomUUID().toString()
+
+                val snapshot = uz.pos.electro.data.debt.DebtService.buildSaleSnapshot(
+                    saleGuid = saleGuid,
+                    occurredAt = System.currentTimeMillis(),
+                    cartItems = items,
+                    cashMinor = cashMinor,
+                    cardMinor = cardMinor,
+                    usdRate = usdRate,
+                    cardTaxRate = effectiveTaxRate
+                )
+
+                debtService.openDebtSale(
+                    requestGuid = requestGuid,
+                    customerGuid = customerGuid,
+                    saleSnapshot = snapshot,
+                    dueDate = dueDate,
+                    userId = 1L
+                )
+
+                _lastCompletedSale.value = CompletedSaleState(
+                    saleId = 0L,
+                    receiptNumber = "LP-" + saleGuid.replace("-", "").uppercase(java.util.Locale.ROOT),
+                    items = items,
+                    totalAmount = totalAmount,
+                    paymentType = PaymentType.DEBT,
+                    timestamp = snapshot.occurredAt
+                )
+
+                _isCheckoutDialogVisible.value = false
+                _cartItems.value = emptyList()
+                _selectedDebtCustomer.value = null
+                _debtDueDate.value = null
+                _debtCashAdvance.value = "0"
+                _debtCardAdvance.value = "0"
+                _toastEvent.emit("Nasiya savdo muvaffaqiyatli saqlandi!")
             } catch (e: Exception) {
                 _toastEvent.emit("Xatolik: ${e.localizedMessage}")
             } finally {

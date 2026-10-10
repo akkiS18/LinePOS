@@ -1,6 +1,6 @@
 # Qarz daftari — davom ettirish nuqtasi
 
-Sana: 2026-10-09. Holat: **Qism 3 (Bir nechta qurilma, tiklash epochlari va kontaktlar) ikkala platformada to‘liq yakunlandi va testdan o‘tdi. Navbatdagi bosqich: Qism 4 (Desktop frontend va kassa integratsiyasi)**.
+Sana: 2026-10-10. Holat: **Qism 5 (Mobil frontend va offline kassa integratsiyasi) to‘liq yakunlandi va testdan o‘tdi. Navbatdagi bosqich: Qism 6 (Return/Reversal, LAN authority va hisobotlar integratsiyasi)**.
 
 ## Asos va branch
 
@@ -245,13 +245,59 @@ Foydalanuvchining kichik tugallangan bosqichlarda ishlash talabi sabab 2B ikkiga
     - `PosElectro.Desktop.csproj` kompilatsiyasi: 0 xato, 0 ogohlantirish.
 - Tekshirilgan kod commit: `2c6c433`.
 
-## Keyingi bosqich — Qism 5: Mobil frontend va offline kassa integratsiyasi
+## Qism 5 natijasi: Mobil frontend va offline kassa integratsiyasi
 
-1. Mobil pastki menyu: **Kassa / Ombor / Qarzlar / Hisobotlar / Sozlamalar**.
-2. Yangi Room DAO/Entity va `DebtService` Kotlin porti.
-3. Yangi Compose ekranlar: `DebtsScreen.kt`, `CustomerDetailScreen.kt`, `PaymentCollectionDialog.kt`.
-4. `CashierScreen.kt` va `CheckoutPaymentDialog.kt` ga Nasiya to‘lov variantini ulash; offline hold/resume.
-5. Android instrumentatsiya testlari orqali tekshirish.
+- `DebtService.kt`:
+  - Room/SQLite ustida do'konga bog'langan (`debt_scope`) servis qatlami; legacy warehouse GUIDni `00000000-0000-0000-0000-000000000001` ga xavfsiz moslash;
+  - KPI summary, 5 ta filtrli mijozlar ro'yxati, hisoblar (accounts) va voqealar (events) tarixi;
+  - Ortiqcha to'lovni bloklovchi live allocation preview (`previewPayment`);
+  - Baytma-bayt idempotent replay bilan to'lov yozish (`recordPayment`);
+  - `buildSaleSnapshot` (manfiy stock ruxsati, minor UZS pul birliklari, aniq tiyin);
+  - Atomik oflayn nasiya savdosini ochish (`openDebtSale`);
+  - Mijozlar CRUD va arxivlash.
+
+- Kassa va to'lov integratsiyasi (`CashierViewModel.kt`, `CashierScreen.kt`, `CheckoutPaymentDialog.kt`, `HoldCartsDialog.kt`):
+  - 4-to'lov turi "Nasiya" (2x2 grid: Naqd, Karta, Aralash, Nasiya);
+  - Mijozni qidirib tanlash modali (`CustomerPickerDialog`), "+ Yangi" tezkor mijoz ochish modali (`QuickAddCustomerDialog`);
+  - Savatda faol nasiya mijozi ko'rsatkichi va bekor qilish;
+  - Muzlatilgan savatlarda (`HeldCart`) nasiya mijozi va avanslarni saqlash hamda `HoldCartsDialog` da "📒 {Mijoz} (Nasiya)" nishoni;
+  - Naqd va karta avanslari, qolgan nasiya summasi va to'lov muddati;
+  - `completeDebtSale` orqali atomik oflayn nasiya yopish (`checkoutGate` bilan himoyalangan).
+
+- Qarz daftari UI (`DebtsViewModel.kt` & `DebtsScreen.kt`):
+  - 4 ta KPI kartasi (Jami nasiya, Muddati o'tgan, Jami to'langan, Haqdorlik);
+  - 5 ta filtr chiplari ("Barchasi", "Qarzdorlar", "Muddati o'tgan", "To'langan", "Arxiv") va qidiruv;
+  - Mijozlar ro'yxati, mijoz balansi va muddati o'tganlik nishoni;
+  - Mijoz tanlanganda to'liq tafsilotlar: Nasiyalar (Accounts) va Tarix (Events) tablari;
+  - Jonli taqsimot ko'rsatuvchi "To'lov olish" modali (`PaymentCollectionDialog`);
+  - Tanlangan mijoz bilan kassaga o'tish ("Kassada ochish") handoff'i;
+  - Mijoz qo'shish / tahrirlash / arxivlash modali.
+
+- Asosiy oyna navigatsiyasi (`MainScreen.kt`):
+  - Apple HIG uslubidagi pastki dock 4 tadan 5 ta tabga kengaytirildi: **Kassa / Ombor / 📒 Qarzlar / Hisobotlar / Sozlamalar**;
+  - TopAppBar sarlavhasi ("SMART — Qarz daftari") va BackHandler moslashtirildi.
+
+- Testlar va verifikatsiya:
+  - Yangi instrumentatsiya testi `DebtMobileIntegrationTest.kt`:
+    - Mijoz lifecycle va aktiv/arxiv filtrlari;
+    - Oflayn nasiya savdosi (Initial stock: 2.0, Sold: 5.0 -> Remaining: -3.0 manfiy stock ruxsati saqlandi);
+    - Naqd va karta avanslari to'g'ri qayd etilishi;
+    - HeldCart nasiya maydonlari saqlanishi va tiklanishi;
+    - To'lov preview, to'lov yozish, hisoblarning FIFO yopilishi va baytma-bayt idempotency replay;
+  - Kotlin va Android test kompilyatsiyasi:
+    - `compileDebugKotlin`: BUILD SUCCESSFUL (0 xato).
+    - `compileDebugAndroidTestKotlin`: BUILD SUCCESSFUL (0 xato).
+  - Regressiya testlari:
+    - C# `Business.CoreTests`: 11/11 test to‘plamlari PASS (100%).
+    - C# `WifiSync.CoreTests`: 20/20 testlar PASS (100%).
+    - Python `tests/test_sync_schema.py`: 7/7 testlar PASS.
+
+## Keyingi bosqich — Qism 6: Return/Reversal, LAN authority va hisobotlar integratsiyasi
+
+1. Qarzga olingan tovarlarni qaytarish (Return/Refund): faqat LAN authority orqali yakunlash.
+2. Noto‘g‘ri olingan qarz to‘lovini bekor qilish (Payment Reversal) va LAN authority.
+3. Hisobotlar (Reports): Nasiya tushumlarini yangi revenue deb hisoblamaslik, alohida Receivable va Debt Collection ko‘rsatkichlari.
+4. Desktop va Android hisobotlar pariteti.
 
 ## Muhim cheklovlar
 

@@ -39,3 +39,16 @@ Ushbu qisqacha qo'llanma mijozga oxirgi kiritilgan qulayliklarni ko'rsatish uchu
   - Nasiyaga savdo qilish va qarz yig'ish 100% oflayn rejimda, internet va Wi-Fi bo'lmaganda ham mustaqil ishlaydi.
   - Har bir mijoz bo'yicha to'liq cheklar va to'lovlar tarixi bir joyda shaffof ko'rinib turadi.
 
+---
+
+### 4. 📱 Android mobil ilovasida "Qarzlar" bo'limi va oflayn Nasiya kassa integratsiyasi
+- **Nima o'zgardi:**
+  - Mobil ilova pastki boshqaruv paneliga yangi **📒 Qarzlar** bo'limi qo'shildi (Kassa / Ombor / Qarzlar / Hisobotlar / Sozlamalar).
+  - Mobil kassa to'lov oynasi 2x2 qulay ko'rinishga keltirildi (Naqd, Karta, Aralash, Nasiya).
+  - Nasiya to'lovida mijozni qidirib tanlash, "+ Yangi" tugmasi orqali joyida tezkor mijoz ochish, naqd/karta avans summasini kiritish, qolgan qarz summasini avtomatik hisoblash va to'lov muddatini belgilash imkoniyati yaratildi.
+  - Muzlatilgan savatlarda (Hold Carts) nasiya mijozi va to'lov holati saqlanadi hamda "📒 {Mijoz ismi} (Nasiya)" belgisi ko'rsatiladi.
+  - "Qarzlar" ekranida 4 ta KPI kartasi (Jami nasiya, Muddati o'tgan, Jami to'langan, Haqdorlik), 5 ta filtr, mijozlar qidiruvi, mijoz kartasida cheklar va to'lovlar tarixi, jonli taqsimot ko'rsatuvchi "To'lov olish" dialogi hamda tanlangan mijoz bilan bir zumda kassaga o'tish ("Kassada ochish") imkoniyati yaratildi.
+- **Mijoz uchun foydasi:**
+  - Mobil telefonda internet va Wi-Fi bo'lmaganda ham 100% oflayn rejimda nasiyaga tovar sotish, yangi mijoz ochish va qarz to'lovlarini yig'ish mumkin.
+
+
