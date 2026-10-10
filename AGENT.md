@@ -236,4 +236,10 @@ Android mobil ilovasida to'liq Qarz daftari (Customer Debt) moduli va oflayn kas
 3. Testlar: C# `DebtBackupRestoreTests.cs` (D21-D23) yozildi va o'tdi. Barcha D01-D27 qabul mezonlari va fizik sinov qo'llanmasi `docs/DEBT_CHECKPOINT_UZ.md`ga kiritildi.
 4. Regressiya: `Business.CoreTests` 14/14 PASS, `WifiSync.CoreTests` 20/20 PASS, Python 23/23 PASS, Desktop Release va Android buildlar 0 xato.
 
+## Qarz daftari va Kassa Optimizatsiyasi — 2026-10-10, `main` branchiga to'liq integratsiya va Production Release
+- `feature/customer-debt` barcha 1-8 qismlari va `main` dagi so'nggi optimizatsiyalar (kassada 200ms debounce tezkor qidiruv, hisobotlar jadvali filtr va piktogrammalari) to'liq, konfliktlarsiz birlashtirildi (`merge commit e78f37f`).
+- Barcha testlar (Business.CoreTests 14 ta to'plam, WifiSync.CoreTests 20/20, Python 23/23, Android Kotlin) 100% muvaffaqiyatli o'tdi va `origin/main` ga push qilindi.
+- `PROD/` relizlari to'liq yangilandi:
+  - `PROD/LinePOS_Desktop/` (.NET 8 WPF win-x64 Release)
+  - `PROD/LinePOS_Release.apk` (Android Release APK, R8 ProGuard obfuscation va resurs siqish bilan).
 
