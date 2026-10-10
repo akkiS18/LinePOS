@@ -677,6 +677,7 @@ namespace PosElectro.Desktop.ViewModels
         public ICommand OpenCashSaleCommand { get; }
         public ICommand OpenCardSaleCommand { get; }
         public ICommand OpenSplitSaleCommand { get; }
+        public ICommand OpenDebtSaleCommand { get; }
 
         public CashierViewModel(DatabaseContext db, ProductService productService, CurrencyService currencyService, DebtService? debtService = null)
         {
@@ -718,6 +719,7 @@ namespace PosElectro.Desktop.ViewModels
             OpenCashSaleCommand = new RelayCommand(_ => OpenPaymentModal(0));
             OpenCardSaleCommand = new RelayCommand(_ => OpenPaymentModal(1));
             OpenSplitSaleCommand = new RelayCommand(_ => OpenPaymentModal(2));
+            OpenDebtSaleCommand = new RelayCommand(_ => OpenPaymentModal(3));
             SelectCategoryCommand = new RelayCommand<string>(cat => { if (cat != null) SelectedCategory = cat; });
             SearchQueryEnterCommand = new RelayCommand(HandleSearchQueryEnter);
 
@@ -1312,6 +1314,10 @@ namespace PosElectro.Desktop.ViewModels
             if (CartItems.Count == 0) return;
             CurrentCardTaxRate = _db.GetCardTaxRate();
             SelectedPaymentType = paymentType;
+            if (paymentType == 3 && ActiveCustomers.Count == 0)
+            {
+                RefreshActiveCustomers();
+            }
             RecalculatePaymentAmounts();
 
             // Printerlar ro'yxatini yangilash

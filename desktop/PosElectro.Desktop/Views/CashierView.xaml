@@ -729,9 +729,10 @@
                                            HorizontalAlignment="Right" VerticalAlignment="Center"/>
                             </Grid>
 
-                            <!-- 2-Qator: 3 ta asosiy to'lov tugmasi (Naqd, Karta, Aralash) -->
+                            <!-- 2-Qator: 4 ta asosiy to'lov tugmasi (Naqd, Karta, Aralash, Nasiya) -->
                             <Grid Grid.Row="1">
                                 <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="*"/>
@@ -741,15 +742,15 @@
                                 <Button Grid.Column="0" Command="{Binding OpenCashSaleCommand}"
                                         IsEnabled="{Binding HasCartItems}"
                                         ToolTip="Naqd pul orqali sotish [Space / F8]"
-                                        Background="#1E293B" Height="58" Margin="0,0,6,0"
+                                        Background="#1E293B" Height="58" Margin="0,0,5,0"
                                         BorderThickness="0" Cursor="Hand">
                                     <Button.Template>
                                         <ControlTemplate TargetType="Button">
                                             <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="#475569" BorderThickness="1.5" CornerRadius="10">
                                                 <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
                                                     <Path x:Name="ic" Data="M21 6H3C1.89 6 1 6.89 1 8V16C1 17.11 1.89 18 3 18H21C22.11 18 23 17.11 23 16V8C23 6.89 22.11 6 21 6ZM21 16H3V8H21V16ZM12 9C10.34 9 9 10.34 9 12C9 13.66 10.34 15 12 15C13.66 15 15 13.66 15 12C15 10.34 13.66 9 12 9Z" 
-                                                          Fill="#F8FAFC" Width="20" Height="20" Stretch="Uniform" Margin="0,0,0,4" HorizontalAlignment="Center"/>
-                                                    <TextBlock Text="Naqd" FontWeight="Bold" FontSize="14" Foreground="#F8FAFC" HorizontalAlignment="Center"/>
+                                                          Fill="#F8FAFC" Width="18" Height="18" Stretch="Uniform" Margin="0,0,0,4" HorizontalAlignment="Center"/>
+                                                    <TextBlock Text="Naqd" FontWeight="Bold" FontSize="13" Foreground="#F8FAFC" HorizontalAlignment="Center"/>
                                                 </StackPanel>
                                             </Border>
                                             <ControlTemplate.Triggers>
@@ -772,15 +773,15 @@
                                 <Button Grid.Column="1" Command="{Binding OpenCardSaleCommand}"
                                         IsEnabled="{Binding HasCartItems}"
                                         ToolTip="Plastik karta orqali sotish (F9)"
-                                        Background="#1E293B" Height="58" Margin="0,0,6,0"
+                                        Background="#1E293B" Height="58" Margin="0,0,5,0"
                                         BorderThickness="0" Cursor="Hand">
                                     <Button.Template>
                                         <ControlTemplate TargetType="Button">
                                             <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="#475569" BorderThickness="1.5" CornerRadius="10">
                                                 <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
                                                     <Path x:Name="ic" Data="M20 4H4C2.89 4 2.01 4.89 2.01 6L2 18C2 19.1 2.89 20 4 20H20C21.1 20 22 19.1 22 18V6C22 4.89 21.1 4 20 4ZM20 18H4V12H20V18ZM20 8H4V6H20V8Z" 
-                                                          Fill="#F8FAFC" Width="20" Height="20" Stretch="Uniform" Margin="0,0,0,4" HorizontalAlignment="Center"/>
-                                                    <TextBlock Text="Karta" FontWeight="Bold" FontSize="14" Foreground="#F8FAFC" HorizontalAlignment="Center"/>
+                                                          Fill="#F8FAFC" Width="18" Height="18" Stretch="Uniform" Margin="0,0,0,4" HorizontalAlignment="Center"/>
+                                                    <TextBlock Text="Karta" FontWeight="Bold" FontSize="13" Foreground="#F8FAFC" HorizontalAlignment="Center"/>
                                                 </StackPanel>
                                             </Border>
                                             <ControlTemplate.Triggers>
@@ -803,21 +804,53 @@
                                 <Button Grid.Column="2" Command="{Binding OpenSplitSaleCommand}"
                                         IsEnabled="{Binding HasCartItems}"
                                         ToolTip="Aralash to'lov (Naqd + Karta) [F10]"
-                                        Background="#1E293B" Height="58" Margin="0"
+                                        Background="#1E293B" Height="58" Margin="0,0,5,0"
                                         BorderThickness="0" Cursor="Hand">
                                     <Button.Template>
                                         <ControlTemplate TargetType="Button">
                                             <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="#475569" BorderThickness="1.5" CornerRadius="10">
                                                 <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
                                                     <Path x:Name="ic" Data="M6.99 11L3 15L6.99 19V16H14V14H6.99V11ZM21 9L17.01 5V8H10V10H17.01V13L21 9Z" 
-                                                          Fill="#F8FAFC" Width="20" Height="20" Stretch="Uniform" Margin="0,0,0,4" HorizontalAlignment="Center"/>
-                                                    <TextBlock Text="Aralash" FontWeight="Bold" FontSize="14" Foreground="#F8FAFC" HorizontalAlignment="Center"/>
+                                                          Fill="#F8FAFC" Width="18" Height="18" Stretch="Uniform" Margin="0,0,0,4" HorizontalAlignment="Center"/>
+                                                    <TextBlock Text="Aralash" FontWeight="Bold" FontSize="13" Foreground="#F8FAFC" HorizontalAlignment="Center"/>
                                                 </StackPanel>
                                             </Border>
                                             <ControlTemplate.Triggers>
                                                 <Trigger Property="IsMouseOver" Value="True">
                                                     <Setter TargetName="bd" Property="Background" Value="#334155"/>
                                                     <Setter TargetName="bd" Property="BorderBrush" Value="#38BDF8"/>
+                                                </Trigger>
+                                                <Trigger Property="IsPressed" Value="True">
+                                                    <Setter TargetName="bd" Property="Opacity" Value="0.75"/>
+                                                </Trigger>
+                                                <Trigger Property="IsEnabled" Value="False">
+                                                    <Setter TargetName="bd" Property="Opacity" Value="0.35"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+
+                                <!-- 4: Nasiya (Qarzga) -->
+                                <Button Grid.Column="3" Command="{Binding OpenDebtSaleCommand}"
+                                        IsEnabled="{Binding HasCartItems}"
+                                        ToolTip="Nasiyaga (Qarzga) sotish [F11]"
+                                        Background="#1E293B" Height="58" Margin="0"
+                                        BorderThickness="0" Cursor="Hand">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="#A855F7" BorderThickness="1.5" CornerRadius="10">
+                                                <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                    <Path x:Name="ic" Data="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z" 
+                                                          Fill="#C084FC" Width="18" Height="18" Stretch="Uniform" Margin="0,0,0,4" HorizontalAlignment="Center"/>
+                                                    <TextBlock Text="Nasiya" FontWeight="Bold" FontSize="13" Foreground="#C084FC" HorizontalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="bd" Property="Background" Value="#3B0764"/>
+                                                    <Setter TargetName="bd" Property="BorderBrush" Value="#C084FC"/>
+                                                    <Setter TargetName="ic" Property="Fill" Value="#FFFFFF"/>
                                                 </Trigger>
                                                 <Trigger Property="IsPressed" Value="True">
                                                     <Setter TargetName="bd" Property="Opacity" Value="0.75"/>

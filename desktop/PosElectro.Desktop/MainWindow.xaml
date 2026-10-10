@@ -144,8 +144,7 @@
                     </Button>
 
                     <!-- Qarzlar -->
-                    <Button Content="📒 Qarzlar"
-                            Command="{Binding NavigateDebtsCommand}">
+                    <Button Command="{Binding NavigateDebtsCommand}">
                         <Button.Style>
                             <Style TargetType="Button" BasedOn="{StaticResource NavTabButton}">
                                 <Style.Triggers>
@@ -154,9 +153,22 @@
                                         <Setter Property="Foreground" Value="#0B6477"/>
                                         <Setter Property="FontWeight" Value="Bold"/>
                                     </DataTrigger>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding IsDebtsSelected}" Value="True"/>
+                                            <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True"/>
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </MultiDataTrigger>
                                 </Style.Triggers>
                             </Style>
                         </Button.Style>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Path Data="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z"
+                                  Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                  Width="15" Height="15" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="Qarzlar" VerticalAlignment="Center"/>
+                        </StackPanel>
                     </Button>
 
                     <!-- Hisobotlar -->
