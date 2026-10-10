@@ -400,12 +400,49 @@ namespace PosElectro.Desktop.Services
                     lines.Add("  Karta:" + new string(' ', cardSpace) + cardVal);
                 }
             }
+            else if (sale.PaymentType == PaymentType.DEBT)
+            {
+                double debt = Math.Max(0, sale.TotalAmount - sale.CashAmount - sale.CardAmount);
+                if (sale.CashAmount > 0)
+                {
+                    lines.Add($"  Oldindan (Naqd):  {FormatMoney(sale.CashAmount)} so'm");
+                }
+                if (sale.CardAmount > 0)
+                {
+                    lines.Add($"  Oldindan (Karta): {FormatMoney(sale.CardAmount)} so'm");
+                }
+                lines.Add($"  Nasiya (Qarz):    {FormatMoney(debt)} so'm");
+            }
 
             lines.Add(new string('-', 32));
             lines.Add(CenterText("Rahmat, xaridingiz uchun!", 32));
             lines.Add(CenterText("Yana tashrif buyuring!", 32));
 
             return lines;
+        }
+
+        public (bool Success, string? ErrorMessage) PrintCustomerStatement(
+            PosElectro.Desktop.Debt.DebtCustomerDetailDto customer,
+            string? printerName = null)
+        {
+            var targetPrinter = printerName ?? FindReceiptPrinter();
+            if (string.IsNullOrWhiteSpace(targetPrinter))
+            {
+                return (false, "Chek printeri topilmadi yoki sozlanmagan");
+            }
+
+            string text = Debt.DebtReceiptFormatter.BuildCustomerStatementText(customer);
+
+            using var ms = new MemoryStream();
+            using var bw = new BinaryWriter(ms);
+            bw.Write(new byte[] { 0x1B, 0x40 });
+            bw.Write(new byte[] { 0x1B, 0x74, 17 });
+            WriteCp866(bw, text);
+            bw.Write(new byte[] { 0x1D, 0x56, 0x42, 0x00 });
+            byte[] bytes = ms.ToArray();
+
+            bool ok = RawPrinterHelper.SendBytesToPrinter(targetPrinter, bytes, $"Ko'chirma - {customer.Customer.Name}");
+            return (ok, ok ? null : "Printerga chop etishda xatolik yuz berdi");
         }
 
         private byte[] BuildEscPosReceipt(Sale sale)
@@ -602,6 +639,11 @@ namespace PosElectro.Desktop.Services
             var lines = BuildReceiptLines(sale);
             return string.Join(Environment.NewLine, lines);
         }
+
+        /// <summary>
+        /// Mijoz qarz daftari ko'chirmasi matnini shakllantirish (58mm/80mm yoki ko'rish uchun)
+        /// </summary>
+        public static string BuildCustomerStatementText(Debt.DebtCustomerDetailDto customer) => Debt.DebtReceiptFormatter.BuildCustomerStatementText(customer);
 
         /// <summary>
         /// A4 formatdagi tovar hisob-fakturasini chop etish (Standard Windows printer or PDF)

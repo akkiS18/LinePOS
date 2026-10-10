@@ -50,6 +50,8 @@
             <RowDefinition Height="Auto"/>
             <!-- 2. 4 ta KPI Kartasi -->
             <RowDefinition Height="Auto"/>
+            <!-- 2.5. Qarz va Cashflow Paneli -->
+            <RowDefinition Height="Auto"/>
             <!-- 3. Savdolar Jadvali -->
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
@@ -571,8 +573,55 @@
             </Border>
         </Grid>
 
+        <!-- 2.5 QARZ VA KASSA PUL OQIMI (CASHFLOW) -->
+        <Border Grid.Row="2" Background="#1E293B" CornerRadius="14" Padding="18,12" Margin="0,0,0,16" BorderBrush="#334155" BorderThickness="1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- 1. Berilgan yangi qarz -->
+                <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                    <TextBlock Text="BERILGAN NASIYA" Foreground="#94A3B8" FontSize="11" FontWeight="Bold"/>
+                    <TextBlock Text="{Binding NewDebtIssuedText}" Foreground="#F59E0B" FontSize="18" FontWeight="Bold" Margin="0,4,0,2"/>
+                    <TextBlock Text="Savdodan hosil bo'lgan qarz" Foreground="#64748B" FontSize="11"/>
+                </StackPanel>
+
+                <!-- 2. Undirilgan qarz (Yig'im) -->
+                <StackPanel Grid.Column="1" Margin="4,0,4,0">
+                    <TextBlock Text="UNDIRILGAN QARZ (YIG'IM)" Foreground="#94A3B8" FontSize="11" FontWeight="Bold"/>
+                    <TextBlock Text="{Binding DebtCollectedTotalText}" Foreground="#10B981" FontSize="18" FontWeight="Bold" Margin="0,4,0,2"/>
+                    <TextBlock Foreground="#94A3B8" FontSize="11">
+                        <Run Text="Naqd: "/><Run Text="{Binding DebtCollectedCashText, Mode=OneWay}" Foreground="#F8FAFC" FontWeight="SemiBold"/>
+                        <Run Text=" • "/><Run Text="Karta: "/><Run Text="{Binding DebtCollectedCardText, Mode=OneWay}" Foreground="#38BDF8" FontWeight="SemiBold"/>
+                    </TextBlock>
+                </StackPanel>
+
+                <!-- 3. Kassa pul oqimi (Cashflow) -->
+                <StackPanel Grid.Column="2" Margin="4,0,4,0">
+                    <TextBlock Text="KASSA PUL OQIMI (CASHFLOW)" Foreground="#94A3B8" FontSize="11" FontWeight="Bold"/>
+                    <TextBlock Text="{Binding TotalCashflowText}" Foreground="#38BDF8" FontSize="18" FontWeight="Bold" Margin="0,4,0,2"/>
+                    <TextBlock Foreground="#64748B" FontSize="11">
+                        <Run Text="Naqd + Karta (Savdo + Qarz)"/>
+                    </TextBlock>
+                </StackPanel>
+
+                <!-- 4. Davr oxiriga faol qarz va haqdorlik -->
+                <StackPanel Grid.Column="3" Margin="8,0,0,0">
+                    <TextBlock Text="FAOL QARZDORLIK / HAQDORLIK" Foreground="#94A3B8" FontSize="11" FontWeight="Bold"/>
+                    <TextBlock Text="{Binding ClosingDebtText}" Foreground="#EF4444" FontSize="18" FontWeight="Bold" Margin="0,4,0,2"/>
+                    <TextBlock Foreground="#94A3B8" FontSize="11">
+                        <Run Text="Mijoz haqi (kredit): "/><Run Text="{Binding ClosingCreditText, Mode=OneWay}" Foreground="#A78BFA" FontWeight="SemiBold"/>
+                    </TextBlock>
+                </StackPanel>
+            </Grid>
+        </Border>
+
         <!-- 3. SAVDOLAR TARIXI JADVALI (Yuqorida Chek № qidiruv paneli bilan) -->
-        <Border Grid.Row="2" Background="#1E293B" CornerRadius="12" BorderBrush="#334155" BorderThickness="1" Padding="12">
+        <Border Grid.Row="3" Background="#1E293B" CornerRadius="12" BorderBrush="#334155" BorderThickness="1" Padding="12">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>

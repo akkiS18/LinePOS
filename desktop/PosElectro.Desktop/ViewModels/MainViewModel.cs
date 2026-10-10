@@ -21,14 +21,17 @@ namespace PosElectro.Desktop.ViewModels
 
         public CashierViewModel CashierVM { get; }
         public InventoryViewModel InventoryVM { get; }
+        public DebtsViewModel DebtsVM { get; }
         public ReportsViewModel ReportsVM { get; }
         public SyncViewModel SyncVM { get; }
 
         public ICommand NavigateCashierCommand { get; }
         public ICommand NavigateInventoryCommand { get; }
+        public ICommand NavigateDebtsCommand { get; }
         public ICommand NavigateReportsCommand { get; }
         public ICommand NavigateSyncCommand { get; }
         public ICommand BackupDatabaseCommand { get; }
+        public ICommand RestoreDatabaseCommand { get; }
 
         // Jonli Wi-Fi sinxron holati
         private int _liveClientsCount;
@@ -118,6 +121,15 @@ namespace PosElectro.Desktop.ViewModels
             };
 
             ReportsVM = new ReportsViewModel(Database, CurrencyService);
+            DebtsVM = new DebtsViewModel(Database);
+            DebtsVM.RequestOpenCashierForCustomer += customer =>
+            {
+                App.Current?.Dispatcher.Invoke(() =>
+                {
+                    CashierVM.SetDebtCustomer(customer);
+                    CurrentView = CashierVM;
+                });
+            };
             SyncVM = new SyncViewModel(SyncServer, Database);
 
             SyncServer.LiveClientsCountChanged += count =>
@@ -145,6 +157,12 @@ namespace PosElectro.Desktop.ViewModels
                 InventoryVM.Refresh();
                 CurrentView = InventoryVM;
             });
+            NavigateDebtsCommand = new RelayCommand(() =>
+            {
+                DebtsVM.RefreshSummary();
+                DebtsVM.RefreshCustomers();
+                CurrentView = DebtsVM;
+            });
             NavigateReportsCommand = new RelayCommand(() =>
             {
                 ReportsVM.LoadData();
@@ -152,6 +170,7 @@ namespace PosElectro.Desktop.ViewModels
             });
             NavigateSyncCommand = new RelayCommand(() => CurrentView = SyncVM);
             BackupDatabaseCommand = new RelayCommand(PerformDatabaseBackup);
+            RestoreDatabaseCommand = new RelayCommand(PerformDatabaseRestore);
 
             OpenPinModalCommand = new RelayCommand(() =>
             {
@@ -298,6 +317,8 @@ namespace PosElectro.Desktop.ViewModels
                     CashierVM.RefreshProducts();
                     InventoryVM.Refresh();
                     ReportsVM.LoadData();
+                    DebtsVM.RefreshSummary();
+                    DebtsVM.RefreshCustomers();
                 });
             };
 
@@ -319,6 +340,8 @@ namespace PosElectro.Desktop.ViewModels
                     CashierVM.RefreshProducts();
                     InventoryVM.Refresh();
                     ReportsVM.LoadData();
+                    DebtsVM.RefreshSummary();
+                    DebtsVM.RefreshCustomers();
                 });
             };
         }
@@ -366,6 +389,52 @@ namespace PosElectro.Desktop.ViewModels
             }
         }
 
+        public void PerformDatabaseRestore()
+        {
+            try
+            {
+                var ofd = new Microsoft.Win32.OpenFileDialog
+                {
+                    Title = "SMART Kassa ma'lumotlar bazasini tiklash (Zaxira fayldan)",
+                    Filter = "SQLite Baza fayli (*.db)|*.db|Barcha fayllar (*.*)|*.*"
+                };
+
+                if (ofd.ShowDialog() == true)
+                {
+                    var confirm = MessageBox.Show(
+                        "DIQQAT: Zaxira fayldan tiklash amaldagi ma'lumotlarni o'sha zaxira holatiga qaytaradi.\n\n" +
+                        "Tiklashdan oldin hozirgi bazangizning xavfsiz avtomatik nusxasi olinadi.\n\n" +
+                        "Tiklashni davom ettirasizmi?",
+                        "Bazani tiklashni tasdiqlash",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Warning);
+
+                    if (confirm != MessageBoxResult.Yes) return;
+
+                    Database.RestoreDatabase(ofd.FileName);
+
+                    // Re-initialize view models
+                    CashierVM.RefreshProducts();
+                    CashierVM.RefreshCategories();
+                    CashierVM.RefreshActiveCustomers();
+                    InventoryVM.Refresh();
+                    DebtsVM.RefreshAll();
+                    ReportsVM.LoadData();
+
+                    MessageBox.Show(
+                        "✅ Ma'lumotlar bazasi zaxiradan muvaffaqiyatli tiklandi!\n\n" +
+                        "Barcha tovarlar, qarzlar va hisobotlar yangilandi.",
+                        "Muvaffaqiyatli tiklandi",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Bazani tiklashda xatolik yuz berdi:\n{ex.Message}", "Xatolik", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
         public ViewModelBase CurrentView
         {
             get => _currentView;
@@ -375,6 +444,7 @@ namespace PosElectro.Desktop.ViewModels
                 {
                     OnPropertyChanged(nameof(IsCashierSelected));
                     OnPropertyChanged(nameof(IsInventorySelected));
+                    OnPropertyChanged(nameof(IsDebtsSelected));
                     OnPropertyChanged(nameof(IsReportsSelected));
                     OnPropertyChanged(nameof(IsSyncSelected));
                 }
@@ -383,6 +453,7 @@ namespace PosElectro.Desktop.ViewModels
 
         public bool IsCashierSelected => CurrentView == CashierVM;
         public bool IsInventorySelected => CurrentView == InventoryVM;
+        public bool IsDebtsSelected => CurrentView == DebtsVM;
         public bool IsReportsSelected => CurrentView == ReportsVM;
         public bool IsSyncSelected => CurrentView == SyncVM;
 

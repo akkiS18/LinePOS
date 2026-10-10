@@ -284,6 +284,34 @@ namespace PosElectro.Desktop.ViewModels
         public bool IsProfitNegative => TotalProfit < 0;
         public string TotalSalesCountText => $"{TotalSalesCount} ta chek";
         public string TotalItemsCountText => $"{TotalItemsCount:0.##} ta/m";
+        private PosElectro.Desktop.Debt.DebtPeriodSummary? _debtSummary;
+        public PosElectro.Desktop.Debt.DebtPeriodSummary? DebtSummary => _debtSummary;
+
+        public double NewDebtIssuedUz => _debtSummary?.NewDebtIssuedUz ?? 0;
+        public string NewDebtIssuedText => $"{NewDebtIssuedUz:N0} so'm";
+
+        public double DebtCollectedTotalUz => _debtSummary?.NetDebtCollectedTotalUz ?? 0;
+        public string DebtCollectedTotalText => $"{DebtCollectedTotalUz:N0} so'm";
+
+        public double DebtCollectedCashUz => _debtSummary?.NetDebtCashCollectedUz ?? 0;
+        public string DebtCollectedCashText => $"{DebtCollectedCashUz:N0} so'm";
+
+        public double DebtCollectedCardUz => _debtSummary?.NetDebtCardCollectedUz ?? 0;
+        public string DebtCollectedCardText => $"{DebtCollectedCardUz:N0} so'm";
+
+        public double DebtCollectedFeeUz => _debtSummary?.NetDebtFeeUz ?? 0;
+        public string DebtCollectedFeeText => $"{DebtCollectedFeeUz:N0} so'm";
+
+        public double ClosingDebtUz => _debtSummary?.ClosingDebtUz ?? 0;
+        public string ClosingDebtText => $"{ClosingDebtUz:N0} so'm";
+
+        public double ClosingCreditUz => _debtSummary?.ClosingCreditUz ?? 0;
+        public string ClosingCreditText => $"{ClosingCreditUz:N0} so'm";
+
+        public double CashflowCashUz => TotalCashRevenue + DebtCollectedCashUz - (_debtSummary?.CreditRefundCashUz ?? 0);
+        public double CashflowCardUz => TotalCardRevenue + DebtCollectedCardUz - (_debtSummary?.CreditRefundCardUz ?? 0);
+        public double TotalCashflowUz => CashflowCashUz + CashflowCardUz;
+        public string TotalCashflowText => $"{TotalCashflowUz:N0} so'm";
 
         public void SetToday()
         {
@@ -420,6 +448,7 @@ namespace PosElectro.Desktop.ViewModels
             var ids = _reportLines.Select(i => i.SaleId).ToHashSet();
             foreach (var sale in rawSales.Where(s => ids.Contains(s.Id))) Sales.Add(sale);
 
+            _debtSummary = _db.GetDebtPeriodSummary(_startDate, _endDate);
             RecalculateSummary();
         }
 
@@ -443,6 +472,26 @@ namespace PosElectro.Desktop.ViewModels
             OnPropertyChanged(nameof(TotalSalesCountText));
             OnPropertyChanged(nameof(TotalItemsCountText));
             OnPropertyChanged(nameof(UsdRateText));
+
+            OnPropertyChanged(nameof(DebtSummary));
+            OnPropertyChanged(nameof(NewDebtIssuedUz));
+            OnPropertyChanged(nameof(NewDebtIssuedText));
+            OnPropertyChanged(nameof(DebtCollectedTotalUz));
+            OnPropertyChanged(nameof(DebtCollectedTotalText));
+            OnPropertyChanged(nameof(DebtCollectedCashUz));
+            OnPropertyChanged(nameof(DebtCollectedCashText));
+            OnPropertyChanged(nameof(DebtCollectedCardUz));
+            OnPropertyChanged(nameof(DebtCollectedCardText));
+            OnPropertyChanged(nameof(DebtCollectedFeeUz));
+            OnPropertyChanged(nameof(DebtCollectedFeeText));
+            OnPropertyChanged(nameof(ClosingDebtUz));
+            OnPropertyChanged(nameof(ClosingDebtText));
+            OnPropertyChanged(nameof(ClosingCreditUz));
+            OnPropertyChanged(nameof(ClosingCreditText));
+            OnPropertyChanged(nameof(CashflowCashUz));
+            OnPropertyChanged(nameof(CashflowCardUz));
+            OnPropertyChanged(nameof(TotalCashflowUz));
+            OnPropertyChanged(nameof(TotalCashflowText));
         }
 
         public void ExecuteExport()
@@ -469,7 +518,8 @@ namespace PosElectro.Desktop.ViewModels
 
             periodTitle += $" | Brak: {detailedItems.Where(i => i.IsBrak).Select(i => i.SaleId).Distinct().Count()} ta, {detailedItems.Where(i => i.IsBrak).Sum(i => i.TotalCost):N2} so‘m";
             periodTitle += detailedItems.All(i => i.ProfitUsd.HasValue) && detailedItems.Sum(i => i.ProfitUsd ?? 0) > 0 ? $" | USD foyda: ${detailedItems.Sum(i => i.ProfitUsd ?? 0):N2}" : string.Empty;
-            bool exported = ExcelExportService.ExportReport(periodTitle, rev, cost, prof, salesCount, detailedItems, catFilter ?? "Barchasi", whTitle);
+            var debtSum = _db.GetDebtPeriodSummary(_startDate, _endDate);
+            bool exported = ExcelExportService.ExportReport(periodTitle, rev, cost, prof, salesCount, detailedItems, catFilter ?? "Barchasi", whTitle, debtSum);
             if (exported)
             {
                 StatusMessage = "✅ Excel hisoboti muvaffaqiyatli saqlandi";

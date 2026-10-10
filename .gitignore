@@ -98,3 +98,4 @@ scratch/
 # Python sync test caches
 __pycache__/
 *.pyc
+TEST_BUILD/

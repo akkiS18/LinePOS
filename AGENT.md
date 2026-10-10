@@ -168,3 +168,72 @@ C#/Kotlin `DebtSyncStore`: frozen component export, full-body replay va atomic D
 ## Qarz daftari — 2026-10-08, 3A-2b-2a
 
 `DebtEnvelopeInbox.cs/kt`: durable validated v1 inbox, customer/payment + full receipt + pending removal bir writer tranzaksiyada. 128 packet/32MiB pending cap, exact replay va original relay; sale_open faqat WaitingForSaleAdapter, yangi public callback orqali bypass yo‘q. 2b-2b concrete sale/items/stock adapter va local freeze/preflight hali qolgan. Unknown version quarantine ham transport bosqichida; waiting hech qachon moliyaviy ACK emas. UI/main/release/Firebase/CBU yo‘q. Kontrakt `docs/DEBT_INBOX.md`, CI va keyingi scope `docs/DEBT_CHECKPOINT_UZ.md`da.
+
+
+## Qarz daftari — 2026-10-09, desktop sale receiver
+
+`DebtSaleReceiver.cs` existing inbox writer tranzaksiyasida frozen sale/items/stock/customer/account/event/full receiptni atomik saqlaydi. Optional trusted actor/user resolver desktop openingni yoqadi; default va Android gate hali saqlangan. Desktop users jadvali yo‘q, host attribution mapping beradi; Android port haqiqiy usersni ham tekshirishi kerak. Exact REAL preflight, original movement GUIDli HELD journal, full historical replay validation bor. Source freeze/local preflight va transport/main/UI/release hali yo‘q. Detallar `docs/DEBT_SALE_RECEIVER.md`, CI dalili/keyingi scope `docs/DEBT_CHECKPOINT_UZ.md`da. Firebase/CBU o‘zgarmadi.
+
+
+## Qarz daftari — 2026-10-09, Android sale receiver
+
+`DebtSaleReceiver.kt` desktop frozen sale/stock receiverini Room writer transactioniga ko‘chiradi. Mapped user haqiqiy local users jadvalida bo‘lishi shart; missing dependency qisman yozilmaydi. API26ga mos SELECT + INSERT/UPDATE, original movement GUIDli HELD markerlar va exact body/replay tekshiruvi saqlanadi. Native Room/report, 10 write-boundary rollback va >2MiB/1000-item applied receipt restart testlari qo‘shildi. CI dalili/keyingi source local freeze bosqichi `docs/DEBT_CHECKPOINT_UZ.md`da. Default gate saqlangan; UI/transport/main/release/Firebase/CBUga tegilmadi.
+
+
+## Qarz daftari — 2026-10-09, local source envelope freeze va preflight (Qism 1)
+
+C# va Kotlin `DebtRepository`da jo‘natuvchi qurilmada local source envelope freeze va qat’iy preflight yakunlandi (3A-2b-2b / Qism 1). Yangi `OpenSale(DebtOpenSaleCommand)` API arbitary callback o‘rniga to‘liq muzlatilgan snapshot qabul qiladi; stock deltalari, movement GUIDlar, UZS/USD kurs, karta komissiyasi va REAL/decimal chegaraviy qiymatlari (±1e18, aniq tiyin, max 1000 items, max 6MiB) local commitdan oldin tekshiriladi. Local commit paytida bitta atomik tranzaksiyada savdo, tovar qoldiqlari, HELD stock va sale markerlari, qarz event/accounti, durable command receipt va sync_meta ichida `"debt_wire_v1:event:<guid>"` hamda `"debt_envelope_v1:<guid>"` muhrlanadi. `DebtEnvelopeInbox.ExportApplied(requestGuid)` orqali eksport qilinib, peer qurilmaga yetib borganida to‘liq qabul qilinadi; manbaga qaytgan echo esa hech qanday pul yoki ombor ta’sirini takrorlamasdan `AlreadyApplied` qaytaradi. Barcha 9 ta C# test to‘plami va Android Room instrumentatsiya testlari yozildi va o‘tdi. UI/LAN transport hali ulanmagan; main merge/release yo‘q.
+
+## Qarz daftari — 2026-10-09, LAN transport, capability, push/pull va ACK (Qism 2)
+
+Desktop va Android o‘rtasida qarz protokoli bo‘yicha to‘liq LAN transporti joriy qilindi (3A-2c / Qism 2). Desktop `LocalSyncServer` pairing/ping’da `"debtLedgerV1"` capability va `storeGuid` e’lon qiladi; `POST /api/v2/debt/push` va `GET /api/v2/debt/pull` qo‘shildi; active debt mavjudligida `download_db` rad etiladi (400). Legacy sync yo‘llarida `payment_type <> 3` qat’iy filtrlanib, nasiya savdolari eski peerlarga oqib ketishi to‘xtatildi. Android `LocalSyncManager` da pairing tekshiruvi, per-group debt push (faqat `Applied`/`AlreadyApplied` bo‘lganda `acked=1` va `markSalesSynced`), atomik Room transactionida debt pull va `debt_cursor` siljishi, yetishmagan bog‘liqliklar uchun `drainPending` va legacy `sync_conflicts` mavjud bo‘lganda ham qarz sinxroni uzluksiz ishlashi ta’minlandi. 20 ta yangi C# LAN testi (`WifiSync.CoreTests`), 9 ta C# Core testi, 23 ta Python testi va Android instrumentatsiya testi (`DebtLanSyncTest.kt`) muvaffaqiyatli o‘tdi. UI tugmalari hali ulanmagan; main merge/release yo‘q.
+
+## Qarz daftari — 2026-10-09, bir nechta qurilma, tiklash epochlari va kontaktlar (Qism 3)
+
+Desktop va Android o‘rtasida multi-device konvergentsiya, zaxira tiklash epochlari va kontakt boshqaruvi to‘liq amalga oshirildi (3B-1/3B-2 / Qism 3).
+1. Kontakt boshqaruvi: `DebtCustomerRecord`, `DebtCustomerUpdate`, `ReadCustomer`, `UpdateCustomer` (versiya nazorati / optimistic concurrency: `revision == currentRev`), va `ArchiveCustomer` (`archived = 1/0`, revision oshishi) joriy etildi. Arxivlangan mijozga yangi nasiya ochish va kassa to‘lovi qabul qilish bloklanadi; mavjud hisoblar esa faol qoladi va tarmoq orqali kelgan oflayn to‘lovlar qabul qilinib balansni kamaytiradi. Tarixiy cheklardagi `customer_name_at_sale` o‘zgarmas saqlanadi.
+2. Tiklash epochi va cursor rollback: Desktop `LocalSyncServer`da `_debtHistoryEpoch` saqlanib, `/api/ping`, `/api/v2/pair`, va `/api/v2/debt/pull` da uzatiladi. Server orqaga tiklanganda `cursorRollback: true` qaytariladi. Android `LocalSyncManager` esa epoch nomuvofiqligi yoki rollbackni sezib, lokal cursorni 0 ga qaytaradi va barcha acked qarz guruhlarini qayta pending holatiga o‘tkazib qayta push qiladi; bunda lokal pendinglar yo‘qolmaydi, pul va ombor dublikat bo‘lmaydi.
+3. Klon zaxira izolatsiyasi: Alohida `device_guid` va har bir repository ochilishida yangi writer UUID epoch orqali zaxira nusxalaridan tiklangan qurilmalar sequence to‘qnashuviga uchramaydi.
+4. Testlar: C# `DebtMultiDeviceTests.cs` (3 qurilma konvergentsiyasi, oflayn ortiqcha to‘lov va kredit shakllanishi, klon writer izolatsiyasi, server restore rollback va reconcilation, mijoz GUID va arxivlash semantikasi) va Android Room `DebtMultiDeviceConvergenceTest.kt` yozildi. C# Business.CoreTests 10/10 PASS, WifiSync.CoreTests 20/20 PASS, Python 23/23 PASS, Desktop va Android buildlar 100% muvaffaqiyatli. UI kodi hali ulanmagan; main merge/release yo‘q. Keyingi bosqich: Qism 4 (Desktop frontend va kassa integratsiyasi).
+
+## Qarz daftari — 2026-10-10, Desktop frontend va kassa integratsiyasi (Qism 4)
+
+Desktop ilovasida to'liq Qarz daftari (Customer Debt) moduli va kassa integratsiyasi yakunlandi:
+1. `DebtService.cs`: `DebtRepository` ustida xavfsiz servis qatlami; metadata (`sync_meta`, `sync_control`) va qarz jadvallarini avtomatik ta'minlaydi; summary, 5 ta filtrli mijozlar ro'yxati, hisoblar va voqealar tarixi, overpayment bloklanishi bilan to'lov taqsimoti preview'si, idempotent replay, kassa snapshot va ochish.
+2. `CashierViewModel.cs` & `CashierView.xaml`: 4-to'lov turi "📒 Nasiya" (`SelectedPaymentType == 3`); mijoz tanlash va tezkor qo'shish modali, oldingi qarz, avans to'lovlari (naqd/karta), qoladigan qarz nishoni, to'lash muddati; hold savatlarda nasiya mijozi va muddatini saqlash/tiklash; atomik `OpenDebtSale` va printer xatolaridan ajratilgan (decoupled) xavfsiz yakunlash.
+3. `DebtsViewModel.cs` & `DebtsView.xaml`: Zamonaviy Dark Theme Apple/Fluent UI master-detail interfeysi; 4 ta KPI kartasi, qidiruv paneli, 5 ta filtr chiplari, mijoz qo'shish/tahrirlash/arxivlash, to'lov qabul qilish modali va kassaga o'tish handoff'i.
+4. `MainWindow.xaml` & `MainViewModel.cs`: Asosiy navigatsiya paneliga "📒 Qarzlar" bo'limi qo'shildi va `DebtsView` ulandi.
+5. Testlar: `DebtDesktopIntegrationTests.cs` (service summary, customer revision concurrency, debt sale snapshot, manfiy stock, cashier hold/open, payment preview, overpayment prevention, debt settlement, archiving) muvaffaqiyatli o'tdi. `Business.CoreTests` 11/11 PASS, `WifiSync.CoreTests` 20/20 PASS, `test_sync_schema.py` 7/7 PASS, Desktop ilovasi 0 xato va 0 ogohlantirish bilan kompilyatsiya qilindi. Keyingi bosqich: Qism 5 (Mobil frontend va offline kassa integratsiyasi).
+
+## Qarz daftari — 2026-10-10, Mobil frontend va offline kassa integratsiyasi (Qism 5)
+
+Android mobil ilovasida to'liq Qarz daftari (Customer Debt) moduli va oflayn kassa integratsiyasi yakunlandi:
+1. `DebtService.kt`: Android Room/SQLite ustida xavfsiz servis qatlami; do'kon identifikatori (`debt_scope`), mobil actor GUID va default canonical warehouse GUID mapping; KPI summary (`getSummary`), 5 ta filtrli mijozlar ro'yxati, mijoz balansi, hisoblar (accounts) va voqealar (events) tarixi, ortiqcha to'lovni bloklovchi live allocation preview (`previewPayment`), baytma-bayt idempotent replay bilan to'lov yozish (`recordPayment`), to'liq snapshot tuzish (`buildSaleSnapshot`) va atomik nasiya ochish (`openDebtSale`), mijozlar CRUD va arxivlash.
+2. `CashierViewModel.kt` & `CashierScreen.kt`: Nasiya mijozi tanlash (`selectedDebtCustomer`), tezkor yangi mijoz ochish modali (`QuickAddCustomerDialog`), naqd/karta avanslari, to'lov muddati; `completeDebtSale` orqali atomik oflayn nasiya savdosini yopish (`checkoutGate` bilan himoyalangan); savatda faol nasiya mijozi banneri; `HeldCart` da nasiya mijozi va avanslarni muzlatish va tiklash; `HoldCartsDialog` da "📒 {Mijoz ismi} (Nasiya)" nishoni.
+3. `CheckoutPaymentDialog.kt`: 2x2 zamonaviy to'lov paneli (Naqd, Karta, Aralash, Nasiya); Nasiya tanlanganda qidiruvli mijoz tanlash dialogi (`CustomerPickerDialog`), joriy qarz va muddati o'tganlik ko'rsatkichi, naqd/karta avans maydonlari, jonli qolgan nasiya hisob-kitobi va to'lov muddati kiritish.
+4. `DebtsViewModel.kt` & `DebtsScreen.kt`: Apple Material 3 uslubidagi to'liq Qarz daftari ekrani; 4 ta KPI kartasi (Jami nasiya, Muddati o'tgan, Jami to'langan, Haqdorlik), 5 ta tezkor filtr chipi, mijozlar qidiruvi, mijoz kartasida cheklar va to'lovlar tarixi (Accounts & Events tablari), jonli taqsimot ko'rsatuvchi "To'lov olish" dialogi, mijoz qo'shish/tahrirlash/arxivlash hamda tanlangan mijoz bilan kassaga o'tish ("Kassada ochish") handoff'i.
+5. `MainScreen.kt`: Apple uslubidagi pastki dock 4 tadan 5 ta tabga kengaytirildi (Kassa / Ombor / Qarzlar / Hisobotlar / Sozlamalar); TopAppBar sarlavhasi va BackHandler 5 ta tabga moslashtirildi.
+6. Testlar: `DebtMobileIntegrationTest.kt` yozildi (mijoz lifecycle, oflayn nasiya savdosi, manfiy stock ruxsati saqlanishi, avans to'lovlari, held cart saqlanishi/tiklanishi, to'lov preview va idempotency replay). `compileDebugKotlin` va `compileDebugAndroidTestKotlin` 0 xato bilan o'tdi (BUILD SUCCESSFUL). Desktop `Business.CoreTests` 11/11 PASS, `WifiSync.CoreTests` 20/20 PASS, `test_sync_schema.py` 7/7 PASS.
+
+## Qarz daftari — 2026-10-10, Return, reversal, refund va kredit transferi (Qism 6)
+
+1. Desktop va Android `DebtRepository` hamda `DebtService`: `ReversePayment`, `RefundCredit`, `TransferCredit` metodlari tranzaksiyaviy delta va single-reversal cheklovlari bilan qo'shildi.
+2. `ReturnStore.cs` va `ReturnReversal.cs`: Nasiya savdosi tovari qaytarilganda `DebtAccounting.DebtReturnSplit` hisoblanib, avval qarz kamaytiriladi (`return_offset`), ortiqcha to'langan qismigina refund qilinadi; quote-to-commit race protection va qaytarishni bekor qilishda asl offset deltasini teskari qilish (`+offset`) joriy etildi.
+3. LAN authority va UI: `LocalSyncServer` HTTP endpointlari (`/api/v2/debt/reverse_payment`, `/api/v2/debt/refund_credit`, `/api/v2/debt/transfer_credit`), `LocalSyncManager` orqali mobil bilan bog'landi. Desktop `DebtsViewModel`da "💸 Pulni qaytarish", "🔁 Qarzga o'tkazish" va har bir to'lov yonida "Bekor qilish" tugmalari, Androidda `ReturnDialog`da qarz offseti va naqd/karta qaytarish summalari ajratildi.
+4. Testlar: C# `DebtReturnAndReversalTests.cs` (D13-D16) yozildi va o'tdi. `Business.CoreTests` 12/12 PASS, `WifiSync.CoreTests` 20/20 PASS, Python 23/23 PASS.
+
+## Qarz daftari — 2026-10-10, Hisobotlar, foyda, Excel va chek/ko'chirma (Qism 7)
+
+1. Buxgalteriya va P&L intizomi (`SaleAccounting.cs` va `SaleAccounting.kt`): Savdo sanasida to'liq revenue/cost/profit bir marta hisoblanadi; keyingi qarz to'lovi (`TakePayment`) savdo daromadi qilib qayta qo'shilmaydi (faqat cashflow va undirilgan kungi bank komissiyasi); nasiya tovar qaytarilganda revenue kamayadi, cashflow o'zgarmaydi.
+2. Davriy tahliliy proyeksiyalar (`DebtReportProjection.cs` va `DebtReportProjection.kt`): `[start, end)` chegarasi, `opening + periodChanges = closing` formulasi, ClosingDebt va ClosingCredit alohida.
+3. UI va eksportlar: Desktop `ReportsViewModel` va Android `ReportsViewModel`ga "Qarz va Cashflow" kartalari, `ExcelExportService` va `ExcelExporter`ga "QARZ VA CASHFLOW" analitik bloki va "Nasiya (so'm)" ustuni qo'shildi. `PrinterService.cs` (80mm/58mm chek ko'chirmasi) va `DebtReceiptFormatter.kt` (matn ko'chirmasini Telegram/SMS orqali ulashish) yaratildi.
+4. Testlar: C# `DebtReportTests.cs` (D17-D20, D26) yozildi va o'tdi. `Business.CoreTests` 13/13 PASS.
+
+## Qarz daftari — 2026-10-10, Backup/restore, D01–D27 qabul va yakuniy regressiya (Qism 8)
+
+1. Desktop `DatabaseContext.RestoreDatabase`: Readonly integrity va FK tekshiruvi, tiklash oldidan avtomatik `before_restore` xavfsizlik zaxirasi, SQLite pool tozalash, staged atomic replace, yangi writer/history epochlar va UI avtomatik refresh. `MainWindow.xaml` va `MainViewModel.cs`da "📥 Bazani tiklash" tugmasi.
+2. Android `DebtMigrationTest.kt`: Faqat to'lov bo'lgan kun, uzilgan lokal amallar va kutilayotgan inbox paketlari bilan snapshot tiklanishi Room darajasida tekshirildi.
+3. Testlar: C# `DebtBackupRestoreTests.cs` (D21-D23) yozildi va o'tdi. Barcha D01-D27 qabul mezonlari va fizik sinov qo'llanmasi `docs/DEBT_CHECKPOINT_UZ.md`ga kiritildi.
+4. Regressiya: `Business.CoreTests` 14/14 PASS, `WifiSync.CoreTests` 20/20 PASS, Python 23/23 PASS, Desktop Release va Android buildlar 0 xato.
+
+

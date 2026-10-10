@@ -2,6 +2,7 @@ using PosElectro.Desktop.Models;
 using Microsoft.Data.Sqlite;
 using Newtonsoft.Json.Linq;
 using PosElectro.Desktop.Sync;
+using PosElectro.Desktop.Debt;
 using System.Text;
 
 AccountingTests.Run();
@@ -114,6 +115,185 @@ try {
             for(var attempt=0;attempt<2;attempt++) Assert(http.PostAsync("/api/v2/returns/reverse",new StringContent(reverseBody.ToString(),Encoding.UTF8,"application/json")).Result.IsSuccessStatusCode,"LAN reversal rejected");
             Assert(Quantity(store)==beforeReturn,"Reversal retry changed stock twice");
             Assert(!store.Pull((long)store.Pull(0)["cursor"]!)["returns"]!.Any(),"Unchanged return history retransmitted");
+
+            // Debt capabilities and store GUID in pairing and ping
+            Assert(credentials["capabilities"] is JArray caps && caps.Values<string>().Contains("debtLedgerV1"), "Debt capability missing in pairing");
+            string debtStoreGuid = (string)credentials["storeGuid"]!;
+            Assert(!string.IsNullOrWhiteSpace(debtStoreGuid), "Store GUID missing in pairing");
+            var pingResp = http.GetAsync("/api/ping").Result; Assert(pingResp.IsSuccessStatusCode, "Ping failed");
+            var pingObj = JObject.Parse(pingResp.Content.ReadAsStringAsync().Result);
+            Assert(pingObj["capabilities"] is JArray pingCaps && pingCaps.Values<string>().Contains("debtLedgerV1"), "Debt capability missing in ping");
+            Assert((string)pingObj["storeGuid"]! == debtStoreGuid, "Store GUID mismatch in ping");
+
+            // Legacy push rejects PaymentType == 3
+            var debtSaleOp = Op("sale", Guid.NewGuid().ToString(), new JObject { ["Guid"] = Guid.NewGuid().ToString(), ["PaymentType"] = 3, ["TotalAmount"] = 100, ["Items"] = new JArray() });
+            Assert((int)http.PostAsync("/api/v2/push", new StringContent(new JObject { ["operations"] = new JArray(debtSaleOp) }.ToString(), Encoding.UTF8, "application/json")).Result.StatusCode == 400, "Debt sale accepted on legacy push");
+
+            // Legacy pull excludes payment_type == 3
+            Sql("INSERT INTO sales(guid, total_amount, payment_type, is_synced) VALUES('debt-legacy-leak', 500, 3, 0)");
+            var pullResp = http.GetAsync("/api/v2/pull?cursor=0").Result;
+            var pullData = JObject.Parse(pullResp.Content.ReadAsStringAsync().Result);
+            Assert(!pullData["sales"]!.Any(s => (string?)s["Guid"] == "debt-legacy-leak"), "Debt sale leaked into legacy pull");
+
+            // Unauthenticated debt push returns 401
+            using var unauthHttp = new HttpClient(new HttpClientHandler { UseProxy = false }) { BaseAddress = new Uri("http://127.0.0.1:8080") };
+            Assert((int)unauthHttp.PostAsync("/api/v2/debt/push", new StringContent("{\"envelopes\":[]}", Encoding.UTF8, "application/json")).Result.StatusCode == 401, "Unauthenticated debt push allowed");
+
+            // Wrong server ID returns 400
+            http.DefaultRequestHeaders.Remove("X-LinePOS-Server-Id");
+            http.DefaultRequestHeaders.Add("X-LinePOS-Server-Id", "wrong-server");
+            Assert((int)http.PostAsync("/api/v2/debt/push", new StringContent("{\"envelopes\":[]}", Encoding.UTF8, "application/json")).Result.StatusCode == 400, "Wrong server ID accepted on debt push");
+            http.DefaultRequestHeaders.Remove("X-LinePOS-Server-Id");
+            http.DefaultRequestHeaders.Add("X-LinePOS-Server-Id", (string)credentials["serverId"]!);
+
+            // LAN customer debt push
+            string G(int n) => $"00000000-0000-0000-0000-{n:D12}";
+            var custGuid = G(101);
+            var custPayload = DebtRepository.Canonical("customer", debtStoreGuid, G(102), custGuid, "Mijoz Bir", "+998901234567", "izoh", "1000");
+            var custHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(custPayload))).ToLowerInvariant();
+            var custWire = DebtWire.EncodeCustomer(new DebtWireCustomer(custGuid, debtStoreGuid, G(103), custPayload, custHash), debtStoreGuid);
+            var custEnvelope = DebtEnvelope.Encode(new DebtEnvelopePacket(custGuid, debtStoreGuid, custWire, "", ""), debtStoreGuid);
+
+            var pushCustResp = http.PostAsync("/api/v2/debt/push", new StringContent(new JObject { ["envelopes"] = new JArray(custEnvelope) }.ToString(), Encoding.UTF8, "application/json")).Result;
+            Assert(pushCustResp.IsSuccessStatusCode, "Customer debt push failed");
+            var pushCustRes = JObject.Parse(pushCustResp.Content.ReadAsStringAsync().Result);
+            Assert((string)pushCustRes["results"]![0]!["status"]! == "Applied", "Customer envelope status not Applied");
+
+            // Retry customer push returns AlreadyApplied
+            var retryCustResp = http.PostAsync("/api/v2/debt/push", new StringContent(new JObject { ["envelopes"] = new JArray(custEnvelope) }.ToString(), Encoding.UTF8, "application/json")).Result;
+            var retryCustRes = JObject.Parse(retryCustResp.Content.ReadAsStringAsync().Result);
+            Assert((string)retryCustRes["results"]![0]!["status"]! == "AlreadyApplied", "Customer retry not AlreadyApplied");
+
+            // Tampered body for same GUID is rejected
+            var tamperedCustPayload = DebtRepository.Canonical("customer", debtStoreGuid, G(102), custGuid, "Boshqa Ism", "+998901234567", "izoh", "1000");
+            var tamperedCustHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(tamperedCustPayload))).ToLowerInvariant();
+            var tamperedCustWire = DebtWire.EncodeCustomer(new DebtWireCustomer(custGuid, debtStoreGuid, G(103), tamperedCustPayload, tamperedCustHash), debtStoreGuid);
+            var tamperedEnvelope = DebtEnvelope.Encode(new DebtEnvelopePacket(custGuid, debtStoreGuid, tamperedCustWire, "", ""), debtStoreGuid);
+            Assert((int)http.PostAsync("/api/v2/debt/push", new StringContent(new JObject { ["envelopes"] = new JArray(tamperedEnvelope) }.ToString(), Encoding.UTF8, "application/json")).Result.StatusCode == 400, "Tampered envelope accepted");
+
+            // Active debt database download is refused
+            Assert((int)http.GetAsync("/api/sync/download_db").Result.StatusCode == 400, "download_db did not refuse database with active debt");
+
+            // Debt pull returns customer envelope with cursor
+            var debtPullResp = http.GetAsync("/api/v2/debt/pull?cursor=0").Result;
+            Assert(debtPullResp.IsSuccessStatusCode, "Debt pull failed");
+            var debtPullData = JObject.Parse(debtPullResp.Content.ReadAsStringAsync().Result);
+            Assert(debtPullData["envelopes"]!.Count() >= 1, "Debt pull missing envelopes");
+            long debtCursor = (long)debtPullData["cursor"]!;
+            var debtPullEmpty = http.GetAsync($"/api/v2/debt/pull?cursor={debtCursor}").Result;
+            var emptyData = JObject.Parse(debtPullEmpty.Content.ReadAsStringAsync().Result);
+            Assert(emptyData["envelopes"]!.Count() == 0, "Repeated debt pull returned old envelopes");
+
+            // Sale open envelope push & stock deduction & idempotency
+            var debtProdGuid = G(501);
+            var debtWhGuid = G(502);
+            Sql($"INSERT INTO products(guid, barcode, name, category, cost_price, cost_currency, selling_price, stock_quantity, unit_type, min_stock_alert, is_deleted, note, updated_at) VALUES('{debtProdGuid}', NULL, 'Кабель', 'Barchasi', 50, 'UZS', 100, 10, 0, 3, 0, '', 1)");
+            Sql($"INSERT INTO warehouses(guid, name, is_primary, is_deleted, updated_at) VALUES('{debtWhGuid}', 'Asosiy', 1, 0, 1)");
+            Sql($"INSERT INTO product_stocks(product_guid, warehouse_guid, quantity, updated_at) VALUES('{debtProdGuid}', '{debtWhGuid}', 10, 1)");
+
+            var saleGuid = G(201);
+            var reqGuid = G(202);
+            var itemGuid = G(203);
+            var stockOpGuid = G(204);
+            var saleItems = new List<DebtSaleItem>
+            {
+                new DebtSaleItem(itemGuid, debtProdGuid, "Кабель", "Barchasi", "dona", debtWhGuid, "Asosiy", "2", "100", "50", "UZS", stockOpGuid, "-2")
+            };
+            var saleSnapshot = new DebtSaleSnapshot(saleGuid, 2000, 20000, 10000, 5000, 5000, 0, "0", "12850", "DEBT", saleItems.AsReadOnly());
+            var saleWire = DebtEnvelope.EncodeSale(saleSnapshot);
+            var saleFingerprint = DebtWire.Fingerprint(saleWire);
+            var salePayload = DebtRepository.Canonical("sale_open", debtStoreGuid, G(102), reqGuid, custGuid, saleGuid, saleFingerprint, "20000", "5000", "5000", "2000", "");
+            var saleHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(salePayload))).ToLowerInvariant();
+            var accountGuid = saleGuid;
+            var accountWire = new DebtWireAccount(accountGuid, saleGuid, reqGuid, 10000, null, "Mijoz Bir");
+            var evObj = new DebtWireEvent(reqGuid, reqGuid, "sale_open", custGuid, debtStoreGuid, G(102), G(103), 1, 2000, salePayload, saleHash, 0, 0, 0, null, accountWire, Array.Empty<DebtLine>());
+            var eventWire = DebtWire.EncodeEvent(evObj, debtStoreGuid);
+            var saleEnvelope = DebtEnvelope.Encode(new DebtEnvelopePacket(reqGuid, debtStoreGuid, "", eventWire, saleWire), debtStoreGuid);
+
+            double stockBeforeDebtSale = Quantity(store, debtWhGuid);
+            var pushSaleResp = http.PostAsync("/api/v2/debt/push", new StringContent(new JObject { ["envelopes"] = new JArray(saleEnvelope) }.ToString(), Encoding.UTF8, "application/json")).Result;
+            Assert(pushSaleResp.IsSuccessStatusCode, "Sale envelope push failed: " + pushSaleResp.Content.ReadAsStringAsync().Result);
+            var pushSaleRes = JObject.Parse(pushSaleResp.Content.ReadAsStringAsync().Result);
+            Assert((string)pushSaleRes["results"]![0]!["status"]! == "Applied", "Sale envelope not Applied");
+            Assert(Quantity(store, debtWhGuid) == stockBeforeDebtSale - 2, "Debt sale did not deduct stock by 2");
+
+            var retrySaleResp = http.PostAsync("/api/v2/debt/push", new StringContent(new JObject { ["envelopes"] = new JArray(saleEnvelope) }.ToString(), Encoding.UTF8, "application/json")).Result;
+            var retrySaleRes = JObject.Parse(retrySaleResp.Content.ReadAsStringAsync().Result);
+            Assert((string)retrySaleRes["results"]![0]!["status"]! == "AlreadyApplied", "Sale retry not AlreadyApplied");
+            Assert(Quantity(store, debtWhGuid) == stockBeforeDebtSale - 2, "Sale retry deducted stock again");
+
+            // Payment envelope push & debt reduction
+            var payReqGuid = G(301);
+            var payPayload = DebtRepository.Canonical("payment", debtStoreGuid, G(102), payReqGuid, custGuid, "4000", "0", "0", "3000", accountGuid, "");
+            var payHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(payPayload))).ToLowerInvariant();
+            var payLines = new List<DebtLine> { new DebtLine(accountGuid, -4000) };
+            var payEvent = new DebtWireEvent(payReqGuid, payReqGuid, "payment", custGuid, debtStoreGuid, G(102), G(103), 2, 3000, payPayload, payHash, 4000, 0, 0, null, null, payLines.AsReadOnly());
+            var payEventWire = DebtWire.EncodeEvent(payEvent, debtStoreGuid);
+            var payEnvelope = DebtEnvelope.Encode(new DebtEnvelopePacket(payReqGuid, debtStoreGuid, "", payEventWire, ""), debtStoreGuid);
+
+            var pushPayResp = http.PostAsync("/api/v2/debt/push", new StringContent(new JObject { ["envelopes"] = new JArray(payEnvelope) }.ToString(), Encoding.UTF8, "application/json")).Result;
+            Assert(pushPayResp.IsSuccessStatusCode, "Payment envelope push failed");
+            var pushPayRes = JObject.Parse(pushPayResp.Content.ReadAsStringAsync().Result);
+            Assert((string)pushPayRes["results"]![0]!["status"]! == "Applied", "Payment envelope not Applied");
+
+            // Delta pull returns sale and payment envelopes
+            var deltaPullResp = http.GetAsync($"/api/v2/debt/pull?cursor={debtCursor}").Result;
+            Assert(deltaPullResp.IsSuccessStatusCode, "Debt delta pull failed");
+            var deltaPullData = JObject.Parse(deltaPullResp.Content.ReadAsStringAsync().Result);
+            Assert(deltaPullData["envelopes"]!.Count() == 2, "Delta pull expected 2 envelopes (sale and payment)");
+
+            // Missing dependency envelope queues as WaitingForDependency and drains upon dependency arrival
+            var depReqGuid = G(401);
+            var missingCustGuid = G(499);
+            var orphanAccountGuid = G(498);
+            var orphanPayPayload = DebtRepository.Canonical("payment", debtStoreGuid, G(102), depReqGuid, missingCustGuid, "1000", "0", "0", "4000", orphanAccountGuid, "");
+            var orphanPayHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(orphanPayPayload))).ToLowerInvariant();
+            var orphanLines = new List<DebtLine> { new DebtLine(orphanAccountGuid, -1000) };
+            var orphanEvent = new DebtWireEvent(depReqGuid, depReqGuid, "payment", missingCustGuid, debtStoreGuid, G(102), G(103), 3, 4000, orphanPayPayload, orphanPayHash, 1000, 0, 0, null, null, orphanLines.AsReadOnly());
+            var orphanWire = DebtWire.EncodeEvent(orphanEvent, debtStoreGuid);
+            var orphanEnvelope = DebtEnvelope.Encode(new DebtEnvelopePacket(depReqGuid, debtStoreGuid, "", orphanWire, ""), debtStoreGuid);
+
+            var orphanResp = http.PostAsync("/api/v2/debt/push", new StringContent(new JObject { ["envelopes"] = new JArray(orphanEnvelope) }.ToString(), Encoding.UTF8, "application/json")).Result;
+            Assert(orphanResp.IsSuccessStatusCode, "Orphan push failed");
+            var orphanRes = JObject.Parse(orphanResp.Content.ReadAsStringAsync().Result);
+            Assert((string)orphanRes["results"]![0]!["status"]! == "WaitingForDependency", "Orphan packet was not queued as WaitingForDependency");
+
+            // Now create the missing customer and account so drain applies the pending packet
+            var missingSaleGuid = orphanAccountGuid;
+            var missingReqGuid = G(497);
+            var missingItemGuid = G(496);
+            var missingStockOp = G(495);
+            var missingSaleItems = new List<DebtSaleItem>
+            {
+                new DebtSaleItem(missingItemGuid, debtProdGuid, "Кабель", "Barchasi", "dona", debtWhGuid, "Asosiy", "1", "100", "50", "UZS", missingStockOp, "-1")
+            };
+            var missingSaleSnapshot = new DebtSaleSnapshot(missingSaleGuid, 4000, 10000, 5000, 0, 0, 0, "0", "12850", "DEBT", missingSaleItems.AsReadOnly());
+            var missingSaleWire = DebtEnvelope.EncodeSale(missingSaleSnapshot);
+            var missingSaleFp = DebtWire.Fingerprint(missingSaleWire);
+            var missingSalePayload = DebtRepository.Canonical("sale_open", debtStoreGuid, G(102), missingReqGuid, missingCustGuid, missingSaleGuid, missingSaleFp, "10000", "0", "0", "4000", "");
+            var missingSaleHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(missingSalePayload))).ToLowerInvariant();
+            var missingAccWire = new DebtWireAccount(orphanAccountGuid, missingSaleGuid, missingReqGuid, 10000, null, "Yetim Mijoz");
+            var missingEvObj = new DebtWireEvent(missingReqGuid, missingReqGuid, "sale_open", missingCustGuid, debtStoreGuid, G(102), G(103), 4, 4000, missingSalePayload, missingSaleHash, 0, 0, 0, null, missingAccWire, Array.Empty<DebtLine>());
+            var missingEvWire = DebtWire.EncodeEvent(missingEvObj, debtStoreGuid);
+
+            var createMissingCustPayload = DebtRepository.Canonical("customer", debtStoreGuid, G(102), missingCustGuid, "Yetim Mijoz", "+998900000000", "", "4000");
+            var createMissingCustHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(createMissingCustPayload))).ToLowerInvariant();
+            var createMissingCustWire = DebtWire.EncodeCustomer(new DebtWireCustomer(missingCustGuid, debtStoreGuid, G(103), createMissingCustPayload, createMissingCustHash), debtStoreGuid);
+
+            var drainEnv = DebtEnvelope.Encode(new DebtEnvelopePacket(missingReqGuid, debtStoreGuid, createMissingCustWire, missingEvWire, missingSaleWire), debtStoreGuid);
+
+            var drainResp = http.PostAsync("/api/v2/debt/push", new StringContent(new JObject { ["envelopes"] = new JArray(drainEnv) }.ToString(), Encoding.UTF8, "application/json")).Result;
+            Assert(drainResp.IsSuccessStatusCode, "Drain customer push failed: " + drainResp.Content.ReadAsStringAsync().Result);
+            var pullAllResp = http.GetAsync("/api/v2/debt/pull?cursor=0").Result;
+            var allEnvelopes = (JArray)JObject.Parse(pullAllResp.Content.ReadAsStringAsync().Result)["envelopes"]!;
+            Assert(allEnvelopes.Any(w => DebtEnvelope.Decode((string)w!, debtStoreGuid).Guid == depReqGuid), "Orphan packet was not drained upon dependency arrival");
+
+            // Product conflict in sync_conflicts does not break debt operations
+            Sql("INSERT INTO sync_conflicts(kind, entity_guid, revision, message) VALUES('product', 'p', 99, 'Test conflict')");
+            var debtWithConflictResp = http.GetAsync("/api/v2/debt/pull?cursor=0").Result;
+            Assert(debtWithConflictResp.IsSuccessStatusCode, "Debt pull failed when product conflict present");
+            Sql("DELETE FROM sync_conflicts");
+
             server.RevokeDevices();Assert((int)http.GetAsync("/api/v2/pull").Result.StatusCode==401,"Revoked token still accepted");
         } finally { server.Stop(); }
     });

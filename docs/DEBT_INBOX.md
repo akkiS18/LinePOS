@@ -1,14 +1,16 @@
 # Durable debt inbox — 3A-2b-2a
 
 `DebtEnvelopeInbox.cs` / `DebtEnvelopeInbox.kt` persist validated canonical packets and
-atomically receive **customer creation and payment**. This bounded stage does NOT
-implement the concrete sale/item/stock adapter or local before-commit envelope freeze.
-Every valid `sale_open` packet stays `WaitingForSaleAdapter`, even when some components
-already exist locally. No callback can bypass this gate through the new inbox API.
+atomically receive **customer creation and payment**. Both inboxes also
+support opt-in concrete opening receivers using a trusted actor/user resolver;
+see `DEBT_SALE_RECEIVER.md`. Without the resolver, both platforms retain `WaitingForSaleAdapter`.
+Android additionally verifies that the mapped local user exists.
+Local before-commit envelope freeze is still missing. No arbitrary sale callback can
+bypass these inbox gates.
 
 Existing component `DebtSyncStore.Apply` remains available for its earlier trusted
-component use/tests. It is not a network endpoint or a substitute for the missing
-full-sale receiver. None of these APIs are connected to the app UI/transport yet.
+component use/tests. It is not a network endpoint or a substitute for the concrete
+full-envelope receiver. None of these APIs are connected to the app UI/transport yet.
 
 ## API and explicit outcomes
 
@@ -27,7 +29,7 @@ future host's responsibility; a wire actor UUID is not proof of permission.
 - `AlreadyApplied`: exact full-body receipt AND persisted component reconstruction
   match. No extra ledger, allocation, journal or contact write is performed.
 - `WaitingForDependency`: packet is durably pending; financial effects are NOT applied.
-- `WaitingForSaleAdapter`: opening is durably pending; no customer/sale/stock/event is
+- `WaitingForSaleAdapter`: opening receiver is not enabled and the packet is durably pending; no customer/sale/stock/event is
   partially applied. This is an explicit unfinished integration gate.
 - `ReadPending(guid)` / `readPending`: returns immutable wire/first timestamp/reason,
   or null. Checks stored GUID/store/body and current authorization again.
@@ -118,9 +120,9 @@ A valid >2 MiB opening envelope is persisted, reloaded after a Room restart and
 compared on retry without changing its first timestamp. Test opening dependencies use the prior trusted component fixture callback, not a
 claim that concrete sale/items/stock import is implemented.
 
-Next bounded stage **3A-2b-2b**: concrete frozen sale/items/stock DB adapter, exact
-legacy numeric conversion checks, local envelope freeze/preflight in the same sale
-transaction, and opening replay/stock-operation identity validation. Extend this SAME
+Desktop/Android concrete receivers and numeric/replay checks are described in `DEBT_SALE_RECEIVER.md`.
+Next bounded work in **3A-2b-2b**: local envelope freeze/preflight
+in the same source sale transaction. Extend this SAME
 receipt/inbox transaction when lifting the opening gate; never add a separate commit.
 Then implement authenticated transport/ACK/full/delta/download gates in 3A-2c.
 Current CI evidence and exact commit are in `DEBT_CHECKPOINT_UZ.md`.
@@ -137,4 +139,4 @@ GUID in a snapshot), so it cannot silently import a debt header as CASH or ackno
 that header without its ledger envelope. Snapshot exceptions roll back its existing
 outer transaction/cursor. These guards are not the complete 3A-2c protocol, journal
 coalescing, restored-DB, full/delta or server-side barriers; all remain required before
-feature enablement. The inbox opening gate above remains unchanged.
+feature enablement. The default opening gates above remain; both platforms can explicitly opt in to their concrete receivers.

@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.filled.PointOfSale
@@ -66,6 +67,8 @@ import uz.pos.electro.ui.licensing.ActivationScreen
 import uz.pos.electro.ui.products.AddEditProductDialog
 import uz.pos.electro.ui.products.ProductViewModel
 import uz.pos.electro.ui.products.ProductsScreen
+import uz.pos.electro.ui.debt.DebtsScreen
+import uz.pos.electro.ui.debt.DebtsViewModel
 import uz.pos.electro.ui.reports.ReportsScreen
 import uz.pos.electro.ui.reports.ReportsViewModel
 import uz.pos.electro.ui.settings.SettingsScreen
@@ -79,6 +82,7 @@ fun MainScreen(
     taxSettingsRepository: uz.pos.electro.data.repository.TaxSettingsRepository,
     cashierViewModel: CashierViewModel = hiltViewModel(),
     productViewModel: ProductViewModel = hiltViewModel(),
+    debtsViewModel: DebtsViewModel = hiltViewModel(),
     reportsViewModel: ReportsViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
@@ -141,7 +145,8 @@ fun MainScreen(
                                 text = when (selectedTab) {
                                     0 -> "SMART — Kassa"
                                     1 -> "SMART — Ombor"
-                                    2 -> "SMART — Hisobotlar"
+                                    2 -> "SMART — Qarz daftari"
+                                    3 -> "SMART — Hisobotlar"
                                     else -> "SMART — Sozlamalar"
                                 },
                                 fontWeight = FontWeight.Bold,
@@ -250,7 +255,7 @@ fun MainScreen(
                         )
 
                         AppleDockTabItem(
-                            icon = Icons.Default.Assessment,
+                            icon = Icons.AutoMirrored.Filled.MenuBook,
                             isSelected = selectedTab == 2,
                             onClick = {
                                 if (selectedTab != 2) {
@@ -261,12 +266,23 @@ fun MainScreen(
                         )
 
                         AppleDockTabItem(
-                            icon = Icons.Default.Settings,
+                            icon = Icons.Default.Assessment,
                             isSelected = selectedTab == 3,
                             onClick = {
                                 if (selectedTab != 3) {
                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                     selectedTab = 3
+                                }
+                            }
+                        )
+
+                        AppleDockTabItem(
+                            icon = Icons.Default.Settings,
+                            isSelected = selectedTab == 4,
+                            onClick = {
+                                if (selectedTab != 4) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    selectedTab = 4
                                 }
                             }
                         )
@@ -294,10 +310,17 @@ fun MainScreen(
                 1 -> ProductsScreen(
                     viewModel = productViewModel
                 )
-                2 -> ReportsScreen(
+                2 -> DebtsScreen(
+                    viewModel = debtsViewModel,
+                    onOpenCustomerInCashier = { customer ->
+                        cashierViewModel.selectDebtCustomer(customer)
+                        selectedTab = 0
+                    }
+                )
+                3 -> ReportsScreen(
                     viewModel = reportsViewModel
                 )
-                3 -> {
+                4 -> {
                     val productList by productViewModel.products.collectAsState()
                     SettingsScreen(
                         taxSettingsRepository = taxSettingsRepository,

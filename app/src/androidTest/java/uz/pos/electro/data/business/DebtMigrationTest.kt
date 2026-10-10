@@ -97,4 +97,70 @@ class DebtMigrationTest {
             sql.query("SELECT COUNT(*) FROM sqlite_master WHERE name GLOB 'debt_*'").use { it.moveToFirst();assertEquals(0,it.getInt(0)) }
         } finally { raw.close() }
     }
+
+    @Test fun restoreDatabasePreservesPaymentOnlyAndFullDebtHistory() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        val name = "debt-restore-${UUID.randomUUID()}.db"
+        val db = AppDatabase.buildDatabase(context, scope, name)
+        val backupFile = File(context.cacheDir, "test-backup-${UUID.randomUUID()}.db")
+        try {
+            val sql = db.openHelper.writableDatabase
+            val storeGuid = UUID.randomUUID().toString()
+            val custGuid = UUID.randomUUID().toString()
+
+            sql.execSQL("INSERT OR REPLACE INTO debt_scope VALUES(1, '$storeGuid')")
+            sql.execSQL("INSERT INTO debt_customers(guid, store_guid, name, phone, note, created_at, device_guid) VALUES('$custGuid', '$storeGuid', 'Rustam', '+998901234567', '', 100, '${UUID.randomUUID()}')")
+
+            // Payment only on day: take a 100k payment
+            val payGuid = UUID.randomUUID().toString()
+            sql.execSQL("""
+                INSERT INTO debt_events(guid, request_guid, schema_version, kind, customer_guid, store_guid, actor_guid, device_guid, device_sequence, occurred_at, payload, payload_hash, cash_minor, card_minor, fee_minor)
+                VALUES('$payGuid', '$payGuid', 1, 'payment', '$custGuid', '$storeGuid', '${UUID.randomUUID()}', '${UUID.randomUUID()}', 1, 200, 'payload', 'hash', 10000000, 0, 0)
+            """.trimIndent())
+
+            // Unsent local event
+            sql.execSQL("INSERT INTO sync_journal(op_id, kind, entity_guid, group_id, acked) VALUES('op-$payGuid', 'debt_payment', '$payGuid', '$payGuid', -1)")
+
+            // Missing-dependency inbox entry
+            val inboxGuid = UUID.randomUUID().toString()
+            sql.execSQL("INSERT INTO debt_sync_inbox(packet_guid, store_guid, payload, received_at, error) VALUES('$inboxGuid', '$storeGuid', 'test-pending', 300, 'Missing dependency')")
+
+            // Backup database
+            DatabaseBackupExporter.copySnapshot(sql, backupFile)
+            assertTrue(backupFile.exists())
+
+            // Verify the backup can be read and holds all debt & sync state
+            SQLiteDatabase.openDatabase(backupFile.path, null, SQLiteDatabase.OPEN_READONLY).use { copy ->
+                copy.rawQuery("SELECT name FROM debt_customers WHERE guid='$custGuid'", null).use {
+                    assertTrue(it.moveToFirst())
+                    assertEquals("Rustam", it.getString(0))
+                }
+                copy.rawQuery("SELECT cash_minor FROM debt_events WHERE guid='$payGuid'", null).use {
+                    assertTrue(it.moveToFirst())
+                    assertEquals(10000000L, it.getLong(0))
+                }
+                copy.rawQuery("SELECT acked FROM sync_journal WHERE group_id='$payGuid'", null).use {
+                    assertTrue(it.moveToFirst())
+                    assertEquals(-1, it.getInt(0))
+                }
+                copy.rawQuery("SELECT error FROM debt_sync_inbox WHERE packet_guid='$inboxGuid'", null).use {
+                    assertTrue(it.moveToFirst())
+                    assertEquals("Missing dependency", it.getString(0))
+                }
+                copy.rawQuery("PRAGMA foreign_key_check", null).use {
+                    assertFalse(it.moveToFirst())
+                }
+                copy.rawQuery("PRAGMA integrity_check", null).use {
+                    assertTrue(it.moveToFirst())
+                    assertEquals("ok", it.getString(0))
+                }
+            }
+        } finally {
+            db.close()
+            scope.cancel()
+            SQLiteDatabase.deleteDatabase(context.getDatabasePath(name))
+            SQLiteDatabase.deleteDatabase(backupFile)
+        }
+    }
 }

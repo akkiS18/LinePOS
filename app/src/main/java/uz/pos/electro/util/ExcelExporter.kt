@@ -92,9 +92,44 @@ object ExcelExporter {
                         </tr>
                         <tr>
                             <td colspan="5">Jami Cheklar Soni:</td>
-                            <td colspan="8" class="kpi-val">${summary.salesCount} ta savdo; Qaytarish amallari: ${summary.returnCount}, sof qaytarilgan: ${numberFormat.format(summary.refundedAmount)}, tannarx tiklanishi: ${numberFormat.format(summary.costReversal)} so‘m; ${summary.brakCount} ta brak (${numberFormat.format(summary.brakCost)} so‘m). USD foyda: ${if (summary.usdComplete) String.format(Locale.US, "%.2f", summary.netProfitUsd) else "noma’lum: eski kurs saqlanmagan"}</td>
+                            <td colspan="9" class="kpi-val">${summary.salesCount} ta savdo; Qaytarish amallari: ${summary.returnCount}, sof qaytarilgan: ${numberFormat.format(summary.refundedAmount)}, tannarx tiklanishi: ${numberFormat.format(summary.costReversal)} so‘m; ${summary.brakCount} ta brak (${numberFormat.format(summary.brakCost)} so‘m). USD foyda: ${if (summary.usdComplete) String.format(Locale.US, "%.2f", summary.netProfitUsd) else "noma’lum: eski kurs saqlanmagan"}</td>
                         </tr>
-                        <tr><td colspan="13" style="border:none;"></td></tr>
+
+                        <!-- Qarz va Cashflow Xulosa -->
+                        <tr><td colspan="14" style="border:none;"></td></tr>
+                        <tr>
+                            <td colspan="5" class="kpi-title" style="background-color:#E2E8F0;">QARZ VA CASHFLOW (PUL OQIMI)</td>
+                            <td colspan="9" class="kpi-title" style="background-color:#E2E8F0;">KO'RSATKICH</td>
+                        </tr>
+                        <tr>
+                            <td colspan="5">Yangi Berilgan Nasiya:</td>
+                            <td colspan="9" class="kpi-val">${numberFormat.format(summary.totalDebtAmount)} so'm</td>
+                        </tr>
+                        <tr>
+                            <td colspan="5">Undirilgan Qarz (Yig'im):</td>
+                            <td colspan="9" class="kpi-val">${numberFormat.format(summary.debtCollected)} so'm (Naqd: ${numberFormat.format(summary.debtCollectedCash)}, Karta: ${numberFormat.format(summary.debtCollectedCard)})</td>
+                        </tr>
+                        <tr>
+                            <td colspan="5">Undiruv Karta Komissiyasi:</td>
+                            <td colspan="9" class="kpi-val">${numberFormat.format(summary.debtCollectedFee)} so'm</td>
+                        </tr>
+                        <tr>
+                            <td colspan="5">Qaytarishdan Qarz Yopilishi:</td>
+                            <td colspan="9" class="kpi-val">${numberFormat.format(summary.debtReturnOffset)} so'm</td>
+                        </tr>
+                        <tr>
+                            <td colspan="5">Kassa Pul Oqimi (Savdo + Qarz Yig'imi):</td>
+                            <td colspan="9" class="kpi-val" style="color:#0284C7;">${numberFormat.format(summary.totalCashflow)} so'm</td>
+                        </tr>
+                        <tr>
+                            <td colspan="5">Davr Yakunidagi Faol Qarz:</td>
+                            <td colspan="9" class="kpi-val" style="color:#DC2626;">${numberFormat.format(summary.activeDebtTotal)} so'm</td>
+                        </tr>
+                        <tr>
+                            <td colspan="5">Davr Yakunidagi Mijoz Haqi (Kredit):</td>
+                            <td colspan="9" class="kpi-val" style="color:#7C3AED;">${numberFormat.format(summary.activeCreditTotal)} so'm</td>
+                        </tr>
+                        <tr><td colspan="14" style="border:none;"></td></tr>
 
                         <!-- Jadval sarlavhasi -->
                         <tr class="header">
@@ -109,6 +144,7 @@ object ExcelExporter {
                             <td>Tan Narxi (so'm)</td>
                             <td>Sotish Narxi (so'm)</td>
                             <td>Jami Summa (so'm)</td>
+                            <td>Nasiya (so'm)</td>
                             <td>Sof Foyda (so'm)</td>
                             <td>Rentabellik %</td>
                         </tr>
@@ -123,6 +159,7 @@ object ExcelExporter {
                 val qtyStr = if (item.quantity % 1.0 == 0.0) item.quantity.toLong().toString() else item.quantity.toString()
                 val marginPercent = if (item.totalPrice > 0.0) (item.profit / item.totalPrice) * 100.0 else 0.0
                 val marginStr = String.format(Locale.US, "%.1f%%", marginPercent)
+                val debtLabel = if (item.debtAmount > 0.0) numberFormat.format(item.debtAmount) else "-"
 
                 htmlContent.append("""
                     <tr>
@@ -137,6 +174,7 @@ object ExcelExporter {
                         <td class="num">${numberFormat.format(item.costPrice)}</td>
                         <td class="num">${numberFormat.format(item.sellingPrice)}</td>
                         <td class="num"><b>${numberFormat.format(item.totalPrice)}</b></td>
+                        <td class="num">$debtLabel</td>
                         <td class="num" style="color:#15803D;"><b>${numberFormat.format(item.profit)}</b></td>
                         <td class="num" style="font-weight:bold; color: #2563EB;">$marginStr</td>
                     </tr>

@@ -5,11 +5,13 @@
     <Compile Include="../../desktop/PosElectro.Desktop/Models/Enums.cs" Link="Models/Enums.cs" />
     <Compile Include="../../desktop/PosElectro.Desktop/Models/ReturnAccounting.cs" Link="ReturnAccounting.cs" />
     <Compile Include="../../desktop/PosElectro.Desktop/Returns/*.cs" Link="Returns/%(Filename)%(Extension)" />
+    <Compile Include="../../desktop/PosElectro.Desktop/Debt/*.cs" Link="Debt/%(Filename)%(Extension)" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.8" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <Compile Include="../../desktop/PosElectro.Desktop/Sync/WifiSyncStore.cs" Link="WifiSyncStore.cs" />
     <Compile Include="../../desktop/PosElectro.Desktop/Services/LocalSyncServer.cs" Link="LocalSyncServer.cs" />
     <Compile Include="../../desktop/PosElectro.Desktop/Sync/WifiHttpRequest.cs" Link="WifiHttpRequest.cs" />
     <EmbeddedResource Include="../../sync/schema.sql" LogicalName="WifiSyncSchema" />
+    <EmbeddedResource Include="../../debt/schema.sql" LogicalName="DebtSchema" />
   </ItemGroup>
 </Project>

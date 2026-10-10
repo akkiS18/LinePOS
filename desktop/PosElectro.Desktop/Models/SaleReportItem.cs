@@ -10,6 +10,8 @@ namespace PosElectro.Desktop.Models
         public double TaxAmount { get; set; }
         public double CashAmount { get; set; }
         public double CardAmount { get; set; }
+        public double DebtAmount => Math.Max(0, (double)Math.Round((decimal)TotalPrice - (decimal)CashAmount - (decimal)CardAmount, 2, MidpointRounding.AwayFromZero));
+        public bool IsDebt => DebtAmount > 0;
         public double? ProfitUsd { get; set; }
         public bool IsReturn { get; set; }
         public bool IsBrak { get; set; }

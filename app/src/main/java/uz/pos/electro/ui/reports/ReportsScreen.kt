@@ -486,6 +486,44 @@ fun ReportsScreen(
                         }
                     }
 
+                    // Qarz va Cashflow (Pul oqimi) Karta
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            Text(
+                                text = "QARZ VA PUL OQIMI (CASHFLOW)",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("Berilgan nasiya", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                                    Text("${numberFormat.format(summary.totalDebtAmount)} so'm", fontWeight = FontWeight.Bold, color = Color(0xFFF59E0B), fontSize = 14.sp)
+                                }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("Undirilgan qarz", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                                    Text("${numberFormat.format(summary.debtCollected)} so'm", fontWeight = FontWeight.Bold, color = Color(0xFF10B981), fontSize = 14.sp)
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("Kassa pul oqimi", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                                    Text("${numberFormat.format(summary.totalCashflow)} so'm", fontWeight = FontWeight.Bold, color = Color(0xFF0284C7), fontSize = 14.sp)
+                                }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("Faol qarz / Kredit", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                                    Text("${numberFormat.format(summary.activeDebtTotal)} / +${numberFormat.format(summary.activeCreditTotal)}", fontWeight = FontWeight.Bold, color = Color(0xFFEF4444), fontSize = 13.sp)
+                                }
+                            }
+                        }
+                    }
+
                     // 3. Alohida Cheklar Tarixi Oynasiga O'tish Kartasi
                     Card(
                         modifier = Modifier

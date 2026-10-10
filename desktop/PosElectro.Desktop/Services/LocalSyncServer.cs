@@ -14,6 +14,7 @@ using PosElectro.Desktop.Returns;
 using Newtonsoft.Json;
 using PosElectro.Desktop.Data;
 using PosElectro.Desktop.Models;
+using PosElectro.Desktop.Debt;
 
 namespace PosElectro.Desktop.Services
 {
@@ -84,6 +85,9 @@ namespace PosElectro.Desktop.Services
         private readonly DatabaseContext _db;
         private readonly CurrencyService? _currencyService;
         private readonly WifiSyncStore store;
+        private readonly DebtEnvelopeInbox _debtInbox;
+        private readonly string _debtStoreGuid;
+        private readonly string _debtHistoryEpoch;
         private TcpListener? listener;
         private CancellationTokenSource? stop;
         private readonly Dictionary<string, (SyncClientInfo Info, DateTime Seen)> clients = new();
@@ -93,6 +97,8 @@ namespace PosElectro.Desktop.Services
         private int pairingAttempts;
         public int Port => 8080;
         public bool IsRunning => stop is { IsCancellationRequested: false };
+        public string DebtHistoryEpoch => _debtHistoryEpoch;
+        public string DebtStoreGuid => _debtStoreGuid;
         public event Action<string>? LogMessageReceived;
         public event Action<string,string>? ActivityLogged;
         public event Action<SyncClientInfo>? ClientStatusUpdated;
@@ -105,7 +111,35 @@ namespace PosElectro.Desktop.Services
             lock(gate)return clients.Where(c=>(DateTime.UtcNow-c.Value.Seen).TotalSeconds<15).Select(c=>new ConnectedClientInfo { Id=c.Key, DeviceName=c.Value.Info.DeviceName, IpAddress=c.Value.Info.IpAddress, ConnectedAt=c.Value.Info.LastSeen }).ToList();
         }
         public LocalSyncServer(DatabaseContext db, CurrencyService? currencyService=null)
-        { _db=db; _currencyService=currencyService; store=new WifiSyncStore(db.DatabaseFilePath); new ReturnStore(db.DatabaseFilePath).Install(); }
+        {
+            _db=db;
+            _currencyService=currencyService;
+            store=new WifiSyncStore(db.DatabaseFilePath);
+            new ReturnStore(db.DatabaseFilePath).Install();
+            using var conn = store.Open();
+            Debt.DebtSchema.Install(conn);
+            var existing = (string?)WifiSyncStore.Scalar(conn, null, "SELECT store_guid FROM debt_scope WHERE id=1");
+            if (existing == null)
+            {
+                WifiSyncStore.Exec(conn, null, "INSERT OR IGNORE INTO debt_scope(id,store_guid) VALUES(1,@id)", ("@id", store.ServerId));
+                _debtStoreGuid = store.ServerId;
+            }
+            else
+            {
+                _debtStoreGuid = existing;
+            }
+            var existingEpoch = (string?)WifiSyncStore.Scalar(conn, null, "SELECT value FROM sync_meta WHERE key='debt_history_epoch'");
+            if (string.IsNullOrEmpty(existingEpoch))
+            {
+                _debtHistoryEpoch = Guid.NewGuid().ToString("D");
+                WifiSyncStore.Exec(conn, null, "INSERT OR REPLACE INTO sync_meta(key,value) VALUES('debt_history_epoch',@epoch)", ("@epoch", _debtHistoryEpoch));
+            }
+            else
+            {
+                _debtHistoryEpoch = existingEpoch;
+            }
+            _debtInbox = new DebtEnvelopeInbox(db.DatabaseFilePath, _debtStoreGuid, () => true, actor => !string.IsNullOrWhiteSpace(actor), actor => 1L);
+        }
         public string NewPairingCode()
         { lock(gate) { pairingCode=RandomNumberGenerator.GetInt32(10000000,100000000).ToString(); pairingExpires=DateTime.UtcNow.AddMinutes(5); pairingAttempts=0; return pairingCode; } }
         public void RevokeDevices()
@@ -146,7 +180,7 @@ namespace PosElectro.Desktop.Services
                 string token=Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
                 using var db=store.Open(); WifiSyncStore.Exec(db,null,"INSERT INTO sync_devices(token_hash,device_id,device_name) VALUES(@hash,@id,@name)",("@hash",Hash(token)),("@id",id),("@name",name));
                 pairingCode="";
-                return new JObject { ["token"]=token,["serverId"]=store.ServerId,["protocol"]=2 };
+                return new JObject { ["token"]=token,["serverId"]=store.ServerId,["protocol"]=2,["capabilities"]=new JArray{ DebtWire.Capability },["storeGuid"]=_debtStoreGuid,["historyEpoch"]=_debtHistoryEpoch };
             }
         }
         private async Task MonitorClients(CancellationToken token)
@@ -179,7 +213,7 @@ namespace PosElectro.Desktop.Services
                         // Never allow legacy unauthenticated writes to bypass V2 invariants.
                         var deviceId = Authenticate(request.Headers,(client.Client.RemoteEndPoint as IPEndPoint)?.Address.ToString()??"");
                         if(path=="/api/ping" && request.Method=="GET")
-                        {await Reply(stream,200,new JObject{["protocol"]=2,["serverId"]=store.ServerId,["name"]="Line kassa",["productsCount"]=_db.GetActiveProductsCount(),["salesCount"]=_db.GetTotalSalesCount()},timeout.Token);return;}
+                        {await Reply(stream,200,new JObject{["protocol"]=2,["serverId"]=store.ServerId,["name"]="Line kassa",["productsCount"]=_db.GetActiveProductsCount(),["salesCount"]=_db.GetTotalSalesCount(),["capabilities"]=new JArray{ DebtWire.Capability },["storeGuid"]=_debtStoreGuid,["historyEpoch"]=_debtHistoryEpoch},timeout.Token);return;}
                         // Bind V2 requests to the paired database before any mutation occurs.
                         if(path.StartsWith("/api/v2/",StringComparison.Ordinal) &&
                            (!request.Headers.TryGetValue("X-LinePOS-Server-Id",out var expectedServer) || expectedServer!=store.ServerId))
@@ -198,12 +232,123 @@ namespace PosElectro.Desktop.Services
                           // A notification failure cannot turn a committed return into a failed payout.
                           try { DataSynced?.Invoke(); } catch { }
                           await Reply(stream,200,JObject.FromObject(result),timeout.Token);return; }
+                        if (path == "/api/v2/debt/reverse_payment" && request.Method == "POST")
+                        {
+                            var body = JObject.Parse(request.Body);
+                            var paymentEventGuid = WifiSyncStore.Required(body, "PaymentEventGuid");
+                            var reason = WifiSyncStore.Required(body, "Reason");
+                            var fee = body["RefundedFeeMinor"] != null ? (long)body["RefundedFeeMinor"]! : 0L;
+                            var debtService = new DebtService(_db);
+                            var resultGuid = debtService.ReversePayment(paymentEventGuid, reason, fee);
+                            try { DataSynced?.Invoke(); } catch { }
+                            await Reply(stream, 200, new JObject { ["resultGuid"] = resultGuid }, timeout.Token);
+                            return;
+                        }
+                        if (path == "/api/v2/debt/refund_credit" && request.Method == "POST")
+                        {
+                            var body = JObject.Parse(request.Body);
+                            var customerGuid = WifiSyncStore.Required(body, "CustomerGuid");
+                            var accountGuid = WifiSyncStore.Required(body, "AccountGuid");
+                            var cash = body["CashMinor"] != null ? (long)body["CashMinor"]! : 0L;
+                            var card = body["CardMinor"] != null ? (long)body["CardMinor"]! : 0L;
+                            var reason = WifiSyncStore.Required(body, "Reason");
+                            var debtService = new DebtService(_db);
+                            var resultGuid = debtService.RefundCredit(customerGuid, accountGuid, cash, card, reason);
+                            try { DataSynced?.Invoke(); } catch { }
+                            await Reply(stream, 200, new JObject { ["resultGuid"] = resultGuid }, timeout.Token);
+                            return;
+                        }
+                        if (path == "/api/v2/debt/transfer_credit" && request.Method == "POST")
+                        {
+                            var body = JObject.Parse(request.Body);
+                            var customerGuid = WifiSyncStore.Required(body, "CustomerGuid");
+                            var sourceAccountGuid = WifiSyncStore.Required(body, "SourceAccountGuid");
+                            var targetAccountGuid = WifiSyncStore.Required(body, "TargetAccountGuid");
+                            var amount = body["AmountMinor"] != null ? (long)body["AmountMinor"]! : 0L;
+                            var reason = WifiSyncStore.Required(body, "Reason");
+                            var debtService = new DebtService(_db);
+                            var resultGuid = debtService.TransferCredit(customerGuid, sourceAccountGuid, targetAccountGuid, amount, reason);
+                            try { DataSynced?.Invoke(); } catch { }
+                            await Reply(stream, 200, new JObject { ["resultGuid"] = resultGuid }, timeout.Token);
+                            return;
+                        }
+                        if(path=="/api/v2/debt/push" && request.Method=="POST")
+                        {
+                            var body=JObject.Parse(request.Body);
+                            var envelopes=(JArray?)body["envelopes"]??throw new ArgumentException("Envelopes massivi yo'q.");
+                            if(envelopes.Count>500)throw new ArgumentException("Bitta so'rovda 500 dan ortiq paket bo'lishi mumkin emas.");
+                            long totalChars=0;
+                            foreach(var e in envelopes)
+                            {
+                                string wire=(string?)e??throw new ArgumentException("Bo'sh paket.");
+                                totalChars+=wire.Length;
+                            }
+                            if(totalChars>8*1024*1024)throw new ArgumentException("Paketlar hajmi 8MiB dan oshmasligi kerak.");
+                            long now=DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                            var results=new JArray();
+                            foreach(var e in envelopes)
+                            {
+                                string wire=(string)e!;
+                                var p=DebtEnvelope.Decode(wire,_debtStoreGuid);
+                                try
+                                {
+                                    var status=_debtInbox.Receive(wire,now);
+                                    results.Add(new JObject{["guid"]=p.Guid,["status"]=status.ToString()});
+                                }
+                                catch(DebtInboxFullException)
+                                {
+                                    results.Add(new JObject{["guid"]=p.Guid,["status"]="InboxFull"});
+                                }
+                            }
+                            _debtInbox.DrainPending(now);
+                            try { DataSynced?.Invoke(); } catch { }
+                            await Reply(stream,200,new JObject{["results"]=results},timeout.Token);
+                            return;
+                        }
+                        if(path.StartsWith("/api/v2/debt/pull",StringComparison.Ordinal) && request.Method=="GET")
+                        {
+                            var query=uri.Query.TrimStart('?').Split('&').Select(x=>x.Split('=',2)).Where(x=>x.Length==2).ToDictionary(x=>x[0],x=>x[1]);
+                            long cursor=query.TryGetValue("cursor",out var raw)?long.Parse(raw):0;
+                            using var db=store.Open(); using var tx=db.BeginTransaction();
+                            long high=Convert.ToInt64(WifiSyncStore.Scalar(db,tx,"SELECT COALESCE(MAX(seq),0) FROM sync_journal"));
+                            if(cursor<0 || cursor>high)
+                            {
+                                tx.Commit();
+                                var rollback=new JObject{["protocol"]=2,["serverId"]=store.ServerId,["storeGuid"]=_debtStoreGuid,["historyEpoch"]=_debtHistoryEpoch,["cursorRollback"]=true,["cursor"]=0,["envelopes"]=new JArray()};
+                                await Reply(stream,200,rollback,timeout.Token);
+                                return;
+                            }
+                            using var groupCmd=db.CreateCommand(); groupCmd.Transaction=tx;
+                            groupCmd.CommandText="SELECT group_id, MIN(seq) as min_seq, MAX(seq) as max_seq FROM sync_journal WHERE kind IN ('debt_customer','debt_event','debt_sale','debt_stock') AND (@since=0 OR seq>@since) AND seq<=@high AND group_id<>'' GROUP BY group_id ORDER BY min_seq";
+                            groupCmd.Parameters.AddWithValue("@since",cursor); groupCmd.Parameters.AddWithValue("@high",high);
+                            var groupList=new List<(string GroupId,long MinSeq,long MaxSeq)>();
+                            using(var r=groupCmd.ExecuteReader())while(r.Read())groupList.Add((r.GetString(0),r.GetInt64(1),r.GetInt64(2)));
+                            var envelopes=new JArray(); long totalChars=0; long returnedCursor=high;
+                            for(int i=0;i<groupList.Count;i++)
+                            {
+                                var (groupId,_,maxSeq)=groupList[i];
+                                if(!Guid.TryParseExact(groupId,"D",out _))continue;
+                                var wire=_debtInbox.ExportApplied(db,tx,groupId);
+                                if(wire==null)continue;
+                                if(envelopes.Count>=250 || totalChars+wire.Length>6*1024*1024)break;
+                                envelopes.Add(wire); totalChars+=wire.Length; returnedCursor=maxSeq;
+                            }
+                            if(envelopes.Count==0 && groupList.Count==0)returnedCursor=high;
+                            tx.Commit();
+                            var reply=new JObject{["protocol"]=2,["serverId"]=store.ServerId,["storeGuid"]=_debtStoreGuid,["historyEpoch"]=_debtHistoryEpoch,["cursor"]=returnedCursor,["envelopes"]=envelopes};
+                            await Reply(stream,200,reply,timeout.Token);
+                            return;
+                        }
                         if(path=="/api/v2/push" && request.Method=="POST")
                         {var reply=store.Push((JArray?)JObject.Parse(request.Body)["operations"]??throw new ArgumentException("Amallar yo'q."));DataSynced?.Invoke();await Reply(stream,200,reply,timeout.Token);return;}
                         if(path=="/api/v2/pull" && request.Method=="GET")
                         {var query=uri.Query.TrimStart('?').Split('&').Select(x=>x.Split('=',2)).Where(x=>x.Length==2).ToDictionary(x=>x[0],x=>x[1]);long cursor=query.TryGetValue("cursor",out var raw)?long.Parse(raw):0;var reply=store.Pull(cursor);reply["cardTaxRate"]=_db.GetCardTaxRate();reply["usdRate"]=_currencyService?.GetCachedUsdRate()??12850;await Reply(stream,200,reply,timeout.Token);return;}
                         if(path=="/api/sync/download_db" && request.Method=="GET")
                         {
+                            using(var checkDb=store.Open()){
+                                var debtCount=Convert.ToInt64(WifiSyncStore.Scalar(checkDb,null,"SELECT (SELECT COUNT(*) FROM debt_customers) + (SELECT COUNT(*) FROM debt_events)"));
+                                if(debtCount>0)throw new InvalidOperationException("Qarz yozuvlari mavjud bo'lganda eski baza yuklab olish xavfsiz emas. Wi-Fi V2 qarz sinxronidan foydalaning.");
+                            }
                             var temp=Path.Combine(Path.GetTempPath(),$"LinePOS_{Guid.NewGuid():N}.db");
                             try{_db.BackupDatabase(temp);
                                 using(var exported=new Microsoft.Data.Sqlite.SqliteConnection("Data Source="+temp)) { exported.Open();

@@ -54,7 +54,7 @@ namespace PosElectro.Desktop.Data
             {
                 using var source = new SqliteConnection(_connectionString); source.Open();
                 using var debtCheck = source.CreateCommand();
-                debtCheck.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='sales'";
+                debtCheck.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND (name='sales' OR name='products')";
                 if (Convert.ToInt32(debtCheck.ExecuteScalar()) > 0 && !Debt.DebtSchema.IsInstalled(source)) {
                     var backupDir = Path.Combine(Path.GetDirectoryName(DatabaseFilePath)!, "Backups"); Directory.CreateDirectory(backupDir);
                     using var backup = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = Path.Combine(backupDir, $"before-debt-{DateTime.UtcNow:yyyyMMdd-HHmmss}-{Guid.NewGuid():N}.db") }.ToString());
@@ -127,6 +127,112 @@ namespace PosElectro.Desktop.Data
             {
                 return null;
             }
+        }
+
+        public void RestoreDatabase(string sourcePath)
+        {
+            if (string.IsNullOrWhiteSpace(sourcePath) || !File.Exists(sourcePath))
+                throw new FileNotFoundException("Tiklash uchun tanlangan zaxira fayli topilmadi.", sourcePath);
+
+            var fileInfo = new FileInfo(sourcePath);
+            if (fileInfo.Length == 0)
+                throw new InvalidOperationException("Zaxira fayli bo'sh (0 bayt).");
+
+            // 1. Manba zaxira yaxlitligini (integrity check va foreign key check) xavfsiz tekshirish
+            var sourceConnStr = new SqliteConnectionStringBuilder
+            {
+                DataSource = sourcePath,
+                Mode = SqliteOpenMode.ReadOnly
+            }.ToString();
+
+            using (var verifyConn = new SqliteConnection(sourceConnStr))
+            {
+                verifyConn.Open();
+                using var intCmd = verifyConn.CreateCommand();
+                intCmd.CommandText = "PRAGMA integrity_check;";
+                var intRes = Convert.ToString(intCmd.ExecuteScalar());
+                if (!string.Equals(intRes, "ok", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException($"Zaxira fayli yaxlit emas (shikastlangan): {intRes}");
+                }
+
+                using var fkCmd = verifyConn.CreateCommand();
+                fkCmd.CommandText = "PRAGMA foreign_key_check;";
+                using var reader = fkCmd.ExecuteReader();
+                if (reader.Read())
+                {
+                    throw new InvalidOperationException("Zaxira bazasida tashqi kalit (Foreign Key) buzilishlari aniqlandi.");
+                }
+            }
+
+            // 2. Tiklashdan oldin amaldagi ishchi bazaning recovery snapshotini olish
+            var recoveryBackup = AutoBackup("before_restore");
+
+            // 3. Staging fayl orqali xavfsiz almashtirish
+            var targetDir = Path.GetDirectoryName(DatabaseFilePath) ?? AppDomain.CurrentDomain.BaseDirectory;
+            var stagingPath = Path.Combine(targetDir, $"restore_staging_{Guid.NewGuid():N}.db");
+
+            try
+            {
+                File.Copy(sourcePath, stagingPath, overwrite: true);
+
+                // Staging fayl yaxlitligini tekshirish
+                using (var stageVerify = new SqliteConnection($"Data Source={stagingPath};Mode=ReadOnly"))
+                {
+                    stageVerify.Open();
+                    using var intCmd = stageVerify.CreateCommand();
+                    intCmd.CommandText = "PRAGMA integrity_check;";
+                    var intRes = Convert.ToString(intCmd.ExecuteScalar());
+                    if (!string.Equals(intRes, "ok", StringComparison.OrdinalIgnoreCase))
+                    {
+                        throw new InvalidOperationException("Tayyorlangan vaqtinchalik zaxira fayli shikastlangan.");
+                    }
+                }
+
+                // SQLite ulanish hovuzlarini tozalash
+                SqliteConnection.ClearAllPools();
+
+                // WAL va SHM fayllarini tozalash
+                var walPath = DatabaseFilePath + "-wal";
+                var shmPath = DatabaseFilePath + "-shm";
+                if (File.Exists(walPath)) try { File.Delete(walPath); } catch { }
+                if (File.Exists(shmPath)) try { File.Delete(shmPath); } catch { }
+
+                // Faylni atomik almashtirish
+                File.Move(stagingPath, DatabaseFilePath, overwrite: true);
+            }
+            catch (Exception)
+            {
+                // Agar muammo bo'lsa va joriy baza yo'qolgan bo'lsa, recovery snapshotdan tiklash
+                if (!File.Exists(DatabaseFilePath) && recoveryBackup != null && File.Exists(recoveryBackup))
+                {
+                    try { File.Copy(recoveryBackup, DatabaseFilePath, overwrite: true); } catch { }
+                }
+                throw;
+            }
+            finally
+            {
+                if (File.Exists(stagingPath))
+                {
+                    try { File.Delete(stagingPath); } catch { }
+                }
+            }
+
+            // 4. Tiklangan bazani ochish, sxemani tekshirish va yangi epoch belgilash
+            using (var conn = CreateConnection())
+            {
+                Debt.DebtSchema.Install(conn);
+
+                var newHistoryEpoch = Guid.NewGuid().ToString("D");
+                using var epochCmd = conn.CreateCommand();
+                epochCmd.CommandText = "INSERT OR REPLACE INTO sync_meta(key,value) VALUES('debt_history_epoch',@epoch)";
+                epochCmd.Parameters.AddWithValue("@epoch", newHistoryEpoch);
+                epochCmd.ExecuteNonQuery();
+            }
+
+            // 5. Hodisalarni chaqirish (UI yangilanishi uchun)
+            RaiseProductsChanged();
+            RaiseWarehousesChanged();
         }
 
         public event Action? ProductsChanged;
@@ -1814,6 +1920,14 @@ namespace PosElectro.Desktop.Data
             return GetSales(from, to).SelectMany(SaleAccounting.Lines).Where(item =>
                 (string.IsNullOrWhiteSpace(categoryFilter) || categoryFilter == "Barchasi" || string.Equals(item.Category, categoryFilter, StringComparison.OrdinalIgnoreCase)) &&
                 (string.IsNullOrWhiteSpace(warehouseGuidFilter) || warehouseGuidFilter == "all" || item.WarehouseGuid == warehouseGuidFilter)).ToList();
+        }
+
+        public Debt.DebtPeriodSummary GetDebtPeriodSummary(DateTime from, DateTime to)
+        {
+            var fromMs = new DateTimeOffset(from).ToUnixTimeMilliseconds();
+            var toMs = new DateTimeOffset(to).ToUnixTimeMilliseconds();
+            using var conn = CreateConnection();
+            return Debt.DebtReportProjection.Query(conn, fromMs, toMs);
         }
 
         private static Product ReadProduct(SqliteDataReader r) => new()

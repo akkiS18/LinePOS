@@ -29,9 +29,11 @@ import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.material.icons.Icons
 
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.PauseCircle
+import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.PointOfSale
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Remove
@@ -69,7 +71,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -103,6 +107,13 @@ fun CashierScreen(
     val isCompletingSale by viewModel.isCompletingSale.collectAsState()
     val isCheckoutDialogVisible by viewModel.isCheckoutDialogVisible.collectAsState()
     val cardTaxRate by viewModel.cardTaxRate.collectAsState()
+
+    val activeDebtCustomers by viewModel.activeDebtCustomers.collectAsState()
+    val selectedDebtCustomer by viewModel.selectedDebtCustomer.collectAsState()
+    val debtDueDate by viewModel.debtDueDate.collectAsState()
+    val debtCashAdvance by viewModel.debtCashAdvance.collectAsState()
+    val debtCardAdvance by viewModel.debtCardAdvance.collectAsState()
+    val isQuickAddCustomerOpen by viewModel.isQuickAddCustomerOpen.collectAsState()
 
     var isCameraScannerOpen by remember { mutableStateOf(false) }
     var isClearCartDialogVisible by remember { mutableStateOf(false) }
@@ -409,6 +420,41 @@ fun CashierScreen(
                             }
 
                         }
+                        selectedDebtCustomer?.let { cust ->
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = Color(0xFFFEF3C7),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF59E0B)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.weight(1f, fill = false)
+                                    ) {
+                                        Text("📒 Nasiya: ", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFB45309))
+                                        Text(cust.name, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF92400E))
+                                        Text(" (${numberFormat.format(cust.balanceUz)} so'm)", fontSize = 11.sp, color = Color(0xFFB45309))
+                                    }
+                                    IconButton(
+                                        onClick = { viewModel.selectDebtCustomer(null) },
+                                        modifier = Modifier.size(22.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = "Bekor qilish",
+                                            tint = Color(0xFFB45309),
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
                         Spacer(modifier = Modifier.height(10.dp))
 
                         LazyColumn(
@@ -624,15 +670,38 @@ fun CashierScreen(
             )
         }
 
-        // To'lov turini tanlash dialogi (Naqd, Karta, Aralash)
+        // To'lov turini tanlash dialogi (Naqd, Karta, Aralash, Nasiya)
         if (isCheckoutDialogVisible) {
             CheckoutPaymentDialog(
                 isSubmitting = isCompletingSale,
                 totalAmount = viewModel.totalAmount,
                 cardTaxRate = cardTaxRate,
+                activeDebtCustomers = activeDebtCustomers,
+                selectedDebtCustomer = selectedDebtCustomer,
+                onSelectDebtCustomer = { viewModel.selectDebtCustomer(it) },
+                debtDueDate = debtDueDate,
+                onSetDebtDueDate = { viewModel.setDebtDueDate(it) },
+                debtCashAdvance = debtCashAdvance,
+                onSetDebtCashAdvance = { viewModel.setDebtCashAdvance(it) },
+                debtCardAdvance = debtCardAdvance,
+                onSetDebtCardAdvance = { viewModel.setDebtCardAdvance(it) },
+                onOpenQuickAddCustomer = { viewModel.openQuickAddCustomer() },
                 onDismissRequest = { viewModel.closeCheckoutDialog() },
                 onConfirmSale = { paymentType, cash, card, tax, rate ->
                     viewModel.completeSale(paymentType, cash, card, tax, rate)
+                },
+                onConfirmDebtSale = { customerGuid, dueDate, cashAdv, cardAdv ->
+                    viewModel.completeDebtSale(customerGuid, dueDate, cashAdv, cardAdv)
+                }
+            )
+        }
+
+        // Tezkor mijoz qo'shish dialogi
+        if (isQuickAddCustomerOpen) {
+            QuickAddCustomerDialog(
+                onDismiss = { viewModel.closeQuickAddCustomer() },
+                onSave = { name, phone, note ->
+                    viewModel.saveQuickCustomer(name, phone, note)
                 }
             )
         }
@@ -950,3 +1019,72 @@ private fun CartItemRow(
         }
     }
 }
+
+@Composable
+fun QuickAddCustomerDialog(
+    onDismiss: () -> Unit,
+    onSave: (name: String, phone: String, note: String) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
+    var note by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(imageVector = Icons.Default.PersonAdd, contentDescription = null, tint = LinePrimary)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Yangi mijoz qo'shish", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Mijoz ismi (majburiy)") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = phone,
+                    onValueChange = { phone = it },
+                    label = { Text("Telefon raqami") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                    singleLine = true,
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = note,
+                    onValueChange = { note = it },
+                    label = { Text("Izoh (ixtiyoriy)") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                enabled = name.isNotBlank(),
+                onClick = { onSave(name, phone, note) },
+                colors = ButtonDefaults.buttonColors(containerColor = LinePrimary),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Text("Saqlash", fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            OutlinedButton(
+                onClick = onDismiss,
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Text("Bekor qilish")
+            }
+        }
+    )
+}
+
