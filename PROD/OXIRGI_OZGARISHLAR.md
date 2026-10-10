@@ -21,7 +21,6 @@ Ushbu hujjat mijozga oxirgi kiritilgan o'zgarishlar va yangi qulayliklarni ko'rs
 
 ---
 
-<<<<<<< HEAD
 ### 2. 🔠 Mahsulot nomi birinchi harfi avtomatik KATTA harf bo'ladi
 - **Nima o'zgardi:** Yangi tovar qo'shganda yoki tahrirlaganda, tovar nomining birinchi harfi avtomatik tarzda **KATTA** harf qilib olinadi (masalan: `kabel` yozilsa, darhol `Kabel` bo'lib yoziladi).
 - **Mijoz uchun foydasi:** Bosh harf yozish uchun `Shift` tugmasini bosib o'tirish shart emas.
