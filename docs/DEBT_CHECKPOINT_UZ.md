@@ -243,6 +243,7 @@ Foydalanuvchining kichik tugallangan bosqichlarda ishlash talabi sabab 2B ikkiga
     - C# `WifiSync.CoreTests`: 20/20 testlar PASS (100%).
     - Python `test_sync_schema.py`: 7/7 testlar PASS.
     - `PosElectro.Desktop.csproj` kompilatsiyasi: 0 xato, 0 ogohlantirish.
+- Tekshirilgan kod commit: `2c6c433`.
 
 ## Keyingi bosqich — Qism 5: Mobil frontend va offline kassa integratsiyasi
 
