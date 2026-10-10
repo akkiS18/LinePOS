@@ -51,4 +51,17 @@ Ushbu qisqacha qo'llanma mijozga oxirgi kiritilgan qulayliklarni ko'rsatish uchu
 - **Mijoz uchun foydasi:**
   - Mobil telefonda internet va Wi-Fi bo'lmaganda ham 100% oflayn rejimda nasiyaga tovar sotish, yangi mijoz ochish va qarz to'lovlarini yig'ish mumkin.
 
+---
+
+### 5. 🔄 Nasiya tovarlarni qaytarish (Return), to'lovni bekor qilish va ortiqcha pul amallari
+- **Nima o'zgardi:**
+  - Nasiyaga sotilgan tovar qaytarilganda (Return), avval mijozning shu chekdagi qarzi avtomatik chegiriladi (kamaytiriladi), faqat qarzdan ortiq to'langan summa mavjud bo'lsagina mijozga naqd/karta puli qaytariladi.
+  - Noto'g'ri kiritilgan qarz to'lovini bekor qilish (Bekor qilish / Payment Reversal) imkoniyati yaratildi — bank komissiyalari va balanslar o'z joyiga qaytariladi.
+  - Ortiqcha to'langan summa (haqdorlik / kredit) bo'lganda mijozga pulni naqd yoki kartada qaytarish ("💸 Pulni qaytarish" / Credit Refund) funksiyasi qo'shildi.
+  - Bir chekdan ortib qolgan kredit summasini mijozning boshqa faol qarziga o'tkazish ("🔁 Qarzga o'tkazish" / Credit Transfer) imkoniyati joriy etildi.
+  - Mobil ilovada tovar qaytarish oynasida qarzdan qancha chegirilishi va mijozga qancha naqd/karta berilishi aniq va shaffof ko'rsatiladi.
+- **Mijoz uchun foydasi:**
+  - Kassir xatolik bilan qarz tovarini qaytarganda mijozga do'kon hisobidan ortiqcha naqd pul berib yuborish xavfi 100% bartaraf etildi.
+  - Mijoz haqdor bo'lib qolgan holatlarda pulni qaytarish yoki boshqa nasiyaga yo'naltirish to'liq avtomatlashtirildi.
+
 

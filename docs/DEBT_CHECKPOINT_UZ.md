@@ -1,6 +1,6 @@
 # Qarz daftari — davom ettirish nuqtasi
 
-Sana: 2026-10-10. Holat: **Qism 5 (Mobil frontend va offline kassa integratsiyasi) to‘liq yakunlandi va testdan o‘tdi. Navbatdagi bosqich: Qism 6 (Return/Reversal, LAN authority va hisobotlar integratsiyasi)**.
+Sana: 2026-10-10. Holat: **Qism 6 (Return/Reversal, LAN authority, Credit Refund va Credit Transfer) to‘liq yakunlandi va testdan o‘tdi. Navbatdagi bosqich: Qism 7 (Hisobotlar, foyda, Excel va chek/ko‘chirma)**.
 
 ## Asos va branch
 
@@ -293,12 +293,40 @@ Foydalanuvchining kichik tugallangan bosqichlarda ishlash talabi sabab 2B ikkiga
     - Python `tests/test_sync_schema.py`: 7/7 testlar PASS.
 - Tekshirilgan kod commit: `6ef03f8`.
 
-## Keyingi bosqich — Qism 6: Return/Reversal, LAN authority va hisobotlar integratsiyasi
+## Qism 6 natijasi: Return, reversal, refund va kredit transferi
+- Desktop Core va Returns integratsiyasi (`desktop/PosElectro.Desktop/`):
+  - `DebtRepository.cs`: `ReversePayment`, `RefundCredit`, `TransferCredit` metodlari va komandalari (`DebtPaymentReversalCommand`, `DebtCreditRefundCommand`, `DebtCreditTransferCommand`) tranzaksiyaviy delta va single-reversal cheklovlari bilan qo'shildi.
+  - `Returns/ReturnStore.cs`: `ReturnQuote`ga qarz hisobi va balansi ulandi; `Commit`da `DebtAccounting.DebtReturnSplit` hisoblanib, qarz kamaytirilishi (`return_offset` event) va naqd/karta refundi bitta tranzaksiyada commit qilinadi. Quote-to-commit o'rtasidagi race condition tekshiruvi joriy etildi.
+  - `Returns/ReturnReversal.cs`: Qarz offseti bo'lgan qaytarishni bekor qilishda asl offset deltasini to'liq teskari qilib (`+offset`), bitta qaytarish yagona reversal bilan bekor qilinishi ta'minlandi.
+  - `Debt/DebtService.cs`: `ReversePayment`, `RefundCredit`, `TransferCredit` servis qatlamiga ulandi; DTO'larda `IsReversed`, `CanReverse` va `KindDisplay` maydonlari kengaytirildi.
+  - `Services/LocalSyncServer.cs`: LAN authority HTTP endpointlari qo'shildi (`/api/v2/debt/reverse_payment`, `/api/v2/debt/refund_credit`, `/api/v2/debt/transfer_credit`).
+- Desktop UI (`PosElectro.Desktop/`):
+  - `ViewModels/DebtsViewModel.cs`: `HasCredit`, `HasActiveDebt`, `CanTransferCredit` hisoblandi; `ReversePaymentCommand` xavfsiz tasdiqlash dialogi bilan, `OpenRefundCreditModalCommand` va `TransferCreditCommand` kiritildi.
+  - `Views/DebtsView.xaml`: Headerda "💸 Pulni qaytarish", "🔁 Qarzga o'tkazish" tugmalari, to'lovlar jadvalida har bir yozuv yonida "Bekor qilish" tugmasi hamda kreditni qaytarish modali qo'shildi.
+- Android Core va UI (`app/src/main/java/uz/pos/electro/`):
+  - `data/debt/DebtRepository.kt` va `DebtService.kt`: `reversePayment`, `refundCredit`, `transferCredit` amalga oshirildi.
+  - `data/sync/LocalSyncManager.kt`: Kompyuter bilan LAN authority orqali bog'lanuvchi `reversePaymentOnDesktop`, `refundCreditOnDesktop`, `transferCreditOnDesktop` metodlari yaratildi.
+  - `ui/reports/ReturnDialog.kt`: Qarzli chek qaytarilganda qarzdan chegiriladigan summa va mijozga to'lanadigan summa ajratib ko'rsatildi va kassa xatoliklaridan himoyalandi.
+- Testlar va verifikatsiya:
+  - C# `Business.CoreTests` yangi D13–D16 test to'plami (`DebtReturnAndReversalTests.cs`):
+    - D13: 100k savdo / 20k to'lov / 80k qarz: 30k qaytarish -> qarz 50k / refund 0; 70k qaytarish -> qarz 0 / refund 20k — PASS.
+    - D14: Quote va Commit o'rtasidagi balance poygasi (race condition) xatolik bilan rad etilishi — PASS.
+    - D14: Kech kelgan oflayn to'lov sinxronlashganda eski returnni buzmasdan, xavfsiz kredit hosil qilishi — PASS.
+    - D15: Payment reversal asl to'lov summasi va fee'ni teskari qilishi, takroriy reversal rad etilishi — PASS.
+    - D16: Credit refund faqat mavjud haqdorlik chegarasida ishlashi, ortiqcha refund bloklanishi; Credit transfer manbadan nishon qarzga naqdsiz o'tishi — PASS.
+    - Natija: `Business.CoreTests` 12/12 test to'plamlari 100% PASS.
+  - C# `WifiSync.CoreTests`: 20/20 testlar PASS (100%).
+  - Python testlari: 23/23 testlar PASS (100%).
+  - Desktop loyihasi: `net8.0-windows` 0 xato, 0 ogohlantirish bilan build bo'ldi.
+  - Android loyihasi: `compileDebugKotlin` va `compileDebugAndroidTestKotlin` 0 xato bilan BUILD SUCCESSFUL.
+- Tekshirilgan kod commit: `90c7a2a`.
 
-1. Qarzga olingan tovarlarni qaytarish (Return/Refund): faqat LAN authority orqali yakunlash.
-2. Noto‘g‘ri olingan qarz to‘lovini bekor qilish (Payment Reversal) va LAN authority.
-3. Hisobotlar (Reports): Nasiya tushumlarini yangi revenue deb hisoblamaslik, alohida Receivable va Debt Collection ko‘rsatkichlari.
-4. Desktop va Android hisobotlar pariteti.
+## Keyingi bosqich — Qism 7: Hisobotlar, foyda, Excel va chek/ko‘chirma
+1. `SaleAccounting` (desktop va Android): Savdo sanasida to'liq revenue/cost/profit 1 marta; keyingi qarz to'lovi faqat cashflow va fee deb hisoblanadi (savdo timestampi yoki revenue o'zgarmaydi).
+2. Naqd, karta, kredit va qarz summalari hisobotlarda aniq ajratilishi; mijoz krediti do'konning boshqa qarzlarini kamaytirib ko'rsatmasligi.
+3. Davriy hisobotlar: `[start inclusive, end exclusive)`, do'kon vaqti bo'yicha; `opening + periodChanges = closing`.
+4. Chek va ko'chirma (Statement): Initial paid, original debt, later payments, returns, current balance/status va credit; stable LP/RT/RV GUIDlar; UZS/USD profit va cashflow pariteti.
+5. Excel eksport helperlari: UI va Excel bir xil projectiondan foydalanishi.
 
 ## Muhim cheklovlar
 
