@@ -291,6 +291,7 @@ Foydalanuvchining kichik tugallangan bosqichlarda ishlash talabi sabab 2B ikkiga
     - C# `Business.CoreTests`: 11/11 test to‘plamlari PASS (100%).
     - C# `WifiSync.CoreTests`: 20/20 testlar PASS (100%).
     - Python `tests/test_sync_schema.py`: 7/7 testlar PASS.
+- Tekshirilgan kod commit: `6ef03f8`.
 
 ## Keyingi bosqich — Qism 6: Return/Reversal, LAN authority va hisobotlar integratsiyasi
 
