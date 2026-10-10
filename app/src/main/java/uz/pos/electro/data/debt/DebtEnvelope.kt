@@ -2,6 +2,7 @@ package uz.pos.electro.data.debt
 
 import java.math.BigInteger
 import java.util.Collections
+import java.util.UUID
 
 // Historical prices are UZS; original cost currency and per-item stock deltas are frozen.
 data class DebtSaleItem(val guid: String,val productGuid: String,val productName: String,val category: String,
@@ -26,6 +27,14 @@ object DebtEnvelope {
         val n=(value+divisor/BigInteger.valueOf(2))/divisor
         require(n.signum()>=0 && n<=BigInteger.valueOf(Long.MAX_VALUE));return n.toLong()
     }
+    private fun validateWarehouseId(s: String) {
+        val isUuid = runCatching { UUID.fromString(s) }.isSuccess
+        if (isUuid) {
+            DebtWire.id(s)
+        } else {
+            DebtWire.text(s, 64, true)
+        }
+    }
     private fun validate(s: DebtSaleSnapshot) {
         DebtWire.id(s.guid);require(s.occurredAt>=0 && s.totalMinor>0 && s.costMinor>=0 && s.cashMinor>=0 && s.cardMinor>=0)
         require(s.paymentType=="DEBT" && s.feeMinor>=0 && s.feeMinor<=s.cardMinor)
@@ -34,7 +43,7 @@ object DebtEnvelope {
         require(feeRate<=hundred*scale && s.feeMinor==rounded(BigInteger.valueOf(s.cardMinor)*feeRate,hundred*scale))
         val ids=mutableSetOf<String>();val ops=mutableSetOf<String>();var revenue=BigInteger.ZERO;var cost=BigInteger.ZERO
         for(i in s.items) {
-            DebtWire.id(i.guid);DebtWire.id(i.productGuid);DebtWire.id(i.warehouseGuid);DebtWire.id(i.stockOperationGuid)
+            DebtWire.id(i.guid);DebtWire.id(i.productGuid);validateWarehouseId(i.warehouseGuid);DebtWire.id(i.stockOperationGuid)
             require(ids.add(i.guid) && ops.add(i.stockOperationGuid))
             DebtWire.text(i.productName,256,true);DebtWire.text(i.category,256);DebtWire.text(i.unit,32,true);DebtWire.text(i.warehouseName,256,true)
             val q=decimalUnits(i.quantity);val price=decimalUnits(i.price);val unitCost=decimalUnits(i.cost)

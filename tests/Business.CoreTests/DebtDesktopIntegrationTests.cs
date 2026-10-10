@@ -82,12 +82,12 @@ public static class DebtDesktopIntegrationTests
             };
             db.SaveProduct(p1);
 
-            var whGuid = Guid.NewGuid().ToString("D");
+            var whGuid = "main-default-warehouse";
             using (var conn = new SqliteConnection("Data Source=" + tempDb))
             {
                 conn.Open();
                 using var cmd = conn.CreateCommand();
-                cmd.CommandText = "INSERT INTO warehouses (guid, name, is_primary, is_deleted, updated_at) VALUES (@guid, 'Do''kondagi ombor', 1, 0, 100);";
+                cmd.CommandText = "INSERT OR REPLACE INTO warehouses (guid, name, is_primary, is_deleted, updated_at) VALUES (@guid, 'Do''kondagi ombor', 1, 0, 100);";
                 cmd.Parameters.AddWithValue("@guid", whGuid);
                 cmd.ExecuteNonQuery();
             }

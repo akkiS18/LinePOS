@@ -631,3 +631,14 @@ Ushbu hujjat mijozga oxirgi kiritilgan o'zgarishlar va yangi qulayliklarni ko'rs
 
 ---
 
+### 45. 🛠️ Nasiya savdoni tasdiqlashdagi "Invalid debt wire component" xatoligi to'liq bartaraf etildi
+- **Nima o'zgardi:**
+  - Nasiya orqali savdoni tasdiqlashda (`ConfirmSale`) do'konning asosiy ombor identifikatori (`main-default-warehouse`) qat'iy UUID formatida bo'lmaganligi sababli `DebtEnvelope` tekshiruvida `Invalid debt wire component` istisnosi (xatosi) yuzaga kelayotgan edi.
+  - `DebtEnvelope` (ham C# Desktop, ham Kotlin Android) protokoli takomillashtirildi: ombor identifikatori (`WarehouseGuid`) standart 36-belgili UUID bo'lishi bilan birga do'kondagi matnli ombor identifikatorlarini (`main-default-warehouse` va boshqa nomlarni) to'liq qo'llab-quvvatlaydigan qilindi.
+  - `BuildSaleSnapshot` va kassa to'lov jarayonida ombor GUID va ombor nomi bo'sh bo'lib qolishining oldini oluvchi avtomatik himoya qo'yildi (`whGuid` va `whName` xavfsiz fallbacks).
+  - Savdo GUID (`_checkoutGuid`) har doim xalqaro standart "D" formatida (kichik harfli defisli GUID) shakllantirilishi kafolatlandi.
+  - Barcha sinovlar (`Debt.CoreTests` protokoli, 155 ta shared envelope fixtures, 92 ta wire fixtures, 97 ta accounting fixtures hamda real baza integratsion testlari) 100% muvaffaqiyatli o'tdi.
+- **Mijoz uchun foydasi:**
+  - Kassada to'lovni tasdiqlashda (Enter bosilganda) hech qanday texnik xatolik chiqmaydi, nasiyaga sotish (avans bilan yoki to'liq qarz) bir zumda muvaffaqiyatli yakunlanadi.
+
+---

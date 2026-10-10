@@ -1526,7 +1526,7 @@ namespace PosElectro.Desktop.ViewModels
                     _db.InsertSale(sale);
                 }
 
-                _checkoutGuid = Guid.NewGuid().ToString();
+                _checkoutGuid = Guid.NewGuid().ToString("D");
 
                 if (SelectedReceiptPrintOption == 1)
                 {
@@ -1635,7 +1635,7 @@ namespace PosElectro.Desktop.ViewModels
             }
 
             _db.InsertSale(sale);
-            _checkoutGuid = Guid.NewGuid().ToString();
+            _checkoutGuid = Guid.NewGuid().ToString("D");
 
             IsBrakModalOpen = false;
             ClearCart();
@@ -1664,7 +1664,7 @@ namespace PosElectro.Desktop.ViewModels
             _toastTimer.Start();
         }
 
-        private string _checkoutGuid = Guid.NewGuid().ToString();
+        private string _checkoutGuid = Guid.NewGuid().ToString("D");
 
         public Sale BuildCurrentCartSale()
         {

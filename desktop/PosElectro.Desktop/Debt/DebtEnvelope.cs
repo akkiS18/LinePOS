@@ -35,6 +35,13 @@ public static class DebtEnvelope
         // All inputs nonnegative; aggregate first, then half-away-from-zero to tiyin.
         var n=(value+divisor/2)/divisor;Need(n>=0 && n<=long.MaxValue);return (long)n;
     }
+    private static void ValidateWarehouseId(string value) {
+        if(Guid.TryParseExact(value,"D",out var g)) {
+            Need(g!=Guid.Empty && g.ToString("D")==value);
+        } else {
+            DebtWire.Text(value,64,true);
+        }
+    }
     private static void Validate(DebtSaleSnapshot s) {
         DebtWire.Id(s.Guid);Need(s.OccurredAt>=0 && s.TotalMinor>0 && s.CostMinor>=0 && s.CashMinor>=0 && s.CardMinor>=0);
         Need(s.PaymentType=="DEBT" && s.FeeMinor>=0 && s.FeeMinor<=s.CardMinor);
@@ -44,7 +51,7 @@ public static class DebtEnvelope
         var ids=new HashSet<string>(StringComparer.Ordinal);var ops=new HashSet<string>(StringComparer.Ordinal);
         BigInteger revenue=0,cost=0;
         foreach(var i in s.Items) {
-            DebtWire.Id(i.Guid);DebtWire.Id(i.ProductGuid);DebtWire.Id(i.WarehouseGuid);DebtWire.Id(i.StockOperationGuid);
+            DebtWire.Id(i.Guid);DebtWire.Id(i.ProductGuid);ValidateWarehouseId(i.WarehouseGuid);DebtWire.Id(i.StockOperationGuid);
             Need(ids.Add(i.Guid) && ops.Add(i.StockOperationGuid));
             DebtWire.Text(i.ProductName,256,true);DebtWire.Text(i.Category,256);DebtWire.Text(i.Unit,32,true);DebtWire.Text(i.WarehouseName,256,true);
             var q=DecimalUnits(i.Quantity);var price=DecimalUnits(i.Price);var unitCost=DecimalUnits(i.Cost);

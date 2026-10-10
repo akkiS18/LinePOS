@@ -652,7 +652,8 @@ public sealed class DebtService
         {
             var itemGuid = Guid.NewGuid().ToString("D");
             var prodGuid = item.ProductGuid;
-            var whGuid = item.WarehouseGuid;
+            var whGuid = string.IsNullOrWhiteSpace(item.WarehouseGuid) ? "main-default-warehouse" : item.WarehouseGuid;
+            var whName = string.IsNullOrWhiteSpace(item.WarehouseName) ? "Do'kondagi ombor" : item.WarehouseName;
             var opGuid = Guid.NewGuid().ToString("D");
 
             var qDecimal = (decimal)item.Quantity;
@@ -678,7 +679,7 @@ public sealed class DebtService
                 item.Category ?? "",
                 item.UnitDisplay,
                 whGuid,
-                item.WarehouseName,
+                whName,
                 qStr,
                 pStr,
                 cStr,
