@@ -64,7 +64,7 @@ public sealed record DebtCustomerItemDto(
             : "0 so'm (Qarz yo'q)";
     public string PhoneDisplay => string.IsNullOrWhiteSpace(Phone) ? "Telefon kiritilmagan" : Phone;
     public string StatusBadge => Archived
-        ? "Arxivlangan"
+        ? "Bloklangan"
         : HasOverdue
             ? "⚠️ Muddati o'tgan"
             : BalanceMinor > 0

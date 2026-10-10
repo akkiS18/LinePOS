@@ -42,7 +42,32 @@ public class DebtsViewModel : ViewModelBase
         {
             if (SetProperty(ref _searchQuery, value))
             {
+                OnPropertyChanged(nameof(HasSearchQuery));
                 RefreshCustomers();
+            }
+        }
+    }
+
+    public bool HasSearchQuery => !string.IsNullOrWhiteSpace(_searchQuery);
+
+    public IReadOnlyList<DebtFilterOption> FilterOptions { get; } = new List<DebtFilterOption>
+    {
+        new(DebtFilter.ActiveDebt, "🔴 Qarzi bor"),
+        new(DebtFilter.Overdue, "⚠️ Muddati o'tgan"),
+        new(DebtFilter.All, "Barchasi"),
+        new(DebtFilter.Settled, "⚪ Yopilgan"),
+        new(DebtFilter.Credit, "🟢 Ortiqcha to'lov")
+    };
+
+    private DebtFilterOption _selectedFilterOption;
+    public DebtFilterOption SelectedFilterOption
+    {
+        get => _selectedFilterOption;
+        set
+        {
+            if (SetProperty(ref _selectedFilterOption, value) && value != null)
+            {
+                SelectedFilter = value.Filter;
             }
         }
     }
@@ -60,6 +85,11 @@ public class DebtsViewModel : ViewModelBase
                 OnPropertyChanged(nameof(IsFilterOverdue));
                 OnPropertyChanged(nameof(IsFilterSettled));
                 OnPropertyChanged(nameof(IsFilterCredit));
+                if (_selectedFilterOption == null || _selectedFilterOption.Filter != value)
+                {
+                    _selectedFilterOption = FilterOptions.FirstOrDefault(x => x.Filter == value) ?? FilterOptions[0];
+                    OnPropertyChanged(nameof(SelectedFilterOption));
+                }
                 RefreshCustomers();
             }
         }
@@ -86,6 +116,7 @@ public class DebtsViewModel : ViewModelBase
                 OnPropertyChanged(nameof(HasCredit));
                 OnPropertyChanged(nameof(HasActiveDebt));
                 OnPropertyChanged(nameof(CanTransferCredit));
+                OnPropertyChanged(nameof(BlockButtonText));
                 LoadSelectedCustomerDetails();
             }
         }
@@ -95,6 +126,7 @@ public class DebtsViewModel : ViewModelBase
     public bool HasCredit => SelectedCustomer != null && SelectedCustomer.BalanceMinor < 0;
     public bool HasActiveDebt => SelectedCustomer != null && SelectedCustomer.BalanceMinor > 0;
     public bool CanTransferCredit => HasCredit && SelectedCustomerAccounts.Any(a => a.BalanceMinor > 0);
+    public string BlockButtonText => SelectedCustomer?.Archived == true ? "Blokdan chiqarish" : "Bloklash";
 
     // --- CUSTOMER DETAILS (RIGHT PANEL) ---
     private DebtCustomerDetailDto? _selectedCustomerDetails;
@@ -268,6 +300,7 @@ public class DebtsViewModel : ViewModelBase
     public bool IsSubmittingRefundCredit { get => _isSubmittingRefundCredit; set => SetProperty(ref _isSubmittingRefundCredit, value); }
 
     // --- COMMANDS ---
+    public ICommand ClearSearchCommand { get; }
     public ICommand SetFilterCommand { get; }
     public ICommand RefreshCommand { get; }
     public ICommand SelectDetailTabCommand { get; }
@@ -296,6 +329,9 @@ public class DebtsViewModel : ViewModelBase
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _debtService = debtService ?? new DebtService(_db);
+
+        _selectedFilterOption = FilterOptions.First(x => x.Filter == DebtFilter.ActiveDebt);
+        ClearSearchCommand = new RelayCommand(() => SearchQuery = string.Empty);
 
         SetFilterCommand = new RelayCommand<string>(f =>
         {
@@ -346,7 +382,7 @@ public class DebtsViewModel : ViewModelBase
             }
             else if (SelectedCustomer != null && SelectedCustomer.Archived)
             {
-                MessageBox.Show("Arxivlangan mijozga yangi nasiya savdosi ochib bo'lmaydi. Avval mijozni arxivdan chiqaring.", "Mijoz arxivlangan", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Bloklangan mijozga yangi nasiya savdosi ochib bo'lmaydi. Avval mijozni blokdan chiqaring.", "Mijoz bloklangan", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         });
 
@@ -517,9 +553,9 @@ public class DebtsViewModel : ViewModelBase
     private void ToggleArchiveCustomer()
     {
         if (SelectedCustomer == null) return;
-        var actionText = SelectedCustomer.Archived ? "faollashtirishni" : "arxivlashni";
+        var actionText = SelectedCustomer.Archived ? "blokdan chiqarishni" : "bloklashni";
         var res = MessageBox.Show(
-            $"Haqiqatan ham '{SelectedCustomer.Name}' mijozini {actionText} istaysizmi?\n\nEslatma: Arxivlangan mijozning mavjud qarzlari saqlanib qoladi va ularga to'lov qabul qilish mumkin, biroq yangi nasiya ochib bo'lmaydi.",
+            $"Haqiqatan ham '{SelectedCustomer.Name}' mijozini {actionText} istaysizmi?\n\nEslatma: Bloklangan mijozning mavjud qarzlari saqlanib qoladi va ularga to'lov qabul qilish mumkin, biroq yangi nasiya ochib bo'lmaydi.",
             "Tasdiqlash",
             MessageBoxButton.YesNo,
             MessageBoxImage.Question);
@@ -530,6 +566,7 @@ public class DebtsViewModel : ViewModelBase
             {
                 _debtService.ArchiveCustomer(SelectedCustomer.Guid, !SelectedCustomer.Archived);
                 RefreshAll();
+                OnPropertyChanged(nameof(BlockButtonText));
             }
             catch (Exception ex)
             {
@@ -857,3 +894,5 @@ public class DebtsViewModel : ViewModelBase
         }
     }
 }
+
+public sealed record DebtFilterOption(DebtFilter Filter, string DisplayName);

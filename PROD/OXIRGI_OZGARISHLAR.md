@@ -642,3 +642,18 @@ Ushbu hujjat mijozga oxirgi kiritilgan o'zgarishlar va yangi qulayliklarni ko'rs
   - Kassada to'lovni tasdiqlashda (Enter bosilganda) hech qanday texnik xatolik chiqmaydi, nasiyaga sotish (avans bilan yoki to'liq qarz) bir zumda muvaffaqiyatli yakunlanadi.
 
 ---
+
+### 46. 💎 Hisobotlar va Qarz daftari UI/UX modernizatsiyasi: Toza ko'rinish, Vektor ikonkalar, Dropdown filtr, Qidiruv tuzatmasi va Bloklash
+- **Nima o'zgardi:**
+  - **Hisobotlardan ortiqcha qarz/cashflow bloki olib tashlandi:** Hisobotlar ekranidagi ikkilamchi "BERILGAN NASIYA", "UNDIRILGAN QARZ", "KASSA PUL OQIMI", "FAOL QARZDORLIK" paneli olib tashlandi. Ekranning to'liq vertikal balandligi savdolar tarixi jadvaliga berildi, vizual yuklama va ortiqcha elementlar tozalandi.
+  - **Qarz to'lov oynasidan keraksiz chek tanlash olib tashlandi:** Qarzni so'ndirish modalidagi ortiqcha va chalkashtiruvchi "Taqsimlash tartibi:" ComboBox maydoni butunlay olib tashlandi. Mijoz to'lov kiritganda, tizim avtomatik eng birinchi ochilgan ochiq qarzlar bo'yicha eng adolatli va to'g'ri FIFO tartibida jonli ravishda taqsimlaydi va ekranda qaysi chek qancha kamayganini ko'rsatib turadi.
+  - **Qarz daftaridan "Kassada nasiya" tugmasi olib tashlandi:** Mijoz kartasidagi ortiqcha "Kassada nasiya" tugmasi olib tashlandi.
+  - **"Arxiv" tugmasi "Bloklash" deb nomlandi:** Qarz daftaridagi mijozni arxivlash funksiyasi endi mantiqan to'g'ri nomlangan: **"Bloklash"** (va bloklangan bo'lsa **"Blokdan chiqarish"**). Mijoz holati nishoni (badge) ham "Arxivlangan" o'rniga aniq **"Bloklangan"** deb ko'rsatiladi.
+  - **Qidiruv maydonidagi ustma-ust yozilish muammosi tuzatildi:** Qidiruv maydonida matn yozilganda suv belgisi (placeholder) va ikonka ustiga yozilib ketish nuqsoni bartaraf etildi. Matn kiritilganda bir zumda o'chadigan placeholder, chapda chiroyli vektor qidiruv belgisi hamda o'ngda bitta bosish bilan qidiruvni tozalovchi "X" tugmasi qo'yildi.
+  - **Filtr tugmalari ixcham Dropdown (ComboBox) qilindi:** Qarzlar ro'yxati ustidagi 5 ta alohida filtr tugmasi bitta qulay va chiroyli ochiluvchi tanlash menyusi (Dropdown) ko'rinishiga o'tkazildi (`🔴 Qarzi bor`, `⚠️ Muddati o'tgan`, `Barchasi`, `⚪ Yopilgan`, `🟢 Ortiqcha to'lov`).
+  - **Yangilash tugmasi so'zsiz vektor ikonka qilindi:** "🔄 Yangilash" tugmasi o'rniga faqat 40x40 o'lchamdagi aylanuvchi animatsiyali zamonaviy vektor tugma qo'yildi.
+  - **Barcha emojilar vektor ikonkalar bilan almashtirildi:** Qarz daftari ekranidagi barcha emojilar (KPI kartalar, amallar, modallar sarlavhalari, yopish tugmalari, sub-tablar) professional SVG vektor `Path` ikonkalariga o'tkazildi va o'lchamlari moslashtirildi.
+- **Mijoz uchun foydasi:**
+  - Hisobotlar va Qarz daftari interfeysi ancha toza, yengil, professional va qulay bo'ldi. Matnlar ustma-ust tushmaydi, filtrlar ixcham joylashgan, ortiqcha chalg'ituvchi tugmalar yo'q.
+
+---
