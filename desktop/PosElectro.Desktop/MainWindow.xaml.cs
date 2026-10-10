@@ -205,12 +205,6 @@ namespace PosElectro.Desktop
                             e.Handled = true;
                             return;
                         }
-                        if (key == Key.F11)
-                        {
-                            cvm.OpenPaymentModal(3);
-                            e.Handled = true;
-                            return;
-                        }
                     }
                 }
             }

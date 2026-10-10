@@ -128,6 +128,7 @@ namespace PosElectro.Desktop.ViewModels
         public string DisplayText => $"{Name} ({ItemCount} ta - {TotalAmount:N0} so'm)";
 
         // Nasiya holati
+        public bool IsDebtSale { get; set; }
         public string? CustomerGuid { get; set; }
         public string? CustomerName { get; set; }
         public string? DueDate { get; set; }
@@ -460,6 +461,36 @@ namespace PosElectro.Desktop.ViewModels
             set => SetProperty(ref _isPaymentModalOpen, value);
         }
 
+        private bool _isDebtSale;
+        public bool IsDebtSale
+        {
+            get => _isDebtSale;
+            set
+            {
+                if (SetProperty(ref _isDebtSale, value))
+                {
+                    if (value)
+                    {
+                        DebtCashAdvanceInput = "0";
+                        DebtCardAdvanceInput = "0";
+                        if (ActiveCustomers.Count == 0)
+                        {
+                            RefreshActiveCustomers();
+                        }
+                    }
+                    RecalculatePaymentAmounts();
+                    OnPropertyChanged(nameof(SelectedPaymentTypeTitle));
+                    OnPropertyChanged(nameof(IsCashSelected));
+                    OnPropertyChanged(nameof(IsCardSelected));
+                    OnPropertyChanged(nameof(IsSplitSelected));
+                    OnPropertyChanged(nameof(IsDebtSelected));
+                    OnPropertyChanged(nameof(DebtRemainingAmount));
+                    OnPropertyChanged(nameof(DebtRemainingAmountText));
+                    NotifyPreviewProperties();
+                }
+            }
+        }
+
         private int _selectedPaymentType = 0; // 0 = Cash, 1 = Card, 2 = Split, 3 = Debt
         public int SelectedPaymentType
         {
@@ -483,10 +514,10 @@ namespace PosElectro.Desktop.ViewModels
             }
         }
 
-        public bool IsCashSelected => SelectedPaymentType == 0;
-        public bool IsCardSelected => SelectedPaymentType == 1;
-        public bool IsSplitSelected => SelectedPaymentType == 2;
-        public bool IsDebtSelected => SelectedPaymentType == 3;
+        public bool IsCashSelected => !IsDebtSale && SelectedPaymentType == 0;
+        public bool IsCardSelected => !IsDebtSale && SelectedPaymentType == 1;
+        public bool IsSplitSelected => !IsDebtSale && SelectedPaymentType == 2;
+        public bool IsDebtSelected => IsDebtSale || SelectedPaymentType == 3;
 
         // --- NASIYA (DEBT) MAYDONLARI ---
         public ObservableCollection<DebtCustomerItemDto> ActiveCustomers { get; } = new();
@@ -616,13 +647,14 @@ namespace PosElectro.Desktop.ViewModels
         public ICommand CloseQuickCustomerModalCommand { get; }
         public ICommand SaveQuickCustomerModalCommand { get; }
 
-        public string SelectedPaymentTypeTitle => SelectedPaymentType switch
-        {
-            1 => "Karta orqali to'lov",
-            2 => "Aralash to'lov (Naqd + Karta)",
-            3 => "Nasiya (Qarz) savdosi",
-            _ => "Naqd to'lov"
-        };
+        public string SelectedPaymentTypeTitle => IsDebtSale
+            ? "Nasiya (Qarz) savdosi"
+            : SelectedPaymentType switch
+            {
+                1 => "Karta orqali to'lov",
+                2 => "Aralash to'lov (Naqd + Karta)",
+                _ => "Naqd to'lov"
+            };
 
         private string _cashAmountInput = string.Empty;
         public string CashAmountInput
@@ -1108,6 +1140,7 @@ namespace PosElectro.Desktop.ViewModels
             var held = new HeldCartModel
             {
                 Name = $"{customName} ({DateTime.Now:HH:mm})",
+                IsDebtSale = IsDebtSale,
                 CustomerGuid = SelectedDebtCustomer?.CustomerGuid,
                 CustomerName = SelectedDebtCustomer?.FullName,
                 DueDate = DebtDueDate?.ToString("yyyy-MM-dd"),
@@ -1126,6 +1159,7 @@ namespace PosElectro.Desktop.ViewModels
 
             HeldCarts.Add(held);
             CartItems.Clear();
+            IsDebtSale = false;
             SelectedDebtCustomer = null;
             DebtDueDate = null;
             DebtCashAdvanceInput = "0";
@@ -1146,6 +1180,7 @@ namespace PosElectro.Desktop.ViewModels
                 var autoHeld = new HeldCartModel
                 {
                     Name = $"Mijoz (Avto) ({DateTime.Now:HH:mm})",
+                    IsDebtSale = IsDebtSale,
                     CustomerGuid = SelectedDebtCustomer?.CustomerGuid,
                     CustomerName = SelectedDebtCustomer?.FullName,
                     DueDate = DebtDueDate?.ToString("yyyy-MM-dd"),
@@ -1172,6 +1207,7 @@ namespace PosElectro.Desktop.ViewModels
             }
 
             SelectedPaymentType = held.SelectedPaymentType;
+            IsDebtSale = held.IsDebtSale;
             if (!string.IsNullOrEmpty(held.CustomerGuid))
             {
                 RefreshActiveCustomers();
@@ -1266,19 +1302,26 @@ namespace PosElectro.Desktop.ViewModels
 
         public void SaveQuickCustomerModal()
         {
-            if (string.IsNullOrWhiteSpace(QuickCustomerName))
+            var name = QuickCustomerName?.Trim();
+            if (string.IsNullOrWhiteSpace(name))
             {
                 QuickCustomerErrorMessage = "Mijoz ismi kiritilishi shart!";
                 return;
             }
 
+            if (_debtService.IsCustomerNameExists(name))
+            {
+                QuickCustomerErrorMessage = "⚠️ Ushbu ismli mijoz allaqachon mavjud! Iltimos, boshqa ism kiriting.";
+                return;
+            }
+
             try
             {
-                var newCustomerGuid = _debtService.CreateCustomer(QuickCustomerName.Trim(), QuickCustomerPhone?.Trim() ?? "", QuickCustomerNote?.Trim() ?? "");
+                var newCustomerGuid = _debtService.CreateCustomer(name, QuickCustomerPhone?.Trim() ?? "", QuickCustomerNote?.Trim() ?? "");
                 RefreshActiveCustomers();
                 SelectedDebtCustomer = ActiveCustomers.FirstOrDefault(c => c.CustomerGuid == newCustomerGuid);
                 IsQuickCustomerModalOpen = false;
-                ShowToast("Mijoz qo'shildi", $"'{QuickCustomerName.Trim()}' muvaffaqiyatli saqlandi");
+                ShowToast("Mijoz qo'shildi", $"'{name}' muvaffaqiyatli saqlandi");
             }
             catch (Exception ex)
             {
@@ -1303,7 +1346,7 @@ namespace PosElectro.Desktop.ViewModels
 
         public void SetDebtCustomer(DebtCustomerItemDto customer)
         {
-            SelectedPaymentType = 3;
+            IsDebtSale = true;
             RefreshActiveCustomers();
             SelectedDebtCustomer = ActiveCustomers.FirstOrDefault(c => c.CustomerGuid == customer.CustomerGuid);
         }
@@ -1313,11 +1356,9 @@ namespace PosElectro.Desktop.ViewModels
         {
             if (CartItems.Count == 0) return;
             CurrentCardTaxRate = _db.GetCardTaxRate();
+            _isDebtSale = false;
+            OnPropertyChanged(nameof(IsDebtSale));
             SelectedPaymentType = paymentType;
-            if (paymentType == 3 && ActiveCustomers.Count == 0)
-            {
-                RefreshActiveCustomers();
-            }
             RecalculatePaymentAmounts();
 
             // Printerlar ro'yxatini yangilash
@@ -1332,7 +1373,14 @@ namespace PosElectro.Desktop.ViewModels
 
         private void RecalculatePaymentAmounts()
         {
-            if (SelectedPaymentType == 0) // Naqd
+            if (IsDebtSale)
+            {
+                _cashAmountInput = DebtCashAdvanceInput;
+                _cardAmountInput = DebtCardAdvanceInput;
+                double.TryParse(CleanNumber(DebtCardAdvanceInput), NumberStyles.Any, CultureInfo.InvariantCulture, out var cardAdv);
+                PreviewCardTax = Math.Max(0, cardAdv) * (CurrentCardTaxRate / 100.0);
+            }
+            else if (SelectedPaymentType == 0) // Naqd
             {
                 _cashAmountInput = TotalAmount.ToString("0");
                 _cardAmountInput = "0";
@@ -1350,13 +1398,6 @@ namespace PosElectro.Desktop.ViewModels
                 _cashAmountInput = half.ToString("0");
                 _cardAmountInput = (TotalAmount - half).ToString("0");
                 PreviewCardTax = (TotalAmount - half) * (CurrentCardTaxRate / 100.0);
-            }
-            else // Nasiya (3)
-            {
-                _cashAmountInput = DebtCashAdvanceInput;
-                _cardAmountInput = DebtCardAdvanceInput;
-                double.TryParse(CleanNumber(DebtCardAdvanceInput), NumberStyles.Any, CultureInfo.InvariantCulture, out var cardAdv);
-                PreviewCardTax = Math.Max(0, cardAdv) * (CurrentCardTaxRate / 100.0);
             }
             OnPropertyChanged(nameof(CashAmountInput));
             OnPropertyChanged(nameof(CardAmountInput));
@@ -1393,7 +1434,7 @@ namespace PosElectro.Desktop.ViewModels
             if (CartItems.Count == 0) return;
             if (_isSubmittingSale) return;
 
-            if (SelectedPaymentType == 3 && SelectedDebtCustomer == null)
+            if (IsDebtSale && SelectedDebtCustomer == null)
             {
                 MessageBox.Show(
                     "⚠️ Nasiya savdoni amalga oshirish uchun mijoz tanlanishi shart!\n\nIltimos, ro'yxatdan mijozni tanlang yoki '+ Yangi' tugmasi orqali yangi mijoz qo'shing.",
@@ -1435,7 +1476,7 @@ namespace PosElectro.Desktop.ViewModels
             try
             {
                 Sale sale;
-                if (SelectedPaymentType == 3) // Nasiya
+                if (IsDebtSale) // Nasiya
                 {
                     double.TryParse(CleanNumber(DebtCashAdvanceInput), NumberStyles.Any, CultureInfo.InvariantCulture, out var cashAdv);
                     double.TryParse(CleanNumber(DebtCardAdvanceInput), NumberStyles.Any, CultureInfo.InvariantCulture, out var cardAdv);
@@ -1518,6 +1559,7 @@ namespace PosElectro.Desktop.ViewModels
                 RefreshProducts();
 
                 // Reset debt fields
+                IsDebtSale = false;
                 SelectedDebtCustomer = null;
                 DebtCashAdvanceInput = "0";
                 DebtCardAdvanceInput = "0";
@@ -1629,7 +1671,14 @@ namespace PosElectro.Desktop.ViewModels
             double cash = 0;
             double card = 0;
 
-            if (SelectedPaymentType == 0)
+            if (IsDebtSale)
+            {
+                double.TryParse(CleanNumber(DebtCashAdvanceInput), NumberStyles.Any, CultureInfo.InvariantCulture, out cash);
+                double.TryParse(CleanNumber(DebtCardAdvanceInput), NumberStyles.Any, CultureInfo.InvariantCulture, out card);
+                cash = SaleAccounting.Money(Math.Clamp(double.IsFinite(cash) ? cash : 0, 0, TotalAmount));
+                card = SaleAccounting.Money(Math.Clamp(double.IsFinite(card) ? card : 0, 0, TotalAmount - cash));
+            }
+            else if (SelectedPaymentType == 0)
             {
                 cash = TotalAmount;
                 card = 0;
@@ -1654,14 +1703,6 @@ namespace PosElectro.Desktop.ViewModels
                 }
             }
 
-            else if (SelectedPaymentType == 3)
-            {
-                double.TryParse(CleanNumber(DebtCashAdvanceInput), NumberStyles.Any, CultureInfo.InvariantCulture, out cash);
-                double.TryParse(CleanNumber(DebtCardAdvanceInput), NumberStyles.Any, CultureInfo.InvariantCulture, out card);
-                cash = SaleAccounting.Money(Math.Clamp(double.IsFinite(cash) ? cash : 0, 0, TotalAmount));
-                card = SaleAccounting.Money(Math.Clamp(double.IsFinite(card) ? card : 0, 0, TotalAmount - cash));
-            }
-
             var saleRate = _currencyService.GetCachedUsdRate();
             var taxRate = CurrentCardTaxRate;
             var taxAmount = SaleAccounting.Money(card * (taxRate / 100.0));
@@ -1673,13 +1714,14 @@ namespace PosElectro.Desktop.ViewModels
                 Guid = _checkoutGuid,
                 TotalCost = SaleAccounting.Money(CartItems.Sum(i => i.Quantity * i.Product.CostPrice * (i.Product.CostCurrency == "USD" ? saleRate : 1))),
                 UsdRate = saleRate,
-                PaymentType = SelectedPaymentType switch
-                {
-                    1 => PaymentType.CARD,
-                    2 => PaymentType.SPLIT,
-                    3 => PaymentType.DEBT,
-                    _ => PaymentType.CASH
-                },
+                PaymentType = IsDebtSale
+                    ? PaymentType.DEBT
+                    : (SelectedPaymentType switch
+                    {
+                        1 => PaymentType.CARD,
+                        2 => PaymentType.SPLIT,
+                        _ => PaymentType.CASH
+                    }),
                 CashAmount = cash,
                 CardAmount = card,
                 TaxAmount = taxAmount,

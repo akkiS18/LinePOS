@@ -55,6 +55,20 @@ public static class DebtDesktopIntegrationTests
                 // Expected
             }
 
+            // Customer Name Uniqueness Validation
+            Check(service.IsCustomerNameExists("Ali Valiyev Updated"), "Customer name exists check works");
+            Check(service.IsCustomerNameExists("ali valiyev updated"), "Customer name exists is case-insensitive");
+            Check(!service.IsCustomerNameExists("Ali Valiyev Updated", custGuid), "Excluding self allows same name on edit");
+            try
+            {
+                service.CreateCustomer("Ali Valiyev Updated", "+998901112233", "");
+                throw new Exception("Duplicate customer name creation should throw");
+            }
+            catch (InvalidOperationException)
+            {
+                // Expected duplicate exception
+            }
+
             // 3. Product Setup for Sale
             var p1 = new Product
             {
@@ -228,6 +242,18 @@ public static class DebtDesktopIntegrationTests
             Check(unarchOk, "Customer unarchived successfully");
             var activeCusts2 = service.GetActiveCustomers();
             Check(activeCusts2.Count == 1, "Unarchived customer included in ActiveCustomers");
+
+            // 11. Customer Name Uniqueness for Update
+            var cust2Guid = service.CreateCustomer("Bobur", "+998902223344", "");
+            try
+            {
+                service.UpdateCustomer(cust2Guid, "Ali Valiyev Updated", "", "", 0);
+                throw new Exception("Updating to duplicate customer name should throw");
+            }
+            catch (InvalidOperationException)
+            {
+                // Expected duplicate exception
+            }
 
             Console.WriteLine("PASS desktop debt integration: service summary, customer revision concurrency, debt sale snapshot, negative stock, cashier hold/open, payment preview, overpayment prevention, debt settlement, archiving");
         }

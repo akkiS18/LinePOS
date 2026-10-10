@@ -616,3 +616,18 @@ Ushbu hujjat mijozga oxirgi kiritilgan o'zgarishlar va yangi qulayliklarni ko'rs
 - **Mijoz uchun foydasi:**
   - Kompyuter almashtirilganda, Windows qayta o'rnatilganda yoki zaxira nusxadan ma'lumotlarni qaytarish zarurati tug'ilganda dastur ichidan 1 tugma bilan xavfsiz va yo'qotishlarsiz tiklash mumkin.
 
+---
+
+### 44. 📒 Kassa To'lov Oynasida Nasiya Checkbox, 3 ta To'lov Tugmasi, Scroll Qulayligi, Dublikat Ismlar Cheklovi va Chekda Nasiyani Yashirish
+- **Nima o'zgardi:**
+  - **Savatda faqat 3 ta asosiy to'lov tugmasi:** Kassa ekranida 4-ortiqcha "Nasiya" tugmasi olib tashlandi, faqat eng ko'p ishlatiladigan 3 ta tugma qoldirildi: **Naqd** [Space / F8], **Karta** [F9], **Aralash** [F10].
+  - **To'lov tasdiqlash oynasidagi 4 ta tugma qatori olib tashlandi:** Modal ichidagi alohida tugmalar qatori butunlay olib tashlandi, oyna ortiqcha elementlardan tozalandi.
+  - **Nasiyaga yozish (Qarz) Checkbox:** To'lov tasdiqlash oynasi ichiga **`[ ] 📒 Nasiyaga yozish (Qarz)`** belgilash katakchasi (checkbox) joylashtirildi. Ushbu checkbox yoqilganda qarz oynasi (mijozni tanlash, mavjud qarzi, avans to'lovi va to'lash muddati) darcha ichida ochiladi. Dastlabki avans avtomatik 0 so'm qilib belgilanib, butun summa qarzga yo'naltiriladi; kassir xohlasa naqd yoki karta bo'yicha qisman avans kiritishi mumkin.
+  - **Moslashuvchan aylantirish (ScrollViewer):** Kichik ekranli monitor yoki noutbuklarda nasiya parametrlari ochilganda ekrandan siqilib chiqib ketmasligi uchun oyna ichki qismi silliq vertikal aylantirish (scroll) bilan o'raldi. Pastki "Bekor qilish (Esc)" va "Tasdiqlash (Enter)" tugmalari esa har doim pastda ko'rinib, o'z joyida qat'iy turadi.
+  - **Qarzdor ismi takrorlanmasligi (Unikal nom):** Qarz daftarida hamda kassadagi tezkor mijoz qo'shish modalida bir xil ismli mijozni qayta saqlash taqiqlandi. Agar mavjud ism kiritilsa, tizim ogohlantirish xabarini chiqaradi.
+  - **Kassa chekida Nasiya yozuvini yashirish:** Chop etiladigan termo-chekda hamda ekrandagi jonli ko'rinishda (Preview) `Nasiya (Qarz): ... so'm` qatori chiqarilmaydi. Chekda mijozga ko'rsatish uchun faqat qabul qilingan to'lov turi (`Naqd`, `Karta` yoki `Aralash`) va jami savdo summasi odatiy standart chek kabi chop etiladi.
+- **Mijoz uchun foydasi:**
+  - Kassir uchun savdo qilish jarayoni yana-da sodda va tushunarli bo'ldi: asosiy ekranda faqat 3 ta to'lov tugmasi turadi, qarzga sotish kerak bo'lganda tasdiqlash oynasida 1 ta checkbox orqali mijoz tanlanadi. Xaridorga beriladigan chekda esa ortiqcha qarz yozuvlari aks etmaydi. Bir xil ismli qarzdorlar adashib qayta-qayta ochilishining oldi olindi.
+
+---
+

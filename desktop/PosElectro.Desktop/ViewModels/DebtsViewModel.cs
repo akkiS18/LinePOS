@@ -486,6 +486,12 @@ public class DebtsViewModel : ViewModelBase
             return;
         }
 
+        if (_debtService.IsCustomerNameExists(name, IsEditingCustomer ? SelectedCustomer?.Guid : null))
+        {
+            ModalCustomerErrorMessage = "⚠️ Ushbu ismli mijoz allaqachon mavjud! Iltimos, boshqa ism kiriting.";
+            return;
+        }
+
         try
         {
             if (IsEditingCustomer)

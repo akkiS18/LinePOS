@@ -504,16 +504,44 @@ public sealed class DebtService
         return GetCustomerList(null, DebtFilter.All).Where(c => !c.Archived).ToList();
     }
 
+    public bool IsCustomerNameExists(string name, string? excludeGuid = null)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return false;
+        var clean = name.Trim();
+        var all = GetCustomerList(null, DebtFilter.All);
+        return all.Any(c => 
+            (excludeGuid == null || c.CustomerGuid != excludeGuid) &&
+            c.FullName.Trim().Equals(clean, StringComparison.OrdinalIgnoreCase));
+    }
+
     public string CreateCustomer(string name, string phone, string note)
     {
+        var cleanName = name?.Trim() ?? "";
+        if (string.IsNullOrWhiteSpace(cleanName))
+        {
+            throw new ArgumentException("Mijoz ismi kiritilishi shart!");
+        }
+        if (IsCustomerNameExists(cleanName))
+        {
+            throw new InvalidOperationException("Ushbu nomli mijoz allaqachon mavjud!");
+        }
         var guid = Guid.NewGuid().ToString("D");
-        var draft = new DebtCustomerDraft(guid, name?.Trim() ?? "", phone?.Trim() ?? "", note?.Trim() ?? "", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+        var draft = new DebtCustomerDraft(guid, cleanName, phone?.Trim() ?? "", note?.Trim() ?? "", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
         return _repo.CreateCustomer(draft);
     }
 
     public bool UpdateCustomer(string guid, string name, string phone, string note, long revision)
     {
-        var update = new DebtCustomerUpdate(guid, name?.Trim() ?? "", phone?.Trim() ?? "", note?.Trim() ?? "", revision);
+        var cleanName = name?.Trim() ?? "";
+        if (string.IsNullOrWhiteSpace(cleanName))
+        {
+            throw new ArgumentException("Mijoz ismi kiritilishi shart!");
+        }
+        if (IsCustomerNameExists(cleanName, guid))
+        {
+            throw new InvalidOperationException("Ushbu nomli mijoz allaqachon mavjud!");
+        }
+        var update = new DebtCustomerUpdate(guid, cleanName, phone?.Trim() ?? "", note?.Trim() ?? "", revision);
         return _repo.UpdateCustomer(update);
     }
 

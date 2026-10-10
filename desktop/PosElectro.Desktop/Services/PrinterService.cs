@@ -317,7 +317,16 @@ namespace PosElectro.Desktop.Services
 
             lines.Add($"Sana: {sale.CreatedDateTime:dd.MM.yyyy HH:mm}");
 
-            foreach (var payLine in SplitIntoLines($"To'lov turi: {sale.PaymentTypeDisplay}", 32))
+            string payTypeStr = sale.PaymentType switch
+            {
+                PaymentType.CARD => "Karta",
+                PaymentType.SPLIT => "Aralash",
+                PaymentType.DEBT => (sale.CardAmount > 0 && sale.CashAmount > 0 ? "Aralash" : (sale.CardAmount > 0 ? "Karta" : "Naqd")),
+                PaymentType.BRAK => "Brak (Chiqim)",
+                _ => "Naqd"
+            };
+
+            foreach (var payLine in SplitIntoLines($"To'lov turi: {payTypeStr}", 32))
             {
                 lines.Add(payLine);
             }
@@ -399,19 +408,6 @@ namespace PosElectro.Desktop.Services
                 {
                     lines.Add("  Karta:" + new string(' ', cardSpace) + cardVal);
                 }
-            }
-            else if (sale.PaymentType == PaymentType.DEBT)
-            {
-                double debt = Math.Max(0, sale.TotalAmount - sale.CashAmount - sale.CardAmount);
-                if (sale.CashAmount > 0)
-                {
-                    lines.Add($"  Oldindan (Naqd):  {FormatMoney(sale.CashAmount)} so'm");
-                }
-                if (sale.CardAmount > 0)
-                {
-                    lines.Add($"  Oldindan (Karta): {FormatMoney(sale.CardAmount)} so'm");
-                }
-                lines.Add($"  Nasiya (Qarz):    {FormatMoney(debt)} so'm");
             }
 
             lines.Add(new string('-', 32));
