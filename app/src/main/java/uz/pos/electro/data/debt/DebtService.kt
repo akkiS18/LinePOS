@@ -152,8 +152,6 @@ class DebtService @Inject constructor(
     private var actorGuid: String = ""
 
     companion object {
-        const val CANONICAL_DEFAULT_WAREHOUSE_GUID = "00000000-0000-0000-0000-000000000001"
-
         fun formatDecimal(value: BigDecimal): String {
             val stripped = value.stripTrailingZeros()
             val plain = stripped.toPlainString()
@@ -228,7 +226,7 @@ class DebtService @Inject constructor(
             for (item in items) {
                 val itemGuid = UUID.randomUUID().toString()
                 val prodGuid = item.productGuid
-                val whGuid = if (isValidGuid(item.warehouseGuid)) item.warehouseGuid else CANONICAL_DEFAULT_WAREHOUSE_GUID
+                val whGuid = if (item.warehouseGuid.isNotBlank()) item.warehouseGuid else "main-default-warehouse"
                 val opGuid = UUID.randomUUID().toString()
 
                 val qStr = formatDecimal(BigDecimal.valueOf(item.quantity).setScale(8, RoundingMode.HALF_UP))
@@ -300,9 +298,6 @@ class DebtService @Inject constructor(
 
         val db = database.openHelper.writableDatabase
 
-        // Ensure canonical warehouse exists for legacy 'main-default-warehouse' fallback
-        ensureCanonicalWarehouse(db)
-
         val existingStore = DebtRepository.scalar(db, "SELECT store_guid FROM debt_scope WHERE id=1") as? String
         val sGuid = if (!existingStore.isNullOrBlank()) {
             existingStore
@@ -327,17 +322,6 @@ class DebtService @Inject constructor(
         val newRepo = DebtRepository(database, sGuid, aGuid) { true }
         repository = newRepo
         newRepo
-    }
-
-    private fun ensureCanonicalWarehouse(db: SupportSQLiteDatabase) {
-        try {
-            val hasCanonical = DebtRepository.scalar(db, "SELECT 1 FROM warehouses WHERE guid=?", CANONICAL_DEFAULT_WAREHOUSE_GUID) != null
-            if (!hasCanonical) {
-                val now = System.currentTimeMillis()
-                DebtRepository.exec(db, "INSERT OR IGNORE INTO warehouses (guid, name, is_primary, is_deleted, updated_at) VALUES (?, 'Do''kondagi ombor', 0, 0, ?)", CANONICAL_DEFAULT_WAREHOUSE_GUID, now)
-                DebtRepository.exec(db, "INSERT OR IGNORE INTO product_stocks (product_guid, warehouse_guid, quantity, updated_at) SELECT product_guid, ?, quantity, ? FROM product_stocks WHERE warehouse_guid='main-default-warehouse'", CANONICAL_DEFAULT_WAREHOUSE_GUID, now)
-            }
-        } catch (_: Throwable) { }
     }
 
     suspend fun getDebtPeriodSummary(startMs: Long, endMs: Long): DebtPeriodSummary = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {

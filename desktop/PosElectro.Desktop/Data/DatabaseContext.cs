@@ -560,6 +560,9 @@ namespace PosElectro.Desktop.Data
             {
                 using var cleanDeletedWhCmd = conn.CreateCommand();
                 cleanDeletedWhCmd.CommandText = @"
+                    DELETE FROM product_stocks WHERE warehouse_guid = '00000000-0000-0000-0000-000000000001' OR (warehouse_guid != 'main-default-warehouse' AND warehouse_guid IN (SELECT guid FROM warehouses WHERE name = 'Do''kondagi ombor' AND is_primary = 0));
+                    DELETE FROM warehouses WHERE guid = '00000000-0000-0000-0000-000000000001' OR (guid != 'main-default-warehouse' AND name = 'Do''kondagi ombor' AND is_primary = 0);
+                    UPDATE sale_items SET warehouse_guid = 'main-default-warehouse' WHERE warehouse_guid = '00000000-0000-0000-0000-000000000001';
                     DELETE FROM product_stocks 
                     WHERE warehouse_guid IN (SELECT guid FROM warehouses WHERE is_deleted = 1);
 

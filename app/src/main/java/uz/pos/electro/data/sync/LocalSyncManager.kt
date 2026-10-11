@@ -184,10 +184,25 @@ class LocalSyncManager @Inject constructor(
     }
     suspend fun pingDesktop(serverUrl: String): Result<String> = withContext(Dispatchers.IO) {
         runCatching {
-            require(normalizeUrl(serverUrl) == getServerUrl()) { "Boshqa kompyuterga ulash uchun uning QR yoki ulanish kodidan foydalaning." }
-            val reply = request(normalizeUrl(serverUrl), "/api/ping")
+            val normUrl = normalizeUrl(serverUrl)
+            val currentUrl = getServerUrl()
+            val reply = request(normUrl, "/api/ping")
             require(reply.getInt("protocol") == 2)
-            require(reply.getString("serverId") == metadata("server_id")) { "Kompyuter bazasi almashgan. Avval qayta ulang." }
+            val incomingServerId = reply.getString("serverId")
+            val currentServerId = metadata("server_id")
+
+            if (currentServerId != null && incomingServerId == currentServerId) {
+                // Same store PC! Silently adopt the new IP across Wi-Fi networks.
+                if (normUrl != currentUrl) {
+                    prefs.edit().putString("local_desktop_url", normUrl).commit()
+                    restartLiveSyncEngine()
+                }
+            } else if (currentServerId != null && incomingServerId != currentServerId) {
+                throw ServerChangedException(incomingServerId, "Kompyuter bazasi almashgan. Yangi QR kod orqali qayta ulang.")
+            } else {
+                prefs.edit().putString("local_desktop_url", normUrl).commit()
+            }
+
             val capabilities = reply.optJSONArray("capabilities")
             val hasDebt = capabilities != null && (0 until capabilities.length()).any { capabilities.getString(it) == DebtWire.CAPABILITY }
             val storeGuid = reply.optString("storeGuid").takeIf { it.isNotBlank() }
@@ -587,7 +602,9 @@ class LocalSyncManager @Inject constructor(
             val localPending = pending()
             for(i in 0 until root.getJSONArray("warehouses").length()) {
                 val w = root.getJSONArray("warehouses").getJSONObject(i)
-                if(localPending.none { it.kind == "warehouse" && it.guid == w.getString("Guid") }) {
+                val wGuid = w.getString("Guid")
+                if (wGuid == "00000000-0000-0000-0000-000000000001") continue
+                if(localPending.none { it.kind == "warehouse" && it.guid == wGuid }) {
                     val entity = parseWarehouseJson(w,System.currentTimeMillis())
                     val old = warehouseDao.getWarehouseByGuid(entity.guid)
                     if(old == null) warehouseDao.insertWarehouse(entity) else warehouseDao.updateWarehouse(entity.copy(id=old.id))
@@ -618,10 +635,21 @@ class LocalSyncManager @Inject constructor(
                 val stock = root.getJSONArray("productStocks").getJSONObject(i)
                 val guid = stock.getString("ProductGuid")
                 val wh = stock.getString("WarehouseGuid")
+                if (wh == "00000000-0000-0000-0000-000000000001") continue
                 val unpushed = localPending.filter { it.kind == "stock" && it.guid == guid && it.warehouse == wh }.sumOf { it.delta }
                 productStockDao.upsertStock(guid,wh,stock.getDouble("Quantity") + unpushed,stock.getLong("UpdatedAt"))
             }
-            sql.execSQL("UPDATE products SET stock_quantity=(SELECT COALESCE(SUM(quantity),0) FROM product_stocks WHERE product_guid=products.guid)")
+            sql.execSQL("DELETE FROM warehouses WHERE guid = '00000000-0000-0000-0000-000000000001'")
+            sql.execSQL("DELETE FROM product_stocks WHERE warehouse_guid = '00000000-0000-0000-0000-000000000001'")
+            sql.execSQL("""
+                UPDATE products 
+                SET stock_quantity = COALESCE((
+                    SELECT SUM(ps.quantity) 
+                    FROM product_stocks ps 
+                    JOIN warehouses w ON w.guid = ps.warehouse_guid AND w.is_deleted = 0 
+                    WHERE ps.product_guid = products.guid
+                ), 0.0)
+            """)
             for ((table, key) in listOf("returns" to "returns", "return_items" to "returnItems", "return_quarantine" to "returnQuarantine")) {
                 val data = root.optJSONArray(key) ?: continue
                 if (table == "return_quarantine") sql.execSQL("DELETE FROM return_quarantine")

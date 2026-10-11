@@ -108,7 +108,7 @@ class DebtMobileIntegrationTest {
                     productName = "Kabel 3x2.5",
                     category = "Kabellar",
                     unitDisplay = "METR",
-                    warehouseGuid = DebtService.CANONICAL_DEFAULT_WAREHOUSE_GUID,
+                    warehouseGuid = "main-default-warehouse",
                     warehouseName = "Asosiy Ombor",
                     quantity = 5.0,
                     priceAtSale = 15000.0,
@@ -159,7 +159,7 @@ class DebtMobileIntegrationTest {
             val wdb = db.openHelper.readableDatabase
             val stockCur = wdb.query(
                 "SELECT quantity FROM product_stocks WHERE product_guid = ? AND warehouse_guid = ?",
-                arrayOf(prodGuid, DebtService.CANONICAL_DEFAULT_WAREHOUSE_GUID)
+                arrayOf(prodGuid, "main-default-warehouse")
             )
             assertTrue(stockCur.moveToFirst())
             val remainingQty = stockCur.getDouble(0)

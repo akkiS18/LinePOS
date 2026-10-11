@@ -67,6 +67,15 @@ class WarehouseRepository @Inject constructor(
     suspend fun getPrimaryWarehouse(): WarehouseEntity? = warehouseDao.getPrimaryWarehouse()
 
     suspend fun saveWarehouse(name: String, isPrimary: Boolean, id: Long = 0L, guid: String = "") = database.withTransaction {
+        val trimmedName = name.trim()
+        require(trimmedName.isNotBlank()) { "Ombor nomini kiriting" }
+        val existing = warehouseDao.getAllWarehousesList()
+        val duplicate = existing.find {
+            !it.isDeleted && it.name.trim().equals(trimmedName, ignoreCase = true) && (id == 0L || it.id != id) && (guid.isBlank() || it.guid != guid)
+        }
+        if (duplicate != null) {
+            throw IllegalArgumentException("Bu nomdagi ombor allaqachon mavjud: '$trimmedName'")
+        }
         val now = System.currentTimeMillis()
         database.openHelper.writableDatabase.execSQL("UPDATE sync_control SET current_group=? WHERE id=1",arrayOf(UUID.randomUUID().toString()))
         val whGuid = if (guid.isBlank()) "wh_${UUID.randomUUID()}" else guid
@@ -78,7 +87,7 @@ class WarehouseRepository @Inject constructor(
         val entity = WarehouseEntity(
             id = id,
             guid = whGuid,
-            name = name.trim(),
+            name = trimmedName,
             isPrimary = isPrimary,
             isDeleted = false,
             updatedAt = now

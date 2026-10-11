@@ -495,6 +495,12 @@ namespace PosElectro.Desktop.ViewModels
                     return;
                 }
 
+                if (_db.GetWarehouses().Any(w => !w.IsDeleted && string.Equals(w.Name?.Trim(), name, StringComparison.OrdinalIgnoreCase)))
+                {
+                    NewWarehouseErrorMessage = "Bu nomdagi ombor allaqachon mavjud!";
+                    return;
+                }
+
                 _db.SaveWarehouse(new Warehouse
                 {
                     Name = name,

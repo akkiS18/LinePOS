@@ -668,3 +668,20 @@ Ushbu hujjat mijozga oxirgi kiritilgan o'zgarishlar va yangi qulayliklarni ko'rs
   - Qarz daftari oynasi to'liq professional darajadagi zamonaviy desktop interfeysiga aylandi: keraksiz uzun matnlar va noo'rin piktogrammalar yo'qoldi, barcha amallar ixcham, ko'rkam va bitta qarashda tushunarli bo'ldi.
 
 ---
+
+### 48. 🏬 Omborlar Dublikatini Yo'qotish, Tarmoqlararo (Wi-Fi) To'siqsiz Qayta Ulanish va Zaxiralarni Avtomatik Sozlash
+- **Nima o'zgardi:**
+  - **Arvoh ombor va klon qoldiqlar manbasi butunlay yo'qotildi:**
+    - Mobil ilovada (`DebtService`) eskirgan statik `00000000-0000-0000-0000-000000000001` identifikatori va uni "Do'kondagi ombor" nomi bilan klonlovchi `ensureCanonicalWarehouse` kodi to'liq o'chirildi. Endi barcha qarz va tovar harakatlari yagona haqiqiy do'kon ombori (`main-default-warehouse`) orqali to'g'ridan-to'g'ri bog'lanadi.
+    - Baza ochilishida (`AppDatabase.onOpen`) hamda har bir sinxronizatsiyada avtomatik tozalash skripti ishga tushirildi: agar telefonda sun'iy ikkinchi "Do'kondagi ombor" yoki unga klonlangan tovar qoldiqlari mavjud bo'lsa, ular avtomatik o'chirilib, tovarlarning umumiy qoldig'i faqat haqiqiy faol omborlar bo'yicha to'g'ri qayta hisoblanadi.
+  - **Wi-Fi tarmog'i o'zgarganda to'siqsiz, uzilishlarsiz va kursor resetlarisiz qayta ulanish:**
+    - Telefon yoki kompyuter boshqa Wi-Fi tarmog'iga ulanganda (yoki router kompyuterga yangi IP berganida) dastur aloqani uzishni talab qilmaydi.
+    - Mobil ilova yangi IP ga so'rov yuborganida server identifikatori (`serverId`) avvalgi do'kon kompyuteri ekanligini tasdiqlasa, yangi IP avtomatik qabul qilinadi, sinxronizatsiya orqa fonda davom etadi. Qayta QR skanerlash, aloqani uzish yoki ma'lumotlarni qayta yuklab olishga majburlash cheklovi olib tashlandi.
+  - **Ombor nomi takrorlanishi (Duplicate Name) cheklandi:**
+    - Ham Android mobil ilovasida (`WarehouseRepository`), ham Desktop kompyuter dasturida bir xil nomdagi omborni qayta saqlash taqiqlandi.
+- **Mijoz uchun foydasi:**
+  - Do'konda Wi-Fi tarmog'i o'zgarganda yoki hotspot yoqilganda telefon va kompyuter bir-biri bilan hech qanday to'siqlarsiz, xatoliklarsiz va ortiqcha tasdiqlashlarsiz darhol ishlab ketadi.
+  - Omborda bir xil nomdagi dublikat omborlar va mahsulotlarning ikki marta ko'payib ketish xatosi 100% bartaraf etildi.
+
+---
+
