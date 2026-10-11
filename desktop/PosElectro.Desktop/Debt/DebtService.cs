@@ -605,7 +605,7 @@ public sealed class DebtService
         string? targetAccountGuid = null,
         string? requestGuid = null,
         long? occurredAt = null,
-        long feeMinor = 0)
+        long? feeMinor = null)
     {
         var req = requestGuid ?? Guid.NewGuid().ToString("D");
         long timestamp = occurredAt ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -619,16 +619,49 @@ public sealed class DebtService
             }
         }
 
+        // Settings are sampled once. A retry must retain the committed fee/rate,
+        // while the repository still checks the caller's amounts and target.
+        long? savedFee = null;
+        string? feeUsdRate = null;
+        using (var conn = new SqliteConnection("Data Source=" + _db.DatabaseFilePath))
+        {
+            conn.Open();
+            using var query = conn.CreateCommand();
+            query.CommandText = "SELECT fee_minor,fee_usd_rate FROM debt_events WHERE request_guid=@id AND kind='payment'";
+            query.Parameters.AddWithValue("@id", req);
+            using var reader = query.ExecuteReader();
+            if (reader.Read())
+            {
+                savedFee = reader.GetInt64(0);
+                feeUsdRate = reader.IsDBNull(1) ? null : reader.GetString(1);
+            }
+        }
+        var fee = feeMinor ?? savedFee ?? CalculatePaymentFee(cardMinor, (decimal)_db.GetCardTaxRate());
+        if (savedFee == null && fee > 0)
+        {
+            var rate = decimal.Parse(_db.GetSetting("last_usd_rate", "12850"), CultureInfo.InvariantCulture);
+            if (rate <= 0) throw new ArgumentException("Dollar kursi musbat bo'lishi kerak");
+            feeUsdRate = FormatDecimal(rate);
+        }
+
         var cmd = new DebtPaymentCommand(
             req,
             customerGuid,
             cashMinor,
             cardMinor,
-            feeMinor,
+            fee,
             timestamp,
-            targetAccountGuid);
+            targetAccountGuid,
+            feeUsdRate);
 
         return _repo.TakePayment(cmd);
+    }
+
+    public static long CalculatePaymentFee(long cardMinor, decimal percent)
+    {
+        if (cardMinor < 0 || percent < 0 || percent > 100)
+            throw new ArgumentException("Karta summasi yoki komissiya noto'g'ri");
+        return checked((long)decimal.Round(cardMinor * percent / 100m, 0, MidpointRounding.AwayFromZero));
     }
 
     public static DebtSaleSnapshot BuildSaleSnapshot(

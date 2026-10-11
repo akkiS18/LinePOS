@@ -23,7 +23,8 @@ public sealed record DebtPeriodSummary(
     long ClosingDebtMinor,
     long ClosingCreditMinor,
     int ActiveDebtorsCount,
-    int OverdueDebtorsCount)
+    int OverdueDebtorsCount,
+    double? NetDebtFeeUsd = 0)
 {
     public double OpeningDebtUz => OpeningDebtMinor / 100.0;
     public double OpeningCreditUz => OpeningCreditMinor / 100.0;
@@ -32,9 +33,9 @@ public sealed record DebtPeriodSummary(
     public double DebtPaymentsCardUz => DebtPaymentsCardMinor / 100.0;
     public double DebtPaymentsFeeUz => DebtPaymentsFeeMinor / 100.0;
     public double DebtPaymentsTotalUz => DebtPaymentsTotalMinor / 100.0;
-    public double NetDebtCashCollectedUz => (DebtPaymentsCashMinor - PaymentReversalsCashMinor) / 100.0;
-    public double NetDebtCardCollectedUz => (DebtPaymentsCardMinor - PaymentReversalsCardMinor) / 100.0;
-    public double NetDebtFeeUz => (DebtPaymentsFeeMinor - PaymentReversalsFeeMinor) / 100.0;
+    public double NetDebtCashCollectedUz => checked(DebtPaymentsCashMinor + PaymentReversalsCashMinor) / 100.0;
+    public double NetDebtCardCollectedUz => checked(DebtPaymentsCardMinor + PaymentReversalsCardMinor) / 100.0;
+    public double NetDebtFeeUz => checked(DebtPaymentsFeeMinor + PaymentReversalsFeeMinor) / 100.0;
     public double NetDebtCollectedTotalUz => NetDebtCashCollectedUz + NetDebtCardCollectedUz;
     public double DebtReturnOffsetUz => DebtReturnOffsetMinor / 100.0;
     public double CreditRefundCashUz => CreditRefundCashMinor / 100.0;
@@ -142,7 +143,26 @@ public static class DebtReportProjection
             ClosingDebtMinor: closingDebt,
             ClosingCreditMinor: closingCredit,
             ActiveDebtorsCount: activeCount,
-            OverdueDebtorsCount: overdueCount);
+            OverdueDebtorsCount: overdueCount,
+            NetDebtFeeUsd: QueryFeeUsd(conn, startMs, endMs));
+    }
+
+    // Reversal amounts are already negative. Historical FX is never replaced by today's rate.
+    private static double? QueryFeeUsd(SqliteConnection conn, long startMs, long endMs)
+    {
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT fee_minor,fee_usd_rate FROM debt_events WHERE kind IN ('payment','payment_reversal') AND fee_minor<>0 AND occurred_at>=@start AND occurred_at<@end";
+        cmd.Parameters.AddWithValue("@start", startMs);
+        cmd.Parameters.AddWithValue("@end", endMs);
+        using var r = cmd.ExecuteReader();
+        decimal total = 0;
+        while (r.Read())
+        {
+            if (r.IsDBNull(1) || !decimal.TryParse(r.GetString(1), System.Globalization.NumberStyles.Number,
+                System.Globalization.CultureInfo.InvariantCulture, out var rate) || rate <= 0) return null;
+            total += r.GetInt64(0) / 100m / rate;
+        }
+        return (double)total;
     }
 
     private static (long Debt, long Credit) QueryBalancesAt(SqliteConnection conn, long timeMs)

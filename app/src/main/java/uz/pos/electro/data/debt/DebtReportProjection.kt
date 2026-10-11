@@ -21,7 +21,8 @@ data class DebtPeriodSummary(
     val closingDebtMinor: Long,
     val closingCreditMinor: Long,
     val activeDebtorsCount: Int,
-    val overdueDebtorsCount: Int
+    val overdueDebtorsCount: Int,
+    val netDebtFeeUsd: Double? = 0.0
 ) {
     val openingDebtUz: Double get() = openingDebtMinor / 100.0
     val openingCreditUz: Double get() = openingCreditMinor / 100.0
@@ -30,9 +31,9 @@ data class DebtPeriodSummary(
     val debtPaymentsCardUz: Double get() = debtPaymentsCardMinor / 100.0
     val debtPaymentsFeeUz: Double get() = debtPaymentsFeeMinor / 100.0
     val debtPaymentsTotalUz: Double get() = debtPaymentsTotalMinor / 100.0
-    val netDebtCashCollectedUz: Double get() = (debtPaymentsCashMinor - paymentReversalsCashMinor) / 100.0
-    val netDebtCardCollectedUz: Double get() = (debtPaymentsCardMinor - paymentReversalsCardMinor) / 100.0
-    val netDebtFeeUz: Double get() = (debtPaymentsFeeMinor - paymentReversalsFeeMinor) / 100.0
+    val netDebtCashCollectedUz: Double get() = Math.addExact(debtPaymentsCashMinor, paymentReversalsCashMinor) / 100.0
+    val netDebtCardCollectedUz: Double get() = Math.addExact(debtPaymentsCardMinor, paymentReversalsCardMinor) / 100.0
+    val netDebtFeeUz: Double get() = Math.addExact(debtPaymentsFeeMinor, paymentReversalsFeeMinor) / 100.0
     val netDebtCollectedTotalUz: Double get() = netDebtCashCollectedUz + netDebtCardCollectedUz
     val debtReturnOffsetUz: Double get() = debtReturnOffsetMinor / 100.0
     val creditRefundCashUz: Double get() = creditRefundCashMinor / 100.0
@@ -141,8 +142,23 @@ object DebtReportProjection {
             closingDebtMinor = closingDebt,
             closingCreditMinor = closingCredit,
             activeDebtorsCount = activeCount,
-            overdueDebtorsCount = overdueCount
+            overdueDebtorsCount = overdueCount,
+            netDebtFeeUsd = queryFeeUsd(db, startMs, endMs)
         )
+    }
+
+    // Use each signed expense's frozen FX; missing legacy FX makes USD incomplete.
+    private fun queryFeeUsd(db: SupportSQLiteDatabase, startMs: Long, endMs: Long): Double? {
+        var total = java.math.BigDecimal.ZERO
+        db.query("SELECT fee_minor,fee_usd_rate FROM debt_events WHERE kind IN ('payment','payment_reversal') AND fee_minor<>0 AND occurred_at>=? AND occurred_at<?",
+            arrayOf(startMs, endMs)).use { c ->
+            while (c.moveToNext()) {
+                val rate = if (c.isNull(1)) null else c.getString(1).toBigDecimalOrNull()
+                if (rate == null || rate <= java.math.BigDecimal.ZERO) return null
+                total += java.math.BigDecimal.valueOf(c.getLong(0), 2).divide(rate, java.math.MathContext.DECIMAL128)
+            }
+        }
+        return total.toDouble()
     }
 
     private fun queryBalancesAt(db: SupportSQLiteDatabase, timeMs: Long): Pair<Long, Long> {

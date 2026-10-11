@@ -112,7 +112,9 @@ class ReportsViewModel @Inject constructor(
     private fun kindMatches(item: uz.pos.electro.data.model.SaleReportItem) = when (_recordKind.value) {
         "Savdo" -> !item.isBrak && !item.isReturn; "Brak" -> item.isBrak; "Qaytarish" -> item.isReturn; else -> true
     }
+    private var summaryJob: Job? = null
     private fun applyFilters() {
+        summaryJob?.cancel()
         val query = _searchQuery.value.trim().removePrefix("#").uppercase(java.util.Locale.ROOT)
         val matched = rawSales.filter { query.isBlank() || it.sale.receiptNumber.contains(query) ||
             it.sale.guid.replace("-", "").contains(query.removePrefix("LP-").replace("-", ""), true) || it.sale.id.toString().contains(query) }
@@ -125,9 +127,15 @@ class ReportsViewModel @Inject constructor(
         _detailedReportItems.value = lines
         val baseSummary = uz.pos.electro.data.model.SaleAccounting.summary(lines, _usdRate.value)
         _summary.value = baseSummary
-        viewModelScope.launch {
-            val debtPeriod = debtService.getDebtPeriodSummary(rangeStart, rangeEnd)
+        val includeFee = query.isBlank() && _selectedCategory.value == "Barchasi" &&
+            _selectedWarehouseGuid.value == "Barchasi" && _recordKind.value == "Barchasi"
+        val periodStart = rangeStart; val periodEnd = rangeEnd
+        summaryJob = viewModelScope.launch {
+            val debtPeriod = debtService.getDebtPeriodSummary(periodStart, periodEnd)
             _summary.value = baseSummary.copy(
+                netProfit = baseSummary.netProfit - (if (includeFee) debtPeriod.netDebtFeeUz else 0.0),
+                netProfitUsd = baseSummary.netProfitUsd - (if (includeFee) debtPeriod.netDebtFeeUsd ?: 0.0 else 0.0),
+                usdComplete = baseSummary.usdComplete && (!includeFee || debtPeriod.netDebtFeeUsd != null),
                 debtCollected = debtPeriod.netDebtCollectedTotalUz,
                 debtCollectedCash = debtPeriod.netDebtCashCollectedUz,
                 debtCollectedCard = debtPeriod.netDebtCardCollectedUz,
@@ -299,7 +307,11 @@ class ReportsViewModel @Inject constructor(
             periodTitle += " | ${_recordKind.value}"
             val debtPeriod = debtService.getDebtPeriodSummary(start, end)
             val baseExportSummary = uz.pos.electro.data.model.SaleAccounting.summary(detailedItems, _usdRate.value)
+            val includeFee = catFilter == null && whFilter == null && _recordKind.value == "Barchasi"
             val exportSummary = baseExportSummary.copy(
+                netProfit = baseExportSummary.netProfit - (if (includeFee) debtPeriod.netDebtFeeUz else 0.0),
+                netProfitUsd = baseExportSummary.netProfitUsd - (if (includeFee) debtPeriod.netDebtFeeUsd ?: 0.0 else 0.0),
+                usdComplete = baseExportSummary.usdComplete && (!includeFee || debtPeriod.netDebtFeeUsd != null),
                 debtCollected = debtPeriod.netDebtCollectedTotalUz,
                 debtCollectedCash = debtPeriod.netDebtCashCollectedUz,
                 debtCollectedCard = debtPeriod.netDebtCardCollectedUz,
