@@ -41,13 +41,23 @@ Alohida bekor qilish kunida sof tushum -100 000, xarajat -540.
 Sana [start,end), cash-only, yarim tiyin, katta qiymat chegarasi ham tekshiriladi.
 
 PR: https://github.com/akkiS18/LinePOS/pull/3 (draft; main'ga merge yo'q).
-Tekshirilayotgan runtime commit: `815f2acd08129cf9a8763a49ce140487f800fd7e`.
+Tekshirilgan runtime commit: `6ef6f19a4c77ea928cfb41dd4ee7e398f758d35d`.
 
 - Lokal 23 Python testi o'tdi; `git diff --check` toza.
 - Windows desktop build o'tdi.
 - Alohida `dotnet run --project tests/Business.CoreTests -- --stage1` o'tdi
-  (CI run `38146784343`, job `114491713485`, birinchi regression step).
-- Android build va yakuniy Room natijasi quyida checkpointda qayd qilinadi.
+  (CI run `38147204614`, job `114492958171`, birinchi regression step).
+- Android debug APK va androidTest APK build o'tdi.
+- API 26: yangi `DebtStage1AccountingTest` — 1 test, 0 failure, 0 skipped,
+  100% successful (HTML artifact `room-test-results-api-26`, id `11704674495`).
+- API 35: shu yangi test — 1 test, 0 failure, 0 skipped, 100% successful
+  (HTML artifact `room-test-results-api-35`, id `11705715035`).
+- Ikkala API'da ham yakuniy umumiy natija: 32 test, 26 o'tdi, 6 yiqildi.
+  Quyida ko'rsatilgan eski 6 ta xato takrorlandi; stage-1 testi o'tdi.
+- Yakuniy runtime Windows/Android buildlari va alohida .NET stage-1 testi
+  muvaffaqiyatli. To'liq Business suite Wi-Fi testining xatosidan keyin skipped.
+- 1-bosqich implementatsiyasi yakunlandi. 2/3-bosqich boshlanmagan, main merge
+  qilinmagan. Oxirgi hujjat commitida runtime/test kodi o'zgartirilmaydi.
 
 Umumiy CI yashil emas. Mavjud testlarni o'chirish/yumshatish qilinmadi:
 - WifiSync.CoreTests: minimal test bazasida debt_customers yo'q, lekin main'dagi
