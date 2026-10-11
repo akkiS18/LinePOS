@@ -130,6 +130,17 @@ fun ReportsScreen(
 
     // Alohida Cheklar Tarixi oynasi (Sub-view) holati
     var isReceiptsViewOpen by remember { mutableStateOf(false) }
+    var isDateSelectionDialogOpen by remember { mutableStateOf(false) }
+
+    val selectedDateText = when (filter) {
+        TimeRangeFilter.TODAY -> "Bugun"
+        TimeRangeFilter.YESTERDAY -> "Kecha"
+        TimeRangeFilter.LAST_7_DAYS -> "Oxirgi 7 kun"
+        TimeRangeFilter.THIS_MONTH -> "Shu oy"
+        TimeRangeFilter.LAST_MONTH -> "O'tgan oy"
+        TimeRangeFilter.CUSTOM -> "${dayFormat.format(Date(customStart))} - ${dayFormat.format(Date(customEnd))}"
+    }
+
     BackHandler(enabled = isReceiptsViewOpen) {
         isReceiptsViewOpen = false
     }
@@ -194,6 +205,59 @@ fun ReportsScreen(
                                     .size(20.dp)
                                     .rotate(if (isRefreshing) refreshRotation else 0f)
                             )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // 1. Sana Tanlash (Desktop uslubida) + Excel Eksport Tugmasi (1-bosishda)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        DateRangeDropdownTrigger(
+                            selectedDateText = selectedDateText,
+                            onClick = { isDateSelectionDialogOpen = true },
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        Button(
+                            onClick = { viewModel.exportToExcel(context) },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF10B981),
+                                contentColor = Color.White
+                            ),
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                            modifier = Modifier.height(44.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.FileDownload,
+                                contentDescription = "Excel",
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Excel",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // 2. Kategoriya va Ombor filtrlari (Ichkarida)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Box(modifier = Modifier.weight(1f)) {
+                            ReportChoice("Kategoriya", selectedCategory, categories.map { it to it }, viewModel::setCategoryFilter)
+                        }
+                        Box(modifier = Modifier.weight(1f)) {
+                            ReportChoice("Ombor", selectedWarehouseGuid, listOf("Barchasi" to "Barchasi") + warehouses.map { it.guid to it.name }, viewModel::setWarehouseFilter)
                         }
                     }
 
@@ -343,85 +407,14 @@ fun ReportsScreen(
                         }
                     }
 
-                    // 1. Vaqt oralig'i filtri (Gorizontal aylanuvchi chipslar)
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        TimeRangeFilter.values().forEach { timeFilter ->
-                            val labelText = if (timeFilter == TimeRangeFilter.CUSTOM && filter == TimeRangeFilter.CUSTOM) {
-                                "${dayFormat.format(Date(customStart))} - ${dayFormat.format(Date(customEnd))}"
-                            } else {
-                                timeFilter.displayName
-                            }
-
-                            FilterChip(
-                                selected = filter == timeFilter,
-                                onClick = {
-                                    if (timeFilter == TimeRangeFilter.CUSTOM) {
-                                        showSequentialDateRangePicker(context) { start, end ->
-                                            viewModel.setCustomRange(start, end)
-                                        }
-                                    } else {
-                                        viewModel.setFilter(timeFilter)
-                                    }
-                                },
-                                shape = CircleShape,
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                    selectedLabelColor = Color.White
-                                ),
-                                label = { Text(labelText, fontSize = 12.sp, fontWeight = FontWeight.SemiBold) },
-                                leadingIcon = if (timeFilter == TimeRangeFilter.CUSTOM) {
-                                    {
-                                        Icon(
-                                            imageVector = Icons.Default.CalendarMonth,
-                                            contentDescription = "Kalendar",
-                                            modifier = Modifier.size(14.dp),
-                                            tint = if (filter == timeFilter) Color.White else MaterialTheme.colorScheme.primary
-                                        )
-                                    }
-                                } else null
-                            )
-                        }
-                    }
-
-                    // Kategoriya va Ombor filtrlari
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        ReportChoice("Kategoriya", selectedCategory, categories.map { it to it }, viewModel::setCategoryFilter)
-                        ReportChoice("Ombor", selectedWarehouseGuid, listOf("Barchasi" to "Barchasi") + warehouses.map { it.guid to it.name }, viewModel::setWarehouseFilter)
-                    }
-
-                    // Xulosa ma'lumotlar bloki (Tartibli yorug' blok)
-                    Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                    // Desktop uslubidagi Sana Oralig'i Dropdown Trigger
+                    DateRangeDropdownTrigger(
+                        selectedDateText = selectedDateText,
+                        onClick = { isDateSelectionDialogOpen = true },
                         modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(
-                                text = "Savdo tushumi: ${numberFormat.format(summary.grossSales)} • Qaytarilgan: ${numberFormat.format(summary.refundedAmount)} • Tannarx tiklanishi: ${numberFormat.format(summary.costReversal)} so‘m",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = "Brak: ${summary.brakCount} ta • Tannarx: ${numberFormat.format(summary.brakCost)} so‘m",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
+                    )
 
-                    // 2. Moliyaviy KPI Ko'rsatkichlari (Apple Rounded Cards)
+                    // 2. Moliyaviy KPI Ko'rsatkichlari (Apple Rounded Cards - 4 ta teng o'lchamli karta)
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -434,7 +427,9 @@ fun ReportsScreen(
                                 icon = Icons.Default.Payments,
                                 containerColor = MaterialTheme.colorScheme.primary,
                                 contentColor = Color.White,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(115.dp)
                             )
 
                             // SOF FOYDA (So'mda va Dollarda)
@@ -455,6 +450,7 @@ fun ReportsScreen(
                                 contentColor = Color.White,
                                 modifier = Modifier
                                     .weight(1f)
+                                    .height(115.dp)
                                     .clickable { viewModel.refreshUsdRate(context) }
                             )
                         }
@@ -472,55 +468,21 @@ fun ReportsScreen(
                                 contentColor = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier
                                     .weight(1f)
+                                    .height(115.dp)
                                     .clickable { isReceiptsViewOpen = true }
                             )
 
                             KpiCard(
                                 title = "SOTILGAN TOVARLAR",
                                 value = "${if (summary.totalItemsCount % 1.0 == 0.0) summary.totalItemsCount.toLong() else summary.totalItemsCount} ta/m",
+                                subtitle = "Sotuv va xizmatlar",
                                 icon = Icons.Default.Description,
                                 containerColor = MaterialTheme.colorScheme.surface,
                                 contentColor = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(115.dp)
                             )
-                        }
-                    }
-
-                    // Qarz va Cashflow (Pul oqimi) Karta
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                    ) {
-                        Column(modifier = Modifier.padding(14.dp)) {
-                            Text(
-                                text = "QARZ VA PUL OQIMI (CASHFLOW)",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text("Berilgan nasiya", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
-                                    Text("${numberFormat.format(summary.totalDebtAmount)} so'm", fontWeight = FontWeight.Bold, color = Color(0xFFF59E0B), fontSize = 14.sp)
-                                }
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text("Undirilgan qarz", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
-                                    Text("${numberFormat.format(summary.debtCollected)} so'm", fontWeight = FontWeight.Bold, color = Color(0xFF10B981), fontSize = 14.sp)
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text("Kassa pul oqimi", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
-                                    Text("${numberFormat.format(summary.totalCashflow)} so'm", fontWeight = FontWeight.Bold, color = Color(0xFF0284C7), fontSize = 14.sp)
-                                }
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text("Faol qarz / Kredit", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
-                                    Text("${numberFormat.format(summary.activeDebtTotal)} / +${numberFormat.format(summary.activeCreditTotal)}", fontWeight = FontWeight.Bold, color = Color(0xFFEF4444), fontSize = 13.sp)
-                                }
-                            }
                         }
                     }
 
@@ -583,31 +545,6 @@ fun ReportsScreen(
                         }
                     }
 
-                    // 4. Excel Eksport Tugmasi (Modal ochiladi)
-                    Button(
-                        onClick = { viewModel.openExportModal() },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = LineSecondary,
-                            contentColor = Color.White
-                        )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.FileDownload,
-                            contentDescription = "Excel",
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Excel hisobotni yuklab olish (.xls)",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp
-                        )
-                    }
-
                     Spacer(modifier = Modifier.height(16.dp))
                 }
             }
@@ -632,6 +569,178 @@ fun ReportsScreen(
                 onExport = { viewModel.exportToExcel(context) }
             )
         }
+
+        // Sana oralig'ini tanlash dialogi (Desktop presetlari)
+        if (isDateSelectionDialogOpen) {
+            DateRangeSelectionDialog(
+                currentFilter = filter,
+                onSelectFilter = { selected ->
+                    viewModel.setFilter(selected)
+                },
+                onCustomRangeClick = {
+                    showSequentialDateRangePicker(context) { start, end ->
+                        viewModel.setCustomRange(start, end)
+                    }
+                },
+                onDismissRequest = { isDateSelectionDialogOpen = false }
+            )
+        }
+    }
+}
+
+@Composable
+private fun DateRangeDropdownTrigger(
+    selectedDateText: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
+        modifier = modifier
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 11.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.weight(1f, fill = false)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CalendarMonth,
+                    contentDescription = "Sana",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                )
+                Text(
+                    text = selectedDateText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
+            }
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = "Tanlash",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .size(18.dp)
+                    .rotate(90f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun DateRangeSelectionDialog(
+    currentFilter: TimeRangeFilter,
+    onSelectFilter: (TimeRangeFilter) -> Unit,
+    onCustomRangeClick: () -> Unit,
+    onDismissRequest: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismissRequest) {
+        Card(
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CalendarMonth,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Text(
+                            text = "Sana oralig'i",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    IconButton(onClick = onDismissRequest, modifier = Modifier.size(28.dp)) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Yopish",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+
+                val presetOptions = listOf(
+                    TimeRangeFilter.TODAY to "Bugun",
+                    TimeRangeFilter.YESTERDAY to "Kecha",
+                    TimeRangeFilter.LAST_7_DAYS to "Oxirgi 7 kun",
+                    TimeRangeFilter.THIS_MONTH to "Shu oy",
+                    TimeRangeFilter.LAST_MONTH to "O'tgan oy",
+                    TimeRangeFilter.CUSTOM to "Oraliq tanlash (Kalendar)"
+                )
+
+                presetOptions.forEach { (optionFilter, title) ->
+                    val isSelected = currentFilter == optionFilter
+                    Surface(
+                        onClick = {
+                            if (optionFilter == TimeRangeFilter.CUSTOM) {
+                                onCustomRangeClick()
+                            } else {
+                                onSelectFilter(optionFilter)
+                            }
+                            onDismissRequest()
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                        border = if (isSelected) androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary) else null,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = title,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                            )
+                            if (isSelected) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(8.dp)
+                                ) {}
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -647,7 +756,7 @@ private fun KpiCard(
 ) {
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(20.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(
             containerColor = containerColor,
@@ -656,8 +765,9 @@ private fun KpiCard(
     ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp)
+                .fillMaxSize()
+                .padding(14.dp),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -667,28 +777,38 @@ private fun KpiCard(
                 Text(
                     text = title,
                     style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = contentColor.copy(alpha = 0.85f),
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(20.dp),
+                    tint = contentColor.copy(alpha = 0.9f)
                 )
             }
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Black
-            )
-            if (subtitle != null) {
-                Spacer(modifier = Modifier.height(2.dp))
+            Column {
                 Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = contentColor.copy(alpha = 0.85f)
+                    text = value,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Black,
+                    color = contentColor,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
+                if (subtitle != null) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = contentColor.copy(alpha = 0.8f),
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    )
+                }
             }
         }
     }
@@ -1208,15 +1328,71 @@ fun ExportReportDialog(
 }
 
 @Composable
-private fun ReportChoice(label: String, selected: String, choices: List<Pair<String, String>>, onSelect: (String) -> Unit) {
+private fun ReportChoice(
+    label: String,
+    selected: String,
+    choices: List<Pair<String, String>>,
+    onSelect: (String) -> Unit
+) {
     var expanded by remember { androidx.compose.runtime.mutableStateOf(false) }
-    Box {
-        androidx.compose.material3.TextButton(onClick = { expanded = true }) {
-            Text("$label: ${choices.firstOrNull { it.first == selected }?.second ?: selected}", maxLines = 1)
+    val selectedText = choices.firstOrNull { it.first == selected }?.second ?: selected
+
+    Surface(
+        onClick = { expanded = true },
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = label,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = selectedText,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
+            }
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .size(16.dp)
+                    .rotate(90f)
+            )
         }
-        androidx.compose.material3.DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+
+        androidx.compose.material3.DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
             choices.forEach { (value, title) ->
-                androidx.compose.material3.DropdownMenuItem(text = { Text(title) }, onClick = { expanded = false; onSelect(value) })
+                androidx.compose.material3.DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = title,
+                            fontWeight = if (value == selected) FontWeight.Bold else FontWeight.Normal,
+                            color = if (value == selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        )
+                    },
+                    onClick = {
+                        expanded = false
+                        onSelect(value)
+                    }
+                )
             }
         }
     }

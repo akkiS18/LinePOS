@@ -60,6 +60,8 @@ data class ReportsSummary(
 enum class TimeRangeFilter(val displayName: String) {
     TODAY("Bugun"),
     YESTERDAY("Kecha"),
+    LAST_7_DAYS("Oxirgi 7 kun"),
     THIS_MONTH("Shu oy"),
+    LAST_MONTH("O'tgan oy"),
     CUSTOM("Oraliq tanlash")
 }

@@ -260,14 +260,14 @@ class ReportsViewModel @Inject constructor(
 
     fun exportToExcel(context: Context) {
         viewModelScope.launch {
-            val (start, end) = if (_exportFilter.value == TimeRangeFilter.CUSTOM) {
-                Pair(_exportStartDate.value, _exportEndDate.value)
+            val (start, end) = if (_selectedFilter.value == TimeRangeFilter.CUSTOM) {
+                Pair(_customStartDate.value, _customEndDate.value)
             } else {
-                calculateTimestamps(_exportFilter.value)
+                calculateTimestamps(_selectedFilter.value)
             }
 
-            val catFilter = if (_exportSelectedCategory.value == "Barchasi") null else _exportSelectedCategory.value
-            val whFilter = if (_exportSelectedWarehouseGuid.value == "Barchasi") null else _exportSelectedWarehouseGuid.value
+            val catFilter = if (_selectedCategory.value == "Barchasi") null else _selectedCategory.value
+            val whFilter = if (_selectedWarehouseGuid.value == "Barchasi") null else _selectedWarehouseGuid.value
 
             val detailedItems = saleRepository.getDetailedReportItems(
                 startTimestamp = start,
@@ -276,10 +276,12 @@ class ReportsViewModel @Inject constructor(
                 warehouseGuidFilter = whFilter
             ).filter { kindMatches(it) }
 
-            var periodTitle = when (_exportFilter.value) {
+            var periodTitle = when (_selectedFilter.value) {
                 TimeRangeFilter.TODAY -> "Bugun"
                 TimeRangeFilter.YESTERDAY -> "Kecha"
+                TimeRangeFilter.LAST_7_DAYS -> "Oxirgi 7 kun"
                 TimeRangeFilter.THIS_MONTH -> "Shu oy"
+                TimeRangeFilter.LAST_MONTH -> "O'tgan oy"
                 TimeRangeFilter.CUSTOM -> {
                     val df = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
                     "${df.format(Date(start))} - ${df.format(Date(end))}"
@@ -363,6 +365,23 @@ class ReportsViewModel @Inject constructor(
                 Pair(start, end)
             }
 
+            TimeRangeFilter.LAST_7_DAYS -> {
+                val endCal = Calendar.getInstance().apply {
+                    set(Calendar.HOUR_OF_DAY, 23)
+                    set(Calendar.MINUTE, 59)
+                    set(Calendar.SECOND, 59)
+                    set(Calendar.MILLISECOND, 999)
+                }
+                val startCal = Calendar.getInstance().apply {
+                    add(Calendar.DAY_OF_YEAR, -6)
+                    set(Calendar.HOUR_OF_DAY, 0)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+                Pair(startCal.timeInMillis, endCal.timeInMillis)
+            }
+
             TimeRangeFilter.THIS_MONTH -> {
                 calendar.set(Calendar.DAY_OF_MONTH, 1)
                 calendar.set(Calendar.HOUR_OF_DAY, 0)
@@ -377,6 +396,26 @@ class ReportsViewModel @Inject constructor(
                 calendar.set(Calendar.SECOND, 59)
                 calendar.set(Calendar.MILLISECOND, 999)
                 val end = calendar.timeInMillis
+
+                Pair(start, end)
+            }
+
+            TimeRangeFilter.LAST_MONTH -> {
+                val cal = Calendar.getInstance().apply {
+                    add(Calendar.MONTH, -1)
+                    set(Calendar.DAY_OF_MONTH, 1)
+                    set(Calendar.HOUR_OF_DAY, 0)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+                val start = cal.timeInMillis
+                cal.set(Calendar.DAY_OF_MONTH, cal.getActualMaximum(Calendar.DAY_OF_MONTH))
+                cal.set(Calendar.HOUR_OF_DAY, 23)
+                cal.set(Calendar.MINUTE, 59)
+                cal.set(Calendar.SECOND, 59)
+                cal.set(Calendar.MILLISECOND, 999)
+                val end = cal.timeInMillis
 
                 Pair(start, end)
             }

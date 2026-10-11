@@ -683,5 +683,20 @@ Ushbu hujjat mijozga oxirgi kiritilgan o'zgarishlar va yangi qulayliklarni ko'rs
   - Do'konda Wi-Fi tarmog'i o'zgarganda yoki hotspot yoqilganda telefon va kompyuter bir-biri bilan hech qanday to'siqlarsiz, xatoliklarsiz va ortiqcha tasdiqlashlarsiz darhol ishlab ketadi.
   - Omborda bir xil nomdagi dublikat omborlar va mahsulotlarning ikki marta ko'payib ketish xatosi 100% bartaraf etildi.
 
+### 49. 📱 Mobil Hisobotlar UI/UX Modernizatsiyasi: Desktop Uslubidagi Sana Tanlash, Cheklar Tarixiga Ko'chirilgan Filtrlar & 1-Bosishda Excel Eksport, Teng Katta Kartalar va Ortiqcha Bloklar Tozalanishi
+- **Nima o'zgardi:**
+  - **Desktop uslubidagi aqlli sana tanlash dropdowni:** Gorizontal aylanib yuruvchi noqulay chipslar o'rniga kompyuterdagi kabi ixcham va ko'rkam kalendar tugmasi qo'yildi (`📅 Tanlangan oraliq ▾`). Uni bosganda kompyuter dasturidagi kabi tezkor tanlovlar modali ochiladi: **"Bugun"**, **"Kecha"**, **"Oxirgi 7 kun"**, **"Shu oy"**, **"O'tgan oy"** va **"Oraliq tanlash (Kalendar)"**.
+  - **Sana, Kategoriya, Ombor filtrlari va Excel tugmasi ichkariga — "Cheklar tarixi" ro'yxatiga ko'chirildi:** 
+    - Asosiy dashboard ekranidagi ortiqcha filtrlar olib tashlanib, bevosita cheklar tahlil qilinadigan "Cheklar tarixi" ro'yxatining yuqorisiga joylashtirildi.
+    - **1-bosishda Excel yuklab olish:** Yashil rangli **`[ 📥 Excel ]`** tugmasi to'g'ridan-to'g'ri cheklar ro'yxati ichida joylashtirildi. Uni bosganda hech qanday ortiqcha oynalarsiz, ayni damda faol bo'lgan filtrlar (sana oralig'i, tovar kategoriyasi, tanlangan ombor va operatsiya turi) bo'yicha hisobot darhol `.xls` fayl qilib telefonga yuklanadi.
+    - Kategoriya va Ombor filtrlari zamonaviy dropdown qutilari ko'rinishida ichkariga o'tkazildi.
+  - **Ortiqcha va ekranni to'ldirib turgan bloklar to'liq olib tashlandi:**
+    - "Savdo tushumi: 0 • Qaytarilgan: -0 • Tannarx tiklanishi: -0 so'm / Brak: 0 ta • Tannarx: 0 so'm" yozuvli yordamchi karta butunlay olib tashlandi.
+    - Asosiy dashboarddan "QARZ VA PUL OQIMI (CASHFLOW)" kartasi olib tashlanib, ekranda faqat eng muhim savdo ko'rsatkichlari qoldirildi.
+  - **4 ta asosiy KPI ko'rsatkich kartalari teng va simmetrik qilindi:**
+    - `JAMI TUSHUM`, `SOF FOYDA`, `SAVDOLAR SONI` va `SOTILGAN TOVARLAR` kartalari 2x2 to'rida bir xil balandlik (`115.dp`) va bir xil proporsiyalarga keltirildi. "Sotilgan tovarlar" kartasi boshqalardan kichik bo'lib qolish muammosi to'liq tuzatildi.
+- **Mijoz uchun foydasi:**
+  - Hisobotlar ekrani toza, zamonaviy va professional ko'rinishga ega bo'ldi. Asosiy ekranda faqatgina katta 4 ta ko'rsatkich va dollar kursi turadi. Cheklar ro'yxatiga kirilganda esa sana, ombor va kategoriya bo'yicha saralab, bitta tugma orqali kerakli Excel hisobotni bir zumda yuklab olish mumkin.
+
 ---
 
