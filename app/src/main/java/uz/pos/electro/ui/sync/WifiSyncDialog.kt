@@ -101,15 +101,21 @@ fun WifiSyncDialog(
             statusText = "Ulanish tekshirilmoqda..."
             val res = if (urlToTest.trim().startsWith("{") || pairingCode.isNotBlank())
                 syncManager.pairDesktop(urlToTest, pairingCode) else syncManager.pingDesktop(normalized)
-            isLoading = false
             if (res.isSuccess) {
-                isConnected = true
                 pairingCode = ""
-                statusText = "Bog'landi: ${res.getOrNull() ?: ""}"
+                statusText = "Bog'landi: ${res.getOrNull() ?: ""}. Sinxronlashtirilmoqda..."
                 syncManager.restartLiveSyncEngine()
-                Toast.makeText(context, "🟢 Kompyuter bilan jonli aloqa o'rnatildi!", Toast.LENGTH_SHORT).show()
+                val syncRes = syncManager.syncWithDesktop()
+                isLoading = false
+                if (syncRes.isSuccess) {
+                    statusText = "🟢 Jonli aloqa o'rnatildi: ${res.getOrNull() ?: ""}"
+                    Toast.makeText(context, "🟢 Kompyuter bilan jonli aloqa o'rnatildi!", Toast.LENGTH_SHORT).show()
+                } else {
+                    val syncErr = syncRes.exceptionOrNull()?.message ?: "Sinxron xatosi"
+                    statusText = "⚠️ Ulandi, lekin: $syncErr"
+                }
             } else {
-                isConnected = false
+                isLoading = false
                 val err = res.exceptionOrNull()
                 if (err is ServerChangedException) {
                     pendingRePair = Pair(urlToTest, pairingCode)
@@ -177,7 +183,7 @@ fun WifiSyncDialog(
                 }
             }
         ) { innerPadding ->
-            val isCurrentlyLive = liveStatus == LiveSyncStatus.CONNECTED || isConnected
+            val isCurrentlyLive = liveStatus == LiveSyncStatus.CONNECTED
 
             Column(
                 modifier = Modifier

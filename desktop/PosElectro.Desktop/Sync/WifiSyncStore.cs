@@ -51,8 +51,13 @@ public sealed class WifiSyncStore
     {
         using var db=Open(); using var tx=db.BeginTransaction();
         long high=Convert.ToInt64(Scalar(db,tx,"SELECT COALESCE(MAX(seq),0) FROM sync_journal"));
-        if(since<0 || since>high)throw new InvalidOperationException("Sinxron kursori noto'g'ri. Kompyuter bazasi tiklangan bo'lishi mumkin; qayta ulash kerak.");
-        var result=new JObject { ["protocol"]=2,["serverId"]=ServerId,["cursor"]=high };
+        bool rollback = false;
+        if(since<0 || since>high)
+        {
+            since = 0;
+            rollback = true;
+        }
+        var result=new JObject { ["protocol"]=2,["serverId"]=ServerId,["cursor"]=high,["cursorRollback"]=rollback };
         foreach(var (kind,table,key) in new[]{("product","products","guid"),("warehouse","warehouses","guid"),("sale","sales","guid"),("stock","product_stocks","product_guid")})
         {
             var sql = kind == "sale"
@@ -71,11 +76,12 @@ public sealed class WifiSyncStore
         result["returns"] = RawRows(db,tx,$"SELECT * FROM returns WHERE {since}=0 OR guid IN (SELECT entity_guid FROM sync_journal WHERE kind='return' AND seq>{since} AND seq<={high})");
         result["returnItems"] = RawRows(db,tx,$"SELECT * FROM return_items WHERE {since}=0 OR return_guid IN (SELECT entity_guid FROM sync_journal WHERE kind='return' AND seq>{since} AND seq<={high})");
         result["returnQuarantine"] = RawRows(db,tx,"SELECT * FROM return_quarantine");
+        result["customers"] = RawRows(db,tx,"SELECT guid, name, phone, note, archived, revision, created_at FROM debt_customers");
         tx.Commit(); return result;
     }
-    private static JArray RawRows(SqliteConnection db, SqliteTransaction tx, string sql)
+    internal static JArray RawRows(SqliteConnection db, SqliteTransaction tx, string sql, params (string,object?)[] args)
     {
-        using var cmd=Command(db,tx,sql); using var reader=cmd.ExecuteReader(); var rows=new JArray();
+        using var cmd=Command(db,tx,sql,args); using var reader=cmd.ExecuteReader(); var rows=new JArray();
         while(reader.Read()) { var row=new JObject(); for(var i=0;i<reader.FieldCount;i++) row[reader.GetName(i)]=reader.IsDBNull(i)?JValue.CreateNull():JToken.FromObject(reader.GetValue(i)); rows.Add(row); }
         return rows;
     }

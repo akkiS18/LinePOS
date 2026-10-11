@@ -272,6 +272,31 @@ namespace PosElectro.Desktop.Services
                             await Reply(stream, 200, new JObject { ["resultGuid"] = resultGuid }, timeout.Token);
                             return;
                         }
+                        if (path == "/api/v2/debt/update_customer" && request.Method == "POST")
+                        {
+                            var body = JObject.Parse(request.Body);
+                            var customerGuid = WifiSyncStore.Required(body, "CustomerGuid");
+                            var name = WifiSyncStore.Required(body, "Name");
+                            var phone = body["Phone"]?.ToString() ?? "";
+                            var note = body["Note"]?.ToString() ?? "";
+                            var rev = body["Revision"] != null ? (long)body["Revision"]! : 0L;
+                            var debtService = new DebtService(_db);
+                            debtService.UpdateCustomer(customerGuid, name, phone, note, rev);
+                            try { DataSynced?.Invoke(); } catch { }
+                            await Reply(stream, 200, new JObject { ["success"] = true }, timeout.Token);
+                            return;
+                        }
+                        if (path == "/api/v2/debt/archive_customer" && request.Method == "POST")
+                        {
+                            var body = JObject.Parse(request.Body);
+                            var customerGuid = WifiSyncStore.Required(body, "CustomerGuid");
+                            var archive = body["Archive"] != null && (bool)body["Archive"]!;
+                            var debtService = new DebtService(_db);
+                            debtService.ArchiveCustomer(customerGuid, archive);
+                            try { DataSynced?.Invoke(); } catch { }
+                            await Reply(stream, 200, new JObject { ["success"] = true }, timeout.Token);
+                            return;
+                        }
                         if(path=="/api/v2/debt/push" && request.Method=="POST")
                         {
                             var body=JObject.Parse(request.Body);
@@ -311,10 +336,11 @@ namespace PosElectro.Desktop.Services
                             long cursor=query.TryGetValue("cursor",out var raw)?long.Parse(raw):0;
                             using var db=store.Open(); using var tx=db.BeginTransaction();
                             long high=Convert.ToInt64(WifiSyncStore.Scalar(db,tx,"SELECT COALESCE(MAX(seq),0) FROM sync_journal"));
+                            var customersArray = WifiSyncStore.RawRows(db, tx, "SELECT guid, name, phone, note, archived, revision, created_at FROM debt_customers WHERE store_guid=@store", ("@store", _debtStoreGuid));
                             if(cursor<0 || cursor>high)
                             {
                                 tx.Commit();
-                                var rollback=new JObject{["protocol"]=2,["serverId"]=store.ServerId,["storeGuid"]=_debtStoreGuid,["historyEpoch"]=_debtHistoryEpoch,["cursorRollback"]=true,["cursor"]=0,["envelopes"]=new JArray()};
+                                var rollback=new JObject{["protocol"]=2,["serverId"]=store.ServerId,["storeGuid"]=_debtStoreGuid,["historyEpoch"]=_debtHistoryEpoch,["cursorRollback"]=true,["cursor"]=0,["envelopes"]=new JArray(),["customers"]=customersArray};
                                 await Reply(stream,200,rollback,timeout.Token);
                                 return;
                             }
@@ -335,7 +361,7 @@ namespace PosElectro.Desktop.Services
                             }
                             if(envelopes.Count==0 && groupList.Count==0)returnedCursor=high;
                             tx.Commit();
-                            var reply=new JObject{["protocol"]=2,["serverId"]=store.ServerId,["storeGuid"]=_debtStoreGuid,["historyEpoch"]=_debtHistoryEpoch,["cursor"]=returnedCursor,["envelopes"]=envelopes};
+                            var reply=new JObject{["protocol"]=2,["serverId"]=store.ServerId,["storeGuid"]=_debtStoreGuid,["historyEpoch"]=_debtHistoryEpoch,["cursor"]=returnedCursor,["envelopes"]=envelopes,["customers"]=customersArray};
                             await Reply(stream,200,reply,timeout.Token);
                             return;
                         }

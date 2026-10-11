@@ -7,8 +7,11 @@ import androidx.room.withTransaction
 import androidx.sqlite.db.SupportSQLiteDatabase
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -54,6 +57,8 @@ class LocalSyncManager @Inject constructor(
     private var liveJob: Job? = null
     private val _liveSyncStatus = MutableStateFlow(LiveSyncStatus.OFFLINE)
     val liveSyncStatus: StateFlow<LiveSyncStatus> = _liveSyncStatus.asStateFlow()
+    private val _dataUpdateEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val dataUpdateEvents: SharedFlow<Unit> = _dataUpdateEvents.asSharedFlow()
     private val _syncMessage = MutableStateFlow("")
     val syncMessage = _syncMessage.asStateFlow()
     private val _pendingCount = MutableStateFlow(0)
@@ -159,6 +164,8 @@ class LocalSyncManager @Inject constructor(
                     }
                     database.withTransaction {
                         putMetadata("server_id", serverId)
+                        putMetadata("cursor", "0")
+                        putMetadata("debt_cursor", "0")
                         val historyEpoch = reply.optString("historyEpoch").takeIf { it.isNotBlank() }
                         if (historyEpoch != null) {
                             putMetadata("debt_history_epoch", historyEpoch)
@@ -523,6 +530,7 @@ class LocalSyncManager @Inject constructor(
                 if (serverEpoch.isNotBlank()) {
                     putMetadata("debt_history_epoch", serverEpoch)
                 }
+                pullReply.optJSONArray("customers")?.let { applyCustomerUpdates(db(), it) }
             }
             return
         }
@@ -543,6 +551,7 @@ class LocalSyncManager @Inject constructor(
                 val p = DebtEnvelope.decode(wire, storeGuid)
                 inbox.receive(sql, p, wire, now)
             }
+            pullReply.optJSONArray("customers")?.let { applyCustomerUpdates(sql, it) }
             putMetadata("debt_cursor", newCursor.toString())
         }
 
@@ -596,7 +605,19 @@ class LocalSyncManager @Inject constructor(
             }
         }
         val cursor = metadata("cursor")?.toLongOrNull() ?: 0L
-        val reply = request(base,"/api/v2/pull?cursor=$cursor")
+        val reply = try {
+            request(base,"/api/v2/pull?cursor=$cursor")
+        } catch (e: Exception) {
+            if (cursor > 0 && (e.message?.contains("kursor", ignoreCase = true) == true || e.message?.contains("400") == true)) {
+                putMetadata("cursor", "0")
+                request(base, "/api/v2/pull?cursor=0")
+            } else {
+                throw e
+            }
+        }
+        if (reply.optBoolean("cursorRollback", false)) {
+            putMetadata("cursor", "0")
+        }
         require(reply.getString("serverId") == metadata("server_id")) { "Kompyuter bazasi almashgan; sinxron to'xtatildi." }
         applySnapshot(reply)
         _pendingCount.value = totalPendingCount()
@@ -669,11 +690,73 @@ class LocalSyncManager @Inject constructor(
                     sql.execSQL("INSERT OR IGNORE INTO $table (${columns.joinToString(",")}) VALUES (${columns.joinToString(",") { "?" }})", values)
                 }
             }
+            root.optJSONArray("customers")?.let { applyCustomerUpdates(sql, it) }
             putMetadata("cursor",root.getLong("cursor").toString())
+            _dataUpdateEvents.tryEmit(Unit)
         } finally { sql.execSQL("UPDATE sync_control SET applying=0 WHERE id=1") }
         // Settings are unrelated to inventory capture. Existing CBU/Firebase behavior is preserved.
         if(root.has("cardTaxRate")) taxSettingsRepository.setCardTaxRate(root.getDouble("cardTaxRate"))
         if(root.has("usdRate")) currencyRepository.updateCachedRate(root.getDouble("usdRate"))
+    }
+    private fun applyCustomerUpdates(sql: SupportSQLiteDatabase, customers: JSONArray) {
+        var anyChanged = false
+        for (i in 0 until customers.length()) {
+            val c = customers.getJSONObject(i)
+            val guid = c.optString("guid")
+            if (guid.isNullOrBlank()) continue
+            val revision = c.optLong("revision", 0L)
+            val name = c.optString("name", "")
+            val phone = c.optString("phone", "")
+            val note = c.optString("note", "")
+            val archived = if (c.optBoolean("archived", false)) 1L else 0L
+
+            sql.query("SELECT revision FROM debt_customers WHERE guid=?", arrayOf(guid)).use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val localRev = cursor.getLong(0)
+                    if (revision > localRev) {
+                        sql.execSQL(
+                            "UPDATE debt_customers SET name=?, phone=?, note=?, archived=?, revision=? WHERE guid=?",
+                            arrayOf(name, phone, note, archived, revision, guid)
+                        )
+                        anyChanged = true
+                    }
+                }
+            }
+        }
+        if (anyChanged) {
+            _dataUpdateEvents.tryEmit(Unit)
+        }
+    }
+    suspend fun sendLiveCustomerUpdate(customerGuid: String, name: String, phone: String, note: String, revision: Long) = withContext(Dispatchers.IO) {
+        val base = getServerUrl() ?: return@withContext
+        if (token().isNullOrBlank()) return@withContext
+        try {
+            val body = JSONObject().apply {
+                put("CustomerGuid", customerGuid)
+                put("Name", name)
+                put("Phone", phone)
+                put("Note", note)
+                put("Revision", revision)
+            }
+            request(base, "/api/v2/debt/update_customer", body)
+            wake()
+        } catch (e: Exception) {
+            Log.w("WifiSyncV2", "sendLiveCustomerUpdate error: ${e.message}")
+        }
+    }
+    suspend fun sendLiveCustomerArchive(customerGuid: String, archive: Boolean) = withContext(Dispatchers.IO) {
+        val base = getServerUrl() ?: return@withContext
+        if (token().isNullOrBlank()) return@withContext
+        try {
+            val body = JSONObject().apply {
+                put("CustomerGuid", customerGuid)
+                put("Archive", archive)
+            }
+            request(base, "/api/v2/debt/archive_customer", body)
+            wake()
+        } catch (e: Exception) {
+            Log.w("WifiSyncV2", "sendLiveCustomerArchive error: ${e.message}")
+        }
     }
     private fun saveVersion(kind: String,guid: String,revision: Long) { db().execSQL("INSERT OR REPLACE INTO sync_versions(kind,entity_guid,revision) VALUES(?,?,?)",arrayOf(kind,guid,revision)) }
     suspend fun resolveConflicts(keepLocal: Boolean) = withContext(Dispatchers.IO) { syncMutex.withLock {

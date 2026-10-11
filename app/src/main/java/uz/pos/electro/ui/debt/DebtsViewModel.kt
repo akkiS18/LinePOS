@@ -17,11 +17,13 @@ import uz.pos.electro.data.debt.DebtFilter
 import uz.pos.electro.data.debt.DebtPaymentAllocationPreview
 import uz.pos.electro.data.debt.DebtService
 import uz.pos.electro.data.debt.DebtSummaryDto
+import uz.pos.electro.data.sync.LocalSyncManager
 import javax.inject.Inject
 
 @HiltViewModel
 class DebtsViewModel @Inject constructor(
-    private val debtService: DebtService
+    private val debtService: DebtService,
+    private val localSyncManager: LocalSyncManager
 ) : ViewModel() {
 
     private val _summary = MutableStateFlow(DebtSummaryDto())
@@ -76,6 +78,11 @@ class DebtsViewModel @Inject constructor(
     val toastEvent: SharedFlow<String> = _toastEvent.asSharedFlow()
 
     init {
+        viewModelScope.launch {
+            localSyncManager.dataUpdateEvents.collect {
+                loadData()
+            }
+        }
         loadData()
     }
 
@@ -181,6 +188,13 @@ class DebtsViewModel @Inject constructor(
                         note = note,
                         revision = editing.revision
                     )
+                    localSyncManager.sendLiveCustomerUpdate(
+                        customerGuid = editing.guid,
+                        name = name,
+                        phone = phone,
+                        note = note,
+                        revision = editing.revision + 1
+                    )
                     _toastEvent.emit("Mijoz ma'lumotlari yangilandi")
                 } else {
                     val newGuid = debtService.createCustomer(name, phone, note)
@@ -199,7 +213,8 @@ class DebtsViewModel @Inject constructor(
             try {
                 val newArchived = !customer.archived
                 debtService.archiveCustomer(customer.guid, newArchived)
-                val msg = if (newArchived) "Mijoz arxivlandi" else "Mijoz arxivdan chiqarildi"
+                localSyncManager.sendLiveCustomerArchive(customer.guid, newArchived)
+                val msg = if (newArchived) "Mijoz bloklandi" else "Mijoz blokdan chiqarildi"
                 _toastEvent.emit(msg)
                 loadData()
             } catch (e: Throwable) {

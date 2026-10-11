@@ -713,3 +713,29 @@ Ushbu hujjat mijozga oxirgi kiritilgan o'zgarishlar va yangi qulayliklarni ko'rs
 
 ---
 
+### 51. 🔍 Chuqur Tahlil (/deep-search): Doimiy Bog'lanish (Online Rejim), Ombor/Tovar Qoldiqlari Sinxronizatsiyasi va Mijoz Ismini O'zaro Yangilash Muammolari Yechimi
+- **Muammoning tub sabablari (Deep-Search):**
+  1. **Doimiy ulanish uzilib qolishi va soxta "Online" ko'rinishi:** 
+     - Mobil ilovadagi `WifiSyncDialog.kt` oynasida vaqtinchalik `isConnected = true` holati bo'lgani sababli, ping o'tishi bilan oyna ichida yashil ko'ringan. Biroq orqa fondagi `LocalSyncManager` jonli xizmati `/api/v2/pull` so'rovida 400 Bad Request xatoligi olgani sababli `OFFLINE` holatiga tushgan. Foydalanuvchi oynadan chiqqanida esa haqiqiy uzilgan holat ko'ringan.
+     - Kompyuter dasturida esa har qanday so'rov (hatto 400 xatosi bilan tugagan so'rov ham) `Authenticate()` orqali mijozning `LastSeen` vaqtini yangilagani sababli kompyuter ekranida telefon "Online" (< 10s) deb ko'rsatib turgan.
+  2. **Ombor va tovar ma'lumotlarining telefonga yangilanmasligi:**
+     - Kompyuter dasturining `WifiSyncStore.cs` faylida kursor tekshiruvi qat'iy qo'yilgan bo'lib, agar telefon so'ragan kursor kompyuterning joriy `sync_journal` chegarasidan katta bo'lsa (`since > high`), tizim `Invalid cursor range` istisnosi (HTTP 400) tashlagan. Natijada sinxronizatsiya tsikli uzilib, `applySnapshot()` umuman ishlamagan va kompyuterdagi yangi ochilgan omborlar hamda yangilangan tovar qoldiqlari telefonga yetib bormagan.
+  3. **Qarz daftarida mijoz ismini tahrirlaganda telefonga o'tmasligi:**
+     - Kompyuter dasturidagi `DebtRepository.cs` faylida mijoz ismi tahrirlanganda faqat lokal `debt_customers` jadvali yangilangan, biroq u `sync_journal`ga yozilmagan.
+     - `/api/v2/debt/pull` xizmati esa faqat tranzaksiya voqealarini (konvertlarni) uzatib, `debt_customers` jadvalidagi to'g'ridan-to'g'ri tahrirlangan yozuvlarni jo'natmagan. Natijada mijoz ismi, telefoni yoki izohi o'zgarganda telefon bu o'zgarishni qabul qila olmagan.
+- **Nima o'zgardi va qanday tuzatildi:**
+  1. **Kursor chegarasi xatoligida avtomatik tiklash (Cursor Rollback & Healing):**
+     - Kompyuter dasturida `WifiSyncStore.Pull()` usulida kursor diapazondan chiqib ketganda 400 xatosi tashlash o'rniga avtomatik `since = 0; rollback = true;` holatiga keltirildi va yangi to'liq holat uzatiladi.
+     - Mobil ilovada (`LocalSyncManager`) agar kompyuterdan kursor xatosi (400) yoki `cursorRollback = true` kelsa, telefon o'z kursorini avtomatik `0` ga qaytarib, toza qayta yuklashni amalga oshiradi. Ulanish uzilib qolmaydi.
+  2. **Ombor va tovar qoldiqlarining uzluksiz yangilanishi:**
+     - Telefon kompyuter bilan qayta ulanganda kursorlar avtomatik to'g'irlanadi va `applySnapshot` orqali yangi omborlar hamda yangilangan tovar qoldiqlari to'liq qabul qilinadi.
+  3. **Mijozlar rekvizitlarini ikki tomonlama (Two-Way) jonli sinxronizatsiya qilish:**
+     - Kompyuter serverida `/api/v2/debt/pull` va `/api/v2/pull` so'rovlariga `customers` ro'yxati (oxirgi `revision` raqamlari bilan) qo'shildi.
+     - Mobil ilovada yangi kelgan mijozlar reviziyasi tekshirilib, agar kompyuterda yangilangan bo'lsa, telefondagi ism, telefon va izohlar avtomatik yangilanadi va `DebtsViewModel` da ro'yxat darhol qayta yuklanadi.
+     - Shuningdek, telefonda mijoz tahrirlanganda yoki bloklanganda darhol kompyuterga yuborish uchun `/api/v2/debt/update_customer` va `/api/v2/debt/archive_customer` API nuqtalari ishga tushirildi.
+  4. **Holat ko'rsatkichining haqqoniyligi:**
+     - `WifiSyncDialog.kt` dagi soxta yashil holat olib tashlandi, dialog faqat orqa fondagi `LocalSyncManager` haqiqatdan ham `CONNECTED` bo'lgandagina yashil ko'rsatadigan qilindi va ulanish vaqtida to'liq sinxronizatsiya tekshirildi.
+- **Mijoz uchun foydasi:**
+  - Oynadan chiqqanda ulanish uzilib qolmaydi, dastur barqaror onlayn turadi. Kompyuterda ochilgan har qanday yangi ombor yoki tovar o'zgarishlari telefonga o'z vaqtida o'tadi. Qarz daftarida mijoz ismi yoki ma'lumotlari kompyuterda o'zgartirilsa ham, telefonda o'zgartirilsa ham ikkala tomonda darhol bir xil bo'lib aks etadi.
+
+---
