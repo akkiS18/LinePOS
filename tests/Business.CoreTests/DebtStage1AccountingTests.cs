@@ -47,6 +47,17 @@ static class DebtStage1AccountingTests
             Check(DebtReportProjection.Query(c,2000,3000).NetDebtCollectedTotalUz == 100000,"Exclusive end date");
             service.RecordPayment(customer,10000000,0,requestGuid:Guid.NewGuid().ToString(),occurredAt:4000);
             Check(DebtReportProjection.Query(c,4000,5000).NetDebtFeeUz == 0,"Cash has no card commission");
+            // Legacy nonzero fees without FX must never borrow today's rate.
+            var legacyCustomer = service.CreateCustomer("Legacy fee", "", "");
+            var legacySale = DebtService.BuildSaleSnapshot(Guid.NewGuid().ToString(),1000,
+                new[] { new DebtCartItemDto(product,"Cable","Cable","DONA",warehouse,"Main",1,100000,50000,"UZS") },0,0,12000,0);
+            service.OpenDebtSale(Guid.NewGuid().ToString(),legacyCustomer,legacySale);
+            var legacyRequest = Guid.NewGuid().ToString();
+            service.Repository.TakePayment(new(legacyRequest,legacyCustomer,0,10000000,100000,6000));
+            Check(DebtReportProjection.Query(c,6000,7000).NetDebtFeeUsd == null,"Missing historical FX is unknown");
+            service.Repository.ReversePayment(new(Guid.NewGuid().ToString(),legacyRequest,"Full refund",100000,7000));
+            var full = DebtReportProjection.Query(c,6000,8000);
+            Check(full.NetDebtCollectedTotalUz == 0 && full.NetDebtFeeUz == 0,"Full reversal cancels both cashflow and fee");
             Check(DebtService.CalculatePaymentFee(25,2m)==1,"Half tiyin rounds up");
             Check(DebtService.CalculatePaymentFee(long.MaxValue,100m)==long.MaxValue,"Large valid fee does not overflow");
             Console.WriteLine("PASS debt stage 1: configured fees, historic FX, retries, mixed/cash payments, signed reversal, date boundaries, rounding");

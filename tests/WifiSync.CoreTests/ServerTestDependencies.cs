@@ -7,6 +7,7 @@ namespace PosElectro.Desktop.Data {
         public int GetActiveProductsCount()=>0;
         public int GetTotalSalesCount()=>0;
         public double GetCardTaxRate()=>1.8;
+        public string GetSetting(string key, string defaultValue="")=>defaultValue;
         public void BackupDatabase(string destination) {using var db=new SqliteConnection("Data Source="+DatabaseFilePath);db.Open();using var cmd=db.CreateCommand();cmd.CommandText="VACUUM INTO @destination";cmd.Parameters.AddWithValue("@destination",destination);cmd.ExecuteNonQuery();}
     }
 }

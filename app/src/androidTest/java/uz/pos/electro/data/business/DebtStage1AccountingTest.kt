@@ -63,6 +63,18 @@ class DebtStage1AccountingTest {
             assertEquals(100000.0, service.getDebtPeriodSummary(2000,3000).netDebtCollectedTotalUz, 0.0)
             service.recordPayment(customer,10000000,0,requestGuid=guid(),occurredAt=4000)
             assertEquals(0.0, service.getDebtPeriodSummary(4000,5000).netDebtFeeUz, 0.0)
+            val legacyCustomer = service.createCustomer("Legacy fee", "", "")
+            val legacySale = DebtService.buildSaleSnapshot(guid(),1000,
+                listOf(DebtCartItemDto(product,"Cable","Cable","METR",warehouse,"Main",1.0,100000.0,50000.0,"UZS")),0,0,12000.0,0.0)
+            service.openDebtSale(guid(),legacyCustomer,legacySale)
+            val repo = DebtRepository(db,store,actor){true}
+            val legacyRequest = guid()
+            repo.takePayment(DebtPaymentCommand(legacyRequest,legacyCustomer,0,10000000,100000,6000))
+            assertNull(service.getDebtPeriodSummary(6000,7000).netDebtFeeUsd)
+            repo.reversePayment(DebtPaymentReversalCommand(guid(),legacyRequest,"Full refund",100000,7000))
+            val full = service.getDebtPeriodSummary(6000,8000)
+            assertEquals(0.0, full.netDebtCollectedTotalUz, 0.0)
+            assertEquals(0.0, full.netDebtFeeUz, 0.0)
             assertEquals(1L, DebtService.calculatePaymentFee(25,BigDecimal("2")))
             assertEquals(Long.MAX_VALUE, DebtService.calculatePaymentFee(Long.MAX_VALUE,BigDecimal("100")))
         } finally {
