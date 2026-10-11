@@ -125,9 +125,14 @@ class ReportsViewModel @Inject constructor(
         _detailedReportItems.value = lines
         val baseSummary = uz.pos.electro.data.model.SaleAccounting.summary(lines, _usdRate.value)
         _summary.value = baseSummary
+        val includeFee = query.isBlank() && _selectedCategory.value == "Barchasi" &&
+            _selectedWarehouseGuid.value == "Barchasi" && _recordKind.value == "Barchasi"
         viewModelScope.launch {
             val debtPeriod = debtService.getDebtPeriodSummary(rangeStart, rangeEnd)
             _summary.value = baseSummary.copy(
+                netProfit = baseSummary.netProfit - (if (includeFee) debtPeriod.netDebtFeeUz else 0.0),
+                netProfitUsd = baseSummary.netProfitUsd - (if (includeFee) debtPeriod.netDebtFeeUsd ?: 0.0 else 0.0),
+                usdComplete = baseSummary.usdComplete && (!includeFee || debtPeriod.netDebtFeeUsd != null),
                 debtCollected = debtPeriod.netDebtCollectedTotalUz,
                 debtCollectedCash = debtPeriod.netDebtCashCollectedUz,
                 debtCollectedCard = debtPeriod.netDebtCardCollectedUz,
@@ -299,7 +304,11 @@ class ReportsViewModel @Inject constructor(
             periodTitle += " | ${_recordKind.value}"
             val debtPeriod = debtService.getDebtPeriodSummary(start, end)
             val baseExportSummary = uz.pos.electro.data.model.SaleAccounting.summary(detailedItems, _usdRate.value)
+            val includeFee = catFilter == null && whFilter == null && _recordKind.value == "Barchasi"
             val exportSummary = baseExportSummary.copy(
+                netProfit = baseExportSummary.netProfit - (if (includeFee) debtPeriod.netDebtFeeUz else 0.0),
+                netProfitUsd = baseExportSummary.netProfitUsd - (if (includeFee) debtPeriod.netDebtFeeUsd ?: 0.0 else 0.0),
+                usdComplete = baseExportSummary.usdComplete && (!includeFee || debtPeriod.netDebtFeeUsd != null),
                 debtCollected = debtPeriod.netDebtCollectedTotalUz,
                 debtCollectedCash = debtPeriod.netDebtCashCollectedUz,
                 debtCollectedCard = debtPeriod.netDebtCardCollectedUz,

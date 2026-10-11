@@ -144,7 +144,9 @@ data class DebtCartItemDto(
 @Singleton
 class DebtService @Inject constructor(
     private val database: AppDatabase,
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val taxSettings: uz.pos.electro.data.repository.TaxSettingsRepository = uz.pos.electro.data.repository.TaxSettingsRepository(context),
+    private val currency: uz.pos.electro.data.repository.CurrencyRepository = uz.pos.electro.data.repository.CurrencyRepository(context)
 ) {
     private val lock = Any()
     private var repository: DebtRepository? = null
@@ -152,6 +154,11 @@ class DebtService @Inject constructor(
     private var actorGuid: String = ""
 
     companion object {
+        fun calculatePaymentFee(cardMinor: Long, percent: BigDecimal): Long {
+            require(cardMinor >= 0 && percent >= BigDecimal.ZERO && percent <= BigDecimal("100"))
+            return BigDecimal.valueOf(cardMinor).multiply(percent).divide(BigDecimal("100"))
+                .setScale(0, java.math.RoundingMode.HALF_UP).longValueExact()
+        }
         fun formatDecimal(value: BigDecimal): String {
             val stripped = value.stripTrailingZeros()
             val plain = stripped.toPlainString()
@@ -718,14 +725,26 @@ class DebtService @Inject constructor(
             }
         }
 
+        // Replay the original financial snapshot even if settings changed meanwhile.
+        val saved = database.openHelper.readableDatabase.query(
+            "SELECT fee_minor,fee_usd_rate FROM debt_events WHERE request_guid=? AND kind='payment'",
+            arrayOf(req)
+        ).use { c -> if (c.moveToFirst()) c.getLong(0) to (if (c.isNull(1)) null else c.getString(1)) else null }
+        val fee = saved?.first ?: calculatePaymentFee(cardMinor, BigDecimal.valueOf(taxSettings.getCardTaxRate()))
+        val feeRate = if (saved != null) saved.second else if (fee > 0) {
+            val rate = BigDecimal.valueOf(currency.getCachedUsdRate())
+            require(rate > BigDecimal.ZERO) { "Dollar kursi musbat bo'lishi kerak" }
+            formatDecimal(rate)
+        } else null
         val cmd = DebtPaymentCommand(
             requestGuid = req,
             customerGuid = customerGuid,
             cashMinor = cashMinor,
             cardMinor = cardMinor,
-            feeMinor = 0L,
+            feeMinor = fee,
             occurredAt = timestamp,
-            targetAccountGuid = targetAccountGuid
+            targetAccountGuid = targetAccountGuid,
+            feeUsdRate = feeRate
         )
 
         return repo.takePayment(cmd)

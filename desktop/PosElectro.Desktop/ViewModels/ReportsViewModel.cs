@@ -268,8 +268,13 @@ namespace PosElectro.Desktop.ViewModels
         public double TotalCardRevenue => _reportLines.Sum(i => i.CardAmount);
         public double TotalTaxAmount => _reportLines.Sum(i => i.TaxAmount);
         public double TotalCost => _reportLines.Sum(i => i.TotalCost);
-        public double TotalProfit => _reportLines.Sum(i => i.Profit);
-        public double TotalProfitUsd => _reportLines.Sum(i => i.ProfitUsd ?? 0);
+        // Debt collection fees are period expenses, not product/receipt sale margins.
+        private bool IncludeDebtFeeInProfit => !HasSearchReceiptNumber && SelectedCategory == "Barchasi" &&
+            (_selectedWarehouse == null || _selectedWarehouse.Guid == "all") && SelectedRecordKind == "Barchasi";
+        private double PeriodDebtFee => IncludeDebtFeeInProfit ? (_debtSummary?.NetDebtFeeUz ?? 0) : 0;
+        private double? PeriodDebtFeeUsd => IncludeDebtFeeInProfit ? (_debtSummary?.NetDebtFeeUsd) : 0;
+        public double TotalProfit => _reportLines.Sum(i => i.Profit) - PeriodDebtFee;
+        public double TotalProfitUsd => _reportLines.Sum(i => i.ProfitUsd ?? 0) - (PeriodDebtFeeUsd ?? 0);
         public int TotalSalesCount => _reportLines.Where(i => !i.IsBrak && !i.IsReturn).Select(i => i.SaleId).Distinct().Count();
         public double TotalItemsCount => _reportLines.Where(i => !i.IsBrak && !i.IsReturn).Sum(i => i.Quantity);
 
@@ -280,7 +285,7 @@ namespace PosElectro.Desktop.ViewModels
         public string TotalProfitText => TotalProfit < 0
             ? $"{TotalProfit:N0} so'm"
             : $"+{TotalProfit:N0} so'm";
-        public string TotalProfitUsdText => _reportLines.Any() && _reportLines.All(i => i.ProfitUsd.HasValue) && Math.Abs(TotalProfitUsd) > 0.001 ? $"(${TotalProfitUsd:N2})" : string.Empty;
+        public string TotalProfitUsdText => _reportLines.All(i => i.ProfitUsd.HasValue) && PeriodDebtFeeUsd.HasValue && Math.Abs(TotalProfitUsd) > 0.001 ? $"(${TotalProfitUsd:N2})" : string.Empty;
         public bool IsProfitNegative => TotalProfit < 0;
         public string TotalSalesCountText => $"{TotalSalesCount} ta chek";
         public string TotalItemsCountText => $"{TotalItemsCount:0.##} ta/m";
@@ -517,8 +522,13 @@ namespace PosElectro.Desktop.ViewModels
             int salesCount = detailedItems.Where(i => !i.IsBrak && !i.IsReturn).Select(i => i.SaleId).Distinct().Count();
 
             periodTitle += $" | Brak: {detailedItems.Where(i => i.IsBrak).Select(i => i.SaleId).Distinct().Count()} ta, {detailedItems.Where(i => i.IsBrak).Sum(i => i.TotalCost):N2} so‘m";
-            periodTitle += detailedItems.All(i => i.ProfitUsd.HasValue) && detailedItems.Sum(i => i.ProfitUsd ?? 0) > 0 ? $" | USD foyda: ${detailedItems.Sum(i => i.ProfitUsd ?? 0):N2}" : string.Empty;
             var debtSum = _db.GetDebtPeriodSummary(_startDate, _endDate);
+            var includeFee = catFilter == null && whGuidFilter == null && SelectedRecordKind == "Barchasi";
+            if (includeFee) prof -= debtSum.NetDebtFeeUz;
+            var feeUsd = includeFee ? debtSum.NetDebtFeeUsd : 0;
+            var profitUsd = detailedItems.Sum(i => i.ProfitUsd ?? 0) - (feeUsd ?? 0);
+            periodTitle += detailedItems.All(i => i.ProfitUsd.HasValue) && feeUsd.HasValue
+                ? $" | USD foyda: ${profitUsd:N2}" : " | USD foyda: tarixiy kurs yetishmaydi";
             bool exported = ExcelExportService.ExportReport(periodTitle, rev, cost, prof, salesCount, detailedItems, catFilter ?? "Barchasi", whTitle, debtSum);
             if (exported)
             {
