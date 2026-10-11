@@ -409,18 +409,60 @@
                                 <StackPanel Grid.Column="0">
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                         <TextBlock Text="{Binding SelectedCustomer.Name}" Foreground="#F8FAFC" FontSize="20" FontWeight="Bold" Margin="0,0,10,0"/>
-                                        <Border CornerRadius="6" Padding="8,2" Background="#1E293B" BorderBrush="#334155" BorderThickness="1">
-                                            <TextBlock Text="{Binding SelectedCustomer.StatusBadge}" Foreground="#38BDF8" FontSize="11" FontWeight="Bold"/>
+                                        <Border CornerRadius="6" Padding="8,3" Background="#1E293B" BorderBrush="#334155" BorderThickness="1">
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Ellipse Width="6" Height="6" Margin="0,0,6,0" VerticalAlignment="Center">
+                                                    <Ellipse.Style>
+                                                        <Style TargetType="Ellipse">
+                                                            <Setter Property="Fill" Value="#38BDF8"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding SelectedCustomer.Archived}" Value="True">
+                                                                    <Setter Property="Fill" Value="#94A3B8"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding SelectedCustomer.HasOverdue}" Value="True">
+                                                                    <Setter Property="Fill" Value="#F59E0B"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding SelectedCustomer.BalanceMinor, Converter={StaticResource GreaterThanZeroConverter}}" Value="True">
+                                                                    <Setter Property="Fill" Value="#EF4444"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding SelectedCustomer.BalanceMinor, Converter={StaticResource LessThanZeroConverter}}" Value="True">
+                                                                    <Setter Property="Fill" Value="#10B981"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Ellipse.Style>
+                                                </Ellipse>
+                                                <TextBlock Text="{Binding SelectedCustomer.StatusBadge}" FontSize="11" FontWeight="Bold">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="#38BDF8"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding SelectedCustomer.Archived}" Value="True">
+                                                                    <Setter Property="Foreground" Value="#94A3B8"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding SelectedCustomer.HasOverdue}" Value="True">
+                                                                    <Setter Property="Foreground" Value="#F59E0B"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding SelectedCustomer.BalanceMinor, Converter={StaticResource GreaterThanZeroConverter}}" Value="True">
+                                                                    <Setter Property="Foreground" Value="#EF4444"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding SelectedCustomer.BalanceMinor, Converter={StaticResource LessThanZeroConverter}}" Value="True">
+                                                                    <Setter Property="Foreground" Value="#10B981"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </StackPanel>
                                         </Border>
                                     </StackPanel>
 
                                     <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
                                         <Path Stretch="Uniform" Data="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
                                               Stroke="#64748B" StrokeThickness="1.6" Width="13" Height="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                        <TextBlock Text="{Binding SelectedCustomer.PhoneDisplay}" Foreground="#94A3B8" FontSize="13" FontWeight="SemiBold" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                                        <Path Stretch="Uniform" Data="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                              Stroke="#64748B" StrokeThickness="1.6" Width="13" Height="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                        <TextBlock Text="{Binding SelectedCustomer.Note}" Foreground="#94A3B8" FontSize="13" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding SelectedCustomer.PhoneDisplay}" Foreground="#94A3B8" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding SelectedCustomer.Note, StringFormat='{} • {0}'}" Foreground="#64748B" FontSize="13" VerticalAlignment="Center"
+                                                   Visibility="{Binding SelectedCustomer.Note, Converter={StaticResource EmptyStringToVisibilityConverter}}"/>
                                     </StackPanel>
 
                                     <!-- Balans va faol qarz -->
@@ -457,7 +499,7 @@
                                     <Button Command="{Binding OpenPaymentModalCommand}"
                                             Visibility="{Binding HasActiveDebt, Converter={StaticResource BooleanToVisibilityConverter}}"
                                             Style="{StaticResource RoundedActionButton}" Background="#10B981" Foreground="White" FontWeight="Bold"
-                                            Padding="14,10" Margin="0,0,8,0">
+                                            Height="40" Padding="14,0" Margin="0,0,8,0">
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                             <Path Stretch="Uniform" Data="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
                                                   Stroke="White" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
@@ -469,7 +511,7 @@
                                     <Button Command="{Binding OpenRefundCreditModalCommand}"
                                             Visibility="{Binding HasCredit, Converter={StaticResource BooleanToVisibilityConverter}}"
                                             Style="{StaticResource RoundedActionButton}" Background="#D97706" Foreground="White" FontWeight="Bold"
-                                            Padding="14,10" Margin="0,0,8,0">
+                                            Height="40" Padding="14,0" Margin="0,0,8,0">
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                             <Path Stretch="Uniform" Data="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
                                                   Stroke="White" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
@@ -481,7 +523,7 @@
                                     <Button Command="{Binding TransferCreditCommand}"
                                             Visibility="{Binding CanTransferCredit, Converter={StaticResource BooleanToVisibilityConverter}}"
                                             Style="{StaticResource RoundedActionButton}" Background="#2563EB" Foreground="White" FontWeight="Bold"
-                                            Padding="14,10" Margin="0,0,8,0">
+                                            Height="40" Padding="14,0" Margin="0,0,8,0">
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                             <Path Stretch="Uniform" Data="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
                                                   Stroke="White" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
@@ -490,32 +532,30 @@
                                         </StackPanel>
                                     </Button>
 
+                                    <!-- Ko'chirma (Faqat vektor ikonka) -->
                                     <Button Command="{Binding PrintStatementCommand}"
-                                            ToolTip="Mijoz hisob ko'chirmasini (sverka) chop etish yoki xotiraga nusxalash"
-                                            Style="{StaticResource RoundedActionButton}" Background="#475569" Foreground="White" FontWeight="Bold"
-                                            Padding="12,10" Margin="0,0,8,0">
-                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                            <Path Stretch="Uniform" Data="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
-                                                  Stroke="White" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                                  Width="14" Height="14" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                            <TextBlock Text="Ko'chirma" FontWeight="Bold" VerticalAlignment="Center"/>
-                                        </StackPanel>
+                                            ToolTip="Hisob ko'chirmasi (sverka) chop etish yoki xotiraga nusxalash"
+                                            Style="{StaticResource RoundedActionButton}" Background="#475569" Foreground="White"
+                                            Width="40" Height="40" Padding="0" Margin="0,0,8,0">
+                                        <Path Stretch="Uniform" Data="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
+                                              Stroke="White" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                              Width="16" Height="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Button>
 
+                                    <!-- Tahrirlash (Faqat vektor ikonka) -->
                                     <Button Command="{Binding OpenEditCustomerModalCommand}"
+                                            ToolTip="Mijoz ma'lumotlarini tahrirlash"
                                             Style="{StaticResource RoundedActionButton}" Background="#334155" Foreground="#F8FAFC"
-                                            Padding="12,10" Margin="0,0,8,0">
-                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                            <Path Stretch="Uniform" Data="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                                                  Stroke="White" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                                  Width="14" Height="14" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                            <TextBlock Text="Tahrirlash" VerticalAlignment="Center"/>
-                                        </StackPanel>
+                                            Width="40" Height="40" Padding="0" Margin="0,0,8,0">
+                                        <Path Stretch="Uniform" Data="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                                              Stroke="White" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                              Width="16" Height="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Button>
 
+                                    <!-- Bloklash (Vektor ikonka va matn) -->
                                     <Button Command="{Binding ToggleArchiveCustomerCommand}"
                                             Style="{StaticResource RoundedActionButton}" Background="#1E293B" Foreground="#94A3B8" BorderBrush="#334155" BorderThickness="1"
-                                            Padding="12,10">
+                                            Height="40" Padding="12,0">
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                             <Path Stretch="Uniform" Data="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
                                                   Stroke="#94A3B8" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
@@ -608,7 +648,44 @@
                                     </DataGridTextColumn.ElementStyle>
                                 </DataGridTextColumn>
                                 <DataGridTextColumn Header="Muddati" Binding="{Binding DueDateDisplay}" Width="120"/>
-                                <DataGridTextColumn Header="Holati" Binding="{Binding StatusText}" Width="*"/>
+                                <DataGridTemplateColumn Header="Holati" Width="*">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Ellipse Width="6" Height="6" Margin="0,0,6,0" VerticalAlignment="Center">
+                                                    <Ellipse.Style>
+                                                        <Style TargetType="Ellipse">
+                                                            <Setter Property="Fill" Value="#EF4444"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding BalanceMinor}" Value="0">
+                                                                    <Setter Property="Fill" Value="#10B981"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding IsOverdue}" Value="True">
+                                                                    <Setter Property="Fill" Value="#F59E0B"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Ellipse.Style>
+                                                </Ellipse>
+                                                <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="#F87171"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding BalanceMinor}" Value="0">
+                                                                    <Setter Property="Foreground" Value="#94A3B8"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding IsOverdue}" Value="True">
+                                                                    <Setter Property="Foreground" Value="#F59E0B"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
                             </DataGrid.Columns>
                         </DataGrid>
 
@@ -632,7 +709,49 @@
                             </DataGrid.ColumnHeaderStyle>
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Vaqt" Binding="{Binding OccurredAtDisplay}" Width="140"/>
-                                <DataGridTextColumn Header="Amal turi" Binding="{Binding KindDisplay}" Width="160"/>
+                                <DataGridTemplateColumn Header="Amal turi" Width="170">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Path Stretch="Uniform" Width="13" Height="13" Margin="0,0,6,0" VerticalAlignment="Center" StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round">
+                                                    <Path.Style>
+                                                        <Style TargetType="Path">
+                                                            <Setter Property="Data" Value="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                            <Setter Property="Stroke" Value="#94A3B8"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Kind}" Value="sale_open">
+                                                                    <Setter Property="Data" Value="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+                                                                    <Setter Property="Stroke" Value="#38BDF8"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Kind}" Value="payment">
+                                                                    <Setter Property="Data" Value="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+                                                                    <Setter Property="Stroke" Value="#34D399"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding IsReversed}" Value="True">
+                                                                    <Setter Property="Data" Value="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
+                                                                    <Setter Property="Stroke" Value="#EF4444"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Kind}" Value="payment_reversal">
+                                                                    <Setter Property="Data" Value="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
+                                                                    <Setter Property="Stroke" Value="#EF4444"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Kind}" Value="credit_refund">
+                                                                    <Setter Property="Data" Value="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
+                                                                    <Setter Property="Stroke" Value="#F59E0B"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Kind}" Value="credit_transfer">
+                                                                    <Setter Property="Data" Value="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                                                                    <Setter Property="Stroke" Value="#818CF8"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Path.Style>
+                                                </Path>
+                                                <TextBlock Text="{Binding KindDisplay}" Foreground="#F8FAFC" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
                                 <DataGridTextColumn Header="Summa" Binding="{Binding AmountDisplay}" Width="140">
                                     <DataGridTextColumn.ElementStyle>
                                         <Style TargetType="TextBlock">
@@ -644,20 +763,24 @@
                                 <DataGridTextColumn Header="Naqd" Binding="{Binding CashMinor, StringFormat='{}{0:N0} so\'m', Converter={StaticResource MinorToUzConverter}}" Width="120"/>
                                 <DataGridTextColumn Header="Karta" Binding="{Binding CardMinor, StringFormat='{}{0:N0} so\'m', Converter={StaticResource MinorToUzConverter}}" Width="120"/>
                                 <DataGridTextColumn Header="Tafsilot" Binding="{Binding Lines.Count, StringFormat='{}{0} ta chekka taqsimlangan'}" Width="*"/>
-                                <DataGridTemplateColumn Header="Amallar" Width="105">
+                                <DataGridTemplateColumn Header="Amallar" Width="70">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <Button Content="Bekor qilish"
-                                                    Command="{Binding DataContext.ReversePaymentCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                            <Button Command="{Binding DataContext.ReversePaymentCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
                                                     CommandParameter="{Binding}"
                                                     Visibility="{Binding CanReverse, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                                    Background="#7F1D1D" Foreground="#FCA5A5" BorderBrush="#EF4444" BorderThickness="1"
-                                                    FontSize="11" FontWeight="SemiBold" Padding="8,3" Cursor="Hand">
+                                                    ToolTip="To'lovni bekor qilish"
+                                                    Background="#7F1D1D" BorderBrush="#EF4444" BorderThickness="1"
+                                                    Width="30" Height="28" Padding="0" Cursor="Hand"
+                                                    HorizontalAlignment="Center" VerticalAlignment="Center">
                                                 <Button.Resources>
                                                     <Style TargetType="Border">
                                                         <Setter Property="CornerRadius" Value="6"/>
                                                     </Style>
                                                 </Button.Resources>
+                                                <Path Stretch="Uniform" Data="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
+                                                      Stroke="#FCA5A5" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                                      Width="13" Height="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Button>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>

@@ -66,12 +66,12 @@ public sealed record DebtCustomerItemDto(
     public string StatusBadge => Archived
         ? "Bloklangan"
         : HasOverdue
-            ? "⚠️ Muddati o'tgan"
+            ? "Muddati o'tgan"
             : BalanceMinor > 0
-                ? "🔴 Qarzdor"
+                ? "Qarzdor"
                 : BalanceMinor < 0
-                    ? "🟢 Haqdor"
-                    : "⚪ Yopilgan";
+                    ? "Haqdor"
+                    : "Yopilgan";
 }
 
 public sealed record DebtAccountItemDto(
@@ -91,10 +91,10 @@ public sealed record DebtAccountItemDto(
     public string CreatedAtDisplay => DateTimeOffset.FromUnixTimeMilliseconds(CreatedAt).LocalDateTime.ToString("dd.MM.yyyy HH:mm");
     public string DueDateDisplay => string.IsNullOrWhiteSpace(DueDate) ? "Muddatsiz" : DueDate;
     public string StatusText => BalanceMinor <= 0
-        ? "✅ To'liq yopilgan"
+        ? "To'liq yopilgan"
         : IsOverdue
-            ? "⚠️ Muddati o'tgan"
-            : "⏳ Faol nasiya";
+            ? "Muddati o'tgan"
+            : "Faol nasiya";
 }
 
 public sealed record DebtEventItemDto(
@@ -112,13 +112,13 @@ public sealed record DebtEventItemDto(
     public string OccurredAtDisplay => DateTimeOffset.FromUnixTimeMilliseconds(OccurredAt).LocalDateTime.ToString("dd.MM.yyyy HH:mm");
     public string KindDisplay => Kind switch
     {
-        "sale_open" => "🛒 Nasiya savdo",
-        "payment" => IsReversed ? "❌ To'lov (Bekor qilingan)" : "💰 Qarz to'lovi",
-        "return_offset" => IsReversed ? "↩️ Qaytarish (Bekor qilingan)" : "↩️ Qaytarish hisobidan",
-        "return_reversal" => "🔄 Qaytarish bekor qilindi",
-        "payment_reversal" => "❌ To'lov bekor qilindi",
-        "credit_refund" => "💸 Pulni qaytarish (Kredit)",
-        "credit_transfer" => "🔁 Boshqa chekka o'tkazish",
+        "sale_open" => "Nasiya savdo",
+        "payment" => IsReversed ? "To'lov (Bekor qilingan)" : "Qarz to'lovi",
+        "return_offset" => IsReversed ? "Qaytarish (Bekor qilingan)" : "Qaytarish hisobidan",
+        "return_reversal" => "Qaytarish bekor qilindi",
+        "payment_reversal" => "To'lov bekor qilindi",
+        "credit_refund" => "Pulni qaytarish (Kredit)",
+        "credit_transfer" => "Boshqa chekka o'tkazish",
         _ => Kind
     };
     public bool CanReverse => Kind == "payment" && !IsReversed;

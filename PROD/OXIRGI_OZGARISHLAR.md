@@ -657,3 +657,14 @@ Ushbu hujjat mijozga oxirgi kiritilgan o'zgarishlar va yangi qulayliklarni ko'rs
   - Hisobotlar va Qarz daftari interfeysi ancha toza, yengil, professional va qulay bo'ldi. Matnlar ustma-ust tushmaydi, filtrlar ixcham joylashgan, ortiqcha chalg'ituvchi tugmalar yo'q.
 
 ---
+### 47. 🎨 Qarz daftari UI/UX to'liq vektorlashtirish: "Bekor qilish" vektor tugmasi, Faqat ikonkali "Ko'chirma" va "Tahrirlash", Telefon qalamchasi olib tashlanishi
+- **Nima o'zgardi:**
+  - **"Bekor qilish" tugmasi toza vektorga o'tkazildi:** "To'lovlar va Tarix" jadvalidagi qizil "Bekor qilish" yozuvli tugma matndan butunlay xoli qilindi. Uning o'rniga ixcham (`30x28px`), qulay, to'q qizil fonli (`#7F1D1D`), qizil hoshiyali (`#EF4444`) va silliq SVG vektor orqaga qaytarish/undo ikonkali tugma qo'yildi hamda tushunarli ko'rsatkich (Tooltip: "To'lovni bekor qilish") bilan ta'minlandi.
+  - **"Ko'chirma" va "Tahrirlash" tugmalari faqat vektor ikonka qilindi:** Mijoz kartochkasidagi amallar panelida "Ko'chirma" va "Tahrirlash" tugmalaridagi barcha matnlar olib tashlandi. Ular teng `40x40px` o'lchamdagi kvadrat shaklga keltirilib, mos ravishda printer/sverka va qalamcha SVG vektor ikonkalariga ega bo'ldi hamda qulay Tooltip qo'shildi.
+  - **Telefon yonidagi qalamcha ikonkasi olib tashlandi:** "Telefon kiritilmagan" yozuvi yonida noo'rin ko'rinib turgan ikkinchi qalamcha (izoh belgisi) olib tashlandi. Telefon raqami yonida faqat toza telefon vektor piktogrammasi qoldirildi, mijoz izohi esa bor bo'lsa ajratuvchi nuqta bilan ravon ko'rinadi.
+  - **Jadvaldagi operatsiyalar turlari va holatlar vektorlashtirildi:** "Amal turi" ustuniga har bir operatsiya turi bo'yicha chiroyli SVG piktogrammalar (Nasiya savdo uchun moviy savat, Qarz to'lovi uchun yashil naqd pul, Bekor qilingan to'lovlar uchun qizil qaytarish, Kredit qaytarish uchun to'q sariq qaytarish, Chekka o'tkazish uchun binafsharang strelkalar) o'rnatildi. Cheklar holatiga esa rangli vektor nuqtalar biriktirildi.
+  - **Dastur xizmati (`DebtService`) to'liq tozalanishi:** Status matnlari, nishonlar va operatsiya nomlaridagi barcha eski emojilar to'liq tozalandi.
+- **Mijoz uchun foydasi:**
+  - Qarz daftari oynasi to'liq professional darajadagi zamonaviy desktop interfeysiga aylandi: keraksiz uzun matnlar va noo'rin piktogrammalar yo'qoldi, barcha amallar ixcham, ko'rkam va bitta qarashda tushunarli bo'ldi.
+
+---
