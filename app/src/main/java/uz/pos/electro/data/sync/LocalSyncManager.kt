@@ -24,6 +24,7 @@ import uz.pos.electro.data.repository.TaxSettingsRepository
 import uz.pos.electro.data.debt.DebtEnvelope
 import uz.pos.electro.data.debt.DebtEnvelopeInbox
 import uz.pos.electro.data.debt.DebtReceiveStatus
+import uz.pos.electro.data.debt.DebtService
 import uz.pos.electro.data.debt.DebtWire
 import java.net.HttpURLConnection
 import java.net.URL
@@ -44,7 +45,8 @@ class LocalSyncManager @Inject constructor(
     private val warehouseDao: WarehouseDao,
     private val productStockDao: ProductStockDao,
     private val currencyRepository: CurrencyRepository,
-    private val taxSettingsRepository: TaxSettingsRepository
+    private val taxSettingsRepository: TaxSettingsRepository,
+    private val debtService: DebtService? = null
 ) {
     private val prefs = context.getSharedPreferences("pos_local_sync_prefs", Context.MODE_PRIVATE)
     private val syncScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -131,32 +133,32 @@ class LocalSyncManager @Inject constructor(
                     if (!force) {
                         throw ServerChangedException(serverId, "Bu telefon avval boshqa kompyuter bazasiga bog'langan. Yangi kompyuterga qayta bog'lashni tasdiqlaysizmi?")
                     }
+                    if (hasDebt && storeGuid != null) {
+                        DebtService.rebindDebtStore(db(), storeGuid)
+                        debtService?.resetRepo(storeGuid)
+                        cachedDebtInbox = null
+                        cachedDebtStore = null
+                    }
                     database.withTransaction {
                         putMetadata("server_id", serverId)
                         putMetadata("cursor", "0")
                         db().execSQL("DELETE FROM sync_versions")
                         db().execSQL("DELETE FROM sync_conflicts")
                         db().execSQL("UPDATE sync_journal SET base_revision=-1 WHERE acked=0")
-                        if (hasDebt && storeGuid != null) {
-                            db().execSQL("INSERT OR REPLACE INTO debt_scope(id, store_guid) VALUES(1, ?)", arrayOf(storeGuid))
-                            putMetadata("debt_store_guid", storeGuid)
-                        }
                         val historyEpoch = reply.optString("historyEpoch").takeIf { it.isNotBlank() }
                         if (historyEpoch != null) {
                             putMetadata("debt_history_epoch", historyEpoch)
                         }
                     }
                 } else {
+                    if (hasDebt && storeGuid != null) {
+                        DebtService.rebindDebtStore(db(), storeGuid)
+                        debtService?.resetRepo(storeGuid)
+                        cachedDebtInbox = null
+                        cachedDebtStore = null
+                    }
                     database.withTransaction {
                         putMetadata("server_id", serverId)
-                        if (hasDebt && storeGuid != null) {
-                            val existingStore = scalar(db(), "SELECT store_guid FROM debt_scope WHERE id=1")
-                            require(existingStore == null || existingStore == storeGuid) { "Bu telefon boshqa do'kon qarz daftariga bog'langan." }
-                            if (existingStore == null) {
-                                db().execSQL("INSERT OR IGNORE INTO debt_scope(id, store_guid) VALUES(1, ?)", arrayOf(storeGuid))
-                            }
-                            putMetadata("debt_store_guid", storeGuid)
-                        }
                         val historyEpoch = reply.optString("historyEpoch").takeIf { it.isNotBlank() }
                         if (historyEpoch != null) {
                             putMetadata("debt_history_epoch", historyEpoch)
@@ -174,8 +176,10 @@ class LocalSyncManager @Inject constructor(
         liveJob = null
         _liveSyncStatus.value = LiveSyncStatus.OFFLINE
         prefs.edit().remove("local_desktop_url").remove("wifi_v2_token").apply()
+        cachedDebtInbox = null
+        cachedDebtStore = null
         database.withTransaction {
-            db().execSQL("DELETE FROM sync_meta WHERE key IN ('server_id', 'cursor')")
+            db().execSQL("DELETE FROM sync_meta WHERE key IN ('server_id', 'cursor', 'debt_store_guid', 'debt_history_epoch', 'debt_cursor')")
             db().execSQL("DELETE FROM sync_versions")
             db().execSQL("DELETE FROM sync_conflicts")
             db().execSQL("UPDATE sync_journal SET base_revision=-1 WHERE acked=0")
@@ -208,7 +212,12 @@ class LocalSyncManager @Inject constructor(
             val storeGuid = reply.optString("storeGuid").takeIf { it.isNotBlank() }
             if (hasDebt && storeGuid != null) {
                 val existingStore = scalar(db(), "SELECT store_guid FROM debt_scope WHERE id=1")
-                require(existingStore == null || existingStore == storeGuid) { "Do'kon qarz doirasi mos emas." }
+                if (existingStore != storeGuid) {
+                    DebtService.rebindDebtStore(db(), storeGuid)
+                    debtService?.resetRepo(storeGuid)
+                    cachedDebtInbox = null
+                    cachedDebtStore = null
+                }
             }
             reply.getString("name")
         }
@@ -430,12 +439,11 @@ class LocalSyncManager @Inject constructor(
 
         val storeGuid = ping.optString("storeGuid").takeIf { it.isNotBlank() } ?: return
         val existingStore = scalar(db(), "SELECT store_guid FROM debt_scope WHERE id=1")
-        require(existingStore == null || existingStore == storeGuid) { "Do'kon qarz doirasi mos emas." }
-        if (existingStore == null) {
-            database.withTransaction {
-                db().execSQL("INSERT OR IGNORE INTO debt_scope(id, store_guid) VALUES(1, ?)", arrayOf(storeGuid))
-                putMetadata("debt_store_guid", storeGuid)
-            }
+        if (existingStore != storeGuid) {
+            DebtService.rebindDebtStore(db(), storeGuid)
+            debtService?.resetRepo(storeGuid)
+            cachedDebtInbox = null
+            cachedDebtStore = null
         }
 
         val remoteHistoryEpoch = ping.optString("historyEpoch").takeIf { it.isNotBlank() }

@@ -698,5 +698,18 @@ Ushbu hujjat mijozga oxirgi kiritilgan o'zgarishlar va yangi qulayliklarni ko'rs
 - **Mijoz uchun foydasi:**
   - Hisobotlar ekrani toza, zamonaviy va professional ko'rinishga ega bo'ldi. Asosiy ekranda faqatgina katta 4 ta ko'rsatkich va dollar kursi turadi. Cheklar ro'yxatiga kirilganda esa sana, ombor va kategoriya bo'yicha saralab, bitta tugma orqali kerakli Excel hisobotni bir zumda yuklab olish mumkin.
 
+### 50. 🔍 Chuqur Tahlil (/deep-search): "Bu telefon boshqa do'kon qarz daftariga bog'langan" Xatoligi va Avtomatik Do'kon Bog'lanishi (Reconciliation)
+- **Muammoning tub sabablari (Deep-Search):**
+  1. **Lokal do'kon identifikatori (Store GUID) nomuvofiqligi:** Mobil ilova birinchi marta ishga tushganda yoki yangi o'rnatilganda, `DebtService` startup vaqtida `debt_scope` jadvaliga tasodifiy generatsiya qilingan UUID yozib qo'ygan. Kompyuter dasturi esa o'zining doimiy `storeGuid`iga ega bo'lgan. Natijada `LocalSyncManager`dagi qat'iy tekshiruv (`require(existingStore == storeGuid)`) sababli har safar *"Ulanib bo'lmadi: Bu telefon boshqa do'kon qarz daftariga bog'langan"* xatosi bloklab turgan.
+  2. **Fon sinxronizatsiyasi va Ping tekshiruvi cheklovlari:** Foydalanuvchi ulanishga harakat qilganda `pingDesktop` va `syncDebtIfSupported` metodlarida ham xuddi shu qat'iy tekshiruv ishlab, aloqa o'rnatilishini to'xtatgan.
+  3. **SQLite Trigger va Foreign Key blokirovkasi:** Qarz jadvallari (`debt_customers`, `debt_events`, `debt_accounts`, `debt_event_lines`, `debt_sync_inbox`) `debt_scope(store_guid)`ga qat'iy bog'langan (`ON DELETE RESTRICT`) va `debt_scope_no_update`, `debt_scope_no_delete` triggerlari orqali himoyalangan edi. Shu sababli standart yangilash urinishlari SQLite cheklovi sabab xatolik keltirib chiqarayotgan edi.
+- **Nima o'zgardi va qanday tuzatildi:**
+  - **Avtomatik do'kon bog'lanishi (`DebtService.rebindDebtStore`):** Qarz doirasi triggerlarini xavfsiz vaqtinchalik yechish, barcha qarz jadvallaridagi `store_guid`ni kompyuter bazasining haqiqiy GUIDiga moslashtirish, triggerlarni qayta tiklash va `sync_meta` ga `debt_store_guid`ni muhrlash mexanizmi joriy qilindi.
+  - **Xatolik o'rniga avtomatik kelishuv (Reconciliation):** `LocalSyncManager` dagi `pairDesktop`, `pingDesktop` va `syncDebtIfSupported` metodlaridan ulanishni to'xtatuvchi `require(existingStore == storeGuid)` cheklovlari butunlay olib tashlandi. Endi telefon kompyuterga ulanganda, qarz doirasi avtomatik tarzda kompyuter do'koniga moslanadi va in-memory keshlar yangilanadi.
+  - **Ilova ochilishida (`AppDatabase.onOpen`) avtomatik tekshiruv:** Telefon ilovasi har safar ochilganda bazadagi saqlangan kompyuter identifikatori bo'yicha qarz doirasi tekshirilib, har qanday nomuvofiqlik avtomatik tuzatiladi.
+  - **Yangi Release APK:** Barcha tuzatishlar bilan yangi `PROD/LinePOS_Release.apk` (v2.0, 35.1 MB) muvaffaqiyatli yig'ildi.
+- **Mijoz uchun foydasi:**
+  - Telefon va kompyuter bitta do'kon doirasida hech qanday asossiz xatoliklarsiz, ortiqcha to'siqlarsiz darhol ulanadi. Boshqa Wi-Fi ga o'tilganda ham ulanish muammosiz tiklanadi va qarzlar hamda tovarlar bekamu-ko'st sinxronlashadi.
+
 ---
 

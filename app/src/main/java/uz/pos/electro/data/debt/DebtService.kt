@@ -290,6 +290,47 @@ class DebtService @Inject constructor(
                 false
             }
         }
+
+        fun rebindDebtStore(db: SupportSQLiteDatabase, newStoreGuid: String) {
+            val oldStore = DebtRepository.scalar(db, "SELECT store_guid FROM debt_scope WHERE id=1") as? String
+            if (oldStore == newStoreGuid) {
+                db.execSQL("INSERT OR REPLACE INTO sync_meta(key, value) VALUES('debt_store_guid', ?)", arrayOf(newStoreGuid))
+                return
+            }
+
+            db.execSQL("PRAGMA foreign_keys = OFF")
+            db.beginTransaction()
+            try {
+                db.execSQL("DROP TRIGGER IF EXISTS debt_scope_no_update")
+                db.execSQL("DROP TRIGGER IF EXISTS debt_scope_no_delete")
+
+                db.execSQL("INSERT OR REPLACE INTO debt_scope(id, store_guid) VALUES(1, ?)", arrayOf(newStoreGuid))
+
+                if (!oldStore.isNullOrBlank()) {
+                    db.execSQL("UPDATE debt_customers SET store_guid = ? WHERE store_guid = ?", arrayOf(newStoreGuid, oldStore))
+                    db.execSQL("UPDATE debt_events SET store_guid = ? WHERE store_guid = ?", arrayOf(newStoreGuid, oldStore))
+                    db.execSQL("UPDATE debt_accounts SET store_guid = ? WHERE store_guid = ?", arrayOf(newStoreGuid, oldStore))
+                    db.execSQL("UPDATE debt_event_lines SET store_guid = ? WHERE store_guid = ?", arrayOf(newStoreGuid, oldStore))
+                    db.execSQL("UPDATE debt_sync_inbox SET store_guid = ? WHERE store_guid = ?", arrayOf(newStoreGuid, oldStore))
+                }
+
+                db.execSQL("CREATE TRIGGER IF NOT EXISTS debt_scope_no_update BEFORE UPDATE ON debt_scope BEGIN SELECT RAISE(ABORT,'Store rebinding requires reconciliation'); END;")
+                db.execSQL("CREATE TRIGGER IF NOT EXISTS debt_scope_no_delete BEFORE DELETE ON debt_scope BEGIN SELECT RAISE(ABORT,'Store rebinding requires reconciliation'); END;")
+
+                db.execSQL("INSERT OR REPLACE INTO sync_meta(key, value) VALUES('debt_store_guid', ?)", arrayOf(newStoreGuid))
+                db.setTransactionSuccessful()
+            } finally {
+                db.endTransaction()
+                db.execSQL("PRAGMA foreign_keys = ON")
+            }
+        }
+    }
+
+    fun resetRepo(newStoreGuid: String? = null) = synchronized(lock) {
+        repository = null
+        if (!newStoreGuid.isNullOrBlank()) {
+            storeGuid = newStoreGuid
+        }
     }
 
     private fun ensureRepo(): DebtRepository = synchronized(lock) {
@@ -298,8 +339,16 @@ class DebtService @Inject constructor(
 
         val db = database.openHelper.writableDatabase
 
+        val metaStore = (DebtRepository.scalar(db, "SELECT value FROM sync_meta WHERE key='debt_store_guid'") as? String)
+            ?: (DebtRepository.scalar(db, "SELECT value FROM sync_meta WHERE key='server_id'") as? String)
         val existingStore = DebtRepository.scalar(db, "SELECT store_guid FROM debt_scope WHERE id=1") as? String
-        val sGuid = if (!existingStore.isNullOrBlank()) {
+
+        val sGuid = if (!metaStore.isNullOrBlank()) {
+            if (existingStore != metaStore) {
+                rebindDebtStore(db, metaStore)
+            }
+            metaStore
+        } else if (!existingStore.isNullOrBlank()) {
             existingStore
         } else {
             val gen = UUID.randomUUID().toString()

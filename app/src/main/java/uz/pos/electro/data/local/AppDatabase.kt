@@ -222,6 +222,15 @@ abstract class AppDatabase : RoomDatabase() {
                         context.assets.open("debt-schema.sql").bufferedReader().use { it.readText() })
                     uz.pos.electro.data.sync.WifiSyncSchema.install(db, context.assets.open("wifi-sync-schema.sql").bufferedReader().use { it.readText() })
                     try {
+                        val boundStore = uz.pos.electro.data.debt.DebtRepository.scalar(db, "SELECT value FROM sync_meta WHERE key='debt_store_guid'") as? String
+                            ?: uz.pos.electro.data.debt.DebtRepository.scalar(db, "SELECT value FROM sync_meta WHERE key='server_id'") as? String
+                        if (!boundStore.isNullOrBlank()) {
+                            uz.pos.electro.data.debt.DebtService.rebindDebtStore(db, boundStore)
+                        }
+                    } catch (e: Throwable) {
+                        android.util.Log.e("AppDatabase", "onOpen debt rebind error: ${e.message}")
+                    }
+                    try {
                         db.execSQL("DELETE FROM product_stocks WHERE warehouse_guid = '00000000-0000-0000-0000-000000000001' OR (warehouse_guid != 'main-default-warehouse' AND warehouse_guid IN (SELECT guid FROM warehouses WHERE name = 'Do''kondagi ombor' AND is_primary = 0))")
                         db.execSQL("DELETE FROM warehouses WHERE guid = '00000000-0000-0000-0000-000000000001' OR (guid != 'main-default-warehouse' AND name = 'Do''kondagi ombor' AND is_primary = 0)")
                         db.execSQL("UPDATE sale_items SET warehouse_guid = 'main-default-warehouse' WHERE warehouse_guid = '00000000-0000-0000-0000-000000000001'")
