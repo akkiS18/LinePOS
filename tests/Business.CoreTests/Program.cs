@@ -3,6 +3,7 @@ using PosElectro.Desktop.Models;
 using Microsoft.Data.Sqlite;
 
 DebtStage1AccountingTests.Run();
+if (args.Contains("--stage1")) return;
 DebtSyncStoreTests.Run();
 DebtEnvelopeInboxTests.Run();
 DebtSaleReceiverTests.Run();
