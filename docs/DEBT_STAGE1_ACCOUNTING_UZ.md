@@ -40,9 +40,29 @@ sof tushum 0, qolgan xarajat 540 so'm / $0.045, qarz yana 100 000.
 Alohida bekor qilish kunida sof tushum -100 000, xarajat -540.
 Sana [start,end), cash-only, yarim tiyin, katta qiymat chegarasi ham tekshiriladi.
 
-Lokal 23 Python testi o'tdi. Lokal .NET CLI muhitning process ma'lumotini
-ololmagani sabab ishga tushmadi; desktop va Android test/build dalili PR CI'da
-tekshirilishi kerak. Bu fayldagi holat keyingi checkpointda yangilanadi.
+PR: https://github.com/akkiS18/LinePOS/pull/3 (draft; main'ga merge yo'q).
+Tekshirilayotgan runtime commit: `815f2acd08129cf9a8763a49ce140487f800fd7e`.
+
+- Lokal 23 Python testi o'tdi; `git diff --check` toza.
+- Windows desktop build o'tdi.
+- Alohida `dotnet run --project tests/Business.CoreTests -- --stage1` o'tdi
+  (CI run `38146784343`, job `114491713485`, birinchi regression step).
+- Android build va yakuniy Room natijasi quyida checkpointda qayd qilinadi.
+
+Umumiy CI yashil emas. Mavjud testlarni o'chirish/yumshatish qilinmadi:
+- WifiSync.CoreTests: minimal test bazasida debt_customers yo'q, lekin main'dagi
+  WifiSyncStore.Pull shu jadvalni o'qiydi. Business full suite shu sabab skipped.
+- Dastlabki API 26/35 runlarda 32 testdan 6 tasi yiqildi; yangi stage-1 testi
+  yiqilmadi. Eski testlar: DebtLanSyncTest tokenni `token` kalitiga yozadi,
+  manager `wifi_v2_token`ni o'qiydi; DebtMigrationTest hash fixture cheklovdan
+  o'tmaydi; DebtMobileIntegrationTest sale GUID kutadi, repository request GUID
+  qaytaradi; uchta DebtMultiDeviceConvergenceTest oddiy Room builder ishlatib,
+  auxiliary debt sxemasini o'rnatmaydi. Bu fayllar ushbu branchda o'zgarmagan.
+- Bu to'siqlar yakuniy regressiya bosqichida to'g'ri fixturelar bilan tekshirilishi
+  kerak; ularning o'rniga 'barcha testlar success' deb xulosa qilinmasin.
+
+Lokal .NET CLI process metadata cheklovi sabab ishlamadi; .NET dalili GitHub
+runnerdan olingan. Haqiqiy Windows+telefon LAN manual testi bajarilmadi.
 
 ## Keyingi scope
 
@@ -52,3 +72,21 @@ HTTP takror so'rov himoyasi.
 store identifikatori, restore va to'liq qurilmalararo regressiya.
 Bu branch qolgan muammolarni tuzatgan yoki butun loyiha productionga tayyor
 bo'lgan deb hisoblanmasin.
+
+## Qo'lda qabul testi (test bazasida)
+
+1. Karta komissiyasini 1.8%, USD kursini 12 000 qilib, 100 000 so'mlik
+   qarz oching. 40 000 naqd va 60 000 karta bilan undiring.
+2. Qarz 0, undirilgan summa 100 000, komissiya 1080 bo'lishi kerak.
+   Faqat to'lov bo'lgan kunda savdo tushumi 0; umumiy sof foyda -1080 so'm,
+   -$0.09. Excel ham shu umumiy summalarni berishi kerak.
+3. Kursni 24 000 va komissiyani 3% qilib, oldingi davrni qayta oching:
+   eski to'lov komissiyasi va dollar xarajati o'zgarmasligi kerak.
+4. Desktopda to'lovni bekor qiling. UI mavjud xulqiga ko'ra to'liq
+   komissiyani ham bekor qiladi: ikkala amal joylashgan davrda sof
+   undirish 0 va sof komissiya 0; qarz yana 100 000.
+5. Faqat bekor qilish kunini tanlang: sof undirish manfiy ko'rinishi kerak.
+   Naqd-only to'lov uchun komissiya 0 bo'lishi kerak.
+
+Bu bosqichda qaytarish/bekor qilishni ikkinchi qurilmaga sinxronlash hali
+qabul mezoni emas: transportdagi audit #2 keyingi bosqichda tuzatiladi.

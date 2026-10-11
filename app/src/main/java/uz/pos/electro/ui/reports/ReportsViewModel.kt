@@ -112,7 +112,9 @@ class ReportsViewModel @Inject constructor(
     private fun kindMatches(item: uz.pos.electro.data.model.SaleReportItem) = when (_recordKind.value) {
         "Savdo" -> !item.isBrak && !item.isReturn; "Brak" -> item.isBrak; "Qaytarish" -> item.isReturn; else -> true
     }
+    private var summaryJob: Job? = null
     private fun applyFilters() {
+        summaryJob?.cancel()
         val query = _searchQuery.value.trim().removePrefix("#").uppercase(java.util.Locale.ROOT)
         val matched = rawSales.filter { query.isBlank() || it.sale.receiptNumber.contains(query) ||
             it.sale.guid.replace("-", "").contains(query.removePrefix("LP-").replace("-", ""), true) || it.sale.id.toString().contains(query) }
@@ -127,8 +129,9 @@ class ReportsViewModel @Inject constructor(
         _summary.value = baseSummary
         val includeFee = query.isBlank() && _selectedCategory.value == "Barchasi" &&
             _selectedWarehouseGuid.value == "Barchasi" && _recordKind.value == "Barchasi"
-        viewModelScope.launch {
-            val debtPeriod = debtService.getDebtPeriodSummary(rangeStart, rangeEnd)
+        val periodStart = rangeStart; val periodEnd = rangeEnd
+        summaryJob = viewModelScope.launch {
+            val debtPeriod = debtService.getDebtPeriodSummary(periodStart, periodEnd)
             _summary.value = baseSummary.copy(
                 netProfit = baseSummary.netProfit - (if (includeFee) debtPeriod.netDebtFeeUz else 0.0),
                 netProfitUsd = baseSummary.netProfitUsd - (if (includeFee) debtPeriod.netDebtFeeUsd ?: 0.0 else 0.0),

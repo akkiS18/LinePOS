@@ -732,7 +732,7 @@ class DebtService @Inject constructor(
         ).use { c -> if (c.moveToFirst()) c.getLong(0) to (if (c.isNull(1)) null else c.getString(1)) else null }
         val fee = saved?.first ?: calculatePaymentFee(cardMinor, BigDecimal.valueOf(taxSettings.getCardTaxRate()))
         val feeRate = if (saved != null) saved.second else if (fee > 0) {
-            val rate = BigDecimal.valueOf(currency.getCachedUsdRate())
+            val rate = BigDecimal.valueOf(currency.getCachedUsdRate()).setScale(8, RoundingMode.HALF_UP)
             require(rate > BigDecimal.ZERO) { "Dollar kursi musbat bo'lishi kerak" }
             formatDecimal(rate)
         } else null
