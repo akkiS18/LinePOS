@@ -188,13 +188,7 @@ class DebtsViewModel @Inject constructor(
                         note = note,
                         revision = editing.revision
                     )
-                    localSyncManager.sendLiveCustomerUpdate(
-                        customerGuid = editing.guid,
-                        name = name,
-                        phone = phone,
-                        note = note,
-                        revision = editing.revision + 1
-                    )
+                    localSyncManager.sendLiveCustomerChange()
                     _toastEvent.emit("Mijoz ma'lumotlari yangilandi")
                 } else {
                     val newGuid = debtService.createCustomer(name, phone, note)
@@ -213,7 +207,7 @@ class DebtsViewModel @Inject constructor(
             try {
                 val newArchived = !customer.archived
                 debtService.archiveCustomer(customer.guid, newArchived)
-                localSyncManager.sendLiveCustomerArchive(customer.guid, newArchived)
+                localSyncManager.sendLiveCustomerChange()
                 val msg = if (newArchived) "Mijoz bloklandi" else "Mijoz blokdan chiqarildi"
                 _toastEvent.emit(msg)
                 loadData()

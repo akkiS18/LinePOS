@@ -174,6 +174,9 @@ class DebtRepository(private val database: AppDatabase, private val store: Strin
                 ?: throw IllegalArgumentException("Mijoz topilmadi")
             val currentRev = existing[0] as Long
             require(update.revision == currentRev) { "Customer revision conflict" }
+            val before = DebtCustomerEdits.read(db, update.customerGuid)
+            DebtCustomerEdits.enqueue(db, store, update.customerGuid, before,
+                update.name, update.phone, update.note, DebtCustomerEdits.archived(before))
             exec(db,"UPDATE debt_customers SET name=@p0, phone=@p1, note=@p2, revision=revision+1 WHERE guid=@p3 AND store_guid=@p4",
                 update.name, update.phone, update.note, update.customerGuid, store)
             true
@@ -185,6 +188,9 @@ class DebtRepository(private val database: AppDatabase, private val store: Strin
             scope(db)
             val existing = rows(db,"SELECT 1 FROM debt_customers WHERE guid=@p0 AND store_guid=@p1",customerGuid,store).singleOrNull()
                 ?: throw IllegalArgumentException("Mijoz topilmadi")
+            val before = DebtCustomerEdits.read(db, customerGuid)
+            DebtCustomerEdits.enqueue(db, store, customerGuid, before,
+                before.getString("name"), before.getString("phone"), before.getString("note"), archive)
             exec(db,"UPDATE debt_customers SET archived=@p0, revision=revision+1 WHERE guid=@p1 AND store_guid=@p2",
                 if (archive) 1L else 0L, customerGuid, store)
             true

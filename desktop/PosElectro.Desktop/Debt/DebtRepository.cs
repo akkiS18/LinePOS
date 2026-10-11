@@ -28,7 +28,7 @@ public sealed record DebtCreditTransferCommand(string RequestGuid, string Custom
 // Local command boundary. The host supplies an authenticated actor/store and permission check.
 // UI/sync adapters are deliberately not wired yet. Remote events must NOT call these local
 // allocation methods: a future receiver must apply the sender's already-frozen event lines.
-public sealed class DebtRepository
+public sealed partial class DebtRepository
 {
     private readonly string path, store, actor;
     private readonly Func<bool> canWrite;

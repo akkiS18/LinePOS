@@ -180,7 +180,7 @@ namespace PosElectro.Desktop.Services
                 string token=Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
                 using var db=store.Open(); WifiSyncStore.Exec(db,null,"INSERT INTO sync_devices(token_hash,device_id,device_name) VALUES(@hash,@id,@name)",("@hash",Hash(token)),("@id",id),("@name",name));
                 pairingCode="";
-                return new JObject { ["token"]=token,["serverId"]=store.ServerId,["protocol"]=2,["capabilities"]=new JArray{ DebtWire.Capability },["storeGuid"]=_debtStoreGuid,["historyEpoch"]=_debtHistoryEpoch };
+                return new JObject { ["token"]=token,["serverId"]=store.ServerId,["protocol"]=2,["capabilities"]=new JArray{ DebtWire.Capability, DebtRepository.CustomerEditCapability },["storeGuid"]=_debtStoreGuid,["historyEpoch"]=_debtHistoryEpoch };
             }
         }
         private async Task MonitorClients(CancellationToken token)
@@ -213,7 +213,7 @@ namespace PosElectro.Desktop.Services
                         // Never allow legacy unauthenticated writes to bypass V2 invariants.
                         var deviceId = Authenticate(request.Headers,(client.Client.RemoteEndPoint as IPEndPoint)?.Address.ToString()??"");
                         if(path=="/api/ping" && request.Method=="GET")
-                        {await Reply(stream,200,new JObject{["protocol"]=2,["serverId"]=store.ServerId,["name"]="Line kassa",["productsCount"]=_db.GetActiveProductsCount(),["salesCount"]=_db.GetTotalSalesCount(),["capabilities"]=new JArray{ DebtWire.Capability },["storeGuid"]=_debtStoreGuid,["historyEpoch"]=_debtHistoryEpoch},timeout.Token);return;}
+                        {await Reply(stream,200,new JObject{["protocol"]=2,["serverId"]=store.ServerId,["name"]="Line kassa",["productsCount"]=_db.GetActiveProductsCount(),["salesCount"]=_db.GetTotalSalesCount(),["capabilities"]=new JArray{ DebtWire.Capability, DebtRepository.CustomerEditCapability },["storeGuid"]=_debtStoreGuid,["historyEpoch"]=_debtHistoryEpoch},timeout.Token);return;}
                         // Bind V2 requests to the paired database before any mutation occurs.
                         if(path.StartsWith("/api/v2/",StringComparison.Ordinal) &&
                            (!request.Headers.TryGetValue("X-LinePOS-Server-Id",out var expectedServer) || expectedServer!=store.ServerId))
@@ -270,6 +270,20 @@ namespace PosElectro.Desktop.Services
                             var resultGuid = debtService.TransferCredit(customerGuid, sourceAccountGuid, targetAccountGuid, amount, reason);
                             try { DataSynced?.Invoke(); } catch { }
                             await Reply(stream, 200, new JObject { ["resultGuid"] = resultGuid }, timeout.Token);
+                            return;
+                        }
+                        if (path == "/api/v2/debt/customer_edit" && request.Method == "POST")
+                        {
+                            var command = JsonConvert.DeserializeObject<DebtCustomerEditCommand>(request.Body)
+                                ?? throw new ArgumentException("Mijoz tahriri yo'q");
+                            var result = new DebtService(_db).Repository.ApplyCustomerEdit(command);
+                            var customer = result.Customer;
+                            var reply = new JObject { ["status"] = result.Status };
+                            if (customer != null) reply["customer"] = new JObject {
+                                ["guid"]=customer.Guid,["name"]=customer.Name,["phone"]=customer.Phone,
+                                ["note"]=customer.Note,["archived"]=customer.Archived,["revision"]=customer.Revision };
+                            try { DataSynced?.Invoke(); } catch { }
+                            await Reply(stream,200,reply,timeout.Token);
                             return;
                         }
                         if (path == "/api/v2/debt/update_customer" && request.Method == "POST")

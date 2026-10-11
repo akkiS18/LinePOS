@@ -27,6 +27,7 @@ import uz.pos.electro.data.repository.TaxSettingsRepository
 import uz.pos.electro.data.debt.DebtEnvelope
 import uz.pos.electro.data.debt.DebtEnvelopeInbox
 import uz.pos.electro.data.debt.DebtReceiveStatus
+import uz.pos.electro.data.debt.DebtCustomerEdits
 import uz.pos.electro.data.debt.DebtService
 import uz.pos.electro.data.debt.DebtWire
 import java.net.HttpURLConnection
@@ -54,6 +55,7 @@ class LocalSyncManager @Inject constructor(
     private val prefs = context.getSharedPreferences("pos_local_sync_prefs", Context.MODE_PRIVATE)
     private val syncScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val syncMutex = Mutex()
+    private var customerEditMessage: String? = null
     private var liveJob: Job? = null
     private val _liveSyncStatus = MutableStateFlow(LiveSyncStatus.OFFLINE)
     val liveSyncStatus: StateFlow<LiveSyncStatus> = _liveSyncStatus.asStateFlow()
@@ -105,7 +107,8 @@ class LocalSyncManager @Inject constructor(
         val debt = db().query("SELECT COUNT(DISTINCT group_id) FROM sync_journal WHERE kind LIKE 'debt_%' AND acked = -1 AND group_id <> ''").use { c ->
             if (c.moveToFirst()) c.getInt(0) else 0
         }
-        return legacy + debt
+        val edits = db().query("SELECT COUNT(*) FROM sync_meta WHERE key LIKE 'debt_customer_edits:%'").use { c -> c.moveToFirst(); c.getInt(0) }
+        return legacy + debt + edits
     }
 
     companion object {
@@ -438,6 +441,7 @@ class LocalSyncManager @Inject constructor(
     }
 
     private suspend fun syncDebtIfSupported(base: String) {
+        customerEditMessage = null
         val ping = request(base, "/api/ping")
         require(ping.getString("serverId") == metadata("server_id")) { "Kompyuter bazasi almashgan." }
         val capabilities = ping.optJSONArray("capabilities")
@@ -515,6 +519,11 @@ class LocalSyncManager @Inject constructor(
                 }
             }
         }
+
+        // New customer envelopes go first; edits never bypass customer creation.
+        pushCustomerEdits(base, capabilities != null && (0 until capabilities.length()).any {
+            capabilities.getString(it) == DebtCustomerEdits.CAPABILITY
+        })
 
         // 2. Debt Pull
         val debtCursor = metadata("debt_cursor")?.toLongOrNull() ?: 0L
@@ -622,7 +631,7 @@ class LocalSyncManager @Inject constructor(
         applySnapshot(reply)
         _pendingCount.value = totalPendingCount()
         _hasConflict.value = db().query("SELECT 1 FROM sync_conflicts LIMIT 1").use { it.moveToFirst() }
-        _syncMessage.value = if(_pendingCount.value == 0) "Barcha amallar sinxronlandi." else "${_pendingCount.value} ta amal navbatda."
+        _syncMessage.value = customerEditMessage ?: if(_pendingCount.value == 0) "Barcha amallar sinxronlandi." else "${_pendingCount.value} ta amal navbatda."
     } }
     private suspend fun applySnapshot(root: JSONObject) = database.withTransaction {
         val sql = db()
@@ -708,12 +717,16 @@ class LocalSyncManager @Inject constructor(
             val name = c.optString("name", "")
             val phone = c.optString("phone", "")
             val note = c.optString("note", "")
-            val archived = if (c.optBoolean("archived", false)) 1L else 0L
+            val archived = if (DebtCustomerEdits.archived(c)) 1L else 0L
+            if (DebtCustomerEdits.pending(sql,guid).length() != 0) continue
 
-            sql.query("SELECT revision FROM debt_customers WHERE guid=?", arrayOf(guid)).use { cursor ->
+            sql.query("SELECT revision,name,phone,note,archived FROM debt_customers WHERE guid=?", arrayOf(guid)).use { cursor ->
                 if (cursor.moveToFirst()) {
                     val localRev = cursor.getLong(0)
-                    if (revision > localRev) {
+                    // With no pending edits the desktop snapshot is authoritative, even
+                    // if local optimistic revisions were higher than the server's counter.
+                    if (revision != localRev || name != cursor.getString(1) || phone != cursor.getString(2) ||
+                        note != cursor.getString(3) || archived != cursor.getLong(4)) {
                         sql.execSQL(
                             "UPDATE debt_customers SET name=?, phone=?, note=?, archived=?, revision=? WHERE guid=?",
                             arrayOf(name, phone, note, archived, revision, guid)
@@ -727,35 +740,60 @@ class LocalSyncManager @Inject constructor(
             _dataUpdateEvents.tryEmit(Unit)
         }
     }
-    suspend fun sendLiveCustomerUpdate(customerGuid: String, name: String, phone: String, note: String, revision: Long) = withContext(Dispatchers.IO) {
-        val base = getServerUrl() ?: return@withContext
-        if (token().isNullOrBlank()) return@withContext
-        try {
-            val body = JSONObject().apply {
-                put("CustomerGuid", customerGuid)
-                put("Name", name)
-                put("Phone", phone)
-                put("Note", note)
-                put("Revision", revision)
-            }
-            request(base, "/api/v2/debt/update_customer", body)
-            wake()
-        } catch (e: Exception) {
-            Log.w("WifiSyncV2", "sendLiveCustomerUpdate error: ${e.message}")
+    fun sendLiveCustomerChange() = wake()
+
+    private suspend fun pushCustomerEdits(base: String, supported: Boolean) {
+        customerEditMessage = null
+        val keys = db().query("SELECT key FROM sync_meta WHERE key LIKE 'debt_customer_edits:%' ORDER BY key").use { c ->
+            buildList { while(c.moveToNext()) add(c.getString(0)) }
         }
-    }
-    suspend fun sendLiveCustomerArchive(customerGuid: String, archive: Boolean) = withContext(Dispatchers.IO) {
-        val base = getServerUrl() ?: return@withContext
-        if (token().isNullOrBlank()) return@withContext
-        try {
-            val body = JSONObject().apply {
-                put("CustomerGuid", customerGuid)
-                put("Archive", archive)
+        if (keys.isEmpty()) return
+        if (!supported) {
+            customerEditMessage = "Mijoz tahrirlari saqlandi. Sinxronlash uchun kompyuter dasturini yangilang."
+            return
+        }
+        for (key in keys) {
+            val guid = key.removePrefix(DebtCustomerEdits.PREFIX)
+            // Bound each customer's work so a long offline queue cannot starve others.
+            for (batch in 0 until 50) {
+                val queued = DebtCustomerEdits.pending(db(),guid)
+                if (queued.length() == 0) break
+                val command = queued.getJSONObject(0)
+                try {
+                    val response = request(base,"/api/v2/debt/customer_edit",command)
+                    val status = response.getString("status")
+                    if (status == "MissingCustomer") break // Creation envelope may still be waiting.
+                    require(status in listOf("Applied","AlreadyApplied","Conflict")) { "Noma'lum mijoz tahriri javobi" }
+                    val customer = response.getJSONObject("customer")
+                    require(customer.getString("guid") == guid)
+                    database.withTransaction {
+                        val sql = db()
+                        val current = DebtCustomerEdits.pending(sql,guid)
+                        // A newer local save must never be removed by an older HTTP response.
+                        if (current.length() > 0 && current.getJSONObject(0).getString("RequestGuid") == command.getString("RequestGuid")) {
+                            if (status == "Conflict") {
+                                sql.execSQL("INSERT OR REPLACE INTO sync_meta(key,value) VALUES(?,?)",
+                                    arrayOf(DebtCustomerEdits.CONFLICT_PREFIX+guid,customer.toString()))
+                            } else {
+                                val rest = JSONArray()
+                                for(i in 1 until current.length()) rest.put(current.getJSONObject(i))
+                                if(rest.length() == 0) sql.execSQL("DELETE FROM sync_meta WHERE key=?",arrayOf(key))
+                                else sql.execSQL("UPDATE sync_meta SET value=? WHERE key=?",arrayOf(rest.toString(),key))
+                                sql.execSQL("DELETE FROM sync_meta WHERE key=?",arrayOf(DebtCustomerEdits.CONFLICT_PREFIX+guid))
+                                applyCustomerUpdates(sql,JSONArray().put(customer))
+                            }
+                        }
+                    }
+                    if(status == "Conflict") {
+                        customerEditMessage = "Mijoz tahriri farq qiladi. Telefon tahririni tanlash uchun mijozni qayta saqlang; kompyuterda ham shu qiymatlarni tanlashingiz mumkin."
+                        break
+                    }
+                } catch (e: CancellationException) { throw e }
+                catch (e: Exception) {
+                    customerEditMessage = "Mijoz tahriri navbatda: ${e.message}"
+                    break // Keep the durable body; do not block financial sync.
+                }
             }
-            request(base, "/api/v2/debt/archive_customer", body)
-            wake()
-        } catch (e: Exception) {
-            Log.w("WifiSyncV2", "sendLiveCustomerArchive error: ${e.message}")
         }
     }
     private fun saveVersion(kind: String,guid: String,revision: Long) { db().execSQL("INSERT OR REPLACE INTO sync_versions(kind,entity_guid,revision) VALUES(?,?,?)",arrayOf(kind,guid,revision)) }
