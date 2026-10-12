@@ -298,39 +298,8 @@ class DebtService @Inject constructor(
             }
         }
 
-        fun rebindDebtStore(db: SupportSQLiteDatabase, newStoreGuid: String) {
-            val oldStore = DebtRepository.scalar(db, "SELECT store_guid FROM debt_scope WHERE id=1") as? String
-            if (oldStore == newStoreGuid) {
-                db.execSQL("INSERT OR REPLACE INTO sync_meta(key, value) VALUES('debt_store_guid', ?)", arrayOf(newStoreGuid))
-                return
-            }
+        fun rebindDebtStore(db: SupportSQLiteDatabase, newStoreGuid: String) = DebtStoreBinding.bind(db,newStoreGuid)
 
-            db.execSQL("PRAGMA foreign_keys = OFF")
-            db.beginTransaction()
-            try {
-                db.execSQL("DROP TRIGGER IF EXISTS debt_scope_no_update")
-                db.execSQL("DROP TRIGGER IF EXISTS debt_scope_no_delete")
-
-                db.execSQL("INSERT OR REPLACE INTO debt_scope(id, store_guid) VALUES(1, ?)", arrayOf(newStoreGuid))
-
-                if (!oldStore.isNullOrBlank()) {
-                    db.execSQL("UPDATE debt_customers SET store_guid = ? WHERE store_guid = ?", arrayOf(newStoreGuid, oldStore))
-                    db.execSQL("UPDATE debt_events SET store_guid = ? WHERE store_guid = ?", arrayOf(newStoreGuid, oldStore))
-                    db.execSQL("UPDATE debt_accounts SET store_guid = ? WHERE store_guid = ?", arrayOf(newStoreGuid, oldStore))
-                    db.execSQL("UPDATE debt_event_lines SET store_guid = ? WHERE store_guid = ?", arrayOf(newStoreGuid, oldStore))
-                    db.execSQL("UPDATE debt_sync_inbox SET store_guid = ? WHERE store_guid = ?", arrayOf(newStoreGuid, oldStore))
-                }
-
-                db.execSQL("CREATE TRIGGER IF NOT EXISTS debt_scope_no_update BEFORE UPDATE ON debt_scope BEGIN SELECT RAISE(ABORT,'Store rebinding requires reconciliation'); END;")
-                db.execSQL("CREATE TRIGGER IF NOT EXISTS debt_scope_no_delete BEFORE DELETE ON debt_scope BEGIN SELECT RAISE(ABORT,'Store rebinding requires reconciliation'); END;")
-
-                db.execSQL("INSERT OR REPLACE INTO sync_meta(key, value) VALUES('debt_store_guid', ?)", arrayOf(newStoreGuid))
-                db.setTransactionSuccessful()
-            } finally {
-                db.endTransaction()
-                db.execSQL("PRAGMA foreign_keys = ON")
-            }
-        }
     }
 
     fun resetRepo(newStoreGuid: String? = null) = synchronized(lock) {
@@ -384,6 +353,10 @@ class DebtService @Inject constructor(
         DebtReportProjection.query(database.openHelper.readableDatabase, startMs, endMs)
     }
 
+    private fun netCollected(db: SupportSQLiteDatabase, customer: String, account: String? = null): Long {
+        return (DebtRepository.scalar(db,"SELECT COALESCE(SUM(-l.debt_delta_minor),0) FROM debt_event_lines l JOIN debt_events e ON e.guid=l.event_guid WHERE l.customer_guid=? AND e.kind IN ('payment','payment_reversal','credit_refund') AND (? IS NULL OR l.account_guid=?)",customer,account,account) as Number).toLong()
+    }
+
     suspend fun getSummary(): DebtSummaryDto {
         ensureRepo()
         val db = database.openHelper.readableDatabase
@@ -401,15 +374,15 @@ class DebtService @Inject constructor(
             db,
             "SELECT c.guid, c.archived, " +
                 "(SELECT COALESCE(SUM(original_debt_minor), 0) FROM debt_accounts WHERE customer_guid = c.guid), " +
-                "(SELECT COALESCE(SUM(-debt_delta_minor), 0) FROM debt_event_lines WHERE customer_guid = c.guid AND debt_delta_minor < 0) " +
+                "(SELECT COALESCE(SUM(-debt_delta_minor), 0) FROM debt_event_lines WHERE customer_guid = c.guid) " +
                 "FROM debt_customers c"
         )
 
         for (row in custRows) {
             val orig = (row[2] as Number).toLong()
             val paid = (row[3] as Number).toLong()
-            val bal = orig - paid
-            totalPaid += paid
+            val bal = Math.subtractExact(orig,paid)
+            totalPaid = Math.addExact(totalPaid,netCollected(db,row[0] as String))
 
             if (bal > 0) {
                 totalActiveDebt += bal
@@ -423,7 +396,7 @@ class DebtService @Inject constructor(
             val overdueRow = DebtRepository.rows(
                 db,
                 "SELECT a.guid, a.original_debt_minor, a.due_date, " +
-                    "(SELECT COALESCE(SUM(-debt_delta_minor), 0) FROM debt_event_lines WHERE account_guid = a.guid AND debt_delta_minor < 0) " +
+                    "(SELECT COALESCE(SUM(-debt_delta_minor), 0) FROM debt_event_lines WHERE account_guid = a.guid) " +
                     "FROM debt_accounts a " +
                     "WHERE a.customer_guid = ? AND a.due_date IS NOT NULL AND a.due_date < ?",
                 cGuid, today
@@ -433,7 +406,7 @@ class DebtService @Inject constructor(
             for (acc in overdueRow) {
                 val accOrig = (acc[1] as Number).toLong()
                 val accPaid = (acc[3] as Number).toLong()
-                val accBal = accOrig - accPaid
+                val accBal = Math.subtractExact(accOrig,accPaid)
                 if (accBal > 0) {
                     overdueDebt += accBal
                     custHasOverdue = true
@@ -481,20 +454,21 @@ class DebtService @Inject constructor(
             val createdAt = (row[6] as Long)
 
             val origDebt = ((DebtRepository.scalar(db, "SELECT COALESCE(SUM(original_debt_minor), 0) FROM debt_accounts WHERE customer_guid = ?", guid) as? Number)?.toLong()) ?: 0L
-            val totalPaid = ((DebtRepository.scalar(db, "SELECT COALESCE(SUM(-debt_delta_minor), 0) FROM debt_event_lines WHERE customer_guid = ? AND debt_delta_minor < 0", guid) as? Number)?.toLong()) ?: 0L
-            val balance = origDebt - totalPaid
+            val settlement = ((DebtRepository.scalar(db, "SELECT COALESCE(SUM(-debt_delta_minor), 0) FROM debt_event_lines WHERE customer_guid = ?", guid) as? Number)?.toLong()) ?: 0L
+            val balance = Math.subtractExact(origDebt,settlement)
+            val totalPaid = netCollected(db,guid)
 
             val overdueCount = ((DebtRepository.scalar(
                 db,
                 "SELECT COUNT(*) FROM debt_accounts a WHERE a.customer_guid = ? AND a.due_date IS NOT NULL AND a.due_date < ? AND " +
-                    "((SELECT COALESCE(SUM(-debt_delta_minor), 0) FROM debt_event_lines WHERE account_guid = a.guid AND debt_delta_minor < 0) < a.original_debt_minor)",
+                    "((SELECT COALESCE(SUM(-debt_delta_minor), 0) FROM debt_event_lines WHERE account_guid = a.guid) < a.original_debt_minor)",
                 guid, today
             ) as? Number)?.toInt()) ?: 0
 
             val earliestDueDate = DebtRepository.scalar(
                 db,
                 "SELECT a.due_date FROM debt_accounts a WHERE a.customer_guid = ? AND a.due_date IS NOT NULL AND " +
-                    "((SELECT COALESCE(SUM(-debt_delta_minor), 0) FROM debt_event_lines WHERE account_guid = a.guid AND debt_delta_minor < 0) < a.original_debt_minor) " +
+                    "((SELECT COALESCE(SUM(-debt_delta_minor), 0) FROM debt_event_lines WHERE account_guid = a.guid) < a.original_debt_minor) " +
                     "ORDER BY a.due_date ASC LIMIT 1",
                 guid
             ) as? String
@@ -502,7 +476,7 @@ class DebtService @Inject constructor(
             val activeAccountsCount = ((DebtRepository.scalar(
                 db,
                 "SELECT COUNT(*) FROM debt_accounts a WHERE a.customer_guid = ? AND " +
-                    "((SELECT COALESCE(SUM(-debt_delta_minor), 0) FROM debt_event_lines WHERE account_guid = a.guid AND debt_delta_minor < 0) < a.original_debt_minor)",
+                    "((SELECT COALESCE(SUM(-debt_delta_minor), 0) FROM debt_event_lines WHERE account_guid = a.guid) < a.original_debt_minor)",
                 guid
             ) as? Number)?.toInt()) ?: 0
 
@@ -556,7 +530,7 @@ class DebtService @Inject constructor(
         val accRows = DebtRepository.rows(
             db,
             "SELECT a.guid, a.sale_guid, a.customer_name_at_sale, a.original_debt_minor, a.due_date, s.created_at, " +
-                "(SELECT COALESCE(SUM(-debt_delta_minor), 0) FROM debt_event_lines WHERE account_guid = a.guid AND debt_delta_minor < 0) " +
+                "(SELECT COALESCE(SUM(-debt_delta_minor), 0) FROM debt_event_lines WHERE account_guid = a.guid) " +
                 "FROM debt_accounts a " +
                 "JOIN sales s ON s.guid = a.sale_guid " +
                 "WHERE a.customer_guid = ? ORDER BY s.created_at DESC",
@@ -571,7 +545,7 @@ class DebtService @Inject constructor(
             val dueDate = row[4] as? String
             val createdAt = (row[5] as Number).toLong()
             val paid = (row[6] as Number).toLong()
-            val bal = orig - paid
+            val bal = Math.subtractExact(orig,paid)
             val isOverdue = dueDate != null && dueDate < today && bal > 0
 
             accountsList.add(
@@ -581,11 +555,11 @@ class DebtService @Inject constructor(
                     customerNameAtSale = custNameAtSale,
                     originalDebtMinor = orig,
                     balanceMinor = bal,
-                    totalPaidMinor = paid,
+                    totalPaidMinor = netCollected(db,customerGuid,aGuid),
                     dueDate = dueDate,
                     isOverdue = isOverdue,
                     createdAt = createdAt,
-                    receiptNumber = "LP-" + saleGuid.replace("-", "").uppercase().take(8)
+                    receiptNumber = "LP-" + saleGuid.replace("-", "").uppercase()
                 )
             )
         }
@@ -643,9 +617,7 @@ class DebtService @Inject constructor(
             )
         }
 
-        val totalOrig = accountsList.sumOf { it.originalDebtMinor }
-        val totalPaid = accountsList.sumOf { it.totalPaidMinor }
-        val balance = totalOrig - totalPaid
+        val balance = accountsList.fold(0L) { sum,a -> Math.addExact(sum,a.balanceMinor) }
 
         return DebtCustomerDetailDto(
             customer = customerRecord,
@@ -663,7 +635,7 @@ class DebtService @Inject constructor(
         require(paymentMinor > 0) { "To'lov summasi musbat bo'lishi shart" }
         val details = getCustomerDetails(customerGuid) ?: throw IllegalArgumentException("Mijoz topilmadi")
 
-        val totalOutstanding = details.accounts.sumOf { it.balanceMinor }
+        val totalOutstanding = details.accounts.filter { it.balanceMinor>0 }.sumOf { it.balanceMinor }
         if (paymentMinor > totalOutstanding) {
             throw IllegalArgumentException("To'lov summasi (${paymentMinor / 100.0} so'm) mavjud qarzdan (${totalOutstanding / 100.0} so'm) ko'p bo'lishi mumkin emas")
         }

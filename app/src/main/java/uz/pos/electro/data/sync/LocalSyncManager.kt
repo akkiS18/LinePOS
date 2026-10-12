@@ -58,6 +58,7 @@ class LocalSyncManager @Inject constructor(
     private val syncMutex = Mutex()
     private var customerEditMessage: String? = null
     private var debtCommandMessage: String? = null
+    private var debtStockWatermarkSupported = false
     private var liveJob: Job? = null
     private val _liveSyncStatus = MutableStateFlow(LiveSyncStatus.OFFLINE)
     val liveSyncStatus: StateFlow<LiveSyncStatus> = _liveSyncStatus.asStateFlow()
@@ -143,46 +144,28 @@ class LocalSyncManager @Inject constructor(
                 val hasDebt = capabilities != null && (0 until capabilities.length()).any { capabilities.getString(it) == DebtWire.CAPABILITY }
                 val storeGuid = reply.optString("storeGuid").takeIf { it.isNotBlank() }
 
-                if (oldId != null && oldId != serverId) {
-                    if (!force) {
-                        throw ServerChangedException(serverId, "Bu telefon avval boshqa kompyuter bazasiga bog'langan. Yangi kompyuterga qayta bog'lashni tasdiqlaysizmi?")
-                    }
-                    if (hasDebt && storeGuid != null) {
-                        DebtService.rebindDebtStore(db(), storeGuid)
+                database.withTransaction {
+                    if(hasDebt && storeGuid!=null) {
+                        DebtService.rebindDebtStore(db(),storeGuid)
                         debtService?.resetRepo(storeGuid)
-                        cachedDebtInbox = null
-                        cachedDebtStore = null
+                        cachedDebtInbox=null;cachedDebtStore=null
                     }
-                    database.withTransaction {
-                        putMetadata("server_id", serverId)
-                        putMetadata("cursor", "0")
+                    val epoch=reply.optString("historyEpoch").takeIf { it.isNotBlank() }
+                    val changedHistory=epoch!=null && metadata("debt_history_epoch")!=null && epoch!=metadata("debt_history_epoch")
+                    if(changedHistory) resetDebtHistory(epoch!!)
+                    putMetadata("server_id",serverId)
+                    putMetadata("cursor","0");putMetadata("debt_cursor","0")
+                    putMetadata("debt_stock_watermark","0")
+                    if(oldId!=null && oldId!=serverId) {
                         db().execSQL("DELETE FROM sync_versions")
                         db().execSQL("DELETE FROM sync_conflicts")
                         db().execSQL("UPDATE sync_journal SET base_revision=-1 WHERE acked=0")
-                        val historyEpoch = reply.optString("historyEpoch").takeIf { it.isNotBlank() }
-                        if (historyEpoch != null) {
-                            putMetadata("debt_history_epoch", historyEpoch)
-                        }
                     }
-                } else {
-                    if (hasDebt && storeGuid != null) {
-                        DebtService.rebindDebtStore(db(), storeGuid)
-                        debtService?.resetRepo(storeGuid)
-                        cachedDebtInbox = null
-                        cachedDebtStore = null
-                    }
-                    database.withTransaction {
-                        putMetadata("server_id", serverId)
-                        putMetadata("cursor", "0")
-                        putMetadata("debt_cursor", "0")
-                        val historyEpoch = reply.optString("historyEpoch").takeIf { it.isNotBlank() }
-                        if (historyEpoch != null) {
-                            putMetadata("debt_history_epoch", historyEpoch)
-                        }
-                    }
+                    if(epoch!=null) putMetadata("debt_history_epoch",epoch)
                 }
                 prefs.edit().putString("local_desktop_url", base).putString("wifi_v2_token", reply.getString("token")).commit()
             }
+            restartLiveSyncEngine()
             "Line kassa"
         }
     }
@@ -191,19 +174,19 @@ class LocalSyncManager @Inject constructor(
         liveJob?.cancel()
         liveJob = null
         _liveSyncStatus.value = LiveSyncStatus.OFFLINE
-        prefs.edit().remove("local_desktop_url").remove("wifi_v2_token").apply()
+        syncMutex.withLock {
+        prefs.edit().remove("local_desktop_url").remove("wifi_v2_token").commit()
         cachedDebtInbox = null
         cachedDebtStore = null
         database.withTransaction {
-            db().execSQL("DELETE FROM sync_meta WHERE key IN ('server_id', 'cursor', 'debt_store_guid', 'debt_history_epoch', 'debt_cursor')")
-            db().execSQL("DELETE FROM sync_versions")
-            db().execSQL("DELETE FROM sync_conflicts")
-            db().execSQL("UPDATE sync_journal SET base_revision=-1 WHERE acked=0")
+            putMetadata("cursor","0")
+            putMetadata("debt_cursor","0")
+        }
         }
         _syncMessage.value = "Kompyuter bilan aloqa uzildi. Yangi QR kod orqali ulanishingiz mumkin."
     }
     suspend fun pingDesktop(serverUrl: String): Result<String> = withContext(Dispatchers.IO) {
-        runCatching {
+        runCatching { syncMutex.withLock {
             val normUrl = normalizeUrl(serverUrl)
             val currentUrl = getServerUrl()
             val reply = request(normUrl, "/api/ping")
@@ -236,7 +219,7 @@ class LocalSyncManager @Inject constructor(
                 }
             }
             reply.getString("name")
-        }
+        } }
     }
     fun restartLiveSyncEngine() { liveJob?.cancel(); liveJob = null; startLiveSyncEngine() }
     fun startLiveSyncEngine() {
@@ -441,7 +424,8 @@ class LocalSyncManager @Inject constructor(
                                 val stocks = JSONArray()
                                 for(stock in productStockDao.getStocksForProduct(op.guid)) {
                                     val unsyncedQty = db().query("SELECT COALESCE(SUM(i.quantity),0) FROM sale_items i JOIN sales s ON i.sale_id=s.id JOIN sync_journal j ON j.entity_guid=s.guid AND j.kind='legacy_sale' WHERE i.product_guid=? AND (i.warehouse_guid=? OR (i.warehouse_guid='' AND ?='main-default-warehouse'))",arrayOf(op.guid,stock.warehouseGuid,stock.warehouseGuid)).use { it.moveToFirst(); it.getDouble(0) }
-                                    stocks.put(JSONObject().put("WarehouseGuid",stock.warehouseGuid).put("Quantity",stock.quantity + unsyncedQty - pending().filter { it.kind == "stock" && it.guid == op.guid && it.warehouse == stock.warehouseGuid }.sumOf { it.delta }))
+                                    val debtDelta=db().query("SELECT COALESCE(SUM(delta),0) FROM sync_journal WHERE kind='debt_stock' AND acked=-1 AND entity_guid=? AND warehouse_guid=?",arrayOf(op.guid,stock.warehouseGuid)).use { c -> c.moveToFirst();c.getDouble(0) }
+                                    stocks.put(JSONObject().put("WarehouseGuid",stock.warehouseGuid).put("Quantity",stock.quantity + unsyncedQty - debtDelta - pending().filter { it.kind == "stock" && it.guid == op.guid && it.warehouse == stock.warehouseGuid }.sumOf { it.delta }))
                                 }
                                 json.put("InitialStocks",stocks)
                             }
@@ -466,6 +450,13 @@ class LocalSyncManager @Inject constructor(
         }
     }
 
+    private fun resetDebtHistory(epoch: String) {
+        db().execSQL("UPDATE sync_journal SET acked=-1 WHERE kind LIKE 'debt_%' AND acked=1")
+        db().execSQL("DELETE FROM sync_meta WHERE key GLOB 'debt_remote_seq:*'")
+        putMetadata("debt_stock_watermark","0")
+        putMetadata("cursor","0");putMetadata("debt_cursor","0")
+        putMetadata("debt_history_epoch",epoch)
+    }
     private suspend fun syncDebtIfSupported(base: String) {
         customerEditMessage = null
         debtCommandMessage = null
@@ -487,15 +478,12 @@ class LocalSyncManager @Inject constructor(
         val remoteHistoryEpoch = ping.optString("historyEpoch").takeIf { it.isNotBlank() }
         val localHistoryEpoch = metadata("debt_history_epoch")
         if (remoteHistoryEpoch != null && localHistoryEpoch != null && remoteHistoryEpoch != localHistoryEpoch) {
-            database.withTransaction {
-                db().execSQL("UPDATE sync_journal SET acked = -1 WHERE kind LIKE 'debt_%' AND acked = 1")
-                putMetadata("debt_cursor", "0")
-                putMetadata("debt_history_epoch", remoteHistoryEpoch)
-            }
+            database.withTransaction { resetDebtHistory(remoteHistoryEpoch) }
         } else if (remoteHistoryEpoch != null && localHistoryEpoch == null) {
             putMetadata("debt_history_epoch", remoteHistoryEpoch)
         }
 
+        debtStockWatermarkSupported=capabilities!=null && (0 until capabilities.length()).any { capabilities.getString(it)=="debtStockWatermarkV1" }
         val fullLedger = capabilities != null && (0 until capabilities.length()).any { capabilities.getString(it)==DebtExtendedWire.CAPABILITY }
         if(fullLedger && metadata("debt_extended_enabled")!="1") {
             database.withTransaction { putMetadata("debt_cursor","0");putMetadata("debt_extended_enabled","1") }
@@ -529,6 +517,7 @@ class LocalSyncManager @Inject constructor(
                 val pushReply = request(base, "/api/v2/debt/push", pushBody)
                 val results = pushReply.getJSONArray("results")
                 val ackedGroups = mutableListOf<String>()
+                val groupSequences=mutableMapOf<String,Long>()
                 val sentGroups=envelopes.map { DebtEnvelope.decode(it,storeGuid).guid }.toSet()
 
                 for (i in 0 until results.length()) {
@@ -538,12 +527,14 @@ class LocalSyncManager @Inject constructor(
                     require(guid in sentGroups) { "Nomaʼlum qarz tasdigʻi" }
                     if (status == "Applied" || status == "AlreadyApplied") {
                         ackedGroups.add(guid)
+                        if(debtStockWatermarkSupported) { val seq=res.getLong("sequence");require(seq>0);groupSequences[guid]=seq }
                     }
                 }
 
                 if (ackedGroups.isNotEmpty()) {
                     database.withTransaction {
                         for (group in ackedGroups) {
+                            groupSequences[group]?.let { putMetadata("debt_remote_seq:$group",it.toString()) }
                             db().execSQL("UPDATE sync_journal SET acked = 1 WHERE group_id = ?", arrayOf(group))
                             db().query("SELECT entity_guid FROM sync_journal WHERE group_id = ? AND kind = 'debt_sale'", arrayOf(group)).use { sc ->
                                 val saleGuids = buildList { while (sc.moveToNext()) add(sc.getString(0)) }
@@ -576,11 +567,7 @@ class LocalSyncManager @Inject constructor(
         if (pullReply.optBoolean("cursorRollback", false)) {
             val serverEpoch = pullReply.optString("historyEpoch").takeIf { it.isNotBlank() } ?: remoteHistoryEpoch ?: ""
             database.withTransaction {
-                db().execSQL("UPDATE sync_journal SET acked = -1 WHERE kind LIKE 'debt_%' AND acked = 1")
-                putMetadata("debt_cursor", "0")
-                if (serverEpoch.isNotBlank()) {
-                    putMetadata("debt_history_epoch", serverEpoch)
-                }
+                resetDebtHistory(serverEpoch)
                 pullReply.optJSONArray("customers")?.let { applyCustomerUpdates(db(), it) }
             }
             return
@@ -588,7 +575,8 @@ class LocalSyncManager @Inject constructor(
 
         val pulledEpoch = pullReply.optString("historyEpoch").takeIf { it.isNotBlank() }
         if (pulledEpoch != null && pulledEpoch != metadata("debt_history_epoch")) {
-            putMetadata("debt_history_epoch", pulledEpoch)
+            database.withTransaction { resetDebtHistory(pulledEpoch) }
+            return
         }
 
         val pulledEnvelopes = pullReply.getJSONArray("envelopes")
@@ -600,6 +588,10 @@ class LocalSyncManager @Inject constructor(
             for (i in 0 until pulledEnvelopes.length()) {
                 val wire = pulledEnvelopes.getString(i)
                 val p = DebtEnvelope.decode(wire, storeGuid)
+                if(debtStockWatermarkSupported) {
+                    val seq=pullReply.getJSONObject("sequences").getLong(p.guid);require(seq>0 && seq<=newCursor)
+                    putMetadata("debt_remote_seq:${p.guid}",seq.toString())
+                }
                 inbox.receive(sql, p, wire, now)
             }
             pullReply.optJSONArray("customers")?.let { applyCustomerUpdates(sql, it) }
@@ -717,7 +709,11 @@ class LocalSyncManager @Inject constructor(
                 val wh = stock.getString("WarehouseGuid")
                 if (wh == "00000000-0000-0000-0000-000000000001") continue
                 val unpushed = localPending.filter { it.kind == "stock" && it.guid == guid && it.warehouse == wh }.sumOf { it.delta }
-                productStockDao.upsertStock(guid,wh,stock.getDouble("Quantity") + unpushed,stock.getLong("UpdatedAt"))
+                val watermark=if(debtStockWatermarkSupported)root.getLong("debtStockWatermark") else 0L
+                // Keep phone-side debt movements not yet included in this server snapshot,
+                // even when created concurrently while the HTTP pull was in flight.
+                val localDebt=if(debtStockWatermarkSupported)sql.query("SELECT COALESCE(SUM(j.delta),0) FROM sync_journal j LEFT JOIN sync_meta m ON m.key='debt_remote_seq:'||j.group_id WHERE j.kind='debt_stock' AND j.entity_guid=? AND j.warehouse_guid=? AND (m.value IS NULL OR CAST(m.value AS INTEGER)>?)",arrayOf(guid,wh,watermark)).use { c -> c.moveToFirst();c.getDouble(0) } else 0.0
+                productStockDao.upsertStock(guid,wh,stock.getDouble("Quantity") + unpushed + localDebt,stock.getLong("UpdatedAt"))
             }
             sql.execSQL("DELETE FROM warehouses WHERE guid = '00000000-0000-0000-0000-000000000001'")
             sql.execSQL("DELETE FROM product_stocks WHERE warehouse_guid = '00000000-0000-0000-0000-000000000001'")
@@ -743,6 +739,10 @@ class LocalSyncManager @Inject constructor(
             }
             root.optJSONArray("customers")?.let { applyCustomerUpdates(sql, it) }
             cachedDebtInbox?.drainPending(sql,System.currentTimeMillis(),extendedOnly=true)
+            if(debtStockWatermarkSupported) {
+                require(root.optString("historyEpoch")==metadata("debt_history_epoch")) { "Tiklangan baza snapshoti yangilanishi kerak" }
+                putMetadata("debt_stock_watermark",root.getLong("debtStockWatermark").toString())
+            }
             putMetadata("cursor",root.getLong("cursor").toString())
             _dataUpdateEvents.tryEmit(Unit)
         } finally { sql.execSQL("UPDATE sync_control SET applying=0 WHERE id=1") }

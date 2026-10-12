@@ -43,7 +43,7 @@ Har bir testda telefon va desktopdagi amal tarixi, summalar, dublikatlar va sinx
 | 2 | Telefonda 20 000 so‘m naqd qarz to‘lovini tasdiqlashni tez ikki marta bosing. | Bitta 20 000 so‘mlik payment yozuvi. Qarzning matematik qoldig‘i 80 000. |
 | 3 | Wi-Fi ni uzib telefonda yana 10 000 so‘m to‘lang. Ilovani yoping, qayta oching va ulang. | To‘lov saqlanib qoladi va desktopga bir marta yetib boradi. Matematik qoldiq 70 000. |
 | 4 | Aloqani qayta-qayta uzib ulang, ikkala dasturni qayta oching. | Oldingi to‘lovlar qayta yaratilmaydi. Navbat yakunda bo‘shaydi. |
-| 5 | Desktopda 20 000 so‘mlik birinchi to‘lovni bekor qiling. | Telefonga bitta payment_reversal keladi, asl payment bekor qilingan deb belgilanadi. Matematik qoldiq 90 000. Qoldiq ko‘rsatkichining quyidagi 3-bosqich chekloviga qarang. |
+| 5 | Desktopda 20 000 so‘mlik birinchi to‘lovni bekor qiling. | Telefonga bitta payment_reversal keladi, asl payment bekor qilingan deb belgilanadi. Matematik qoldiq 90 000. Yakuniy branchda ekrandagi qoldiq ham shu qiymat bo‘lsin. |
 | 6 | Bir xil bekor qilishni yana urining. | Ikkinchi reversal yozuvi yaratilmaydi. |
 | 7 | Shu savdoning 30 000 so‘mlik mahsulotini desktopdan qaytaring. Hali qarz borligi uchun shu qismi qarzdan chegirilsin. | Bitta return_offset; qaytarish cheki, qatori va qarz yozuvi ikkala qurilmaga yetadi. Matematik qoldiq 60 000. Omborga mahsulot faqat bir marta qaytadi. |
 | 8 | Desktopda shu qaytarishni bekor qiling. | Bitta return_reversal keladi. Matematik qoldiq 90 000; qaytarilgan stock bir marta ortga olinadi. |
@@ -54,7 +54,7 @@ Har bir testda telefon va desktopdagi amal tarixi, summalar, dublikatlar va sinx
 | 13 | Telefonda mijozni offline tahrirlang/bloklang, ilovani qayta ochib ulang. | Oxirgi qiymatlar desktopga yetadi. Batafsil konflikt ssenariylari: `DEBT_STAGE2A_CUSTOMER_SYNC_UZ.md`, 1–9. |
 | 14 | Test nusxasida eski desktopga yangi telefonni ulang. | Yangi turdagi amallar o‘chirilmaydi. Ikkala dastur yangilangach eski qolgan amallar ham olinadi. Eski versiyada yangi operatsiyalar bilan ishlash tavsiya etilmaydi. |
 
-**Muhim chegara:** 3-bosqichdagi ulanish, baza tiklash, ombor/qarz qoldig‘i hisoblari hali alohida qolgan. Xususan telefondagi ayrim qoldiq/list so‘rovlari faqat manfiy qarz deltalarini yig‘adi. Musbat reversal/refund/transfer qatori kelganini tarixdan tekshiring; ekrandagi qoldiq ham albatta mos kelishi kerak, ammo shu mavjud muammo 2-bosqich bilan tuzatildi deb hisoblamang. Productionga chiqarish uchun 3-bosqich va umumiy tekshiruv ham kerak.
+**Yakuniy branch uchun:** `fix/debt-stage3-complete` da 3-bosqich tuzatishlari ham mavjud. Ushbu testlarni `docs/DEBT_FINAL_MANUAL_TEST_UZ.md` bilan birga bajaring; musbat delta kelgach ekrandagi qoldiq ham mos bo‘lishi shart. Eski 2-bosqich branchining o‘zi bu qoldiq tuzatishlarini o‘z ichiga olmaydi.
 
 ## Qo‘shimcha texnik manual tekshiruv (lokal agent yordamida)
 

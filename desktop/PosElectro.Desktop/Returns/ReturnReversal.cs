@@ -67,13 +67,16 @@ FROM returns r JOIN sales s ON s.guid=r.guid WHERE r.guid=@p0 AND r.status='conf
 
             var revDebtEventGuid = Guid.NewGuid().ToString("D");
             var revDebtRequestGuid = "return_reversal:" + request.RequestGuid;
-            var revDebtSeq = checked(Convert.ToInt64(Scalar(c, tx, "SELECT COALESCE(MAX(device_sequence),0) FROM debt_events WHERE device_guid=@p0", authorityGuid)) + 1);
+            // A restored DB starts a new writer epoch; never reuse device/sequence pairs.
+            Exec(c,tx,"INSERT OR IGNORE INTO sync_meta(key,value) VALUES('debt_history_epoch',@p0)",Guid.NewGuid().ToString("D"));
+            var debtDeviceGuid=Convert.ToString(Scalar(c,tx,"SELECT value FROM sync_meta WHERE key='debt_history_epoch'"))!;
+            var revDebtSeq = checked(Convert.ToInt64(Scalar(c, tx, "SELECT COALESCE(MAX(device_sequence),0) FROM debt_events WHERE device_guid=@p0", debtDeviceGuid)) + 1);
             var revPayload = PosElectro.Desktop.Debt.DebtRepository.Canonical("return_reversal", strGuid, operatorGuid, revDebtRequestGuid, custGuid, debtOffsetGuid, now.ToString(CultureInfo.InvariantCulture), request.Reason);
             var revHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(revPayload))).ToLowerInvariant();
 
             Exec(c, tx, @"INSERT INTO debt_events(guid,request_guid,schema_version,kind,customer_guid,store_guid,actor_guid,device_guid,device_sequence,occurred_at,payload,payload_hash,cash_minor,card_minor,fee_minor,fee_usd_rate,reference_guid)
 VALUES(@p0,@p1,1,'return_reversal',@p2,@p3,@p4,@p5,@p6,@p7,@p8,@p9,@p10,@p11,@p12,NULL,@p13)",
-                revDebtEventGuid, revDebtRequestGuid, custGuid, strGuid, operatorGuid, authorityGuid, revDebtSeq, now,
+                revDebtEventGuid, revDebtRequestGuid, custGuid, strGuid, operatorGuid, debtDeviceGuid, revDebtSeq, now,
                 revPayload, revHash, -origCash, -origCard, -origFee, debtOffsetGuid);
 
             Exec(c, tx, @"INSERT INTO debt_event_lines(event_guid,line_index,account_guid,customer_guid,store_guid,debt_delta_minor)

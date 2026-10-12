@@ -12,7 +12,7 @@ namespace PosElectro.Desktop.ViewModels;
 
 public class DebtsViewModel : ViewModelBase
 {
-    private readonly DebtService _debtService;
+    private DebtService _debtService;
     private readonly DatabaseContext _db;
 
     public event Action<DebtCustomerItemDto>? RequestOpenCashierForCustomer;
@@ -325,6 +325,11 @@ public class DebtsViewModel : ViewModelBase
     public ICommand GoToCashierForCustomerCommand { get; }
     public ICommand PrintStatementCommand { get; }
 
+    public void ReloadDebtDatabase() {
+        _debtService=new DebtService(_db);
+        SelectedCustomer=null;
+        IsPaymentModalOpen=false;IsRefundCreditModalOpen=false;IsCustomerModalOpen=false;
+    }
     public DebtsViewModel(DatabaseContext db, DebtService? debtService = null)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));

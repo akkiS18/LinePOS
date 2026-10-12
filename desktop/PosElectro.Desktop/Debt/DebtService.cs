@@ -327,7 +327,10 @@ public sealed class DebtService
                        WHERE a.customer_guid = c.guid AND a.store_guid = c.store_guid
                          AND a.due_date IS NOT NULL AND a.due_date < @today
                          AND (a.original_debt_minor + COALESCE((SELECT SUM(l2.debt_delta_minor) FROM debt_event_lines l2 WHERE l2.account_guid = a.guid), 0)) > 0
-                   ) AS overdue_accounts_count
+                   ) AS overdue_accounts_count,
+                   (SELECT COALESCE(SUM(-l.debt_delta_minor),0)
+                    FROM debt_event_lines l JOIN debt_events e ON e.guid=l.event_guid
+                    WHERE l.customer_guid=c.guid AND e.kind IN ('payment','payment_reversal','credit_refund')) AS net_collected
             FROM debt_customers c
             WHERE c.store_guid = @store";
 
@@ -364,7 +367,7 @@ public sealed class DebtService
             var overdueAccountsCount = Convert.ToInt32(reader.GetInt64(11));
 
             var balance = originalDebt + deltas;
-            var totalPaid = Math.Max(0, originalDebt - Math.Max(0, balance));
+            var totalPaid = reader.GetInt64(12);
             var hasOverdue = overdueAccountsCount > 0;
 
             var item = new DebtCustomerItemDto(

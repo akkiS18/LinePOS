@@ -57,12 +57,12 @@ public sealed class WifiSyncStore
             since = 0;
             rollback = true;
         }
-        var result=new JObject { ["protocol"]=2,["serverId"]=ServerId,["cursor"]=high,["cursorRollback"]=rollback };
+        var result=new JObject { ["protocol"]=2,["serverId"]=ServerId,["cursor"]=high,["cursorRollback"]=rollback,["debtStockWatermark"]=high,["historyEpoch"]=(string?)Scalar(db,tx,"SELECT value FROM sync_meta WHERE key='debt_history_epoch'") };
         foreach(var (kind,table,key) in new[]{("product","products","guid"),("warehouse","warehouses","guid"),("sale","sales","guid"),("stock","product_stocks","product_guid")})
         {
             var sql = kind == "sale"
                 ? $"SELECT * FROM {table} WHERE payment_type <> 3 AND (@since=0 OR {key} IN (SELECT entity_guid FROM sync_journal WHERE seq>@since AND seq<=@high AND kind=@kind))"
-                : $"SELECT * FROM {table} WHERE @since=0 OR {key} IN (SELECT entity_guid FROM sync_journal WHERE seq>@since AND seq<=@high AND kind=@kind)";
+                : $"SELECT * FROM {table} WHERE @since=0 OR {key} IN (SELECT entity_guid FROM sync_journal WHERE seq>@since AND seq<=@high AND (kind=@kind OR (@kind='stock' AND kind='debt_stock')))";
             var rows=Rows(db,tx,sql,("@since",since),("@high",high),("@kind",kind));
             foreach(JObject row in rows) { if(kind=="sale")row["Items"]=Rows(db,tx,"SELECT * FROM sale_items WHERE sale_id=@id ORDER BY id",("@id",(long)row["Id"]!)); if(kind is "product" or "warehouse")row["Revision"]=Revision(db,tx,kind,(string)row["Guid"]!); }
             if(kind=="stock")

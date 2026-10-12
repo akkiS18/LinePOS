@@ -389,8 +389,11 @@ namespace PosElectro.Desktop.ViewModels
             }
         }
 
-        public void PerformDatabaseRestore()
+        private bool _isRestoringDatabase;
+        public async void PerformDatabaseRestore()
         {
+            if(_isRestoringDatabase)return;
+            _isRestoringDatabase=true;
             try
             {
                 var ofd = new Microsoft.Win32.OpenFileDialog
@@ -411,7 +414,13 @@ namespace PosElectro.Desktop.ViewModels
 
                     if (confirm != MessageBoxResult.Yes) return;
 
-                    Database.RestoreDatabase(ofd.FileName);
+                    var wasRunning=SyncServer.IsRunning;
+                    try {
+                        await SyncServer.StopAndWaitAsync();
+                        Database.RestoreDatabase(ofd.FileName);
+                        CashierVM.ReloadDebtDatabase();
+                        DebtsVM.ReloadDebtDatabase();
+                    } finally { if(wasRunning)SyncServer.Start(); }
 
                     // Re-initialize view models
                     CashierVM.RefreshProducts();
@@ -433,6 +442,7 @@ namespace PosElectro.Desktop.ViewModels
             {
                 MessageBox.Show($"Bazani tiklashda xatolik yuz berdi:\n{ex.Message}", "Xatolik", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+            finally { _isRestoringDatabase=false; }
         }
 
         public ViewModelBase CurrentView

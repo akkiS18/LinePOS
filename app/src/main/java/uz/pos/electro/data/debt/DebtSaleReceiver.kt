@@ -46,6 +46,9 @@ internal class DebtSaleReceiver private constructor(
             val user=resolveActorUser(ev.actorGuid)
             // Unlike desktop, Android has a users table. Never invent a local user or use 1.
             var missing=user==null || user<=0 || scalar(db,"SELECT 1 FROM users WHERE id=@p0",user)==null
+            val remoteSeq=(scalar(db,"SELECT value FROM sync_meta WHERE key=?","debt_remote_seq:${ev.guid}") as? String)?.toLongOrNull()
+            val stockWatermark=(scalar(db,"SELECT value FROM sync_meta WHERE key='debt_stock_watermark'") as? String)?.toLongOrNull() ?: 0L
+            val alreadyInSnapshot=remoteSeq!=null && remoteSeq>0 && remoteSeq<=stockWatermark
             val products=linkedMapOf<String,Long>()
             val stocks=linkedMapOf<Pair<String,String>,BigDecimal>()
             for(i in s.items) {
@@ -60,7 +63,7 @@ internal class DebtSaleReceiver private constructor(
                     val old=scalar(db,"SELECT quantity FROM product_stocks WHERE product_guid=@p0 AND warehouse_guid=@p1",key.first,key.second)
                     stocks[key]=if(old==null)BigDecimal.ZERO else stored(old)
                 }
-                stocks[key]=stocks.getValue(key)+d(i.stockDelta)
+                stocks[key]=stocks.getValue(key)+(if(alreadyInSnapshot)BigDecimal.ZERO else d(i.stockDelta))
                 real(stocks.getValue(key))
             }
             val totals=linkedMapOf<String,BigDecimal>()

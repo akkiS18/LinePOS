@@ -143,7 +143,7 @@ namespace PosElectro.Desktop.ViewModels
         private readonly ProductService _productService;
         private readonly CurrencyService _currencyService;
         private readonly PrinterService _printerService;
-        private readonly DebtService _debtService;
+        private DebtService _debtService;
         private bool _isSubmittingSale;
         private string _searchQuery = string.Empty;
         private string _selectedCategory = ProductService.CATEGORY_ALL;
@@ -711,6 +711,11 @@ namespace PosElectro.Desktop.ViewModels
         public ICommand OpenSplitSaleCommand { get; }
         public ICommand OpenDebtSaleCommand { get; }
 
+    public void ReloadDebtDatabase() {
+        _debtService=new DebtService(_db);
+        SelectedDebtCustomer=null;
+        IsPaymentModalOpen=false;IsQuickCustomerModalOpen=false;
+    }
         public CashierViewModel(DatabaseContext db, ProductService productService, CurrencyService currencyService, DebtService? debtService = null)
         {
             _db = db;
