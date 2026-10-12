@@ -57,9 +57,10 @@ public sealed class DebtSyncStore
     internal string EventWire(SqliteConnection db,SqliteTransaction tx,string guid) {
         var h=Rows(db,tx,"SELECT request_guid,kind,customer_guid,store_guid,actor_guid,device_guid,device_sequence,occurred_at,payload,payload_hash,cash_minor,card_minor,fee_minor,fee_usd_rate,schema_version,reference_guid FROM debt_events WHERE guid=@p0",guid).SingleOrDefault();
         if(h==null)throw new DebtDependencyException("Debt event missing");
-        Need(N(h[14])==1 && h[15]==null && S(h[3])==store);
+        Need(N(h[14])==1 && S(h[3])==store);
         var receipt=Rows(db,tx,"SELECT payload_hash,event_guid,result FROM debt_command_receipts WHERE request_guid=@p0",h[0]).SingleOrDefault();
-        Need(receipt!=null && S(receipt[0])==S(h[9]) && S(receipt[1])==guid && S(receipt[2])==guid);
+        Need((receipt==null && S(h[1]) is "return_offset" or "return_reversal") ||
+            (receipt!=null && S(receipt[0])==S(h[9]) && S(receipt[1])==guid && S(receipt[2])==guid));
         var accountRow=Rows(db,tx,"SELECT guid,sale_guid,opening_event_guid,original_debt_minor,due_date,customer_name_at_sale,customer_guid,store_guid FROM debt_accounts WHERE opening_event_guid=@p0",guid).SingleOrDefault();
         DebtWireAccount? account=null;
         if(accountRow!=null) {
@@ -71,7 +72,7 @@ public sealed class DebtSyncStore
             Need(N(row[0])==lines.Count && S(row[3])==S(h[2]) && S(row[4])==store);
             lines.Add(new(S(row[1]),N(row[2])));
         }
-        return DebtWire.EncodeEvent(new(guid,S(h[0]),S(h[1]),S(h[2]),store,S(h[4]),S(h[5]),N(h[6]),N(h[7]),S(h[8]),S(h[9]),N(h[10]),N(h[11]),N(h[12]),(string?)h[13],account,lines.AsReadOnly()),store);
+        return DebtWire.EncodeEvent(new(guid,S(h[0]),S(h[1]),S(h[2]),store,S(h[4]),S(h[5]),N(h[6]),N(h[7]),S(h[8]),S(h[9]),N(h[10]),N(h[11]),N(h[12]),(string?)h[13],account,lines.AsReadOnly(),(string?)h[15]),store);
     }
     public string ExportCustomer(string guid) => Write((db,tx)=>{var wire=CustomerWire(db,tx,guid);Seal(db,tx,"customer",guid,wire);return wire;});
     public string ExportEvent(string guid) => Write((db,tx)=>{var wire=EventWire(db,tx,guid);Seal(db,tx,"event",guid,wire);return wire;});
@@ -87,6 +88,42 @@ public sealed class DebtSyncStore
             Journal(db,tx,c.Guid,"debt_customer",c.Payload);
         }
         Seal(db,tx,"customer",c.Guid,wire);
+    }
+    internal bool ExtendedReady(SqliteConnection db,SqliteTransaction tx,DebtWireEvent e) {
+        if(!DebtExtendedWire.Supports(e.Kind))return true;
+        var reference=e.ReferenceGuid;
+        if(reference!=null) {
+            if(Scalar(db,tx,"SELECT 1 FROM debt_events WHERE guid=@p0",reference)==null)return false;
+            var original=DebtWire.DecodeEvent(EventWire(db,tx,reference),store);
+            Need(original.CustomerGuid==e.CustomerGuid);
+            if(e.Kind=="return_offset")Need(original.Kind=="sale_open" && original.Account?.Guid==e.Lines.Single().AccountGuid);
+            if(e.Kind is "payment_reversal" or "return_reversal") {
+                Need(original.Kind==(e.Kind=="payment_reversal"?"payment":"return_offset"));
+                Need(e.CashMinor == -original.CashMinor && e.CardMinor == -original.CardMinor && e.FeeUsdRate==original.FeeUsdRate);
+                Need(e.Lines.SequenceEqual(original.Lines.Select(l=>new DebtLine(l.AccountGuid,-l.DeltaMinor))));
+                if(e.Kind=="payment_reversal")Need(e.FeeMinor<=0 && -e.FeeMinor<=original.FeeMinor);
+                else Need(e.FeeMinor == -original.FeeMinor);
+            }
+        }
+        if(e.Kind.StartsWith("return_",StringComparison.Ordinal)) {
+            var req=e.RequestGuid[(e.Kind.Length+1)..];
+            var r=Rows(db,tx,"SELECT sale_guid,status,cash_refund,card_refund,fee_reversal,result_json FROM returns WHERE request_guid=@p0",req).SingleOrDefault();
+            if(r==null)return false;
+            long Minor(object? v)=>checked((long)decimal.Round(Convert.ToDecimal(v,CultureInfo.InvariantCulture)*100,0,MidpointRounding.AwayFromZero));
+            Need(e.CashMinor == -Minor(r[2]) && e.CardMinor == -Minor(r[3]) && e.FeeMinor == -Minor(r[4]));
+            if(e.Kind=="return_offset") {
+                Need(S(r[0])==e.Lines.Single().AccountGuid && S(r[1])=="confirmed");
+                using var result=System.Text.Json.JsonDocument.Parse(S(r[5]));
+                Need(result.RootElement.GetProperty("DebtEventGuid").GetString()==e.Guid && Minor(result.RootElement.GetProperty("DebtOffset").GetDecimal()) == -e.Lines.Single().DeltaMinor);
+            } else {
+                var status=S(r[1]);Need(status.StartsWith("reversal:",StringComparison.Ordinal));
+                var originalResult=Scalar(db,tx,"SELECT result_json FROM returns WHERE guid=@p0",status[9..]) as string;
+                if(originalResult==null)return false;
+                using var result=System.Text.Json.JsonDocument.Parse(originalResult);
+                Need(result.RootElement.GetProperty("DebtEventGuid").GetString()==reference);
+            }
+        }
+        return true;
     }
     internal void Event(SqliteConnection db,SqliteTransaction tx,DebtWireEvent e,string wire,Action<SqliteConnection,SqliteTransaction,DebtWireEvent>? writeSale) {
         Authorize(e.ActorGuid);
@@ -104,6 +141,7 @@ public sealed class DebtSyncStore
             if(owner==null)throw new DebtDependencyException("Debt account missing");
             Need(S(owner[0])==e.CustomerGuid && S(owner[1])==store);
         }
+        if (!ExtendedReady(db,tx,e)) throw new DebtDependencyException("Referenced debt/return missing");
         if(e.Account!=null) {
             Need(Scalar(db,tx,"SELECT 1 FROM sales WHERE guid=@p0",e.Account.SaleGuid)==null);
             if(writeSale==null)throw new DebtDependencyException("Atomic sale adapter missing");
@@ -112,7 +150,7 @@ public sealed class DebtSyncStore
             var p=DebtWire.CommandFields(e.Payload);
             Need(StoredMinor(sale[0])==long.Parse(p[7],CultureInfo.InvariantCulture) && StoredMinor(sale[1])==long.Parse(p[8],CultureInfo.InvariantCulture) && StoredMinor(sale[2])==long.Parse(p[9],CultureInfo.InvariantCulture) && N(sale[3])==e.OccurredAt);
         }
-        Exec(db,tx,"INSERT INTO debt_events(guid,request_guid,schema_version,kind,customer_guid,store_guid,actor_guid,device_guid,device_sequence,occurred_at,payload,payload_hash,cash_minor,card_minor,fee_minor,fee_usd_rate) VALUES(@p0,@p1,1,@p2,@p3,@p4,@p5,@p6,@p7,@p8,@p9,@p10,@p11,@p12,@p13,@p14)",e.Guid,e.RequestGuid,e.Kind,e.CustomerGuid,store,e.ActorGuid,e.DeviceGuid,e.DeviceSequence,e.OccurredAt,e.Payload,e.PayloadHash,e.CashMinor,e.CardMinor,e.FeeMinor,e.FeeUsdRate);
+        Exec(db,tx,"INSERT INTO debt_events(guid,request_guid,schema_version,kind,customer_guid,store_guid,actor_guid,device_guid,device_sequence,occurred_at,payload,payload_hash,cash_minor,card_minor,fee_minor,fee_usd_rate,reference_guid) VALUES(@p0,@p1,1,@p2,@p3,@p4,@p5,@p6,@p7,@p8,@p9,@p10,@p11,@p12,@p13,@p14,@p15)",e.Guid,e.RequestGuid,e.Kind,e.CustomerGuid,store,e.ActorGuid,e.DeviceGuid,e.DeviceSequence,e.OccurredAt,e.Payload,e.PayloadHash,e.CashMinor,e.CardMinor,e.FeeMinor,e.FeeUsdRate,e.ReferenceGuid);
         if(e.Account is { } a)Exec(db,tx,"INSERT INTO debt_accounts(guid,sale_guid,customer_guid,store_guid,opening_event_guid,original_debt_minor,due_date,customer_name_at_sale) VALUES(@p0,@p1,@p2,@p3,@p4,@p5,@p6,@p7)",a.Guid,a.SaleGuid,e.CustomerGuid,store,a.OpeningEventGuid,a.OriginalDebtMinor,a.DueDate,a.CustomerNameAtSale);
         for(int i=0;i<e.Lines.Count;i++)Exec(db,tx,"INSERT INTO debt_event_lines(event_guid,line_index,account_guid,customer_guid,store_guid,debt_delta_minor) VALUES(@p0,@p1,@p2,@p3,@p4,@p5)",e.Guid,i,e.Lines[i].AccountGuid,e.CustomerGuid,store,e.Lines[i].DeltaMinor);
         Exec(db,tx,"INSERT INTO debt_command_receipts(request_guid,payload_hash,event_guid,result) VALUES(@p0,@p1,@p2,@p2)",e.RequestGuid,e.PayloadHash,e.Guid);

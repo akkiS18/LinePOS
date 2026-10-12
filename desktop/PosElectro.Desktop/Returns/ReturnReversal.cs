@@ -106,6 +106,9 @@ SELECT @p0,-total_amount,-total_cost,8,-cash_amount,-card_amount,-tax_amount,0,@
         Exec(c,tx,@"INSERT INTO sale_items(guid,sale_id,sale_guid,product_id,product_guid,product_name,quantity,price_at_sale,cost_at_sale,cost_currency,warehouse_guid,warehouse_name,category_at_sale,unit_at_sale)
 SELECT @p0||':'||guid,@p1,@p0,product_id,product_guid,product_name,quantity,-price_at_sale,-cost_at_sale,cost_currency,warehouse_guid,warehouse_name,category_at_sale,unit_at_sale FROM sale_items WHERE sale_guid=@p2",guid,id,request.ReturnGuid);
         Exec(c,tx,"INSERT INTO sync_journal(op_id,kind,entity_guid,payload,group_id) VALUES(@p0,'return',@p1,@p2,@p1)",Guid.NewGuid().ToString(),guid,JsonSerializer.Serialize(result));
+        // The debt consequence and return commit together; the debt transport owns its ACK.
+        Exec(c,tx,"INSERT INTO sync_journal(op_id,kind,entity_guid,payload,group_id,acked) SELECT 'debt:'||guid,'debt_event',guid,payload,guid,-1 FROM debt_events e WHERE request_guid=@p0 AND NOT EXISTS(SELECT 1 FROM sync_journal j WHERE j.kind='debt_event' AND j.entity_guid=e.guid)",
+            "return_reversal:"+request.RequestGuid);
         tx.Commit(); return result;
     }
 }

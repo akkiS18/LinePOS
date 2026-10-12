@@ -18,7 +18,7 @@ data class DebtWireCustomer(val guid: String, val storeGuid: String, val deviceG
 data class DebtWireEvent(val guid: String, val requestGuid: String, val kind: String, val customerGuid: String,
     val storeGuid: String, val actorGuid: String, val deviceGuid: String, val deviceSequence: Long, val occurredAt: Long,
     val payload: String, val payloadHash: String, val cashMinor: Long, val cardMinor: Long, val feeMinor: Long,
-    val feeUsdRate: String?, val account: DebtWireAccount?, val lines: List<DebtLine>)
+    val feeUsdRate: String?, val account: DebtWireAccount?, val lines: List<DebtLine>, val referenceGuid: String? = null)
 
 // A pure debt component codec. Does not authorize a peer, write SQL, or constitute a
 // complete atomic sale/stock envelope. Capability is NOT yet advertised by the app.
@@ -80,6 +80,8 @@ object DebtWire {
         return DebtWireCustomer(p[0],p[1],p[2],p[3],p[4]).also { validate(it,expectedStore) }
     }
     private fun validate(e: DebtWireEvent,expectedStore: String) {
+        if (DebtExtendedWire.supports(e.kind)) { DebtExtendedWire.validate(e,expectedStore); return }
+        require(e.referenceGuid == null)
         id(expectedStore);id(e.guid);id(e.requestGuid);id(e.customerGuid);id(e.storeGuid);id(e.actorGuid);id(e.deviceGuid)
         require(e.storeGuid==expectedStore && e.guid==e.requestGuid && e.deviceSequence>0 && e.occurredAt>=0)
         require(e.payload.length<=16384 && e.payloadHash==fingerprint(e.payload) && e.lines.size<=MAX_LINES)
@@ -116,15 +118,18 @@ object DebtWire {
             e.payload,e.payloadHash,e.cashMinor.toString(),e.cardMinor.toString(),e.feeMinor.toString(),e.feeUsdRate ?: "",
             a?.guid ?: "",a?.saleGuid ?: "",a?.openingEventGuid ?: "",a?.originalDebtMinor?.toString() ?: "",a?.dueDate ?: "",a?.customerNameAtSale ?: "",e.lines.size.toString())
         for(line in e.lines){fields.add(line.accountGuid);fields.add(line.deltaMinor.toString())}
-        return pack("debt-event-v1",fields)
+        if (DebtExtendedWire.supports(e.kind)) fields.add(e.referenceGuid ?: "")
+        return pack(if (DebtExtendedWire.supports(e.kind)) "debt-event-v2" else "debt-event-v1",fields)
     }
     fun decodeEvent(wire: String,expectedStore: String): DebtWireEvent {
-        val p=unpack(wire,"debt-event-v1",22+2*MAX_LINES);require(p.size>=22)
-        val count=number(p[21]);require(count>=0 && count<=MAX_LINES && p.size.toLong()==22+2*count)
+        val extended=wire.startsWith("[\"debt-event-v2\",")
+        val p=unpack(wire,if(extended)"debt-event-v2" else "debt-event-v1",23+2*MAX_LINES);require(p.size>=22)
+        val count=number(p[21]);require(count>=0 && count<=MAX_LINES && p.size.toLong()==22+2*count+(if(extended)1 else 0))
         val account=if(p[15].isNotEmpty())DebtWireAccount(p[15],p[16],p[17],number(p[18]),optional(p[19]),p[20])
             else { require(p.subList(16,21).all { it.isEmpty() });null }
         val lines=(0 until count.toInt()).map { DebtLine(p[22+2*it],number(p[23+2*it])) }
         return DebtWireEvent(p[0],p[1],p[2],p[3],p[4],p[5],p[6],number(p[7]),number(p[8]),p[9],p[10],number(p[11]),number(p[12]),number(p[13]),optional(p[14]),account,
-            Collections.unmodifiableList(lines)).also { validate(it,expectedStore) }
+            Collections.unmodifiableList(lines),if(extended)optional(p.last()) else null).also {
+                require(extended == DebtExtendedWire.supports(it.kind)); validate(it,expectedStore) }
     }
 }

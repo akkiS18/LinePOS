@@ -59,12 +59,13 @@ public sealed class DebtEnvelopeInbox
         }
         if(p.EventWire.Length>0) {
             var e=DebtWire.DecodeEvent(p.EventWire,store);
+            if(!bridge.ExtendedReady(db,tx,e)) missing=true;
             Need(Scalar(db,tx,"SELECT 1 FROM debt_customers WHERE guid=@p0",e.Guid)==null);
             var sequence=Scalar(db,tx,"SELECT guid FROM debt_events WHERE device_guid=@p0 AND device_sequence=@p1",e.DeviceGuid,e.DeviceSequence);
             Need(sequence==null || (string)sequence==e.Guid);
             if(Scalar(db,tx,"SELECT 1 FROM debt_events WHERE guid=@p0",e.Guid)!=null)Need(bridge.EventWire(db,tx,e.Guid)==p.EventWire);
             var owner=Scalar(db,tx,"SELECT store_guid FROM debt_customers WHERE guid=@p0",e.CustomerGuid);
-            if(owner==null)missing=p.CustomerWire.Length==0;else Need((string)owner==store);
+            if(owner==null)missing|=p.CustomerWire.Length==0;else Need((string)owner==store);
             foreach(var line in e.Lines) {
                 var account=Rows(db,tx,"SELECT customer_guid,store_guid FROM debt_accounts WHERE guid=@p0",line.AccountGuid);
                 if(account.Count==0)missing=true;else Need((string)account[0][0]! ==e.CustomerGuid && (string)account[0][1]! ==store);
@@ -108,6 +109,14 @@ public sealed class DebtEnvelopeInbox
     public string? ExportApplied(string guid) => bridge.Write<string?>((db,tx)=>ExportApplied(db,tx,guid));
     internal string? ExportApplied(SqliteConnection db,SqliteTransaction tx,string guid) {
         DebtWire.Id(guid);
+        if(Scalar(db,tx,"SELECT 1 FROM sync_meta WHERE key=@p0",Key(guid))==null) {
+            var kind=Scalar(db,tx,"SELECT kind FROM debt_events WHERE guid=@p0",guid) as string;
+            if(kind!=null && DebtExtendedWire.Supports(kind)) {
+                var eventWire=bridge.EventWire(db,tx,guid);
+                var frozenWire=DebtEnvelope.Encode(new DebtEnvelopePacket(guid,store,"",eventWire,""),store);
+                Exec(db,tx,"INSERT INTO sync_meta(key,value) VALUES(@p0,@p1)",Key(guid),Seal(frozenWire));
+            }
+        }
         var value=Scalar(db,tx,"SELECT value FROM sync_meta WHERE key=@p0",Key(guid)) as string;
         if(value==null)return null;
         Need(value.Length>65 && value[64]=='\n');var wire=value[65..];Need(value==Seal(wire));

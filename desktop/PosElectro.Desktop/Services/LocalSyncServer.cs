@@ -138,6 +138,9 @@ namespace PosElectro.Desktop.Services
             {
                 _debtHistoryEpoch = existingEpoch;
             }
+            using(var repair=store.Open()) {
+                WifiSyncStore.Exec(repair,null,"INSERT INTO sync_journal(op_id,kind,entity_guid,payload,group_id,acked) SELECT 'debt:'||guid,'debt_event',guid,payload,guid,-1 FROM debt_events e WHERE kind IN ('return_offset','return_reversal') AND NOT EXISTS(SELECT 1 FROM sync_journal j WHERE j.kind='debt_event' AND j.entity_guid=e.guid)");
+            }
             _debtInbox = new DebtEnvelopeInbox(db.DatabaseFilePath, _debtStoreGuid, () => true, actor => !string.IsNullOrWhiteSpace(actor), actor => 1L);
         }
         public string NewPairingCode()
@@ -180,7 +183,7 @@ namespace PosElectro.Desktop.Services
                 string token=Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
                 using var db=store.Open(); WifiSyncStore.Exec(db,null,"INSERT INTO sync_devices(token_hash,device_id,device_name) VALUES(@hash,@id,@name)",("@hash",Hash(token)),("@id",id),("@name",name));
                 pairingCode="";
-                return new JObject { ["token"]=token,["serverId"]=store.ServerId,["protocol"]=2,["capabilities"]=new JArray{ DebtWire.Capability, DebtRepository.CustomerEditCapability },["storeGuid"]=_debtStoreGuid,["historyEpoch"]=_debtHistoryEpoch };
+                return new JObject { ["token"]=token,["serverId"]=store.ServerId,["protocol"]=2,["capabilities"]=new JArray{ DebtWire.Capability, DebtRepository.CustomerEditCapability, DebtExtendedWire.Capability },["storeGuid"]=_debtStoreGuid,["historyEpoch"]=_debtHistoryEpoch };
             }
         }
         private async Task MonitorClients(CancellationToken token)
@@ -213,7 +216,7 @@ namespace PosElectro.Desktop.Services
                         // Never allow legacy unauthenticated writes to bypass V2 invariants.
                         var deviceId = Authenticate(request.Headers,(client.Client.RemoteEndPoint as IPEndPoint)?.Address.ToString()??"");
                         if(path=="/api/ping" && request.Method=="GET")
-                        {await Reply(stream,200,new JObject{["protocol"]=2,["serverId"]=store.ServerId,["name"]="Line kassa",["productsCount"]=_db.GetActiveProductsCount(),["salesCount"]=_db.GetTotalSalesCount(),["capabilities"]=new JArray{ DebtWire.Capability, DebtRepository.CustomerEditCapability },["storeGuid"]=_debtStoreGuid,["historyEpoch"]=_debtHistoryEpoch},timeout.Token);return;}
+                        {await Reply(stream,200,new JObject{["protocol"]=2,["serverId"]=store.ServerId,["name"]="Line kassa",["productsCount"]=_db.GetActiveProductsCount(),["salesCount"]=_db.GetTotalSalesCount(),["capabilities"]=new JArray{ DebtWire.Capability, DebtRepository.CustomerEditCapability, DebtExtendedWire.Capability },["storeGuid"]=_debtStoreGuid,["historyEpoch"]=_debtHistoryEpoch},timeout.Token);return;}
                         // Bind V2 requests to the paired database before any mutation occurs.
                         if(path.StartsWith("/api/v2/",StringComparison.Ordinal) &&
                            (!request.Headers.TryGetValue("X-LinePOS-Server-Id",out var expectedServer) || expectedServer!=store.ServerId))
@@ -239,7 +242,7 @@ namespace PosElectro.Desktop.Services
                             var reason = WifiSyncStore.Required(body, "Reason");
                             var fee = body["RefundedFeeMinor"] != null ? (long)body["RefundedFeeMinor"]! : 0L;
                             var debtService = new DebtService(_db);
-                            var resultGuid = debtService.ReversePayment(paymentEventGuid, reason, fee);
+                            var resultGuid = debtService.ReversePayment(paymentEventGuid, reason, fee, WifiSyncStore.Required(body,"RequestGuid"), (long?)body["OccurredAt"] ?? throw new ArgumentException("OccurredAt kerak"));
                             try { DataSynced?.Invoke(); } catch { }
                             await Reply(stream, 200, new JObject { ["resultGuid"] = resultGuid }, timeout.Token);
                             return;
@@ -253,7 +256,7 @@ namespace PosElectro.Desktop.Services
                             var card = body["CardMinor"] != null ? (long)body["CardMinor"]! : 0L;
                             var reason = WifiSyncStore.Required(body, "Reason");
                             var debtService = new DebtService(_db);
-                            var resultGuid = debtService.RefundCredit(customerGuid, accountGuid, cash, card, reason);
+                            var resultGuid = debtService.RefundCredit(customerGuid, accountGuid, cash, card, reason, WifiSyncStore.Required(body,"RequestGuid"), (long?)body["OccurredAt"] ?? throw new ArgumentException("OccurredAt kerak"));
                             try { DataSynced?.Invoke(); } catch { }
                             await Reply(stream, 200, new JObject { ["resultGuid"] = resultGuid }, timeout.Token);
                             return;
@@ -267,7 +270,7 @@ namespace PosElectro.Desktop.Services
                             var amount = body["AmountMinor"] != null ? (long)body["AmountMinor"]! : 0L;
                             var reason = WifiSyncStore.Required(body, "Reason");
                             var debtService = new DebtService(_db);
-                            var resultGuid = debtService.TransferCredit(customerGuid, sourceAccountGuid, targetAccountGuid, amount, reason);
+                            var resultGuid = debtService.TransferCredit(customerGuid, sourceAccountGuid, targetAccountGuid, amount, reason, WifiSyncStore.Required(body,"RequestGuid"), (long?)body["OccurredAt"] ?? throw new ArgumentException("OccurredAt kerak"));
                             try { DataSynced?.Invoke(); } catch { }
                             await Reply(stream, 200, new JObject { ["resultGuid"] = resultGuid }, timeout.Token);
                             return;
@@ -348,6 +351,7 @@ namespace PosElectro.Desktop.Services
                         {
                             var query=uri.Query.TrimStart('?').Split('&').Select(x=>x.Split('=',2)).Where(x=>x.Length==2).ToDictionary(x=>x[0],x=>x[1]);
                             long cursor=query.TryGetValue("cursor",out var raw)?long.Parse(raw):0;
+                            bool full=query.TryGetValue("full",out var fullValue) && fullValue=="1";
                             using var db=store.Open(); using var tx=db.BeginTransaction();
                             long high=Convert.ToInt64(WifiSyncStore.Scalar(db,tx,"SELECT COALESCE(MAX(seq),0) FROM sync_journal"));
                             var customersArray = WifiSyncStore.RawRows(db, tx, "SELECT guid, name, phone, note, archived, revision, created_at FROM debt_customers WHERE store_guid=@store", ("@store", _debtStoreGuid));
@@ -359,21 +363,23 @@ namespace PosElectro.Desktop.Services
                                 return;
                             }
                             using var groupCmd=db.CreateCommand(); groupCmd.Transaction=tx;
-                            groupCmd.CommandText="SELECT group_id, MIN(seq) as min_seq, MAX(seq) as max_seq FROM sync_journal WHERE kind IN ('debt_customer','debt_event','debt_sale','debt_stock') AND (@since=0 OR seq>@since) AND seq<=@high AND group_id<>'' GROUP BY group_id ORDER BY min_seq";
+                            groupCmd.CommandText="SELECT group_id, MIN(seq) as min_seq, MAX(seq) as max_seq FROM sync_journal WHERE kind IN ('debt_customer','debt_event','debt_sale','debt_stock') AND seq<=@high AND group_id<>'' GROUP BY group_id HAVING MAX(seq)>@since ORDER BY max_seq";
                             groupCmd.Parameters.AddWithValue("@since",cursor); groupCmd.Parameters.AddWithValue("@high",high);
                             var groupList=new List<(string GroupId,long MinSeq,long MaxSeq)>();
                             using(var r=groupCmd.ExecuteReader())while(r.Read())groupList.Add((r.GetString(0),r.GetInt64(1),r.GetInt64(2)));
-                            var envelopes=new JArray(); long totalChars=0; long returnedCursor=high;
+                            var envelopes=new JArray(); long totalChars=0; long returnedCursor=cursor;
                             for(int i=0;i<groupList.Count;i++)
                             {
-                                var (groupId,_,maxSeq)=groupList[i];
+                                var (groupId,minSeq,maxSeq)=groupList[i];
+                                var kind=WifiSyncStore.Scalar(db,tx,"SELECT kind FROM debt_events WHERE guid=@g",("@g",groupId)) as string;
+                                if(!full && kind!=null && DebtExtendedWire.Supports(kind)) { returnedCursor=maxSeq; continue; }
                                 if(!Guid.TryParseExact(groupId,"D",out _))continue;
                                 var wire=_debtInbox.ExportApplied(db,tx,groupId);
-                                if(wire==null)continue;
-                                if(envelopes.Count>=250 || totalChars+wire.Length>6*1024*1024)break;
+                                if(wire==null)throw new InvalidOperationException("Qarz paketi topilmadi: "+groupId);
+                                if(envelopes.Count>=(full?64:250) || totalChars+wire.Length>6*1024*1024)break;
                                 envelopes.Add(wire); totalChars+=wire.Length; returnedCursor=maxSeq;
                             }
-                            if(envelopes.Count==0 && groupList.Count==0)returnedCursor=high;
+                            if(groupList.Count==0)returnedCursor=high;
                             tx.Commit();
                             var reply=new JObject{["protocol"]=2,["serverId"]=store.ServerId,["storeGuid"]=_debtStoreGuid,["historyEpoch"]=_debtHistoryEpoch,["cursor"]=returnedCursor,["envelopes"]=envelopes,["customers"]=customersArray};
                             await Reply(stream,200,reply,timeout.Token);

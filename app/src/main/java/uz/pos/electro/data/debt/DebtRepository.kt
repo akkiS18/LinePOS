@@ -363,6 +363,45 @@ class DebtRepository(private val database: AppDatabase, private val store: Strin
             }
         }
     }
+    suspend fun takePaymentFromUi(proposed: DebtPaymentCommand): String {
+        val key="debt_payment_attempt:"+proposed.customerGuid
+        val command=write { db ->
+            scope(db)
+            val saved=scalar(db,"SELECT value FROM sync_meta WHERE key=?",key) as? String
+            if(saved!=null) {
+                val j=org.json.JSONObject(saved)
+                val old=DebtPaymentCommand(j.getString("request"),proposed.customerGuid,j.getLong("cash"),j.getLong("card"),j.getLong("fee"),j.getLong("at"),
+                    j.optString("target").takeIf { it.isNotEmpty() },j.optString("rate").takeIf { it.isNotEmpty() })
+                require(old.cashMinor==proposed.cashMinor && old.cardMinor==proposed.cardMinor && old.targetAccountGuid==proposed.targetAccountGuid) {
+                    "Oldingi to‘lov natijasini tekshirish uchun mijozni qayta oching."
+                }
+                old
+            } else {
+                val j=org.json.JSONObject().put("request",proposed.requestGuid).put("cash",proposed.cashMinor).put("card",proposed.cardMinor)
+                    .put("fee",proposed.feeMinor).put("at",proposed.occurredAt).put("target",proposed.targetAccountGuid ?: "").put("rate",proposed.feeUsdRate ?: "")
+                exec(db,"INSERT INTO sync_meta(key,value) VALUES(?,?)",key,j.toString());proposed
+            }
+        }
+        try { return takePayment(command) }
+        catch(e: Exception) {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+                write { db ->
+                    if(scalar(db,"SELECT 1 FROM debt_command_receipts WHERE request_guid=?",command.requestGuid)==null)
+                        exec(db,"DELETE FROM sync_meta WHERE key=?",key)
+                }
+            }
+            throw e
+        }
+    }
+    suspend fun recoverPaymentAttempt(customerGuid: String): String? = write { db ->
+        val key="debt_payment_attempt:"+customerGuid
+        val saved=scalar(db,"SELECT value FROM sync_meta WHERE key=?",key) as? String
+        if(saved==null)null else {
+            val request=org.json.JSONObject(saved).getString("request")
+            val result=scalar(db,"SELECT result FROM debt_command_receipts WHERE request_guid=?",request) as? String
+            exec(db,"DELETE FROM sync_meta WHERE key=?",key);result
+        }
+    }
     suspend fun takePayment(q: DebtPaymentCommand): String {
         id(q.requestGuid);id(q.customerGuid);q.targetAccountGuid?.let { id(it) };require(q.occurredAt>=0)
         require(q.cashMinor>=0 && q.cardMinor>=0 && q.feeMinor>=0 && q.feeMinor<=q.cardMinor)

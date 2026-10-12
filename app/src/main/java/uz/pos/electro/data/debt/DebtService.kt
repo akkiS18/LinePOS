@@ -747,8 +747,10 @@ class DebtService @Inject constructor(
             feeUsdRate = feeRate
         )
 
-        return repo.takePayment(cmd)
+        return if(requestGuid==null) repo.takePaymentFromUi(cmd) else repo.takePayment(cmd)
     }
+
+    suspend fun recoverPaymentAttempt(customerGuid: String): String? = ensureRepo().recoverPaymentAttempt(customerGuid)
 
     suspend fun getDebtEventOccurredAt(requestGuid: String): Long? {
         if (requestGuid.isBlank()) return null
@@ -813,26 +815,26 @@ class DebtService @Inject constructor(
         return repo.archiveCustomer(customerGuid, archive)
     }
 
-    suspend fun reversePayment(paymentEventGuid: String, reason: String, refundedFeeMinor: Long = 0L): String {
+    suspend fun reversePayment(paymentEventGuid: String, reason: String, refundedFeeMinor: Long = 0L, requestGuid: String? = null, occurredAt: Long? = null): String {
         val repo = ensureRepo()
-        val req = UUID.randomUUID().toString()
-        val timestamp = System.currentTimeMillis()
+        val req = requestGuid ?: UUID.randomUUID().toString()
+        val timestamp = occurredAt ?: getDebtEventOccurredAt(req) ?: System.currentTimeMillis()
         val cmd = DebtPaymentReversalCommand(req, paymentEventGuid, reason, refundedFeeMinor, timestamp)
         return repo.reversePayment(cmd)
     }
 
-    suspend fun refundCredit(customerGuid: String, accountGuid: String, cashMinor: Long, cardMinor: Long, reason: String): String {
+    suspend fun refundCredit(customerGuid: String, accountGuid: String, cashMinor: Long, cardMinor: Long, reason: String, requestGuid: String? = null, occurredAt: Long? = null): String {
         val repo = ensureRepo()
-        val req = UUID.randomUUID().toString()
-        val timestamp = System.currentTimeMillis()
+        val req = requestGuid ?: UUID.randomUUID().toString()
+        val timestamp = occurredAt ?: getDebtEventOccurredAt(req) ?: System.currentTimeMillis()
         val cmd = DebtCreditRefundCommand(req, customerGuid, accountGuid, cashMinor, cardMinor, timestamp, reason)
         return repo.refundCredit(cmd)
     }
 
-    suspend fun transferCredit(customerGuid: String, sourceAccountGuid: String, targetAccountGuid: String, amountMinor: Long, reason: String): String {
+    suspend fun transferCredit(customerGuid: String, sourceAccountGuid: String, targetAccountGuid: String, amountMinor: Long, reason: String, requestGuid: String? = null, occurredAt: Long? = null): String {
         val repo = ensureRepo()
-        val req = UUID.randomUUID().toString()
-        val timestamp = System.currentTimeMillis()
+        val req = requestGuid ?: UUID.randomUUID().toString()
+        val timestamp = occurredAt ?: getDebtEventOccurredAt(req) ?: System.currentTimeMillis()
         val cmd = DebtCreditTransferCommand(req, customerGuid, sourceAccountGuid, targetAccountGuid, amountMinor, timestamp, reason)
         return repo.transferCredit(cmd)
     }

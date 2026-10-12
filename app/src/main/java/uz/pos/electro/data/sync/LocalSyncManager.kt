@@ -27,6 +27,7 @@ import uz.pos.electro.data.repository.TaxSettingsRepository
 import uz.pos.electro.data.debt.DebtEnvelope
 import uz.pos.electro.data.debt.DebtEnvelopeInbox
 import uz.pos.electro.data.debt.DebtReceiveStatus
+import uz.pos.electro.data.debt.DebtExtendedWire
 import uz.pos.electro.data.debt.DebtCustomerEdits
 import uz.pos.electro.data.debt.DebtService
 import uz.pos.electro.data.debt.DebtWire
@@ -56,6 +57,7 @@ class LocalSyncManager @Inject constructor(
     private val syncScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val syncMutex = Mutex()
     private var customerEditMessage: String? = null
+    private var debtCommandMessage: String? = null
     private var liveJob: Job? = null
     private val _liveSyncStatus = MutableStateFlow(LiveSyncStatus.OFFLINE)
     val liveSyncStatus: StateFlow<LiveSyncStatus> = _liveSyncStatus.asStateFlow()
@@ -108,7 +110,11 @@ class LocalSyncManager @Inject constructor(
             if (c.moveToFirst()) c.getInt(0) else 0
         }
         val edits = db().query("SELECT COUNT(*) FROM sync_meta WHERE key LIKE 'debt_customer_edits:%'").use { c -> c.moveToFirst(); c.getInt(0) }
-        return legacy + debt + edits
+        val commands=db().query("SELECT value FROM sync_meta WHERE key GLOB 'debt_command_v2:*'").use { c ->
+            var count=0;while(c.moveToNext()) { val e=JSONObject(c.getString(0));if(!e.has("result") && !e.has("error"))count++ };count
+        }
+        val incoming=db().query("SELECT COUNT(*) FROM debt_sync_inbox").use { c -> c.moveToFirst();c.getInt(0) }
+        return legacy + debt + edits + commands + incoming
     }
 
     companion object {
@@ -349,39 +355,59 @@ class LocalSyncManager @Inject constructor(
         syncMutex.withLock { db().execSQL("DELETE FROM return_drafts WHERE sale_guid=? AND state='confirmed'",arrayOf(saleGuid)) }
     }
 
-    suspend fun reversePaymentOnDesktop(paymentEventGuid: String, reason: String, refundedFeeMinor: Long = 0L): String = withContext(Dispatchers.IO) {
-        val server = getServerUrl() ?: error("Mahalliy kompyuterga ulang")
-        val payload = JSONObject().put("PaymentEventGuid", paymentEventGuid)
-            .put("Reason", reason)
-            .put("RefundedFeeMinor", refundedFeeMinor)
-        val res = request(server, "/api/v2/debt/reverse_payment", payload)
-        try { syncOnce() } catch (_: Exception) { }
-        res.getString("resultGuid")
+    // Kept until the caller acknowledges the result. A lost response/process restart
+    // reuses the persisted body; repeated calls never allocate another payout.
+    private suspend fun durableDebtCommand(kind: String, subject: String, payload: JSONObject): String = withContext(Dispatchers.IO) {
+        val slot="debt_command_v2:$kind:$subject"
+        syncMutex.withLock {
+            val old=metadata(slot)?.let { JSONObject(it) }
+            val entry=old ?: JSONObject().put("server",metadata("server_id") ?: error("Avval kompyuterga ulang"))
+                .put("kind",kind).put("body",JSONObject(payload.toString()).put("RequestGuid",java.util.UUID.randomUUID().toString()).put("OccurredAt",System.currentTimeMillis()))
+            val body=entry.getJSONObject("body")
+            require(payload.keys().asSequence().all { body.get(it).toString()==payload.get(it).toString() }) {
+                "Oldingi qarz so‘rovi natijasini avval tekshiring; uning summasini o‘zgartirib bo‘lmaydi."
+            }
+            if(old==null)putMetadata(slot,entry.toString())
+            if(entry.has("result")) return@withLock entry.getString("result")
+            if(entry.has("error")) error(entry.getString("error"))
+            wake()
+            throw IllegalStateException("Qarz so‘rovi navbatda saqlandi. Aloqa qaytgach kompyuter tasdiqlaydi; natijani tekshiring.")
+        }
     }
-
-    suspend fun refundCreditOnDesktop(customerGuid: String, accountGuid: String, cashMinor: Long, cardMinor: Long, reason: String): String = withContext(Dispatchers.IO) {
-        val server = getServerUrl() ?: error("Mahalliy kompyuterga ulang")
-        val payload = JSONObject().put("CustomerGuid", customerGuid)
-            .put("AccountGuid", accountGuid)
-            .put("CashMinor", cashMinor)
-            .put("CardMinor", cardMinor)
-            .put("Reason", reason)
-        val res = request(server, "/api/v2/debt/refund_credit", payload)
-        try { syncOnce() } catch (_: Exception) { }
-        res.getString("resultGuid")
+    suspend fun acknowledgeDebtCommand(kind: String, subject: String) = withContext(Dispatchers.IO) {
+        syncMutex.withLock {
+            val key="debt_command_v2:$kind:$subject"
+            val entry=metadata(key)?.let { JSONObject(it) }
+            require(entry==null || entry.has("result") || entry.has("error")) { "So‘rov natijasi hali noma’lum" }
+            db().execSQL("DELETE FROM sync_meta WHERE key=?",arrayOf(key))
+        }
     }
-
-    suspend fun transferCreditOnDesktop(customerGuid: String, sourceAccountGuid: String, targetAccountGuid: String, amountMinor: Long, reason: String): String = withContext(Dispatchers.IO) {
-        val server = getServerUrl() ?: error("Mahalliy kompyuterga ulang")
-        val payload = JSONObject().put("CustomerGuid", customerGuid)
-            .put("SourceAccountGuid", sourceAccountGuid)
-            .put("TargetAccountGuid", targetAccountGuid)
-            .put("AmountMinor", amountMinor)
-            .put("Reason", reason)
-        val res = request(server, "/api/v2/debt/transfer_credit", payload)
-        try { syncOnce() } catch (_: Exception) { }
-        res.getString("resultGuid")
+    private suspend fun drainDebtCommands(base: String) {
+        val entries=db().query("SELECT key,value FROM sync_meta WHERE key GLOB 'debt_command_v2:*' ORDER BY key").use { c ->
+            buildList { while(c.moveToNext()) add(c.getString(0) to c.getString(1)) }
+        }
+        for((key,value) in entries) {
+            val entry=JSONObject(value)
+            if(entry.has("error")) { debtCommandMessage="Qarz so‘rovi rad etildi: "+entry.getString("error");continue }
+            if(entry.has("result")) continue
+            require(entry.getString("server")==metadata("server_id")) { "Qarz so‘rovi boshqa baza uchun saqlangan" }
+            try {
+                val result=request(base,"/api/v2/debt/"+entry.getString("kind"),entry.getJSONObject("body"))
+                val guid=result.getString("resultGuid")
+                require(guid==entry.getJSONObject("body").getString("RequestGuid"))
+                entry.put("result",guid);putMetadata(key,entry.toString())
+            } catch(e: DebtCommandRejected) {
+                entry.put("error",e.message);putMetadata(key,entry.toString());debtCommandMessage="Qarz so‘rovi rad etildi: ${e.message}"
+            }
+        }
     }
+    suspend fun reversePaymentOnDesktop(paymentEventGuid: String, reason: String, refundedFeeMinor: Long = 0L): String =
+        durableDebtCommand("reverse_payment",paymentEventGuid,JSONObject().put("PaymentEventGuid",paymentEventGuid).put("Reason",reason).put("RefundedFeeMinor",refundedFeeMinor))
+    suspend fun refundCreditOnDesktop(customerGuid: String, accountGuid: String, cashMinor: Long, cardMinor: Long, reason: String): String =
+        durableDebtCommand("refund_credit",accountGuid,JSONObject().put("CustomerGuid",customerGuid).put("AccountGuid",accountGuid).put("CashMinor",cashMinor).put("CardMinor",cardMinor).put("Reason",reason))
+    suspend fun transferCreditOnDesktop(customerGuid: String, sourceAccountGuid: String, targetAccountGuid: String, amountMinor: Long, reason: String): String =
+        durableDebtCommand("transfer_credit",sourceAccountGuid,JSONObject().put("CustomerGuid",customerGuid).put("SourceAccountGuid",sourceAccountGuid).put("TargetAccountGuid",targetAccountGuid).put("AmountMinor",amountMinor).put("Reason",reason))
+    private class DebtCommandRejected(message: String): IllegalArgumentException(message)
 
     private class ReturnRejected(message: String): IllegalArgumentException(message)
     private data class Pending(val seq: Long, val id: String, val kind: String, val guid: String, val warehouse: String, val delta: Double, val base: Long, val payload: String?, val group: String)
@@ -442,6 +468,7 @@ class LocalSyncManager @Inject constructor(
 
     private suspend fun syncDebtIfSupported(base: String) {
         customerEditMessage = null
+        debtCommandMessage = null
         val ping = request(base, "/api/ping")
         require(ping.getString("serverId") == metadata("server_id")) { "Kompyuter bazasi almashgan." }
         val capabilities = ping.optJSONArray("capabilities")
@@ -469,11 +496,16 @@ class LocalSyncManager @Inject constructor(
             putMetadata("debt_history_epoch", remoteHistoryEpoch)
         }
 
+        val fullLedger = capabilities != null && (0 until capabilities.length()).any { capabilities.getString(it)==DebtExtendedWire.CAPABILITY }
+        if(fullLedger && metadata("debt_extended_enabled")!="1") {
+            database.withTransaction { putMetadata("debt_cursor","0");putMetadata("debt_extended_enabled","1") }
+        }
+        if(!fullLedger && metadata("debt_extended_enabled")=="1") putMetadata("debt_extended_enabled","0")
         val inbox = getDebtInbox(storeGuid)
 
         // 1. Debt Push
         val pendingGroups = db().query(
-            "SELECT DISTINCT group_id FROM sync_journal WHERE kind LIKE 'debt_%' AND acked = -1 AND group_id <> ''"
+            "SELECT group_id FROM sync_journal WHERE kind LIKE 'debt_%' AND acked = -1 AND group_id <> '' GROUP BY group_id ORDER BY MIN(seq)"
         ).use { c ->
             buildList { while (c.moveToNext()) add(c.getString(0)) }
         }
@@ -483,7 +515,10 @@ class LocalSyncManager @Inject constructor(
             var totalChars = 0L
 
             for (groupId in pendingGroups) {
-                val wire = inbox.exportApplied(db(), groupId) ?: continue
+                val kind=scalar(db(),"SELECT kind FROM debt_events WHERE guid=?",groupId) as? String
+                if(!fullLedger && kind!=null && DebtExtendedWire.supports(kind)) continue
+                val wire = database.withTransaction { inbox.exportApplied(db(), groupId) }
+                    ?: error("Qarz paketi topilmadi: $groupId")
                 if (envelopes.size >= 250 || totalChars + wire.length > 6 * 1024 * 1024) break
                 envelopes.add(wire)
                 totalChars += wire.length
@@ -494,11 +529,13 @@ class LocalSyncManager @Inject constructor(
                 val pushReply = request(base, "/api/v2/debt/push", pushBody)
                 val results = pushReply.getJSONArray("results")
                 val ackedGroups = mutableListOf<String>()
+                val sentGroups=envelopes.map { DebtEnvelope.decode(it,storeGuid).guid }.toSet()
 
                 for (i in 0 until results.length()) {
                     val res = results.getJSONObject(i)
                     val status = res.getString("status")
                     val guid = res.getString("guid")
+                    require(guid in sentGroups) { "Nomaʼlum qarz tasdigʻi" }
                     if (status == "Applied" || status == "AlreadyApplied") {
                         ackedGroups.add(guid)
                     }
@@ -520,6 +557,11 @@ class LocalSyncManager @Inject constructor(
             }
         }
 
+        if(fullLedger && scalar(db(),"SELECT 1 FROM sync_journal WHERE kind LIKE 'debt_%' AND acked=-1 LIMIT 1")==null) drainDebtCommands(base)
+
+        if(!fullLedger && scalar(db(),"SELECT 1 FROM sync_journal j JOIN debt_events e ON e.guid=j.entity_guid WHERE j.acked=-1 AND e.kind NOT IN ('sale_open','payment') LIMIT 1")!=null)
+            debtCommandMessage="Qarz amallari navbatda. Ikkala dasturni ham yangilang."
+
         // New customer envelopes go first; edits never bypass customer creation.
         pushCustomerEdits(base, capabilities != null && (0 until capabilities.length()).any {
             capabilities.getString(it) == DebtCustomerEdits.CAPABILITY
@@ -527,7 +569,7 @@ class LocalSyncManager @Inject constructor(
 
         // 2. Debt Pull
         val debtCursor = metadata("debt_cursor")?.toLongOrNull() ?: 0L
-        val pullReply = request(base, "/api/v2/debt/pull?cursor=$debtCursor")
+        val pullReply = request(base, "/api/v2/debt/pull?cursor=$debtCursor&full=${if(fullLedger)1 else 0}")
         require(pullReply.getString("serverId") == metadata("server_id")) { "Kompyuter bazasi almashgan; qarz sinxron to'xtatildi." }
         require(pullReply.getString("storeGuid") == storeGuid) { "Do'kon qarz doirasi mos emas." }
 
@@ -631,7 +673,7 @@ class LocalSyncManager @Inject constructor(
         applySnapshot(reply)
         _pendingCount.value = totalPendingCount()
         _hasConflict.value = db().query("SELECT 1 FROM sync_conflicts LIMIT 1").use { it.moveToFirst() }
-        _syncMessage.value = customerEditMessage ?: if(_pendingCount.value == 0) "Barcha amallar sinxronlandi." else "${_pendingCount.value} ta amal navbatda."
+        _syncMessage.value = debtCommandMessage ?: customerEditMessage ?: if(_pendingCount.value == 0) "Barcha amallar sinxronlandi." else "${_pendingCount.value} ta amal navbatda."
     } }
     private suspend fun applySnapshot(root: JSONObject) = database.withTransaction {
         val sql = db()
@@ -700,6 +742,7 @@ class LocalSyncManager @Inject constructor(
                 }
             }
             root.optJSONArray("customers")?.let { applyCustomerUpdates(sql, it) }
+            cachedDebtInbox?.drainPending(sql,System.currentTimeMillis(),extendedOnly=true)
             putMetadata("cursor",root.getLong("cursor").toString())
             _dataUpdateEvents.tryEmit(Unit)
         } finally { sql.execSQL("UPDATE sync_control SET applying=0 WHERE id=1") }
@@ -837,6 +880,7 @@ class LocalSyncManager @Inject constructor(
                 _hasConflict.value=true
                 throw PendingSyncConflict(reply.getString("error"))
             }
+            if (status == 400 && path in listOf("/api/v2/debt/reverse_payment","/api/v2/debt/refund_credit","/api/v2/debt/transfer_credit")) throw DebtCommandRejected(reply.optString("error","Qarz so‘rovi rad etildi"))
             if (status == 400 && path.startsWith("/api/v2/returns")) throw ReturnRejected(reply.optString("error", "Qaytarish rad etildi"))
             require(status in 200..299) { reply.optString("error","HTTP $status") }
             return reply

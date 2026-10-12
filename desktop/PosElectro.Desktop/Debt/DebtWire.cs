@@ -15,7 +15,7 @@ public sealed record DebtWireCustomer(string Guid, string StoreGuid, string Devi
 public sealed record DebtWireEvent(string Guid, string RequestGuid, string Kind, string CustomerGuid,
     string StoreGuid, string ActorGuid, string DeviceGuid, long DeviceSequence, long OccurredAt,
     string Payload, string PayloadHash, long CashMinor, long CardMinor, long FeeMinor,
-    string? FeeUsdRate, DebtWireAccount? Account, IReadOnlyList<DebtLine> Lines);
+    string? FeeUsdRate, DebtWireAccount? Account, IReadOnlyList<DebtLine> Lines, string? ReferenceGuid = null);
 
 // Pure, bounded codec for a debt component. NOT an atomic sale/stock envelope or an
 // authorization/database receiver. Never advertise capability until transport is integrated.
@@ -75,6 +75,8 @@ public static class DebtWire
         var c=new DebtWireCustomer(p[0],p[1],p[2],p[3],p[4]);Validate(c,expectedStore);return c;
     }
     private static void Validate(DebtWireEvent e,string expectedStore) {
+        if (DebtExtendedWire.Supports(e.Kind)) { DebtExtendedWire.Validate(e,expectedStore); return; }
+        Need(e.ReferenceGuid == null);
         Id(expectedStore);Id(e.Guid);Id(e.RequestGuid);Id(e.CustomerGuid);Id(e.StoreGuid);Id(e.ActorGuid);Id(e.DeviceGuid);
         Need(e.StoreGuid==expectedStore && e.Guid==e.RequestGuid && e.DeviceSequence>0 && e.OccurredAt>=0);
         Need(e.Payload.Length<=16384 && e.PayloadHash==Fingerprint(e.Payload) && e.Lines.Count<=MaxLines);
@@ -108,16 +110,18 @@ public static class DebtWire
             e.Payload,e.PayloadHash,Num(e.CashMinor),Num(e.CardMinor),Num(e.FeeMinor),e.FeeUsdRate??"",
             a?.Guid??"",a?.SaleGuid??"",a?.OpeningEventGuid??"",a==null?"":Num(a.OriginalDebtMinor),a?.DueDate??"",a?.CustomerNameAtSale??"",Num(e.Lines.Count)};
         foreach(var line in e.Lines){fields.Add(line.AccountGuid);fields.Add(Num(line.DeltaMinor));}
-        return Pack("debt-event-v1",fields);
+        if (DebtExtendedWire.Supports(e.Kind)) fields.Add(e.ReferenceGuid??"");
+        return Pack(DebtExtendedWire.Supports(e.Kind)?"debt-event-v2":"debt-event-v1",fields);
     }
     public static DebtWireEvent DecodeEvent(string wire,string expectedStore) {
-        var p=Unpack(wire,"debt-event-v1",22+2*MaxLines);Need(p.Length>=22);
-        long count=Number(p[21]);Need(count>=0 && count<=MaxLines && p.Length==22+2*count);
+        var extended=wire.StartsWith("[\"debt-event-v2\",",StringComparison.Ordinal);
+        var p=Unpack(wire,extended?"debt-event-v2":"debt-event-v1",23+2*MaxLines);Need(p.Length>=22);
+        long count=Number(p[21]);Need(count>=0 && count<=MaxLines && p.Length==22+2*count+(extended?1:0));
         DebtWireAccount? account=null;
         if(p[15].Length>0)account=new(p[15],p[16],p[17],Number(p[18]),Optional(p[19]),p[20]);
         else Need(p.Skip(16).Take(5).All(s=>s.Length==0));
         var lines=new List<DebtLine>();for(int i=0;i<count;i++)lines.Add(new(p[22+2*i],Number(p[23+2*i])));
-        var e=new DebtWireEvent(p[0],p[1],p[2],p[3],p[4],p[5],p[6],Number(p[7]),Number(p[8]),p[9],p[10],Number(p[11]),Number(p[12]),Number(p[13]),Optional(p[14]),account,lines.AsReadOnly());
-        Validate(e,expectedStore);return e;
+        var e=new DebtWireEvent(p[0],p[1],p[2],p[3],p[4],p[5],p[6],Number(p[7]),Number(p[8]),p[9],p[10],Number(p[11]),Number(p[12]),Number(p[13]),Optional(p[14]),account,lines.AsReadOnly(),extended?Optional(p[^1]):null);
+        Need(extended==DebtExtendedWire.Supports(e.Kind)); Validate(e,expectedStore);return e;
     }
 }

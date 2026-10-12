@@ -82,7 +82,7 @@ public static class DebtEnvelope
         if(p.EventWire.Length==0) {Need(c!=null && p.Guid==c.Guid && p.SaleWire.Length==0);return;}
         var e=DebtWire.DecodeEvent(p.EventWire,expectedStore);Need(p.Guid==e.Guid && (c==null || c.Guid==e.CustomerGuid));
         Need(c==null || c.Guid!=e.RequestGuid);
-        if(e.Kind=="payment") {Need(p.SaleWire.Length==0);return;}
+        if(e.Kind!="sale_open") {Need(p.SaleWire.Length==0);return;}
         var sale=DecodeSale(p.SaleWire);var command=DebtWire.CommandFields(e.Payload);
         Need(sale.Guid==e.Account!.SaleGuid && sale.OccurredAt==e.OccurredAt);
         Need(sale.TotalMinor==DebtWire.Number(command[7]) && sale.CashMinor==DebtWire.Number(command[8]) && sale.CardMinor==DebtWire.Number(command[9]));

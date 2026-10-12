@@ -46,9 +46,10 @@ class DebtSyncStore(private val database: AppDatabase, private val store: String
     internal fun eventWire(db: SupportSQLiteDatabase,guid: String): String {
         val h=rows(db,"SELECT request_guid,kind,customer_guid,store_guid,actor_guid,device_guid,device_sequence,occurred_at,payload,payload_hash,cash_minor,card_minor,fee_minor,fee_usd_rate,schema_version,reference_guid FROM debt_events WHERE guid=@p0",guid).singleOrNull()
             ?: throw DebtDependencyException("Debt event missing")
-        need(h[14]==1L && h[15]==null && h[3]==store)
+        need(h[14]==1L && h[3]==store)
         val receipt=rows(db,"SELECT payload_hash,event_guid,result FROM debt_command_receipts WHERE request_guid=@p0",h[0]).singleOrNull()
-        need(receipt!=null && receipt[0]==h[9] && receipt[1]==guid && receipt[2]==guid)
+        need((receipt==null && (h[1]=="return_offset" || h[1]=="return_reversal")) ||
+            (receipt!=null && receipt[0]==h[9] && receipt[1]==guid && receipt[2]==guid))
         val a=rows(db,"SELECT guid,sale_guid,opening_event_guid,original_debt_minor,due_date,customer_name_at_sale,customer_guid,store_guid FROM debt_accounts WHERE opening_event_guid=@p0",guid).singleOrNull()
         val account=if(a==null)null else {
             need(a[6]==h[2] && a[7]==store)
@@ -57,7 +58,7 @@ class DebtSyncStore(private val database: AppDatabase, private val store: String
         val lines=rows(db,"SELECT line_index,account_guid,debt_delta_minor,customer_guid,store_guid FROM debt_event_lines WHERE event_guid=@p0 ORDER BY line_index",guid).mapIndexed { i,row ->
             need(row[0]==i.toLong() && row[3]==h[2] && row[4]==store);DebtLine(row[1] as String,row[2] as Long)
         }
-        return DebtWire.encodeEvent(DebtWireEvent(guid,h[0] as String,h[1] as String,h[2] as String,store,h[4] as String,h[5] as String,h[6] as Long,h[7] as Long,h[8] as String,h[9] as String,h[10] as Long,h[11] as Long,h[12] as Long,h[13] as String?,account,lines),store)
+        return DebtWire.encodeEvent(DebtWireEvent(guid,h[0] as String,h[1] as String,h[2] as String,store,h[4] as String,h[5] as String,h[6] as Long,h[7] as Long,h[8] as String,h[9] as String,h[10] as Long,h[11] as Long,h[12] as Long,h[13] as String?,account,lines,h[15] as String?),store)
     }
     suspend fun exportCustomer(guid: String): String = write { db -> customerWire(db,guid).also { seal(db,"customer",guid,it) } }
     suspend fun exportEvent(guid: String): String = write { db -> eventWire(db,guid).also { seal(db,"event",guid,it) } }
@@ -72,6 +73,41 @@ class DebtSyncStore(private val database: AppDatabase, private val store: String
             journal(db,c.guid,"debt_customer",c.payload)
         }
         seal(db,"customer",c.guid,wire)
+    }
+    internal fun extendedReady(db: SupportSQLiteDatabase,e: DebtWireEvent): Boolean {
+        if(!DebtExtendedWire.supports(e.kind)) return true
+        val ref=e.referenceGuid
+        if(ref!=null) {
+            if(scalar(db,"SELECT 1 FROM debt_events WHERE guid=?",ref)==null) return false
+            val original=DebtWire.decodeEvent(eventWire(db,ref),store)
+            need(original.customerGuid==e.customerGuid)
+            when(e.kind) {
+                "return_offset" -> need(original.kind=="sale_open" && original.account?.guid==e.lines.single().accountGuid)
+                "payment_reversal", "return_reversal" -> {
+                    need(original.kind==if(e.kind=="payment_reversal")"payment" else "return_offset")
+                    need(e.cashMinor == -original.cashMinor && e.cardMinor == -original.cardMinor && e.feeUsdRate==original.feeUsdRate)
+                    need(e.lines==original.lines.map { DebtLine(it.accountGuid,-it.deltaMinor) })
+                    if(e.kind=="payment_reversal") need(e.feeMinor<=0 && -e.feeMinor<=original.feeMinor)
+                    else need(e.feeMinor == -original.feeMinor)
+                }
+            }
+        }
+        if(e.kind.startsWith("return_")) {
+            val req=e.requestGuid.removePrefix(e.kind+":")
+            val r=rows(db,"SELECT sale_guid,status,cash_refund,card_refund,fee_reversal,result_json FROM returns WHERE request_guid=?",req).singleOrNull() ?: return false
+            fun minor(v: Any?)=java.math.BigDecimal(v.toString()).movePointRight(2).setScale(0,java.math.RoundingMode.HALF_UP).longValueExact()
+            need(e.cashMinor == -minor(r[2]) && e.cardMinor == -minor(r[3]) && e.feeMinor == -minor(r[4]))
+            if(e.kind=="return_offset") {
+                need(r[0]==e.lines.single().accountGuid && r[1]=="confirmed")
+                val result=org.json.JSONObject(r[5] as String)
+                need(result.getString("DebtEventGuid")==e.guid && minor(result.get("DebtOffset")) == -e.lines.single().deltaMinor)
+            } else {
+                val status=r[1] as String; need(status.startsWith("reversal:"))
+                val originalResult=scalar(db,"SELECT result_json FROM returns WHERE guid=?",status.removePrefix("reversal:")) as? String ?: return false
+                need(org.json.JSONObject(originalResult).getString("DebtEventGuid")==ref)
+            }
+        }
+        return true
     }
     internal fun event(db: SupportSQLiteDatabase,e: DebtWireEvent,wire: String,writeSale: ((SupportSQLiteDatabase,DebtWireEvent)->Unit)?) {
         authorize(e.actorGuid)
@@ -89,6 +125,7 @@ class DebtSyncStore(private val database: AppDatabase, private val store: String
                 ?: throw DebtDependencyException("Debt account missing")
             need(owner[0]==e.customerGuid && owner[1]==store)
         }
+        if (!extendedReady(db,e)) throw DebtDependencyException("Referenced debt/return missing")
         if(e.account!=null) {
             need(scalar(db,"SELECT 1 FROM sales WHERE guid=@p0",e.account.saleGuid)==null)
             if(writeSale==null)throw DebtDependencyException("Atomic sale adapter missing")
@@ -97,7 +134,7 @@ class DebtSyncStore(private val database: AppDatabase, private val store: String
             val p=DebtWire.commandFields(e.payload)
             need(storedMinor(sale[0])==p[7].toLong() && storedMinor(sale[1])==p[8].toLong() && storedMinor(sale[2])==p[9].toLong() && sale[3]==e.occurredAt)
         }
-        exec(db,"INSERT INTO debt_events(guid,request_guid,schema_version,kind,customer_guid,store_guid,actor_guid,device_guid,device_sequence,occurred_at,payload,payload_hash,cash_minor,card_minor,fee_minor,fee_usd_rate) VALUES(@p0,@p1,1,@p2,@p3,@p4,@p5,@p6,@p7,@p8,@p9,@p10,@p11,@p12,@p13,@p14)",e.guid,e.requestGuid,e.kind,e.customerGuid,store,e.actorGuid,e.deviceGuid,e.deviceSequence,e.occurredAt,e.payload,e.payloadHash,e.cashMinor,e.cardMinor,e.feeMinor,e.feeUsdRate)
+        exec(db,"INSERT INTO debt_events(guid,request_guid,schema_version,kind,customer_guid,store_guid,actor_guid,device_guid,device_sequence,occurred_at,payload,payload_hash,cash_minor,card_minor,fee_minor,fee_usd_rate,reference_guid) VALUES(@p0,@p1,1,@p2,@p3,@p4,@p5,@p6,@p7,@p8,@p9,@p10,@p11,@p12,@p13,@p14,@p15)",e.guid,e.requestGuid,e.kind,e.customerGuid,store,e.actorGuid,e.deviceGuid,e.deviceSequence,e.occurredAt,e.payload,e.payloadHash,e.cashMinor,e.cardMinor,e.feeMinor,e.feeUsdRate,e.referenceGuid)
         e.account?.let { a -> exec(db,"INSERT INTO debt_accounts(guid,sale_guid,customer_guid,store_guid,opening_event_guid,original_debt_minor,due_date,customer_name_at_sale) VALUES(@p0,@p1,@p2,@p3,@p4,@p5,@p6,@p7)",a.guid,a.saleGuid,e.customerGuid,store,a.openingEventGuid,a.originalDebtMinor,a.dueDate,a.customerNameAtSale) }
         e.lines.forEachIndexed { i,line -> exec(db,"INSERT INTO debt_event_lines(event_guid,line_index,account_guid,customer_guid,store_guid,debt_delta_minor) VALUES(@p0,@p1,@p2,@p3,@p4,@p5)",e.guid,i,line.accountGuid,e.customerGuid,store,line.deltaMinor) }
         exec(db,"INSERT INTO debt_command_receipts(request_guid,payload_hash,event_guid,result) VALUES(@p0,@p1,@p2,@p2)",e.requestGuid,e.payloadHash,e.guid)

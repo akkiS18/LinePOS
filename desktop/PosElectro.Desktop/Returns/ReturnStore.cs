@@ -302,6 +302,9 @@ SELECT @p0,@p1,@p2,product_id,product_guid,product_name,@p3,@p4,@p5,'UZS',@p6,(S
         // The immutable return event is delivered with the same journal as its stock changes.
         Exec(c, tx, "INSERT INTO sync_journal(op_id,kind,entity_guid,payload,group_id) VALUES(@p0,'return',@p1,@p2,@p1)",
             System.Guid.NewGuid().ToString(), guid, JsonSerializer.Serialize(result));
+        // The debt consequence and return commit together; the debt transport owns its ACK.
+        Exec(c,tx,"INSERT INTO sync_journal(op_id,kind,entity_guid,payload,group_id,acked) SELECT 'debt:'||guid,'debt_event',guid,payload,guid,-1 FROM debt_events e WHERE request_guid=@p0 AND NOT EXISTS(SELECT 1 FROM sync_journal j WHERE j.kind='debt_event' AND j.entity_guid=e.guid)",
+            "return_offset:"+request.RequestGuid);
         tx.Commit(); return result;
     }
 

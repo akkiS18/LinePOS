@@ -579,6 +579,13 @@ public class DebtsViewModel : ViewModelBase
     private void OpenPaymentModal()
     {
         if (SelectedCustomer == null) return;
+        if (IsSubmittingPayment) return;
+        var recovered=_debtService.Repository.RecoverPaymentAttempt(SelectedCustomer.Guid);
+        if(recovered!=null) {
+            RefreshAll();
+            MessageBox.Show("Oldingi to'lov saqlangan. Qarz qoldig'i yangilandi; takror to'lov kiritilmadi.","To'lov",MessageBoxButton.OK,MessageBoxImage.Information);
+            return;
+        }
         if (SelectedCustomer.BalanceMinor <= 0)
         {
             MessageBox.Show("Ushbu mijozning qarzi mavjud emas.", "Qarz yo'q", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -689,7 +696,7 @@ public class DebtsViewModel : ViewModelBase
     private void ConfirmPayment()
     {
         if (SelectedCustomer == null) return;
-        if (IsSubmittingPayment) return;
+        if (IsSubmittingPayment || !IsPaymentModalOpen) return;
 
         double.TryParse(CleanNumber(PaymentCashInput), NumberStyles.Any, CultureInfo.InvariantCulture, out var cash);
         double.TryParse(CleanNumber(PaymentCardInput), NumberStyles.Any, CultureInfo.InvariantCulture, out var card);
@@ -715,15 +722,14 @@ public class DebtsViewModel : ViewModelBase
 
         try
         {
-            var durableRequestGuid = Guid.NewGuid().ToString("D");
             _debtService.RecordPayment(
                 SelectedCustomer.Guid,
                 cashMinor,
                 cardMinor,
-                SelectedTargetAccount?.AccountGuid,
-                durableRequestGuid);
+                SelectedTargetAccount?.AccountGuid);
 
             IsPaymentModalOpen = false;
+            _debtService.Repository.RecoverPaymentAttempt(SelectedCustomer.Guid);
             RefreshAll();
 
             MessageBox.Show(
@@ -788,7 +794,7 @@ public class DebtsViewModel : ViewModelBase
     private void ConfirmRefundCredit()
     {
         if (SelectedCustomer == null) return;
-        if (IsSubmittingRefundCredit) return;
+        if (IsSubmittingRefundCredit || !IsRefundCreditModalOpen) return;
 
         var creditAccount = SelectedCustomerAccounts.FirstOrDefault(a => a.BalanceMinor < 0);
         if (creditAccount == null)

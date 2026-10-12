@@ -654,7 +654,7 @@ public sealed class DebtService
             targetAccountGuid,
             feeUsdRate);
 
-        return _repo.TakePayment(cmd);
+        return requestGuid==null ? _repo.TakePaymentFromUi(cmd) : _repo.TakePayment(cmd);
     }
 
     public static long CalculatePaymentFee(long cardMinor, decimal percent)
@@ -768,26 +768,26 @@ public sealed class DebtService
         return _repo.OpenSale(cmd);
     }
 
-    public string ReversePayment(string paymentEventGuid, string reason, long refundedFeeMinor = 0)
+    public string ReversePayment(string paymentEventGuid, string reason, long refundedFeeMinor = 0, string? requestGuid = null, long? occurredAt = null)
     {
-        var req = Guid.NewGuid().ToString("D");
-        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var req = requestGuid ?? Guid.NewGuid().ToString("D");
+        var timestamp = occurredAt ?? GetDebtEventOccurredAt(req) ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         var cmd = new DebtPaymentReversalCommand(req, paymentEventGuid, reason, refundedFeeMinor, timestamp);
         return _repo.ReversePayment(cmd);
     }
 
-    public string RefundCredit(string customerGuid, string accountGuid, long cashMinor, long cardMinor, string reason)
+    public string RefundCredit(string customerGuid, string accountGuid, long cashMinor, long cardMinor, string reason, string? requestGuid = null, long? occurredAt = null)
     {
-        var req = Guid.NewGuid().ToString("D");
-        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var req = requestGuid ?? Guid.NewGuid().ToString("D");
+        var timestamp = occurredAt ?? GetDebtEventOccurredAt(req) ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         var cmd = new DebtCreditRefundCommand(req, customerGuid, accountGuid, cashMinor, cardMinor, timestamp, reason);
         return _repo.RefundCredit(cmd);
     }
 
-    public string TransferCredit(string customerGuid, string sourceAccountGuid, string targetAccountGuid, long amountMinor, string reason)
+    public string TransferCredit(string customerGuid, string sourceAccountGuid, string targetAccountGuid, long amountMinor, string reason, string? requestGuid = null, long? occurredAt = null)
     {
-        var req = Guid.NewGuid().ToString("D");
-        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var req = requestGuid ?? Guid.NewGuid().ToString("D");
+        var timestamp = occurredAt ?? GetDebtEventOccurredAt(req) ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         var cmd = new DebtCreditTransferCommand(req, customerGuid, sourceAccountGuid, targetAccountGuid, amountMinor, timestamp, reason);
         return _repo.TransferCredit(cmd);
     }

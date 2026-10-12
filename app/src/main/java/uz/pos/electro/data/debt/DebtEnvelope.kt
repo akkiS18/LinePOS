@@ -71,7 +71,7 @@ object DebtEnvelope {
         if(p.eventWire.isEmpty()) { require(c!=null && p.guid==c.guid && p.saleWire.isEmpty());return }
         val e=DebtWire.decodeEvent(p.eventWire,expectedStore)
         require(p.guid==e.guid && (c==null || c.guid==e.customerGuid) && (c==null || c.guid!=e.requestGuid))
-        if(e.kind=="payment") { require(p.saleWire.isEmpty());return }
+        if(e.kind!="sale_open") { require(p.saleWire.isEmpty());return }
         val sale=decodeSale(p.saleWire);val command=DebtWire.commandFields(e.payload)
         require(sale.guid==e.account!!.saleGuid && sale.occurredAt==e.occurredAt)
         require(sale.totalMinor==DebtWire.number(command[7]) && sale.cashMinor==DebtWire.number(command[8]) && sale.cardMinor==DebtWire.number(command[9]))

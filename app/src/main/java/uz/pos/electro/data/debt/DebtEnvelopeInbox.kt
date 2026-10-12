@@ -61,12 +61,13 @@ class DebtEnvelopeInbox(database: AppDatabase,private val store: String,
         }
         if(p.eventWire.isNotEmpty()) {
             val e=DebtWire.decodeEvent(p.eventWire,store)
+            if(!bridge.extendedReady(db,e)) missing=true
             need(scalar(db,"SELECT 1 FROM debt_customers WHERE guid=@p0",e.guid)==null)
             val sequence=scalar(db,"SELECT guid FROM debt_events WHERE device_guid=@p0 AND device_sequence=@p1",e.deviceGuid,e.deviceSequence)
             need(sequence==null || sequence==e.guid)
             if(scalar(db,"SELECT 1 FROM debt_events WHERE guid=@p0",e.guid)!=null)need(bridge.eventWire(db,e.guid)==p.eventWire)
             val owner=scalar(db,"SELECT store_guid FROM debt_customers WHERE guid=@p0",e.customerGuid)
-            if(owner==null)missing=p.customerWire.isEmpty() else need(owner==store)
+            if(owner==null)missing=missing || p.customerWire.isEmpty() else need(owner==store)
             for(line in e.lines) {
                 val account=rows(db,"SELECT customer_guid,store_guid FROM debt_accounts WHERE guid=@p0",line.accountGuid)
                 if(account.isEmpty())missing=true else need(account[0][0]==e.customerGuid && account[0][1]==store)
@@ -113,6 +114,15 @@ class DebtEnvelopeInbox(database: AppDatabase,private val store: String,
     }
     internal fun exportApplied(db: SupportSQLiteDatabase, guid: String): String? {
         DebtWire.id(guid)
+        if(scalar(db,"SELECT 1 FROM sync_meta WHERE key=?",key(guid))==null) {
+            val kind=scalar(db,"SELECT kind FROM debt_events WHERE guid=?",guid) as? String
+            if(kind!=null && DebtExtendedWire.supports(kind)) {
+                val eventWire=bridge.eventWire(db,guid)
+                val packet=DebtEnvelopePacket(guid,store,"",eventWire,"")
+                val wire=DebtEnvelope.encode(packet,store)
+                exec(db,"INSERT INTO sync_meta(key,value) VALUES(?,?)",key(guid),seal(wire))
+            }
+        }
         val value=body(db,"sync_meta","value","key",key(guid),DebtEnvelope.MAX_ENVELOPE_CHARS+65)
         return if(value==null)null else {
             need(value.length>65 && value[64]=='\n');val wire=value.substring(65);need(value==seal(wire))
@@ -125,7 +135,7 @@ class DebtEnvelopeInbox(database: AppDatabase,private val store: String,
         require(now >= 0)
         return bridge.write { db -> drainPending(db, now) }
     }
-    internal fun drainPending(db: SupportSQLiteDatabase, now: Long): Int {
+    internal fun drainPending(db: SupportSQLiteDatabase, now: Long, extendedOnly: Boolean = false): Int {
         require(now >= 0)
         var drained = 0
         while (true) {
@@ -140,6 +150,7 @@ class DebtEnvelopeInbox(database: AppDatabase,private val store: String,
                 val wire = body(db, "debt_sync_inbox", "payload", "packet_guid", guid, DebtEnvelope.MAX_ENVELOPE_CHARS) ?: continue
                 val p = DebtEnvelope.decode(wire, store)
                 need(p.guid == guid)
+                if(extendedOnly && (p.eventWire.isEmpty() || !DebtExtendedWire.supports(DebtWire.decodeEvent(p.eventWire,store).kind))) continue
                 val status = receive(db, p, wire, now)
                 if (status == DebtReceiveStatus.Applied || status == DebtReceiveStatus.AlreadyApplied) {
                     anyApplied = true

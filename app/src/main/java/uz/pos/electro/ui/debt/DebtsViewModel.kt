@@ -218,6 +218,19 @@ class DebtsViewModel @Inject constructor(
     }
 
     fun openPaymentDialog(customer: DebtCustomerItemDto, targetAccount: DebtAccountItemDto? = null) {
+        if(_isSubmittingPayment.value) return
+        _isSubmittingPayment.value=true
+        viewModelScope.launch {
+            try {
+                val recovered=debtService.recoverPaymentAttempt(customer.guid)
+                if(recovered!=null) {
+                    loadData()
+                    _toastEvent.emit("Oldingi to‘lov saqlangan. Takror to‘lov kiritilmadi.")
+                } else openPaymentDialogReady(customer,targetAccount)
+            } finally { _isSubmittingPayment.value=false }
+        }
+    }
+    private fun openPaymentDialogReady(customer: DebtCustomerItemDto, targetAccount: DebtAccountItemDto?) {
         _selectedCustomer.value = customer
         _paymentTargetAccount.value = targetAccount
         _paymentCashAmount.value = "0"
@@ -279,12 +292,21 @@ class DebtsViewModel @Inject constructor(
     }
 
     fun submitPayment() {
+        if(!_isPaymentDialogOpen.value || _isSubmittingPayment.value) return
         val cust = _selectedCustomer.value ?: return
         val cashVal = _paymentCashAmount.value.toLongOrNull() ?: 0L
         val cardVal = _paymentCardAmount.value.toLongOrNull() ?: 0L
-        val cashMinor = cashVal * 100L
-        val cardMinor = cardVal * 100L
-        val totalPaymentMinor = cashMinor + cardMinor
+        val amounts=runCatching {
+            val cash=Math.multiplyExact(cashVal,100L)
+            val card=Math.multiplyExact(cardVal,100L)
+            Triple(cash,card,Math.addExact(cash,card))
+        }.getOrNull()
+        if(amounts==null) {
+            viewModelScope.launch { _toastEvent.emit("To‘lov summasi juda katta") }
+            return
+        }
+        val (cashMinor,cardMinor,totalPaymentMinor)=amounts
+        val targetAccountGuid=_paymentTargetAccount.value?.accountGuid
 
         if (totalPaymentMinor <= 0L) {
             viewModelScope.launch { _toastEvent.emit("To'lov summasi 0 dan katta bo'lishi kerak") }
@@ -308,12 +330,15 @@ class DebtsViewModel @Inject constructor(
                     customerGuid = cust.guid,
                     cashMinor = cashMinor,
                     cardMinor = cardMinor,
-                    targetAccountGuid = _paymentTargetAccount.value?.accountGuid
+                    targetAccountGuid = targetAccountGuid
                 )
-                _toastEvent.emit("To'lov muvaffaqiyatli qabul qilindi!")
                 closePaymentDialog()
+                debtService.recoverPaymentAttempt(cust.guid)
+                localSyncManager.sendLiveCustomerChange()
+                _toastEvent.emit("To'lov muvaffaqiyatli qabul qilindi!")
                 loadData()
-            } catch (e: Throwable) {
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (e: Throwable) {
                 _toastEvent.emit("To'lovni saqlashda xatolik: ${e.message}")
             } finally {
                 _isSubmittingPayment.value = false
