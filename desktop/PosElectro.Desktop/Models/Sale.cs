@@ -24,7 +24,10 @@ namespace PosElectro.Desktop.Models
         public List<SaleItem> Items { get; set; } = new();
 
         public DateTime CreatedDateTime => DateTimeOffset.FromUnixTimeMilliseconds(CreatedAt).LocalDateTime;
-        public double NetProfit => (TotalAmount - TaxAmount) - TotalCost;
+        public double? RecognisedProfit { get; set; }
+        public double NetProfit => RecognisedProfit ?? (PaymentType == PaymentType.DEBT && TotalAmount > 0
+            ? Math.Round((TotalAmount-TotalCost)*Math.Clamp((CashAmount+CardAmount)/TotalAmount,0,1),2,MidpointRounding.AwayFromZero)-TaxAmount
+            : TotalAmount-TaxAmount-TotalCost);
         public double Profit => NetProfit;
         public bool IsProfitNegative => Profit < 0;
         public string ProfitDisplay => Profit < 0

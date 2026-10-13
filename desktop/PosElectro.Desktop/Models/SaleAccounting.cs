@@ -36,7 +36,9 @@ public static class SaleAccounting
         var cost = Allocate(sale.TotalCost, items.Select(i => i.CostAtSale * i.Quantity *
             (i.CostCurrency == "USD" ? rate ?? 1 : 1)).ToArray());
         return items.Select((item, index) => {
-            var profit = (double)((decimal)revenue[index] - (decimal)cost[index] - (decimal)tax[index]);
+            var share = sale.PaymentType == PaymentType.DEBT && sale.TotalAmount > 0
+                ? Math.Round((decimal)Math.Clamp(sale.CashAmount+sale.CardAmount,0,sale.TotalAmount)/(decimal)sale.TotalAmount,16,MidpointRounding.AwayFromZero) : 1m;
+            var profit = (double)(Math.Round(((decimal)revenue[index] - (decimal)cost[index])*share,2,MidpointRounding.AwayFromZero) - (decimal)tax[index]);
             return new SaleReportItem {
                 SaleId = sale.Id, ReceiptNumber = sale.ReceiptNumber, ProductId = item.ProductId,
                 ProductName = string.IsNullOrWhiteSpace(item.ProductName) ? $"Mahsulot #{item.ProductId}" : item.ProductName,

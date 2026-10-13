@@ -112,30 +112,42 @@ class ReportsViewModel @Inject constructor(
     private fun kindMatches(item: uz.pos.electro.data.model.SaleReportItem) = when (_recordKind.value) {
         "Savdo" -> !item.isBrak && !item.isReturn; "Brak" -> item.isBrak; "Qaytarish" -> item.isReturn; else -> true
     }
+    private val _profitError = MutableStateFlow<String?>(null)
+    val profitError = _profitError.asStateFlow()
+    fun onReportsOpened() = applyFilters()
+    private val _receiptProfits = MutableStateFlow<Map<Long, Double>>(emptyMap())
+    val receiptProfits = _receiptProfits.asStateFlow()
     private var summaryJob: Job? = null
     private fun applyFilters() {
         summaryJob?.cancel()
         val query = _searchQuery.value.trim().removePrefix("#").uppercase(java.util.Locale.ROOT)
         val matched = rawSales.filter { query.isBlank() || it.sale.receiptNumber.contains(query) ||
             it.sale.guid.replace("-", "").contains(query.removePrefix("LP-").replace("-", ""), true) || it.sale.id.toString().contains(query) }
-        val lines = matched.flatMap { uz.pos.electro.data.model.SaleAccounting.lines(it) }.filter {
-            kindMatches(it) && (_selectedCategory.value == "Barchasi" || it.category.equals(_selectedCategory.value, true)) &&
-            (_selectedWarehouseGuid.value == "Barchasi" || it.warehouseGuid == _selectedWarehouseGuid.value)
-        }
-        val ids = lines.map { it.saleId }.toSet()
-        _salesList.value = matched.filter { it.sale.id in ids }
-        _detailedReportItems.value = lines
-        val baseSummary = uz.pos.electro.data.model.SaleAccounting.summary(lines, _usdRate.value)
-        _summary.value = baseSummary
-        val includeFee = query.isBlank() && _selectedCategory.value == "Barchasi" &&
-            _selectedWarehouseGuid.value == "Barchasi" && _recordKind.value == "Barchasi"
-        val periodStart = rangeStart; val periodEnd = rangeEnd
+        val category = _selectedCategory.value
+        val warehouse = _selectedWarehouseGuid.value
+        val kind = _recordKind.value
+        val periodStart = if (query.isBlank()) rangeStart else 0L
+        val periodEnd = if (query.isBlank()) rangeEnd else Long.MAX_VALUE
         summaryJob = viewModelScope.launch {
+          try {
+            val report = saleRepository.getCashProfitReport(periodStart, periodEnd)
+            val lines = report.lines.filter { item ->
+                (query.isBlank() || item.receiptNumber.contains(query, true) ||
+                    item.receiptNumber.replace("-", "").contains(query.replace("-", ""), true) || item.saleId.toString().contains(query)) &&
+                (when(kind) { "Savdo" -> !item.isBrak && !item.isReturn; "Brak" -> item.isBrak; "Qaytarish" -> item.isReturn; else -> true }) &&
+                (category == "Barchasi" || item.category.equals(category, true)) &&
+                (warehouse == "Barchasi" || item.warehouseGuid == warehouse)
+            }
+            val ids = lines.filterNot { it.profitOnly }.map { it.saleId }.toSet()
+            _receiptProfits.value = report.receipts
+            _salesList.value = matched.filter { it.sale.id in ids }
+            _detailedReportItems.value = lines
+            val baseSummary = uz.pos.electro.data.model.SaleAccounting.summary(lines, _usdRate.value)
             val debtPeriod = debtService.getDebtPeriodSummary(periodStart, periodEnd)
             _summary.value = baseSummary.copy(
-                netProfit = baseSummary.netProfit - (if (includeFee) debtPeriod.netDebtFeeUz else 0.0),
-                netProfitUsd = baseSummary.netProfitUsd - (if (includeFee) debtPeriod.netDebtFeeUsd ?: 0.0 else 0.0),
-                usdComplete = baseSummary.usdComplete && (!includeFee || debtPeriod.netDebtFeeUsd != null),
+                netProfit = baseSummary.netProfit,
+                netProfitUsd = baseSummary.netProfitUsd,
+                usdComplete = baseSummary.usdComplete,
                 debtCollected = debtPeriod.netDebtCollectedTotalUz,
                 debtCollectedCash = debtPeriod.netDebtCashCollectedUz,
                 debtCollectedCard = debtPeriod.netDebtCardCollectedUz,
@@ -147,6 +159,12 @@ class ReportsViewModel @Inject constructor(
                 activeDebtTotal = debtPeriod.closingDebtUz,
                 activeCreditTotal = debtPeriod.closingCreditUz
             )
+            _profitError.value = null
+          } catch(e: kotlinx.coroutines.CancellationException) { throw e
+          } catch(e: Exception) {
+            _profitError.value = "Foyda hisoblanmadi: ${e.message}. Sinxron va baza tarixini tekshiring."
+            _salesList.value = emptyList(); _detailedReportItems.value = emptyList(); _receiptProfits.value = emptyMap()
+          }
         }
     }
 
@@ -154,6 +172,16 @@ class ReportsViewModel @Inject constructor(
 
     init {
         loadReportData(TimeRangeFilter.TODAY)
+        viewModelScope.launch {
+            var revision: String? = null
+            returnSync.dataUpdateEvents.collect {
+                try {
+                    val next = saleRepository.profitRevision()
+                    if (next != revision) { revision = next; applyFilters() }
+                } catch(e: kotlinx.coroutines.CancellationException) { throw e }
+                catch(e: Exception) { _profitError.value = "Foyda yangilanmadi: ${e.message}" }
+            }
+        }
         // Ilova ochilganda orqa fonda dollar kursini yangilab qo'yish
         viewModelScope.launch {
             currencyRepository.fetchLatestUsdRate().onSuccess { newRate ->
@@ -277,12 +305,16 @@ class ReportsViewModel @Inject constructor(
             val catFilter = if (_selectedCategory.value == "Barchasi") null else _selectedCategory.value
             val whFilter = if (_selectedWarehouseGuid.value == "Barchasi") null else _selectedWarehouseGuid.value
 
-            val detailedItems = saleRepository.getDetailedReportItems(
-                startTimestamp = start,
-                endTimestamp = end,
+            val receiptQuery = _searchQuery.value.trim().removePrefix("#").uppercase(java.util.Locale.ROOT)
+            val detailedItems = try { saleRepository.getDetailedReportItems(
+                startTimestamp = if (receiptQuery.isBlank()) start else 0L,
+                endTimestamp = if (receiptQuery.isBlank()) end else Long.MAX_VALUE,
                 categoryFilter = catFilter,
                 warehouseGuidFilter = whFilter
-            ).filter { kindMatches(it) }
+            ).filter { kindMatches(it) && (receiptQuery.isBlank() || it.receiptNumber.contains(receiptQuery, true) ||
+                it.receiptNumber.replace("-", "").contains(receiptQuery.replace("-", ""), true) || it.saleId.toString().contains(receiptQuery)) }
+            } catch(e: kotlinx.coroutines.CancellationException) { throw e
+            } catch(e: Exception) { Toast.makeText(context, "Eksport uchun foyda hisoblanmadi: ${e.message}", Toast.LENGTH_LONG).show(); return@launch }
 
             var periodTitle = when (_selectedFilter.value) {
                 TimeRangeFilter.TODAY -> "Bugun"
@@ -307,11 +339,10 @@ class ReportsViewModel @Inject constructor(
             periodTitle += " | ${_recordKind.value}"
             val debtPeriod = debtService.getDebtPeriodSummary(start, end)
             val baseExportSummary = uz.pos.electro.data.model.SaleAccounting.summary(detailedItems, _usdRate.value)
-            val includeFee = catFilter == null && whFilter == null && _recordKind.value == "Barchasi"
             val exportSummary = baseExportSummary.copy(
-                netProfit = baseExportSummary.netProfit - (if (includeFee) debtPeriod.netDebtFeeUz else 0.0),
-                netProfitUsd = baseExportSummary.netProfitUsd - (if (includeFee) debtPeriod.netDebtFeeUsd ?: 0.0 else 0.0),
-                usdComplete = baseExportSummary.usdComplete && (!includeFee || debtPeriod.netDebtFeeUsd != null),
+                netProfit = baseExportSummary.netProfit,
+                netProfitUsd = baseExportSummary.netProfitUsd,
+                usdComplete = baseExportSummary.usdComplete,
                 debtCollected = debtPeriod.netDebtCollectedTotalUz,
                 debtCollectedCash = debtPeriod.netDebtCashCollectedUz,
                 debtCollectedCard = debtPeriod.netDebtCardCollectedUz,

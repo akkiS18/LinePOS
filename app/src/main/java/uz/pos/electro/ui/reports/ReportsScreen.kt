@@ -96,6 +96,9 @@ fun ReportsScreen(
     val selectedWarehouseGuid by viewModel.selectedWarehouseGuid.collectAsState()
     val summary by viewModel.summary.collectAsState()
     val salesList by viewModel.salesList.collectAsState()
+    val receiptProfits by viewModel.receiptProfits.collectAsState()
+    val profitError by viewModel.profitError.collectAsState()
+    LaunchedEffect(Unit) { viewModel.onReportsOpened() }
     val selectedSale by viewModel.selectedSaleForDetail.collectAsState()
     var returning by remember { mutableStateOf(false) }
     var returnHistory by remember { mutableStateOf("") }
@@ -341,6 +344,7 @@ fun ReportsScreen(
                             items(filteredSales, key = { it.sale.id }) { saleWithItems ->
                                 SaleHistoryCard(
                                     saleWithItems = saleWithItems,
+                                    recognisedProfit = receiptProfits[saleWithItems.sale.id],
                                     onClick = { viewModel.selectSaleForDetail(saleWithItems) }
                                 )
                             }
@@ -435,9 +439,9 @@ fun ReportsScreen(
                             // SOF FOYDA (So'mda va Dollarda)
                             val formattedUsdProfit = if (summary.usdComplete) String.format(Locale.US, "%.2f", summary.netProfitUsd) else "— (eski kurs yo‘q)"
                             val taxSubtitle = if (summary.totalTaxAmount > 0) "Karta solig'i: -${numberFormat.format(summary.totalTaxAmount)}" else null
-                            val fullSubtitle = if (taxSubtitle != null) "($${formattedUsdProfit}) • $taxSubtitle" else "($${formattedUsdProfit})"
+                            val fullSubtitle = profitError ?: if (taxSubtitle != null) "($${formattedUsdProfit}) • $taxSubtitle" else "($${formattedUsdProfit})"
                             val profitIsNegative = summary.netProfit < 0
-                            val profitValueText = if (profitIsNegative)
+                            val profitValueText = if (profitError != null) "Hisob mavjud emas" else if (profitIsNegative)
                                 "${numberFormat.format(summary.netProfit)} so'm"
                             else
                                 "+${numberFormat.format(summary.netProfit)} so'm"
@@ -555,6 +559,7 @@ fun ReportsScreen(
             if (returning) ReturnDialog(saleWithItems, viewModel) { returning = false; viewModel.closeSaleDetail() }
             else SaleDetailDialog(
                 saleWithItems = saleWithItems,
+                recognisedProfit = receiptProfits[saleWithItems.sale.id],
                 onReturn = { returning = true },
                 returnHistory = returnHistory,
                 onDismissRequest = { viewModel.closeSaleDetail() }
@@ -817,11 +822,12 @@ private fun KpiCard(
 @Composable
 private fun SaleHistoryCard(
     saleWithItems: SaleWithItems,
+    recognisedProfit: Double?,
     onClick: () -> Unit
 ) {
     val numberFormat = remember { NumberFormat.getNumberInstance(Locale.US) }
     val dateFormat = remember { SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault()) }
-    val profit = (saleWithItems.sale.totalAmount - saleWithItems.sale.taxAmount) - saleWithItems.sale.totalCost
+    val profit = recognisedProfit ?: uz.pos.electro.data.model.SaleAccounting.lines(saleWithItems).sumOf { it.profit }
     val paymentTypeText = when (saleWithItems.sale.paymentType) {
         uz.pos.electro.data.model.PaymentType.DEBT -> "Nasiya"
         uz.pos.electro.data.model.PaymentType.CASH -> "Naqd"
@@ -915,6 +921,7 @@ private fun SaleHistoryCard(
 @Composable
 private fun SaleDetailDialog(
     saleWithItems: SaleWithItems,
+    recognisedProfit: Double?,
     onReturn: () -> Unit,
     returnHistory: String,
     onDismissRequest: () -> Unit
@@ -922,7 +929,7 @@ private fun SaleDetailDialog(
     val numberFormat = remember { NumberFormat.getNumberInstance(Locale.US) }
     val dateFormat = remember { SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault()) }
     // Tax ajratilgan holda hisoblash (SaleHistoryCard bilan bir xil)
-    val profit = (saleWithItems.sale.totalAmount - saleWithItems.sale.taxAmount) - saleWithItems.sale.totalCost
+    val profit = recognisedProfit ?: uz.pos.electro.data.model.SaleAccounting.lines(saleWithItems).sumOf { it.profit }
 
     Dialog(onDismissRequest = onDismissRequest) {
         Card(

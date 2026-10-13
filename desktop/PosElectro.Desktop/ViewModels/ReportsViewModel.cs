@@ -21,6 +21,7 @@ namespace PosElectro.Desktop.ViewModels
     public class ReportsViewModel : ViewModelBase
     {
         private List<SaleReportItem> _reportLines = new();
+        private string? _profitError;
         public string[] RecordKinds { get; } = { "Barchasi", "Savdo", "Qaytarish", "Brak" };
         private string _selectedRecordKind = "Barchasi";
         public string SelectedRecordKind { get => _selectedRecordKind; set { if (SetProperty(ref _selectedRecordKind, value)) LoadData(); } }
@@ -271,21 +272,21 @@ namespace PosElectro.Desktop.ViewModels
         // Debt collection fees are period expenses, not product/receipt sale margins.
         private bool IncludeDebtFeeInProfit => !HasSearchReceiptNumber && SelectedCategory == "Barchasi" &&
             (_selectedWarehouse == null || _selectedWarehouse.Guid == "all") && SelectedRecordKind == "Barchasi";
-        private double PeriodDebtFee => IncludeDebtFeeInProfit ? (_debtSummary?.NetDebtFeeUz ?? 0) : 0;
-        private double? PeriodDebtFeeUsd => IncludeDebtFeeInProfit ? (_debtSummary?.NetDebtFeeUsd) : 0;
+        private double PeriodDebtFee => 0; // Fees are allocated inside the recognition projection.
+        private double? PeriodDebtFeeUsd => 0;
         public double TotalProfit => _reportLines.Sum(i => i.Profit) - PeriodDebtFee;
         public double TotalProfitUsd => _reportLines.Sum(i => i.ProfitUsd ?? 0) - (PeriodDebtFeeUsd ?? 0);
-        public int TotalSalesCount => _reportLines.Where(i => !i.IsBrak && !i.IsReturn).Select(i => i.SaleId).Distinct().Count();
+        public int TotalSalesCount => _reportLines.Where(i => !i.IsBrak && !i.IsReturn && !i.ProfitOnly).Select(i => i.SaleId).Distinct().Count();
         public double TotalItemsCount => _reportLines.Where(i => !i.IsBrak && !i.IsReturn).Sum(i => i.Quantity);
 
         public string TotalRevenueText => $"{TotalRevenue:N0} so'm";
         public string TotalCashRevenueText => $"{TotalCashRevenue:N0} so'm";
         public string TotalCardRevenueText => $"{TotalCardRevenue:N0} so'm";
         public string TotalTaxAmountText => $"{TotalTaxAmount:N0} so'm";
-        public string TotalProfitText => TotalProfit < 0
+        public string TotalProfitText => _profitError != null ? "Hisob mavjud emas" : TotalProfit < 0
             ? $"{TotalProfit:N0} so'm"
             : $"+{TotalProfit:N0} so'm";
-        public string TotalProfitUsdText => _reportLines.All(i => i.ProfitUsd.HasValue) && PeriodDebtFeeUsd.HasValue && Math.Abs(TotalProfitUsd) > 0.001 ? $"(${TotalProfitUsd:N2})" : string.Empty;
+        public string TotalProfitUsdText => _profitError == null && _reportLines.All(i => i.ProfitUsd.HasValue) && PeriodDebtFeeUsd.HasValue && Math.Abs(TotalProfitUsd) > 0.001 ? $"(${TotalProfitUsd:N2})" : string.Empty;
         public bool IsProfitNegative => TotalProfit < 0;
         public string TotalSalesCountText => $"{TotalSalesCount} ta chek";
         public string TotalItemsCountText => $"{TotalItemsCount:0.##} ta/m";
@@ -432,6 +433,7 @@ namespace PosElectro.Desktop.ViewModels
 
         public void LoadData()
         {
+          try {
             List<Sale> rawSales;
             if (HasSearchReceiptNumber)
             {
@@ -446,15 +448,28 @@ namespace PosElectro.Desktop.ViewModels
             string? catFilter = (SelectedCategory == "Barchasi") ? null : SelectedCategory;
             string? whGuidFilter = (_selectedWarehouse == null || _selectedWarehouse.Guid == "all") ? null : _selectedWarehouse.Guid;
 
-            _reportLines = rawSales.SelectMany(SaleAccounting.Lines).Where(item =>
+            var profitReport = _db.GetCashProfitReport(HasSearchReceiptNumber ? 0 : new DateTimeOffset(_startDate).ToUnixTimeMilliseconds(),
+                HasSearchReceiptNumber ? long.MaxValue : new DateTimeOffset(_endDate).ToUnixTimeMilliseconds());
+            var matchingIds = rawSales.Select(s=>s.Id).ToHashSet();
+            _reportLines = profitReport.Lines.Where(item =>
+                (!HasSearchReceiptNumber || matchingIds.Contains(item.SaleId)) &&
                 KindMatches(item) &&
                 (catFilter == null || string.Equals(item.Category, catFilter, StringComparison.OrdinalIgnoreCase)) &&
                 (whGuidFilter == null || item.WarehouseGuid == whGuidFilter)).ToList();
-            var ids = _reportLines.Select(i => i.SaleId).ToHashSet();
-            foreach (var sale in rawSales.Where(s => ids.Contains(s.Id))) Sales.Add(sale);
+            var ids = _reportLines.Where(i=>!i.ProfitOnly).Select(i => i.SaleId).ToHashSet();
+            foreach (var sale in rawSales.Where(s => ids.Contains(s.Id))) {
+                if(profitReport.Receipts.TryGetValue(sale.Id,out var profit))sale.RecognisedProfit=profit;
+                Sales.Add(sale);
+            }
 
             _debtSummary = _db.GetDebtPeriodSummary(_startDate, _endDate);
+            _profitError = null;
             RecalculateSummary();
+          } catch(Exception e) {
+            _profitError = "Foyda hisoblanmadi: " + e.Message;
+            StatusMessage = _profitError;
+            _reportLines.Clear(); Sales.Clear(); RecalculateSummary();
+          }
         }
 
         public void RecalculateSummary()
@@ -505,7 +520,9 @@ namespace PosElectro.Desktop.ViewModels
             string? whGuidFilter = (_selectedWarehouse == null || _selectedWarehouse.Guid == "all") ? null : _selectedWarehouse.Guid;
             string whTitle = _selectedWarehouse?.Name ?? "Barcha omborlar";
 
-            var detailedItems = _db.GetDetailedReportItems(_startDate, _endDate, UsdRate, catFilter, whGuidFilter).Where(i => KindMatches(i)).ToList();
+            LoadData();
+            if (_profitError != null) { MessageBox.Show(_profitError,"Eksport bajarilmadi"); return; }
+            var detailedItems = _reportLines.ToList();
             string periodTitle = $"{SelectedDateDisplay} | {SelectedRecordKind}";
             periodTitle += $" | Qaytarilgan (sof): {-detailedItems.Where(i => i.IsReturn).Sum(i => i.TotalPrice):N2}; Tannarx tiklanishi: {-detailedItems.Where(i => i.IsReturn).Sum(i => i.TotalCost):N2}";
 
@@ -519,13 +536,13 @@ namespace PosElectro.Desktop.ViewModels
                 prof += it.Profit;
             }
 
-            int salesCount = detailedItems.Where(i => !i.IsBrak && !i.IsReturn).Select(i => i.SaleId).Distinct().Count();
+            int salesCount = detailedItems.Where(i => !i.IsBrak && !i.IsReturn && !i.ProfitOnly).Select(i => i.SaleId).Distinct().Count();
 
             periodTitle += $" | Brak: {detailedItems.Where(i => i.IsBrak).Select(i => i.SaleId).Distinct().Count()} ta, {detailedItems.Where(i => i.IsBrak).Sum(i => i.TotalCost):N2} so‘m";
             var debtSum = _db.GetDebtPeriodSummary(_startDate, _endDate);
             var includeFee = catFilter == null && whGuidFilter == null && SelectedRecordKind == "Barchasi";
-            if (includeFee) prof -= debtSum.NetDebtFeeUz;
-            var feeUsd = includeFee ? debtSum.NetDebtFeeUsd : 0;
+            // Collection fees already belong to the projected product lines.
+            double? feeUsd = 0;
             var profitUsd = detailedItems.Sum(i => i.ProfitUsd ?? 0) - (feeUsd ?? 0);
             periodTitle += detailedItems.All(i => i.ProfitUsd.HasValue) && feeUsd.HasValue
                 ? $" | USD foyda: ${profitUsd:N2}" : " | USD foyda: tarixiy kurs yetishmaydi";

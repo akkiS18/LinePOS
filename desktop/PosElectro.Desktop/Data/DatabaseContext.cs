@@ -1887,10 +1887,11 @@ namespace PosElectro.Desktop.Data
             return list;
         }
 
-        private List<SaleItem> GetSaleItems(long saleId, SqliteConnection conn)
+        private List<SaleItem> GetSaleItems(long saleId, SqliteConnection conn, SqliteTransaction? transaction = null)
         {
             var items = new List<SaleItem>();
             using var cmd = conn.CreateCommand();
+            cmd.Transaction = transaction;
             cmd.CommandText = "SELECT * FROM sale_items WHERE sale_id = @saleId ORDER BY id";
             cmd.Parameters.AddWithValue("@saleId", saleId);
             using var reader = cmd.ExecuteReader();
@@ -1918,9 +1919,22 @@ namespace PosElectro.Desktop.Data
             return items;
         }
 
+        public Debt.DebtProfitProjection.Result GetCashProfitReport(long start, long end)
+        {
+            using var conn = CreateConnection(); using var tx = conn.BeginTransaction();
+            using var cmd = conn.CreateCommand(); cmd.Transaction = tx;
+            cmd.CommandText = "SELECT * FROM sales WHERE created_at<=@end AND (created_at>=@start OR payment_type=3 OR guid IN (SELECT r.guid FROM returns r JOIN sales original ON original.guid=r.sale_guid WHERE original.payment_type=3)) ORDER BY created_at,id";
+            cmd.Parameters.AddWithValue("@start", start);
+            cmd.Parameters.AddWithValue("@end", end);
+            var sales = new List<Sale>();
+            using (var r=cmd.ExecuteReader()) while(r.Read()) sales.Add(ReadSale(r));
+            foreach(var sale in sales) sale.Items=GetSaleItems(sale.Id,conn,tx);
+            return Debt.DebtProfitProjection.Build(conn,tx,sales,start,end);
+        }
+
         public List<SaleReportItem> GetDetailedReportItems(DateTime from, DateTime to, double usdRate, string? categoryFilter = null, string? warehouseGuidFilter = null)
         {
-            return GetSales(from, to).SelectMany(SaleAccounting.Lines).Where(item =>
+            return GetCashProfitReport(new DateTimeOffset(from).ToUnixTimeMilliseconds(), new DateTimeOffset(to).ToUnixTimeMilliseconds()).Lines.Where(item =>
                 (string.IsNullOrWhiteSpace(categoryFilter) || categoryFilter == "Barchasi" || string.Equals(item.Category, categoryFilter, StringComparison.OrdinalIgnoreCase)) &&
                 (string.IsNullOrWhiteSpace(warehouseGuidFilter) || warehouseGuidFilter == "all" || item.WarehouseGuid == warehouseGuidFilter)).ToList();
         }

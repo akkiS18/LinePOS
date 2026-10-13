@@ -23,6 +23,7 @@ data class SaleReportItem(
     val isDebt: Boolean = debtAmount > 0.0,
     val profitUsd: Double? = null,
     val isReturn: Boolean = false,
+    val profitOnly: Boolean = false,
     val isBrak: Boolean = false
 )
 

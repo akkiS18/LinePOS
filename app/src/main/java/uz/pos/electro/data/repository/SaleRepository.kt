@@ -225,16 +225,25 @@ class SaleRepository @Inject constructor(
     /**
      * Tanlangan vaqt oralig'idagi barcha savdolarni tovarlar tafsilotlari bilan olish
      */
-    suspend fun getDetailedReportItems(
-        startTimestamp: Long,
-        endTimestamp: Long,
-        categoryFilter: String? = null,
-        warehouseGuidFilter: String? = null
-    ): List<SaleReportItem> {
-        val sales = saleDao.getSalesListBetween(startTimestamp, endTimestamp)
-        return sales.flatMap { uz.pos.electro.data.model.SaleAccounting.lines(it) }.filter { item ->
-            (categoryFilter.isNullOrBlank() || categoryFilter == "Barchasi" || item.category.equals(categoryFilter, true)) &&
-            (warehouseGuidFilter.isNullOrBlank() || warehouseGuidFilter == "Barchasi" || item.warehouseGuid == warehouseGuidFilter)
+    suspend fun profitRevision(): String = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        database.openHelper.readableDatabase.query("SELECT (SELECT COALESCE(MAX(seq),0) FROM sync_journal),(SELECT COUNT(*) FROM debt_events),(SELECT COUNT(*) FROM returns),COALESCE((SELECT value FROM sync_meta WHERE key='debt_history_epoch'),'')").use {
+            it.moveToFirst(); "${it.getLong(0)}:${it.getLong(1)}:${it.getLong(2)}:${it.getString(3)}"
         }
+    }
+
+    suspend fun getCashProfitReport(start: Long, end: Long): uz.pos.electro.data.debt.DebtProfitProjection.Result =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            database.withTransaction {
+                val sales = saleDao.getProfitSales(androidx.sqlite.db.SimpleSQLiteQuery(
+                    "SELECT * FROM sales WHERE created_at<=? AND (created_at>=? OR payment_type='DEBT' OR guid IN (SELECT r.guid FROM returns r JOIN sales original ON original.guid=r.sale_guid WHERE original.payment_type='DEBT')) ORDER BY created_at,id", arrayOf(end,start)))
+                uz.pos.electro.data.debt.DebtProfitProjection.build(database.openHelper.readableDatabase, sales, start, end)
+            }
+        }
+
+    suspend fun getDetailedReportItems(
+        startTimestamp: Long, endTimestamp: Long, categoryFilter: String? = null, warehouseGuidFilter: String? = null
+    ): List<SaleReportItem> = getCashProfitReport(startTimestamp, endTimestamp).lines.filter { item ->
+        (categoryFilter.isNullOrBlank() || categoryFilter == "Barchasi" || item.category.equals(categoryFilter, true)) &&
+        (warehouseGuidFilter.isNullOrBlank() || warehouseGuidFilter == "Barchasi" || item.warehouseGuid == warehouseGuidFilter)
     }
 }

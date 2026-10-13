@@ -12,6 +12,10 @@ import uz.pos.electro.data.local.relation.SaleWithItems
 
 @Dao
 interface SaleDao {
+    @Transaction
+    @androidx.room.RawQuery
+    suspend fun getProfitSales(query: androidx.sqlite.db.SupportSQLiteQuery): List<SaleWithItems>
+
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertSale(sale: SaleEntity): Long

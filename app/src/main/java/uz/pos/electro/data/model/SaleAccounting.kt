@@ -39,8 +39,10 @@ object SaleAccounting {
             it.costAtSale * it.quantity * (if (it.costCurrency == "USD") rate ?: 1.0 else 1.0)
         })
         return items.mapIndexed { index, item ->
-            val profit = BigDecimal.valueOf(revenue[index]).subtract(BigDecimal.valueOf(cost[index]))
-                .subtract(BigDecimal.valueOf(tax[index])).toDouble()
+            val margin = BigDecimal.valueOf(revenue[index]).subtract(BigDecimal.valueOf(cost[index]))
+            val share = if (sale.paymentType == PaymentType.DEBT && sale.totalAmount > 0)
+                BigDecimal.valueOf((sale.cashAmount + sale.cardAmount).coerceIn(0.0, sale.totalAmount)).divide(BigDecimal.valueOf(sale.totalAmount), 16, RoundingMode.HALF_UP) else BigDecimal.ONE
+            val profit = margin.multiply(share).setScale(2, RoundingMode.HALF_UP).subtract(BigDecimal.valueOf(tax[index])).toDouble()
             SaleReportItem(saleId = sale.id, timestamp = sale.createdAt, productId = item.productId,
                 productName = item.productName.ifBlank { "Mahsulot #${item.productId}" },
                 unitType = runCatching { UnitType.valueOf(item.unitAtSale) }.getOrDefault(UnitType.DONA),
@@ -61,9 +63,9 @@ object SaleAccounting {
         totalRevenue = lines.sumOf { it.totalPrice }, totalCost = lines.sumOf { it.totalCost },
         netProfit = lines.sumOf { it.profit }, netProfitUsd = lines.sumOf { it.profitUsd ?: 0.0 },
         usdComplete = lines.all { it.profitUsd != null },
-        salesCount = lines.filterNot { it.isBrak || it.isReturn }.map { it.saleId }.distinct().size,
+        salesCount = lines.filterNot { it.isBrak || it.isReturn || it.profitOnly }.map { it.saleId }.distinct().size,
         brakCount = lines.filter { it.isBrak }.map { it.saleId }.distinct().size,
-        returnCount = lines.filter { it.isReturn }.map { it.saleId }.distinct().size,
+        returnCount = lines.filter { it.isReturn && !it.profitOnly }.map { it.saleId }.distinct().size,
         refundedAmount = -lines.filter { it.isReturn }.sumOf { it.totalPrice },
         costReversal = -lines.filter { it.isReturn }.sumOf { it.totalCost },
         grossSales = lines.filterNot { it.isBrak || it.isReturn }.sumOf { it.totalPrice },
