@@ -226,7 +226,7 @@ public sealed partial class ReturnStore
 
                     var requestRefundMinor = checked((long)Math.Round((request.CashRefund + request.CardRefund) * 100, MidpointRounding.AwayFromZero));
                     if (debtSplit.RefundMinor != requestRefundMinor)
-                        throw new InvalidOperationException("Qarz to'lovi amalga oshirilgani sababli hisob balansi o'zgardi. Qaytarishni qayta hisoblang.");
+                        throw new InvalidOperationException($"Qarzli savdo qaytarilmoqda. Xaridor ushbu chek bo'yicha {debtSplit.RefundMinor / 100m:N2} so'm to'lagan. Mijozga naqd/karta orqali {debtSplit.RefundMinor / 100m:N2} so'm qaytarilishi kerak (qolgan {debtSplit.DebtOffsetMinor / 100m:N2} so'm qarzdan chegiriladi).");
 
                     ReturnAccounting.ValidatePayment(debtSplit.RefundMinor / 100m, request.CashRefund, request.CardRefund, request.FeeReversal, (decimal)sale.TaxAmount, priorFee);
                 }

@@ -110,7 +110,6 @@ fun ProductsScreen(
     val quickStockErrorMessage by viewModel.quickStockErrorMessage.collectAsState()
 
     var isCameraScannerOpen by remember { mutableStateOf(false) }
-    var isBackupDialogOpen by remember { mutableStateOf(false) }
     var isReorderSheetOpen by remember { mutableStateOf(false) }
     var productToDelete by remember { mutableStateOf<ProductEntity?>(null) }
 
@@ -159,47 +158,20 @@ fun ProductsScreen(
                     contentColor = Color.White,
                     elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp)
                 )
-            } else {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 32.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+            } else if (selectedWarehouse != null) {
+                FloatingActionButton(
+                    onClick = { viewModel.openAddProductDialog() },
+                    shape = CircleShape,
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = Color.White,
+                    elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 4.dp),
+                    modifier = Modifier.size(56.dp)
                 ) {
-                    // Chap tomondagi DB Zaxira (Backup) tugmasi
-                    FloatingActionButton(
-                        onClick = { isBackupDialogOpen = true },
-                        shape = CircleShape,
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        contentColor = MaterialTheme.colorScheme.primary,
-                        elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 4.dp),
-                        modifier = Modifier.size(56.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.CloudDownload,
-                            contentDescription = "Baza Zaxirasi",
-                            modifier = Modifier.size(26.dp)
-                        )
-                    }
-
-                    // O'ng tomondagi Mahsulot qo'shish (+) tugmasi (Faqat ombor tanlangandan keyin chiqadi)
-                    if (selectedWarehouse != null) {
-                        FloatingActionButton(
-                            onClick = { viewModel.openAddProductDialog() },
-                            shape = CircleShape,
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = Color.White,
-                            elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 4.dp),
-                            modifier = Modifier.size(56.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = "Yangi mahsulot",
-                                modifier = Modifier.size(28.dp)
-                            )
-                        }
-                    }
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Yangi mahsulot",
+                        modifier = Modifier.size(28.dp)
+                    )
                 }
             }
         }
@@ -576,17 +548,6 @@ fun ProductsScreen(
                     productToDelete = null
                 },
                 onDismiss = { productToDelete = null }
-            )
-        }
-
-        // Baza Zaxira (Backup) va Qayta Tiklash (Restore) modali
-        if (isBackupDialogOpen) {
-            DatabaseBackupDialog(
-                products = products,
-                appDatabase = viewModel.appDatabase,
-                productDao = viewModel.productDao,
-                productStockDao = viewModel.productStockDao,
-                onDismissRequest = { isBackupDialogOpen = false }
             )
         }
 

@@ -594,7 +594,8 @@ data class CashierSearchResult(
                 _debtCardAdvance.value = "0"
                 _toastEvent.emit("Nasiya savdo muvaffaqiyatli saqlandi!")
             } catch (e: Exception) {
-                _toastEvent.emit("Xatolik: ${e.localizedMessage}")
+                val msg = e.message ?: e.localizedMessage ?: "Noma'lum xatolik"
+                _toastEvent.emit(if (msg.contains("bloklangan")) "⚠️ $msg" else "Xatolik: $msg")
             } finally {
                 _isCompletingSale.value = false
                 checkoutGate.set(false)

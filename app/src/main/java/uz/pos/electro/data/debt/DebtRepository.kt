@@ -75,7 +75,10 @@ class DebtRepository(private val database: AppDatabase, private val store: Strin
     } }
     private fun customer(db: SupportSQLiteDatabase, guid: String, active: Boolean = true): String {
         val row=rows(db,"SELECT name,archived FROM debt_customers WHERE guid=@p0 AND store_guid=@p1",guid,store).singleOrNull()
-        require(row!=null && (!active || row[1]==0L)); return row[0] as String
+        require(row!=null) { "Mijoz topilmadi." }
+        if (active && row[1]!=0L)
+            throw IllegalStateException("Ushbu qarzdor bloklangan. Bloklangan mijozga yangi nasiya savdo qilib bo'lmaydi.")
+        return row[0] as String
     }
     private fun outbox(db: SupportSQLiteDatabase, request: String, kind: String, entity: String, payload: String) {
         // -1 is HELD, not acked; legacy transport reads only acked=0. Stage 3 releases a
@@ -411,7 +414,7 @@ class DebtRepository(private val database: AppDatabase, private val store: Strin
         return write { db ->
             scope(db);val old=replay(db,q.requestGuid,payload)
             if(old!=null)old else {
-                customer(db,q.customerGuid)
+                customer(db,q.customerGuid,false)
                 val allocation=DebtAccounting.allocate(total,q.customerGuid,accounts(db,q.customerGuid),q.targetAccountGuid)
                 val effect=DebtAccounting.payment(q.cashMinor,q.cardMinor,q.feeMinor,allocation)
                 val seq=Math.addExact(scalar(db,"SELECT COALESCE(MAX(device_sequence),0) FROM debt_events WHERE device_guid=@p0",device) as Long,1L)

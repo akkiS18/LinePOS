@@ -739,3 +739,42 @@ Ushbu hujjat mijozga oxirgi kiritilgan o'zgarishlar va yangi qulayliklarni ko'rs
   - Oynadan chiqqanda ulanish uzilib qolmaydi, dastur barqaror onlayn turadi. Kompyuterda ochilgan har qanday yangi ombor yoki tovar o'zgarishlari telefonga o'z vaqtida o'tadi. Qarz daftarida mijoz ismi yoki ma'lumotlari kompyuterda o'zgartirilsa ham, telefonda o'zgartirilsa ham ikkala tomonda darhol bir xil bo'lib aks etadi.
 
 ---
+### 52. Qarz daftari va ombor UX/mantiqiy xatoliklarini to'liq tuzatish (Bug fixes & UX parity)
+- **Qayerda o'zgardi:**
+  - Mobil: ProductsScreen.kt, DebtsScreen.kt, CashierViewModel.kt, DebtRepository.kt
+  - Desktop: DebtsView.xaml, CashierViewModel.cs, DebtRepository.cs
+- **Tuzatilgan muammolar va yechimlar:**
+  1. **Ombordan ortiqcha Backup tugmasi olib tashlandi (Mobil):**
+     - Mahsulotlar ekranidagi chap tomondagi CloudDownload FAB tugmasi va DatabaseBackupDialog olib tashlandi. Faqat o'ng tomondagi yangi mahsulot qo'shish (+) tugmasi qoldirildi.
+  2. **Nasiyalar ro'yxatida summa vertikal siqilib qolishi tuzatildi (1-rasm UX):**
+     - AccountItemCard ichida chek raqami bloki Modifier.weight(1f) bilan o'raldi, o'ngdagi qarz summasiga maxLines = 1 va softWrap = false berildi. Natijada uzun GUID chek raqamlari bo'lsa ham, summa hech qachon vertikal siqilmaydi va doim gorizontal, ravon ko'rinadi.
+  3. **Bloklangan qarzdorga nasiya savdo qilinganda aniq xabar berish (2-rasm):**
+     - Nasiya savdoni tasdiqlashda bloklangan mijoz tanlangan bo'lsa, umumiy texnik Invalid debt command or changed retry / Failed requirement xatosi o'rniga aniq o'zbekcha ogohlantirish beriladi: *"Ushbu qarzdor bloklangan. Bloklangan mijozga yangi nasiya savdo qilib bo'lmaydi."*
+  4. **Desktopda ko'rsatkichlar ustun (vertical) joylashtirildi va chek raqami o'ralishi ta'minlandi (3-rasm):**
+     - Mijoz kartasidagi Joriy holat, Jami savdo va To'langan ko'rsatkichlari gorizontal emas, ustun shaklida (Orientation="Vertical") joylashtirildi — hech qanday qirqilish bo'lmaydi.
+     - Nasiyalar jadvalidagi Chek raqami ustuniga TextWrapping="Wrap" va MinRowHeight="38" berildi — uzun chek raqamlari ... bilan qirqilmasdan, chiroyli keyingi qatorga o'raladi.
+  5. **Bloklangan qarzdorning mavjud qarzini to'lash imkoniyati ochildi (4-rasm):**
+     - DebtRepository dagi TakePayment metodida Customer(..., active = false) qilindi. Endi mijoz bloklangan bo'lsa ham, o'zining mavjud qarzini to'lashi taqiqlanmaydi va to'lov muvaffaqiyatli qabul qilinadi.
+- **Mijoz uchun foydasi:**
+  - Telefonda ham, kompyuterda ham qarz daftari va kassa ko'rinishlari toza, qirqilmaydigan va tushunarli bo'ldi. Bloklangan mijozlar mavjud qarzini to'lay oladi, yangi nasiya olishga uringanda esa aniq sabab bilan ogohlantiriladi.
+
+---
+
+### 53. Mahsulot qaytarish (Refund) paneli barqarorligi va qarzli qaytarish mantiqi (Phone & Desktop)
+- **Qayerda o'zgardi:**
+  - Mobil: ReturnDialog.kt, LocalSyncManager.kt
+  - Desktop: ReturnDialog.cs, ReturnStore.cs
+- **Tuzatilgan muammolar va yechimlar:**
+  1. **Telefonda qaytarish (Refund) bosilganda dasturdan chiqib ketishi (crash) bartaraf etildi:**
+     - `ReturnDialog.kt` dagi `LaunchedEffect` xavfsiz `try-catch` blokiga olindi. Mahalliy ma'lumotlarni hisoblashda null va nostandart qiymatlar (`optString`, `toBigDecimalOrNull`) bilan himoyalandi. Serverga ulanmagan yoki oflayn holatda ham oyna qulab tushmaydi, balki toza ogohlantirish beradi.
+  2. **Qarzga sotilgan tovarni qaytarishda aniq va tushunarli mantiq kiritildi (Desktop & Mobil):**
+     - Agar savdo qarzga qilingan bo'lsa (masalan: 21 000 so'mlik tovardan xaridor faqat 10 000 so'm to'lagan, 11 000 so'm qarz bo'lsa), xaridorga naqd/kartada qaytariladigan summa faqat xaridor amalda to'lagan summa (10 000 so'm) bo'lishi kerakligi, qolgan 11 000 so'm esa xaridorning qarzidan chegirilishi to'g'risida o'zbek tilida aniq va muloyim ogohlantirish chiqarildi.
+     - Noto'g'ri ortiqcha summa kiritilganda noaniq texnik xatolik berish o'rniga, tizim do'kon hisobiga zarar yetmasligini tushuntiruvchi oyna chiqaradi.
+  3. **Desktop Mahsulot qaytarish oynasi dizayni to'liq moslashtirildi:**
+     - Oyna foni LinePOS qorong'i dizayniga (Dark theme) to'liq moslashtirildi, qop-qora ombor comboboxi o'rniga barcha matnlar va maydonlar kontrastli va zamonaviy ko'rinishga keltirildi.
+
+---
+
+
+---
+

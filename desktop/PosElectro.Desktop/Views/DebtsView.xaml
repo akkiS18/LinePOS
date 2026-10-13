@@ -1,4 +1,4 @@
-<UserControl x:Class="PosElectro.Desktop.Views.DebtsView"
+﻿<UserControl x:Class="PosElectro.Desktop.Views.DebtsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -466,31 +466,37 @@
                                     </StackPanel>
 
                                     <!-- Balans va faol qarz -->
-                                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0" VerticalAlignment="Center">
-                                        <TextBlock Text="Joriy holat: " Foreground="#64748B" FontSize="13" VerticalAlignment="Center"/>
-                                        <TextBlock Text="{Binding SelectedCustomer.BalanceDisplay}" FontSize="16" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,16,0">
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock">
-                                                    <Setter Property="Foreground" Value="#F8FAFC"/>
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding SelectedCustomer.BalanceMinor, Converter={StaticResource GreaterThanZeroConverter}}" Value="True">
-                                                            <Setter Property="Foreground" Value="#F87171"/>
-                                                        </DataTrigger>
-                                                        <DataTrigger Binding="{Binding SelectedCustomer.BalanceMinor, Converter={StaticResource LessThanZeroConverter}}" Value="True">
-                                                            <Setter Property="Foreground" Value="#34D399"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
+                                    <StackPanel Orientation="Vertical" Margin="0,10,0,0">
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                                            <TextBlock Text="Joriy holat: " Foreground="#64748B" FontSize="13" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding SelectedCustomer.BalanceDisplay}" FontSize="15" FontWeight="Bold" VerticalAlignment="Center">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="#F8FAFC"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding SelectedCustomer.BalanceMinor, Converter={StaticResource GreaterThanZeroConverter}}" Value="True">
+                                                                <Setter Property="Foreground" Value="#F87171"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding SelectedCustomer.BalanceMinor, Converter={StaticResource LessThanZeroConverter}}" Value="True">
+                                                                <Setter Property="Foreground" Value="#34D399"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </StackPanel>
 
-                                        <TextBlock Text="Jami savdo: " Foreground="#64748B" FontSize="13" VerticalAlignment="Center"/>
-                                        <TextBlock Text="{Binding SelectedCustomer.OriginalDebtMinor, StringFormat='{}{0:N0} so\'m', Converter={StaticResource MinorToUzConverter}}"
-                                                   Foreground="#CBD5E1" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                                            <TextBlock Text="Jami savdo: " Foreground="#64748B" FontSize="12" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding SelectedCustomer.OriginalDebtMinor, StringFormat='{}{0:N0} so\'m', Converter={StaticResource MinorToUzConverter}}"
+                                                       Foreground="#CBD5E1" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                        </StackPanel>
 
-                                        <TextBlock Text="To'langan: " Foreground="#64748B" FontSize="13" VerticalAlignment="Center"/>
-                                        <TextBlock Text="{Binding SelectedCustomer.TotalPaidMinor, StringFormat='{}{0:N0} so\'m', Converter={StaticResource MinorToUzConverter}}"
-                                                   Foreground="#34D399" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="To'langan: " Foreground="#64748B" FontSize="12" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding SelectedCustomer.TotalPaidMinor, StringFormat='{}{0:N0} so\'m', Converter={StaticResource MinorToUzConverter}}"
+                                                       Foreground="#34D399" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                        </StackPanel>
                                     </StackPanel>
                                 </StackPanel>
 
@@ -619,7 +625,7 @@
                                   RowBackground="#0F172A" AlternatingRowBackground="#162032"
                                   Foreground="#F8FAFC" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#1E293B"
                                   HeadersVisibility="Column" CanUserAddRows="False" IsReadOnly="True"
-                                  FontSize="13" RowHeight="38">
+                                  FontSize="13" MinRowHeight="38">
                             <DataGrid.ColumnHeaderStyle>
                                 <Style TargetType="DataGridColumnHeader">
                                     <Setter Property="Background" Value="#1E293B"/>
@@ -631,7 +637,15 @@
                                 </Style>
                             </DataGrid.ColumnHeaderStyle>
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="Chek raqami" Binding="{Binding ReceiptNumber}" Width="150"/>
+                                <DataGridTextColumn Header="Chek raqami" Binding="{Binding ReceiptNumber}" Width="170">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="TextWrapping" Value="Wrap"/>
+                                            <Setter Property="VerticalAlignment" Value="Center"/>
+                                            <Setter Property="Padding" Value="2,4"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
                                 <DataGridTextColumn Header="Sana" Binding="{Binding CreatedAtDisplay}" Width="140"/>
                                 <DataGridTextColumn Header="Boshlang'ich qarz" Binding="{Binding OriginalDebtUz, StringFormat='{}{0:N0} so\'m'}" Width="140"/>
                                 <DataGridTextColumn Header="Qoldiq" Binding="{Binding BalanceDisplay}" Width="140">
@@ -696,7 +710,7 @@
                                   RowBackground="#0F172A" AlternatingRowBackground="#162032"
                                   Foreground="#F8FAFC" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#1E293B"
                                   HeadersVisibility="Column" CanUserAddRows="False" IsReadOnly="True"
-                                  FontSize="13" RowHeight="38">
+                                  FontSize="13" MinRowHeight="38">
                             <DataGrid.ColumnHeaderStyle>
                                 <Style TargetType="DataGridColumnHeader">
                                     <Setter Property="Background" Value="#1E293B"/>

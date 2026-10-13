@@ -37,17 +37,18 @@ fun ReturnDialog(receipt: SaleWithItems, viewModel: ReportsViewModel, onDismiss:
     var result by remember { mutableStateOf<JSONObject?>(null) }
     var busy by remember { mutableStateOf(true) }
     val editable = !busy && state == "draft"
-    fun number(value: String) = value.replace(',', '.').toBigDecimal()
+    fun number(value: String) = value.replace(',', '.').toBigDecimalOrNull() ?: BigDecimal.ZERO
     fun refund(): BigDecimal {
         var sum = BigDecimal.ZERO
-        val lines = quote?.getJSONArray("Lines") ?: error("Chek ma'lumoti yo'q")
+        val lines = quote?.optJSONArray("Lines") ?: return BigDecimal.ZERO
         for (i in 0 until lines.length()) {
-            val line = lines.getJSONObject(i); val guid = line.getString("Guid")
+            val line = lines.getJSONObject(i); val guid = line.optString("Guid", "")
             val qty = number(quantities[guid] ?: "0")
             if (qty.signum() == 0) continue
-            val sold = number(line.get("Sold").toString()); val prior = number(line.get("Returned").toString())
+            val sold = number(line.opt("Sold")?.toString() ?: "0"); val prior = number(line.opt("Returned")?.toString() ?: "0")
+            if (sold <= BigDecimal.ZERO) continue
             require(qty > BigDecimal.ZERO && qty <= sold - prior) { "Qaytarish miqdorini tekshiring" }
-            sum += number(line.get("Revenue").toString()).multiply(prior + qty).divide(sold, 2, RoundingMode.HALF_UP) - number(line.get("Refunded").toString())
+            sum += number(line.opt("Revenue")?.toString() ?: "0").multiply(prior + qty).divide(sold, 2, RoundingMode.HALF_UP) - number(line.opt("Refunded")?.toString() ?: "0")
         }
         return sum
     }
@@ -73,23 +74,61 @@ fun ReturnDialog(receipt: SaleWithItems, viewModel: ReportsViewModel, onDismiss:
             .put("FeeReversal", number(fee).toPlainString()).put("Items", items)
     }
     LaunchedEffect(receipt.sale.guid) {
-        // Offline preparation uses immutable local amounts; the authority rechecks every quantity.
-        quote = viewModel.returnSync.localReturnQuote(receipt)
-        try { quote = viewModel.returnSync.quoteReturn(receipt.sale.guid) }
-        catch (e: Exception) { message = "Oflayn loyiha. Yakuniy tasdiq uchun mahalliy kompyuter kerak. ${e.message}" }
-        val lines = quote!!.getJSONArray("Lines")
-        for (i in 0 until lines.length()) { val line = lines.getJSONObject(i); val id = line.getString("Guid")
-            quantities[id] = "0"; destinations[id] = line.getString("WarehouseGuid") }
         try {
-            viewModel.returnSync.getReturnDraft(receipt.sale.guid)?.let { draft ->
-                val body = draft.getJSONObject("payload"); state = draft.getString("state"); requestId = body.getString("RequestGuid")
-                reason = body.getString("Reason"); cash = body.get("CashRefund").toString(); card = body.get("CardRefund").toString(); fee = body.get("FeeReversal").toString()
-                val items = body.getJSONArray("Items"); for (i in 0 until items.length()) { val row = items.getJSONObject(i); val id = row.getString("SaleItemGuid")
-                    quantities[id] = row.get("Quantity").toString(); destinations[id] = row.getString("WarehouseGuid"); damaged[id] = !row.getBoolean("Resellable") }
-                result = draft.optJSONObject("result")
+            // Offline preparation uses immutable local amounts; the authority rechecks every quantity.
+            quote = try {
+                viewModel.returnSync.localReturnQuote(receipt)
+            } catch (e: Exception) {
+                message = "Mahalliy ma'lumotni tayyorlashda xatolik: ${e.message}"
+                JSONObject().put("Lines", JSONArray())
             }
-        } catch (e: Exception) { message = e.message ?: "Loyiha ochilmadi" }
-        busy = false
+            try {
+                quote = viewModel.returnSync.quoteReturn(receipt.sale.guid)
+            } catch (e: Exception) {
+                if (message.isBlank()) {
+                    message = "Oflayn rejim. Yakuniy tasdiq uchun mahalliy kompyuter kerak."
+                }
+            }
+            val lines = quote?.optJSONArray("Lines") ?: JSONArray()
+            for (i in 0 until lines.length()) {
+                val line = lines.getJSONObject(i)
+                val id = line.optString("Guid", "")
+                if (id.isNotBlank()) {
+                    quantities[id] = "0"
+                    destinations[id] = line.optString("WarehouseGuid", "")
+                }
+            }
+            try {
+                viewModel.returnSync.getReturnDraft(receipt.sale.guid)?.let { draft ->
+                    val body = draft.optJSONObject("payload")
+                    if (body != null) {
+                        state = draft.optString("state", "draft")
+                        requestId = body.optString("RequestGuid", java.util.UUID.randomUUID().toString())
+                        reason = body.optString("Reason", "")
+                        cash = body.opt("CashRefund")?.toString() ?: "0"
+                        card = body.opt("CardRefund")?.toString() ?: "0"
+                        fee = body.opt("FeeReversal")?.toString() ?: "0"
+                        val items = body.optJSONArray("Items") ?: JSONArray()
+                        for (i in 0 until items.length()) {
+                            val row = items.getJSONObject(i)
+                            val id = row.optString("SaleItemGuid", "")
+                            if (id.isNotBlank()) {
+                                quantities[id] = row.opt("Quantity")?.toString() ?: "0"
+                                destinations[id] = row.optString("WarehouseGuid", "")
+                                damaged[id] = !row.optBoolean("Resellable", true)
+                            }
+                        }
+                    }
+                    result = draft.optJSONObject("result")
+                }
+            } catch (e: Exception) {
+                message = e.message ?: "Loyiha ochilmadi"
+            }
+        } catch (e: Throwable) {
+            message = "Xatolik: ${e.message ?: "Yuklashda muammo bo'ldi"}"
+        } finally {
+            busy = false
+        }
     }
     Dialog(onDismissRequest = { if (!busy) onDismiss() }) {
         Surface(shape = MaterialTheme.shapes.large) {

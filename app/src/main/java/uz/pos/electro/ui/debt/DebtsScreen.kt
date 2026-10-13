@@ -841,9 +841,14 @@ private fun AccountItemCard(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Top
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Icon(
                         imageVector = Icons.Default.ReceiptLong,
                         contentDescription = null,
@@ -862,7 +867,9 @@ private fun AccountItemCard(
                     text = "${numberFormat.format(account.balanceUz)} so'm",
                     fontWeight = FontWeight.Black,
                     style = MaterialTheme.typography.titleMedium,
-                    color = if (account.balanceMinor > 0) Color(0xFFDC2626) else Color(0xFF16A34A)
+                    color = if (account.balanceMinor > 0) Color(0xFFDC2626) else Color(0xFF16A34A),
+                    maxLines = 1,
+                    softWrap = false
                 )
             }
 

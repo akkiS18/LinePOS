@@ -1449,6 +1449,16 @@ namespace PosElectro.Desktop.ViewModels
                 return;
             }
 
+            if (IsDebtSale && SelectedDebtCustomer != null && SelectedDebtCustomer.Archived)
+            {
+                MessageBox.Show(
+                    "⚠️ Tanlangan qarzdor bloklangan!\n\nBloklangan mijozga yangi nasiya savdo qilib bo'lmaydi. Iltimos, boshqa mijozni tanlang yoki qarz daftaridan mijozni blokdan chiqaring.",
+                    "Mijoz bloklangan",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
             // 1. Printer tekshiruvi (Agar printer tanlangan bo'lsa, u ulangan bo'lishi shart!)
             if (SelectedReceiptPrintOption == 1) // Chek printeri
             {

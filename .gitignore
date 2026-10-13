@@ -99,3 +99,4 @@ scratch/
 __pycache__/
 *.pyc
 TEST_BUILD/
+TEST_OUTPUT/

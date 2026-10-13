@@ -72,7 +72,10 @@ public sealed partial class DebtRepository
     });
     private string Customer(SqliteConnection c,SqliteTransaction t,string id,bool active=true) {
         var row=Rows(c,t,"SELECT name,archived FROM debt_customers WHERE guid=@p0 AND store_guid=@p1",id,store).SingleOrDefault();
-        Need(row!=null && (!active || Convert.ToInt64(row[1])==0));return (string)row![0]!;
+        Need(row!=null);
+        if (active && Convert.ToInt64(row![1])!=0)
+            throw new InvalidOperationException("Ushbu qarzdor bloklangan. Bloklangan mijozga yangi nasiya savdo qilib bo'lmaydi.");
+        return (string)row![0]!;
     }
     private void Outbox(SqliteConnection c,SqliteTransaction t,string request,string kind,string entity,string payload) {
         // -1 is held, NOT acknowledged. Existing transport reads only acked=0. Stage 3 must
@@ -352,7 +355,7 @@ public sealed partial class DebtRepository
         var payload=Canonical("payment",store,actor,q.RequestGuid,q.CustomerGuid,Number(q.CashMinor),Number(q.CardMinor),Number(q.FeeMinor),Number(q.OccurredAt),q.TargetAccountGuid??"",q.FeeUsdRate??"");
         return Write((c,t)=> {
             Scope(c,t);var replay=Replay(c,t,q.RequestGuid,payload);if(replay!=null)return replay;
-            Customer(c,t,q.CustomerGuid);
+            Customer(c,t,q.CustomerGuid,false);
             var allocation=DebtAccounting.Allocate(total,q.CustomerGuid,Accounts(c,t,q.CustomerGuid),q.TargetAccountGuid);
             var effect=DebtAccounting.Payment(q.CashMinor,q.CardMinor,q.FeeMinor,allocation);
             Event(c,t,q.RequestGuid,q.CustomerGuid,"payment",q.OccurredAt,payload,q.CashMinor,q.CardMinor,q.FeeMinor,q.FeeUsdRate);
