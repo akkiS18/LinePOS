@@ -16,7 +16,9 @@ public sealed class ReturnDialog : Window
 {
     readonly ReturnStore store;
     readonly DatabaseContext db;
-    readonly ReturnQuote quote;
+    ReturnQuote quote;
+    bool quoteReady = true;
+    readonly Dictionary<string, TextBlock> lineLabels = new();
     readonly List<(ReturnLine Line, TextBox Quantity, ComboBox Warehouse, CheckBox Damaged)> rows = new();
     readonly TextBox reason = new(), cash = new(), card = new(), fee = new() { Text = "0" };
     readonly TextBlock total = new() { Margin = new Thickness(0, 12, 0, 12) };
@@ -44,7 +46,8 @@ public sealed class ReturnDialog : Window
         var warehouses = db.GetWarehouses();
         foreach (var line in quote.Lines)
         {
-            panel.Children.Add(new TextBlock { Text = $"{line.ProductName} • Sotilgan: {line.Sold} • Qaytgan: {line.Returned} • Qolgan: {line.Sold-line.Returned}", Foreground = textPrimary, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 12, 0, 6), TextWrapping = TextWrapping.Wrap });
+            var label = new TextBlock { Text = LineText(line), Foreground = textPrimary, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 12, 0, 6), TextWrapping = TextWrapping.Wrap };
+            lineLabels.Add(line.Guid, label); panel.Children.Add(label);
             var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 8) };
             var qty = new TextBox { Text = "0", Width = 90, Height = 34, VerticalContentAlignment = VerticalAlignment.Center, Padding = new Thickness(6, 0, 6, 0), Margin = new Thickness(0, 0, 12, 0) };
             var wh = new ComboBox { ItemsSource = warehouses, DisplayMemberPath = "Name", SelectedValuePath = "Guid", SelectedValue = line.WarehouseGuid, Width = 260, Height = 34, VerticalContentAlignment = VerticalAlignment.Center };
@@ -78,21 +81,45 @@ public sealed class ReturnDialog : Window
             }
             cash.Text=submitted.CashRefund.ToString(CultureInfo.InvariantCulture); card.Text=submitted.CardRefund.ToString(CultureInfo.InvariantCulture);
             reason.IsEnabled=cash.IsEnabled=card.IsEnabled=fee.IsEnabled=false; confirm.Content="Oldingi so‘rov natijasini tekshirish";
-            if(draft.Result != null) Loaded += (_,_) => {
-                saved=true; MessageBox.Show(this,"Avval saqlangan: RT-"+draft.Result.Guid.Replace("-", "").ToUpperInvariant(),"Qaytarish");
-                store.FinishDesktopDraft(requestId,null); DialogResult=true;
-            };
+            // Replays go directly to the authority's idempotency lookup, even if
+            // the current balance or returned quantity changed since submission.
+            total.Text = "Oldingi so‘rov saqlangan. Natijasi tekshirilmaguncha yangi qaytarish yaratilmaydi.";
         }
     }
-    static decimal Number(string text) => decimal.TryParse(text.Replace(',', '.'), NumberStyles.AllowDecimalPoint | NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var n) ? n : 0m;
+    static decimal Number(string text)
+    {
+        if (!decimal.TryParse(text.Trim().Replace(',', '.'), NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var n) || n < 0)
+            throw new ArgumentException("Miqdor va pul maydonlariga musbat son yoki 0 kiriting.");
+        return n;
+    }
+    static string LineText(ReturnLine line) => $"{line.ProductName} • Sotilgan: {line.Sold} • Qaytgan: {line.Returned} • Qolgan: {line.Sold-line.Returned}";
+    void SetEditable(bool editable)
+    {
+        foreach (var row in rows) row.Quantity.IsEnabled = row.Warehouse.IsEnabled = row.Damaged.IsEnabled = editable;
+        reason.IsEnabled = cash.IsEnabled = card.IsEnabled = fee.IsEnabled = editable;
+    }
+    void RefreshRejectedQuote()
+    {
+        quoteReady = false;
+        var fresh = store.Quote(quote.SaleGuid);
+        var updated = rows.Select(row => (Line: fresh.Lines.Single(l => l.Guid == row.Line.Guid),
+            row.Quantity, row.Warehouse, row.Damaged)).ToList();
+        quote = fresh; rows.Clear(); rows.AddRange(updated);
+        foreach (var row in rows) lineLabels[row.Line.Guid].Text = LineText(row.Line);
+        quoteReady = true;
+        SetEditable(true); Preview();
+    }
     void Preview()
     {
+        if (submitted != null || !quoteReady) return;
         try {
             decimal sum = 0;
             foreach (var row in rows) { var qty = Number(row.Quantity.Text); if (qty == 0) continue;
                 var l = row.Line; sum += ReturnAccounting.Calculate(l.Sold, l.Revenue, l.Cost,
                     new(l.Returned, l.Refunded, l.CostBasis), qty, row.Damaged.IsChecked != true).Refund; }
-            if (quote.DebtAccountGuid != null) {
+            if (sum == 0) {
+                total.Text = "Qaytariladigan summa: 0 so‘m"; cash.Text = card.Text = "0";
+            } else if (quote.DebtAccountGuid != null) {
                 var sumMinor = checked((long)Math.Round(sum * 100, MidpointRounding.AwayFromZero));
                 var split = DebtAccounting.SplitReturn(sumMinor, quote.AccountBalanceMinor);
                 var offset = split.DebtOffsetMinor / 100.0m;
@@ -110,50 +137,52 @@ public sealed class ReturnDialog : Window
         if (saved || !confirm.IsEnabled) return;
         confirm.IsEnabled = false;
         try {
-            if (quote.DebtAccountGuid != null)
+            if (submitted == null)
             {
-                decimal sum = 0;
-                foreach (var row in rows) {
-                    var qty = Number(row.Quantity.Text); if (qty == 0) continue;
-                    sum += ReturnAccounting.Calculate(row.Line.Sold, row.Line.Revenue, row.Line.Cost,
-                        new(row.Line.Returned, row.Line.Refunded, row.Line.CostBasis), qty, row.Damaged.IsChecked != true).Refund;
-                }
-                var sumMinor = checked((long)Math.Round(sum * 100, MidpointRounding.AwayFromZero));
-                var split = DebtAccounting.SplitReturn(sumMinor, quote.AccountBalanceMinor);
-                var allowedRefund = split.RefundMinor / 100m;
-                var currentEnteredRefund = Number(cash.Text) + Number(card.Text);
-                if (currentEnteredRefund != allowedRefund)
-                {
-                    MessageBox.Show(this,
-                        $"Ushbu chek qarzga olingan savdodir!\n\n" +
-                        $"• Xaridor bu xarid uchun faqat {allowedRefund:N2} so‘m to‘lagan.\n" +
-                        $"• Qolgan {split.DebtOffsetMinor / 100m:N2} so‘m xaridorning qarzidan chegiriladi.\n\n" +
-                        $"Shu sababli xaridorga to‘lanadigan summa (Naqd + Karta) {allowedRefund:N2} so‘m bo‘lishi shart (siz {currentEnteredRefund:N2} so‘m kiritdingiz).",
-                        "Qarzli qaytarish qoidasi", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    confirm.IsEnabled = true;
-                    return;
-                }
+                if (!quoteReady) throw new InvalidOperationException("Ma’lumot yangilanmadi. Oynani qayta oching.");
+                // Build before assigning: malformed input must not freeze a draft.
+                var request = new ReturnRequest(requestId, quote.SaleGuid, reason.Text.Trim(), Number(cash.Text), Number(card.Text), Number(fee.Text),
+                    rows.Where(r => Number(r.Quantity.Text) != 0).Select(r => new ReturnSelection(r.Line.Guid, Number(r.Quantity.Text),
+                        (string?)r.Warehouse.SelectedValue ?? "", r.Damaged.IsChecked != true)).ToList());
+                submitted = request;
             }
-
-            submitted ??= new ReturnRequest(requestId, quote.SaleGuid, reason.Text.Trim(), Number(cash.Text), Number(card.Text), Number(fee.Text),
-                rows.Where(r => Number(r.Quantity.Text) != 0).Select(r => new ReturnSelection(r.Line.Guid, Number(r.Quantity.Text),
-                    (string?)r.Warehouse.SelectedValue ?? "", r.Damaged.IsChecked != true)).ToList());
-            var authority=new WifiSyncStore(db.DatabaseFilePath).ServerId;
-            store.SaveDesktopDraft(submitted,authority);
-            var result = store.Commit(submitted, "desktop-local", authority);
-            store.FinishDesktopDraft(requestId,result);
+            SetEditable(false);
+            confirm.Content = "Oldingi so‘rov natijasini tekshirish";
+            var authority = new WifiSyncStore(db.DatabaseFilePath).ServerId;
+            // No preview validation here: an existing request must reach replay
+            // before current balance/stock validation for a new return.
+            var result = store.CommitDesktop(submitted, authority);
+            store.FinishDesktopDraft(requestId, result);
             saved = true;
             try { db.RaiseProductsChanged(); } catch { }
             var msg = result.DebtOffset > 0
                 ? $"Qaytarish saqlandi: RT-{result.Guid.Replace("-", "").ToUpperInvariant()}\nQarzdan chegirildi: {result.DebtOffset:N2} so‘m\nXaridorga qaytarildi: {result.Refund:N2} so‘m"
                 : $"Qaytarish saqlandi: RT-{result.Guid.Replace("-", "").ToUpperInvariant()}\nSumma: {result.Refund:N2} so‘m";
             MessageBox.Show(this, msg, "Qaytarish");
-            store.FinishDesktopDraft(requestId,null);
+            store.FinishDesktopDraft(requestId, null);
             DialogResult = true;
-        } catch (ArgumentException e) {
-            store.FinishDesktopDraft(requestId,null); submitted = null; MessageBox.Show(this, e.Message, "Ma’lumotni tekshiring");
+        } catch (DesktopReturnRejectedException e) {
+            // Only the store can prove rejection. A new ID is issued only after
+            // the exact uncommitted draft has been removed transactionally.
+            submitted = null; requestId = Guid.NewGuid().ToString();
+            confirm.Content = "Qaytarishni tasdiqlash";
+            try {
+                RefreshRejectedQuote();
+                MessageBox.Show(this, e.Message + "\n\nQaytarish saqlanmadi. Joriy hisob yangilandi; maydonlarni tekshirib, qayta tasdiqlang.", "Ma’lumotni tekshiring");
+            } catch (Exception refreshError) {
+                SetEditable(false);
+                MessageBox.Show(this, e.Message + "\n\nQaytarish saqlanmadi, ammo ma’lumotni yangilab bo‘lmadi. Oynani yopib qayta oching. " + refreshError.Message, "Qaytarish");
+            }
+        } catch (ArgumentException e) when (submitted == null) {
+            MessageBox.Show(this, e.Message, "Ma’lumotni tekshiring");
         } catch (Exception e) {
-            MessageBox.Show(this, "Natijani tekshirish uchun aynan shu so‘rovni qayta tasdiqlang. " + e.Message, "Qaytarish");
-        } finally { if (!saved) confirm.IsEnabled = true; }
+            // Unknown outcome or cleanup failure: retain the request/result.
+            if (saved) {
+                MessageBox.Show(this, "Qaytarish saqlangan. Oynani qayta ochib oldingi natijani tekshiring. " + e.Message, "Qaytarish");
+                Close();
+            } else {
+                MessageBox.Show(this, "Natijani tekshirish uchun aynan shu so‘rovni qayta tasdiqlang. " + e.Message, "Qaytarish");
+            }
+        } finally { if (!saved) confirm.IsEnabled = submitted != null || quoteReady; }
     }
 }

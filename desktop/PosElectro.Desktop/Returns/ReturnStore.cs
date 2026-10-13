@@ -11,6 +11,13 @@ using PosElectro.Desktop.Models;
 
 namespace PosElectro.Desktop.Returns;
 
+// Only raised after the authority proves no return was committed and releases
+// the exact desktop draft. Storage errors/unknown outcomes keep their request.
+public sealed class DesktopReturnRejectedException : Exception
+{
+    public DesktopReturnRejectedException(string message, Exception inner) : base(message, inner) { }
+}
+
 public sealed record ReturnSelection(string SaleItemGuid, decimal Quantity, string WarehouseGuid, bool Resellable);
 public sealed record ReturnRequest(string RequestGuid, string SaleGuid, string Reason, decimal CashRefund,
     decimal CardRefund, decimal FeeReversal, List<ReturnSelection> Items);
@@ -69,10 +76,35 @@ public sealed partial class ReturnStore
     {
         var payload=JsonSerializer.Serialize(request);
         using var c=Open(); using var tx=c.BeginTransaction();
+        if (Convert.ToString(Scalar(c,tx,"SELECT value FROM sync_meta WHERE key='server_id'")) != authority)
+            throw new InvalidOperationException("Kompyuter bazasi almashgan. Eski so‘rov saqlandi.");
+        var boundAuthority=Convert.ToString(Scalar(c,tx,"SELECT authority_guid FROM return_drafts WHERE sale_guid=@p0",request.SaleGuid));
+        if (!string.IsNullOrEmpty(boundAuthority) && boundAuthority != authority)
+            throw new InvalidOperationException("Oldingi so‘rov boshqa bazaga tegishli. So‘rov saqlandi.");
         var existing=Convert.ToString(Scalar(c,tx,"SELECT payload FROM return_drafts WHERE sale_guid=@p0",request.SaleGuid));
         if(!string.IsNullOrEmpty(existing) && existing!=payload) throw new InvalidOperationException("Bu chek uchun oldingi so'rov natijasini avval tekshiring");
         Exec(c,tx,"INSERT OR IGNORE INTO return_drafts(sale_guid,request_guid,authority_guid,payload,state) VALUES(@p0,@p1,@p2,@p3,'submitted')",request.SaleGuid,request.RequestGuid,authority,payload);
         tx.Commit();
+    }
+    public ReturnResult CommitDesktop(ReturnRequest request, string authority)
+    {
+        // A draft conflict is not a rejection of this request; never clear it.
+        SaveDesktopDraft(request, authority);
+        try { return Commit(request, "desktop-local", authority); }
+        catch (Exception e) when (e is ArgumentException or InvalidOperationException)
+        {
+            // Commit has disposed/rolled back its transaction before this check.
+            using var c = Open(); using var tx = c.BeginTransaction(deferred: false);
+            if (Convert.ToString(Scalar(c, tx, "SELECT value FROM sync_meta WHERE key='server_id'")) != authority ||
+                Convert.ToInt64(Scalar(c, tx, "SELECT COUNT(*) FROM returns WHERE request_guid=@p0", request.RequestGuid)) != 0)
+                throw;
+            using var clear = Command(c, tx,
+                "DELETE FROM return_drafts WHERE sale_guid=@p0 AND request_guid=@p1 AND authority_guid=@p2 AND payload=@p3 AND result IS NULL",
+                request.SaleGuid, request.RequestGuid, authority, JsonSerializer.Serialize(request));
+            if (clear.ExecuteNonQuery() != 1) throw;
+            tx.Commit();
+            throw new DesktopReturnRejectedException(e.Message, e);
+        }
     }
     public void FinishDesktopDraft(string requestGuid, ReturnResult? result)
     {
