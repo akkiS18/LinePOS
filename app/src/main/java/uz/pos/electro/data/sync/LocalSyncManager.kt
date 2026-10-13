@@ -253,46 +253,37 @@ class LocalSyncManager @Inject constructor(
     fun sendLiveStockTransfer(productGuid: String, fromWarehouseGuid: String, toWarehouseGuid: String, quantity: Double) = wake()
     suspend fun syncWithDesktop(): Result<SyncSummary> = runCatching { require(!getServerUrl().isNullOrBlank() && !token().isNullOrBlank()) { "Avval kompyuter QR kodini skanerlang." }; syncOnce(); SyncSummary(0, 0, "V2 sinxron yakunlandi") }
     suspend fun localReturnQuote(receipt: uz.pos.electro.data.local.relation.SaleWithItems): JSONObject = withContext(Dispatchers.IO) {
-        val financials = runCatching { uz.pos.electro.data.model.SaleAccounting.lines(receipt) }.getOrDefault(emptyList())
-        val lines = JSONArray()
-        receipt.items.sortedBy { it.id }.forEachIndexed { i, item ->
-            var quantity = java.math.BigDecimal.ZERO
-            var refunded = java.math.BigDecimal.ZERO
-            try {
+        database.withTransaction {
+            // Do not substitute zero or current prices for unreadable historical amounts.
+            val financials = uz.pos.electro.data.model.SaleAccounting.lines(receipt)
+            val lines = JSONArray()
+            receipt.items.sortedBy { it.id }.forEachIndexed { i, item ->
+                var quantity = java.math.BigDecimal.ZERO
+                var refunded = java.math.BigDecimal.ZERO
                 db().query("SELECT quantity, refund_amount_uzs FROM return_items WHERE sale_item_guid=?", arrayOf(item.guid)).use { c ->
                     while (c.moveToNext()) {
-                        val qStr = runCatching { c.getString(0) }.getOrNull()?.replace(',', '.')
-                        val rStr = runCatching { c.getString(1) }.getOrNull()?.replace(',', '.')
-                        quantity += qStr?.toBigDecimalOrNull() ?: java.math.BigDecimal.ZERO
-                        refunded += rStr?.toBigDecimalOrNull() ?: java.math.BigDecimal.ZERO
+                        quantity += c.getString(0).toBigDecimal()
+                        refunded += c.getString(1).toBigDecimal()
                     }
                 }
-            } catch (_: Throwable) { }
-            val rev = if (i < financials.size) financials[i].totalPrice else (item.priceAtSale * item.quantity)
-            lines.put(JSONObject().put("Guid", item.guid).put("ProductName", item.productName).put("WarehouseGuid", item.warehouseGuid)
-                .put("Sold", item.quantity).put("Returned", quantity.toPlainString()).put("Refunded", refunded.toPlainString()).put("Revenue", rev))
-        }
-        val res = JSONObject().put("SaleGuid", receipt.sale.guid).put("Lines", lines)
-        if (receipt.sale.paymentType == uz.pos.electro.data.model.PaymentType.DEBT) {
-            try {
+                lines.put(JSONObject().put("Guid", item.guid).put("ProductName", item.productName).put("WarehouseGuid", item.warehouseGuid)
+                    .put("Sold", item.quantity).put("Returned", quantity.toPlainString()).put("Refunded", refunded.toPlainString()).put("Revenue", financials[i].totalPrice))
+            }
+            val res = JSONObject().put("SaleGuid", receipt.sale.guid).put("Lines", lines)
+            if (receipt.sale.paymentType == PaymentType.DEBT) {
                 db().query("SELECT guid, customer_guid, original_debt_minor FROM debt_accounts WHERE sale_guid=?", arrayOf(receipt.sale.guid)).use { c ->
-                    if (c.moveToFirst()) {
-                        val accGuid = c.getString(0)
-                        val custGuid = c.getString(1)
-                        val origDebt = c.getLong(2)
-                        val deltas = mutableListOf<Long>()
-                        db().query("SELECT debt_delta_minor FROM debt_event_lines WHERE account_guid=?", arrayOf(accGuid)).use { lc ->
-                            while (lc.moveToNext()) deltas.add(lc.getLong(0))
-                        }
-                        val bal = uz.pos.electro.data.debt.DebtAccounting.balance(origDebt, deltas)
-                        res.put("DebtAccountGuid", accGuid)
-                        res.put("CustomerGuid", custGuid)
-                        res.put("AccountBalanceMinor", bal)
+                    require(c.moveToFirst()) { "Nasiya hisobining ma’lumoti topilmadi. Avval qarz sinxronini yakunlang." }
+                    val accGuid = c.getString(0)
+                    val deltas = mutableListOf<Long>()
+                    db().query("SELECT debt_delta_minor FROM debt_event_lines WHERE account_guid=?", arrayOf(accGuid)).use { lc ->
+                        while (lc.moveToNext()) deltas.add(lc.getLong(0))
                     }
+                    res.put("DebtAccountGuid", accGuid).put("CustomerGuid", c.getString(1))
+                        .put("AccountBalanceMinor", uz.pos.electro.data.debt.DebtAccounting.balance(c.getLong(2), deltas))
                 }
-            } catch (_: Throwable) { }
+            }
+            res
         }
-        res
     }
     suspend fun returnHistory(receiptGuid: String): String = withContext(Dispatchers.IO) {
         val original = db().query("SELECT sale_guid FROM returns WHERE guid=?",arrayOf(receiptGuid)).use { if(it.moveToFirst()) it.getString(0) else null }
