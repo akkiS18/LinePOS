@@ -38,6 +38,7 @@ import javax.inject.Singleton
 
 enum class LiveSyncStatus { OFFLINE, CONNECTING, CONNECTED, CONFLICT }
 class ServerChangedException(val serverId: String, message: String) : Exception(message)
+private class SyncAuthenticationException(message: String) : Exception(message)
 private class PendingSyncConflict(message: String) : Exception(message)
 data class SyncSummary(val downloadedProducts: Int, val uploadedProducts: Int, val message: String)
 
@@ -56,6 +57,8 @@ class LocalSyncManager @Inject constructor(
     private val prefs = context.getSharedPreferences("pos_local_sync_prefs", Context.MODE_PRIVATE)
     private val syncScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val syncMutex = Mutex()
+    private val discovery = LanDesktopDiscovery(context)
+    private var lastDiscoveryAt = -10_000L
     private var customerEditMessage: String? = null
     private var debtCommandMessage: String? = null
     private var debtStockWatermarkSupported = false
@@ -137,6 +140,17 @@ class LocalSyncManager @Inject constructor(
             val pairingCode = qr?.optString("pairingCode")?.takeIf { it.isNotBlank() } ?: code
             val id = prefs.getString("wifi_device_id", null) ?: java.util.UUID.randomUUID().toString().also { prefs.edit().putString("wifi_device_id", it).commit() }
             syncMutex.withLock {
+                // A fresh QR for the same PC is just an address change. Reuse the token,
+                // cursors and durable queues, even if the QR pairing code has expired.
+                if (!token().isNullOrBlank() && metadata("server_id") != null) {
+                    val ping = try { request(base, "/api/ping") }
+                    catch (e: CancellationException) { throw e }
+                    catch (_: Exception) { null }
+                    if (ping?.optInt("protocol") == 2 && ping.optString("serverId") == metadata("server_id")) {
+                        prefs.edit().putString("local_desktop_url", base).commit()
+                        return@withLock
+                    }
+                }
                 val reply = request(base, "/api/v2/pair", JSONObject().put("code", pairingCode).put("deviceId", id).put("deviceName", "${Build.MANUFACTURER} ${Build.MODEL}"), authenticated = false)
                 val serverId = reply.getString("serverId")
                 val oldId = metadata("server_id")
@@ -165,6 +179,7 @@ class LocalSyncManager @Inject constructor(
                 }
                 prefs.edit().putString("local_desktop_url", base).putString("wifi_v2_token", reply.getString("token")).commit()
             }
+            currentCoroutineContext().ensureActive()
             restartLiveSyncEngine()
             "Line kassa"
         }
@@ -239,12 +254,39 @@ class LocalSyncManager @Inject constructor(
                     try { syncOnce(); _liveSyncStatus.value = LiveSyncStatus.CONNECTED }
                     catch (e: CancellationException) { throw e }
                     catch (e: PendingSyncConflict) { _syncMessage.value = e.message ?: "Tahrirni tanlang"; _liveSyncStatus.value = LiveSyncStatus.CONFLICT }
-                    catch (e: Exception) { _syncMessage.value = e.message ?: "Aloqa uzildi; amallar lokal navbatda."; _liveSyncStatus.value = LiveSyncStatus.OFFLINE; Log.w("WifiSyncV2", "Sync retry: ${e.message}") }
+                    catch (e: Exception) {
+                        _syncMessage.value = e.message ?: "Aloqa uzildi; amallar lokal navbatda."
+                        _liveSyncStatus.value = LiveSyncStatus.OFFLINE
+                        Log.w("WifiSyncV2", "Sync retry: ${e.message}")
+                        // The old IP may now belong to another PC (401). Discovery never re-pairs.
+                        if (e is java.io.IOException || e is SyncAuthenticationException) {
+                            try { if (rediscoverDesktop()) continue }
+                            catch (cancel: CancellationException) { throw cancel }
+                            catch (failure: Exception) { Log.w("WifiSyncV2", "Discovery: ${failure.message}") }
+                        }
+                    }
                 }
                 delay(2000)
             }
         }
     }
+    private suspend fun rediscoverDesktop(): Boolean = syncMutex.withLock {
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (now - lastDiscoveryAt < 10_000) return@withLock false
+        val serverId = metadata("server_id") ?: return@withLock false
+        val deviceId = prefs.getString("wifi_device_id", null) ?: return@withLock false
+        val savedToken = token() ?: return@withLock false
+        lastDiscoveryAt = now
+        val base = discovery.find(serverId, deviceId, savedToken) ?: return@withLock false
+        currentCoroutineContext().ensureActive()
+        val ping = request(base, "/api/ping")
+        require(ping.optInt("protocol") == 2 && ping.optString("serverId") == serverId) { "Kompyuter tasdiqlanmadi." }
+        currentCoroutineContext().ensureActive()
+        // No pairing, rebind, cursor reset, or queue deletion on an IP-only change.
+        check(prefs.edit().putString("local_desktop_url", base).commit()) { "Yangi IP saqlanmadi." }
+        true
+    }
+
     // Writes are captured durably by triggers. These methods only wake the drain early.
     private fun wake() { syncScope.launch { try { syncOnce() } catch (e: CancellationException) { throw e } catch (_: Exception) {} } }
     fun sendLiveSale(sale: SaleEntity, items: List<SaleItemEntity>) = wake()
@@ -865,7 +907,9 @@ class LocalSyncManager @Inject constructor(
     private fun request(base: String,path: String,body: JSONObject? = null,authenticated: Boolean = true): JSONObject {
         val address = java.net.InetAddress.getByName(java.net.URI(base).host)
         require(address.isSiteLocalAddress || address.isLinkLocalAddress || address.isLoopbackAddress) { "Wi-Fi sinxron faqat lokal tarmoqda ishlaydi." }
-        val conn = URL(base + path).openConnection() as HttpURLConnection
+        // Wi-Fi without Internet must still work while cellular data is enabled.
+        val url = URL(base + path)
+        val conn = (discovery.networkFor(address)?.openConnection(url) ?: url.openConnection()) as HttpURLConnection
         conn.connectTimeout=5000;conn.readTimeout=15000;conn.instanceFollowRedirects=false
         try {
             if(authenticated) {
@@ -881,7 +925,9 @@ class LocalSyncManager @Inject constructor(
             }
             val status=conn.responseCode
             val text=(if(status in 200..299) conn.inputStream else conn.errorStream)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() } ?: "{}"
-            val reply=JSONObject(text)
+            if (status == 401) throw SyncAuthenticationException("Qurilma ruxsati tasdiqlanmadi. Kompyuter qidirilmoqda; ruxsat bekor qilingan bo‘lsa QR orqali qayta ulang.")
+            val reply = try { JSONObject(text) }
+            catch (e: org.json.JSONException) { throw java.io.IOException("Manzilda LinePOS javobi olinmadi.", e) }
             if(status == 409) {
                 val kind=reply.getString("kind");val guid=reply.getString("guid")
                 db().execSQL("INSERT OR REPLACE INTO sync_conflicts(kind,entity_guid,revision,message) VALUES(?,?,?,?)",arrayOf(kind,guid,reply.getLong("revision"),reply.getString("error")))

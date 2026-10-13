@@ -10,6 +10,7 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <Compile Include="../../desktop/PosElectro.Desktop/Sync/WifiSyncStore.cs" Link="WifiSyncStore.cs" />
     <Compile Include="../../desktop/PosElectro.Desktop/Services/LocalSyncServer.cs" Link="LocalSyncServer.cs" />
+    <Compile Include="../../desktop/PosElectro.Desktop/Services/LanDiscoveryResponder.cs" Link="LanDiscoveryResponder.cs" />
     <Compile Include="../../desktop/PosElectro.Desktop/Sync/WifiHttpRequest.cs" Link="WifiHttpRequest.cs" />
     <EmbeddedResource Include="../../sync/schema.sql" LogicalName="WifiSyncSchema" />
     <EmbeddedResource Include="../../debt/schema.sql" LogicalName="DebtSchema" />

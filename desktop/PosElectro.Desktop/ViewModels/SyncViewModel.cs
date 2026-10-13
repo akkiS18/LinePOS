@@ -322,7 +322,7 @@ namespace PosElectro.Desktop.ViewModels
                 var psi = new System.Diagnostics.ProcessStartInfo
                 {
                     FileName = "cmd.exe",
-                    Arguments = "/c netsh advfirewall firewall delete rule name=\"SMART Kassa Desktop Sync\" & netsh advfirewall firewall delete rule name=\"Line kassa Desktop Sync\" & netsh advfirewall firewall add rule name=\"Line kassa Desktop Sync\" dir=in action=allow protocol=TCP localport=8080 profile=private remoteip=localsubnet",
+                    Arguments = "/c netsh advfirewall firewall delete rule name=\"SMART Kassa Desktop Sync\" & netsh advfirewall firewall delete rule name=\"Line kassa Desktop Sync\" & netsh advfirewall firewall add rule name=\"Line kassa Desktop Sync\" dir=in action=allow protocol=TCP localport=8080 profile=private remoteip=localsubnet && netsh advfirewall firewall add rule name=\"Line kassa Desktop Sync\" dir=in action=allow protocol=UDP localport=8080 profile=private remoteip=localsubnet",
                     UseShellExecute = true,
                     Verb = "runas"
                 };

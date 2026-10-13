@@ -143,13 +143,14 @@ namespace PosElectro.Desktop.Services
         public void Start()
         {
             if(IsRunning)return;
-            try { RepairDebtOutbox();listener=new TcpListener(IPAddress.Any,Port); listener.Start(); stop=new CancellationTokenSource(); listenTask=Listen(stop.Token); _=MonitorClients(stop.Token); ActivityLogged?.Invoke("info",$"Lokal V2 server: {GetLocalIpAddress()}:{Port}"); }
+            try { RepairDebtOutbox();listener=new TcpListener(IPAddress.Any,Port); listener.Start(); stop=new CancellationTokenSource(); listenTask=Listen(stop.Token); discoveryTask=LanDiscoveryResponder.Run(store,Port,stop.Token,message=>LogMessageReceived?.Invoke(message)); _=MonitorClients(stop.Token); ActivityLogged?.Invoke("info",$"Lokal V2 server: {GetLocalIpAddress()}:{Port}"); }
             catch(Exception e){ stop?.Cancel(); ActivityLogged?.Invoke("error",e.Message); }
         }
         public void Stop(){stop?.Cancel();listener?.Stop();lock(gate)clients.Clear();LiveClientsCountChanged?.Invoke(0);}
         public async Task StopAndWaitAsync() {
             Stop();
             if(listenTask!=null)await listenTask;
+            if(discoveryTask!=null)await discoveryTask;
             using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(30));
             int acquired=0;
             try { for(;acquired<32;acquired++)await connectionSlots.WaitAsync(timeout.Token); }
@@ -159,6 +160,7 @@ namespace PosElectro.Desktop.Services
         public Task BroadcastLiveEventAsync(string eventType,object data,string? excludeClientId=null)=>Task.CompletedTask;
         private readonly SemaphoreSlim connectionSlots=new(32,32);
         private Task? listenTask;
+        private Task? discoveryTask;
         private async Task Listen(CancellationToken token)
         {
             while(!token.IsCancellationRequested)
