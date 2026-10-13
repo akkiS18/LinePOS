@@ -269,7 +269,13 @@ class LocalSyncManager @Inject constructor(
                 lines.put(JSONObject().put("Guid", item.guid).put("ProductName", item.productName).put("WarehouseGuid", item.warehouseGuid)
                     .put("Sold", item.quantity).put("Returned", quantity.toPlainString()).put("Refunded", refunded.toPlainString()).put("Revenue", financials[i].totalPrice))
             }
+            var returnedFee = java.math.BigDecimal.ZERO
+            db().query("SELECT fee_reversal FROM returns WHERE sale_guid=?", arrayOf(receipt.sale.guid)).use { c ->
+                while (c.moveToNext()) returnedFee += c.getString(0).toBigDecimal()
+            }
+            val remainingFee = java.math.BigDecimal.valueOf(receipt.sale.taxAmount) - returnedFee
             val res = JSONObject().put("SaleGuid", receipt.sale.guid).put("Lines", lines)
+                .put("RemainingFee", remainingFee.toPlainString())
             if (receipt.sale.paymentType == PaymentType.DEBT) {
                 db().query("SELECT guid, customer_guid, original_debt_minor FROM debt_accounts WHERE sale_guid=?", arrayOf(receipt.sale.guid)).use { c ->
                     require(c.moveToFirst()) { "Nasiya hisobining ma’lumoti topilmadi. Avval qarz sinxronini yakunlang." }

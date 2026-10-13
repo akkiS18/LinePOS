@@ -101,15 +101,23 @@ public sealed class ReturnDialog : Window
     void RefreshRejectedQuote()
     {
         quoteReady = false;
-        var fresh = store.Quote(quote.SaleGuid);
+        ApplyQuote(store.Quote(quote.SaleGuid));
+        SetEditable(true); Preview();
+    }
+    void ApplyQuote(ReturnQuote fresh)
+    {
         var updated = rows.Select(row => (Line: fresh.Lines.Single(l => l.Guid == row.Line.Guid),
             row.Quantity, row.Warehouse, row.Damaged)).ToList();
         quote = fresh; rows.Clear(); rows.AddRange(updated);
         foreach (var row in rows) lineLabels[row.Line.Guid].Text = LineText(row.Line);
         quoteReady = true;
-        SetEditable(true); Preview();
     }
-    void Preview()
+    static bool SameCalculation(ReturnQuote a, ReturnQuote b) =>
+        a.SaleGuid == b.SaleGuid && a.DebtAccountGuid == b.DebtAccountGuid &&
+        a.CustomerGuid == b.CustomerGuid && a.AccountBalanceMinor == b.AccountBalanceMinor &&
+        a.RemainingFee == b.RemainingFee &&
+        a.Lines.OrderBy(l => l.Guid).SequenceEqual(b.Lines.OrderBy(l => l.Guid));
+    void Preview(bool updatePayments = true)
     {
         if (submitted != null || !quoteReady) return;
         try {
@@ -118,17 +126,17 @@ public sealed class ReturnDialog : Window
                 var l = row.Line; sum += ReturnAccounting.Calculate(l.Sold, l.Revenue, l.Cost,
                     new(l.Returned, l.Refunded, l.CostBasis), qty, row.Damaged.IsChecked != true).Refund; }
             if (sum == 0) {
-                total.Text = "Qaytariladigan summa: 0 so‘m"; cash.Text = card.Text = "0";
+                total.Text = "Qaytariladigan summa: 0 so‘m"; if (updatePayments) cash.Text = card.Text = "0";
             } else if (quote.DebtAccountGuid != null) {
                 var sumMinor = checked((long)Math.Round(sum * 100, MidpointRounding.AwayFromZero));
                 var split = DebtAccounting.SplitReturn(sumMinor, quote.AccountBalanceMinor);
                 var offset = split.DebtOffsetMinor / 100.0m;
                 var refund = split.RefundMinor / 100.0m;
                 total.Text = $"Qaytariladigan tovar: {sum:N2} so‘m | Qarzdan chegiriladi: {offset:N2} so‘m | Xaridorga to‘lanadi: {refund:N2} so‘m";
-                cash.Text = refund.ToString(CultureInfo.InvariantCulture); card.Text = "0";
+                if (updatePayments) { cash.Text = refund.ToString(CultureInfo.InvariantCulture); card.Text = "0"; }
             } else {
                 total.Text = $"Qaytariladigan summa: {sum:N2} so‘m";
-                cash.Text = sum.ToString(CultureInfo.InvariantCulture); card.Text = "0";
+                if (updatePayments) { cash.Text = sum.ToString(CultureInfo.InvariantCulture); card.Text = "0"; }
             }
         } catch (Exception e) { total.Text = e.Message; }
     }
@@ -140,6 +148,14 @@ public sealed class ReturnDialog : Window
             if (submitted == null)
             {
                 if (!quoteReady) throw new InvalidOperationException("Ma’lumot yangilanmadi. Oynani qayta oching.");
+                var fresh = store.Quote(quote.SaleGuid);
+                var changed = !SameCalculation(quote, fresh);
+                ApplyQuote(fresh);
+                if (changed) {
+                    Preview(updatePayments: false);
+                    MessageBox.Show(this, "Qarz balansi, qaytarilgan miqdor yoki komissiya o‘zgargan. Hisob yangilandi. Miqdor, naqd/karta va komissiyani tekshirib, qayta tasdiqlang. Hozircha qaytarish saqlanmadi.", "Hisob yangilandi");
+                    return;
+                }
                 // Build before assigning: malformed input must not freeze a draft.
                 var request = new ReturnRequest(requestId, quote.SaleGuid, reason.Text.Trim(), Number(cash.Text), Number(card.Text), Number(fee.Text),
                     rows.Where(r => Number(r.Quantity.Text) != 0).Select(r => new ReturnSelection(r.Line.Guid, Number(r.Quantity.Text),
@@ -180,6 +196,8 @@ public sealed class ReturnDialog : Window
             if (saved) {
                 MessageBox.Show(this, "Qaytarish saqlangan. Oynani qayta ochib oldingi natijani tekshiring. " + e.Message, "Qaytarish");
                 Close();
+            } else if (submitted == null) {
+                MessageBox.Show(this, "Joriy hisobni tekshirib bo‘lmadi. Qaytarish yuborilmadi; qayta urinib ko‘ring. " + e.Message, "Qaytarish");
             } else {
                 MessageBox.Show(this, "Natijani tekshirish uchun aynan shu so‘rovni qayta tasdiqlang. " + e.Message, "Qaytarish");
             }

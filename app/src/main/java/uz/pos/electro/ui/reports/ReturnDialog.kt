@@ -56,8 +56,32 @@ private fun validateReturnQuote(value: JSONObject, saleGuid: String, isDebt: Boo
         }
         // Strict integer parsing: missing/invalid balances must never turn into zero.
         value.get("AccountBalanceMinor").toString().toLong()
+        require(value.getString("CustomerGuid").isNotBlank())
     }
+    val remainingFee = value.get("RemainingFee").toString().toBigDecimal()
+    require(remainingFee.scale() in -16..16 && remainingFee.precision() <= 32 && remainingFee.signum() >= 0) {
+        "Qaytariladigan komissiya ma’lumoti noto‘g‘ri"
+    }
+    value.put("RemainingFee", remainingFee.toPlainString())
     return value
+}
+
+// Compare financial values, not JSON field order or decimal formatting.
+private fun sameReturnCalculation(a: JSONObject, b: JSONObject, isDebt: Boolean): Boolean {
+    fun signature(q: JSONObject): List<String> {
+        fun decimal(value: Any) = value.toString().toBigDecimal().stripTrailingZeros().toPlainString()
+        val fields = mutableListOf(q.getString("SaleGuid"), decimal(q.get("RemainingFee")))
+        if (isDebt) fields.addAll(listOf(q.getString("DebtAccountGuid"), q.getString("CustomerGuid"), q.get("AccountBalanceMinor").toString()))
+        val lines = q.getJSONArray("Lines")
+        val sorted = (0 until lines.length()).map { lines.getJSONObject(it) }.sortedBy { it.getString("Guid") }
+        for (line in sorted) {
+            fields.add(line.getString("Guid"))
+            fields.add(line.getString("WarehouseGuid"))
+            for (key in listOf("Sold", "Returned", "Revenue", "Refunded")) fields.add(decimal(line.get(key)))
+        }
+        return fields
+    }
+    return signature(a) == signature(b)
 }
 
 @Composable
@@ -116,6 +140,7 @@ fun ReturnDialog(receipt: SaleWithItems, viewModel: ReportsViewModel, onDismiss:
         val cashValue = paymentNumber(cash)
         val cardValue = paymentNumber(card)
         val feeValue = paymentNumber(fee)
+        require(feeValue <= requireNotNull(quote).get("RemainingFee").toString().toBigDecimal()) { "Qaytarilgan komissiya qolgan komissiyadan oshmasin" }
         val expectedRefund = if (isDebt) BigDecimal.valueOf(debtSplit(totalSum).refundMinor).movePointLeft(2) else totalSum
         require((cashValue + cardValue).compareTo(expectedRefund) == 0) { "Naqd va karta yig'indisini tekshiring" }
         return JSONObject().put("RequestGuid", requestId).put("SaleGuid", receipt.sale.guid).put("Reason", reason)
@@ -244,7 +269,19 @@ fun ReturnDialog(receipt: SaleWithItems, viewModel: ReportsViewModel, onDismiss:
                     Button(enabled = !busy && draftLoaded && (state != "draft" || (quote != null && expectedRefund != null && amount != null && amount.signum() > 0)), onClick = {
                         busy = true
                         scope.launch { try {
-                            if (state == "draft") viewModel.returnSync.saveReturnDraft(payload())
+                            if (state == "draft") {
+                                // Refresh only a new request. An uncertain submitted request
+                                // must reach idempotent replay without requiring a new quote.
+                                val fresh = validateReturnQuote(viewModel.returnSync.quoteReturn(receipt.sale.guid), receipt.sale.guid, isDebt)
+                                val previous = quote
+                                val changed = previous == null || !sameReturnCalculation(previous, fresh, isDebt)
+                                quote = fresh
+                                if (changed) {
+                                    message = "Qarz balansi, qaytarilgan miqdor yoki komissiya o‘zgargan. Hisob yangilandi. Miqdor, naqd/karta va komissiyani tekshirib, qayta tasdiqlang. Hozircha qaytarish yuborilmadi."
+                                    return@launch
+                                }
+                                viewModel.returnSync.saveReturnDraft(payload())
+                            }
                             state = "submitted"; result = viewModel.returnSync.confirmReturn(receipt.sale.guid); state = "confirmed"
                         } catch (e: CancellationException) { throw e
                         } catch (e: Exception) {
