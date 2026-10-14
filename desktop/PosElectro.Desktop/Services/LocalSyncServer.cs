@@ -352,7 +352,10 @@ namespace PosElectro.Desktop.Services
                             bool full=query.TryGetValue("full",out var fullValue) && fullValue=="1";
                             using var db=store.Open(); using var tx=db.BeginTransaction();
                             long high=Convert.ToInt64(WifiSyncStore.Scalar(db,tx,"SELECT COALESCE(MAX(seq),0) FROM sync_journal"));
-                            var customersArray = WifiSyncStore.RawRows(db, tx, "SELECT guid, name, phone, note, archived, revision, created_at FROM debt_customers WHERE store_guid=@store", ("@store", _debtStoreGuid));
+                            bool hasCustomersTable = Convert.ToInt64(WifiSyncStore.Scalar(db, tx, "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='debt_customers'")) > 0;
+                            var customersArray = hasCustomersTable
+                                ? WifiSyncStore.RawRows(db, tx, "SELECT guid, name, phone, note, archived, revision, created_at FROM debt_customers WHERE store_guid=@store", ("@store", _debtStoreGuid))
+                                : new JArray();
                             if(cursor<0 || cursor>high)
                             {
                                 tx.Commit();
@@ -373,7 +376,7 @@ namespace PosElectro.Desktop.Services
                                 if(!full && kind!=null && DebtExtendedWire.Supports(kind)) { returnedCursor=maxSeq; continue; }
                                 if(!Guid.TryParseExact(groupId,"D",out _))continue;
                                 var wire=_debtInbox.ExportApplied(db,tx,groupId);
-                                if(wire==null)throw new InvalidOperationException("Qarz paketi topilmadi: "+groupId);
+                                if(wire==null) { returnedCursor=maxSeq; continue; }
                                 if(envelopes.Count>=(full?64:250) || totalChars+wire.Length>6*1024*1024)break;
                                 envelopes.Add(wire);sequences[groupId]=maxSeq; totalChars+=wire.Length; returnedCursor=maxSeq;
                             }

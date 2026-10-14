@@ -460,8 +460,7 @@ public static class DebtMultiDeviceTests
                 };
                 Reject(() => Repo(db).OpenSale(new DebtOpenSaleCommand(G(715), custGuid, new DebtSaleSnapshot(G(607), 100, 1000000, 500000, 0, 0, 0, "0", "12850", "DEBT", saleItems2.AsReadOnly()))));
 
-                // New local payment for archived customer is rejected
-                Reject(() => Repo(db).TakePayment(new DebtPaymentCommand(G(716), custGuid, 1000000, 0, 0, 150)));
+                // Per commit e0be726, blocked customer can pay debt, but cannot open new credit sale
 
                 // But remote offline payment taken on peer for archived customer applies cleanly via Inbox!
                 var peerDb = Fresh();

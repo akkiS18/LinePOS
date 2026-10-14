@@ -59,7 +59,8 @@ static class DebtRepositoryTests
             // The same frozen command remains retryable after contact metadata changes.
             using(var c=new SqliteConnection("Data Source="+path)) { c.Open();Exec(c,null,"UPDATE debt_customers SET name='Renamed',archived=1"); }
             repo.CreateCustomer(customer);Repo().TakePayment(payment);
-            Reject(()=>repo.TakePayment(payment with {RequestGuid=G(70)}));
+            // Blocked customer CAN make debt payments (commit e0be726), but CANNOT open new credit sale
+            Reject(()=>repo.OpenSale(open with {RequestGuid=G(70),SaleGuid=G(71)},(c,t)=>SaveSale(c,t,G(71))));
             using(var c=new SqliteConnection("Data Source="+path)) { c.Open();Exec(c,null,"UPDATE debt_customers SET archived=0"); }
             var before=Count(path,"sync_journal");
             Reject(()=>repo.OpenSale(open with {RequestGuid=G(7),SaleGuid=G(8)},(c,t)=>{SaveSale(c,t,G(8));throw new InvalidOperationException("Crash before debt");}));

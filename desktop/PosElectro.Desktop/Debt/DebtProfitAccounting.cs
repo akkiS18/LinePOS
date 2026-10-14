@@ -37,4 +37,5 @@ public static class DebtProfitAccounting
             var target = i == weights.Count-1 ? amount : Round(Math.Round(amount*cumulative/(sum==0?weights.Count:sum),16,MidpointRounding.AwayFromZero));
             var part=checked(target-previous); previous=target; return part;
         }).ToList();
+    }
 }

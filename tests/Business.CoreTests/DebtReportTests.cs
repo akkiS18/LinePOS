@@ -290,9 +290,11 @@ static class DebtReportTests
                 12850,
                 categoryFilter: "Kabellar",
                 warehouseGuidFilter: whGuid);
-            Check(detailedItems.Count == 1, $"Expected 1 item for Kabellar / wh-main, got {detailedItems.Count}");
-            Check(detailedItems[0].Category == "Kabellar", "Item category mismatch");
-            Check(detailedItems[0].WarehouseGuid == whGuid, "Warehouse guid mismatch");
+            Check(detailedItems.Count(x => !x.ProfitOnly) == 1, $"Expected 1 sale line for Kabellar / wh-main, got {detailedItems.Count(x => !x.ProfitOnly)}");
+            Check(detailedItems.Sum(x => x.Quantity) == 1, "Detailed report items sum of quantity must be 1");
+            Check(detailedItems.Sum(x => x.Profit) == 8000, "Recognised profit on Day 1 advance must be 8,000 UZS");
+            Check(detailedItems.All(x => x.Category == "Kabellar"), "Item category mismatch");
+            Check(detailedItems.All(x => x.WarehouseGuid == whGuid), "Warehouse guid mismatch");
 
             // Filter with non-matching category
             var emptyItems = dbContext.GetDetailedReportItems(

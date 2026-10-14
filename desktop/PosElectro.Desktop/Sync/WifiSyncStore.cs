@@ -73,10 +73,12 @@ public sealed class WifiSyncStore
             result[table=="product_stocks"?"productStocks":table]=rows;
         }
         // Return records are immutable and their line/stock effects share this snapshot.
-        result["returns"] = RawRows(db,tx,$"SELECT * FROM returns WHERE {since}=0 OR guid IN (SELECT entity_guid FROM sync_journal WHERE kind='return' AND seq>{since} AND seq<={high})");
-        result["returnItems"] = RawRows(db,tx,$"SELECT * FROM return_items WHERE {since}=0 OR return_guid IN (SELECT entity_guid FROM sync_journal WHERE kind='return' AND seq>{since} AND seq<={high})");
-        result["returnQuarantine"] = RawRows(db,tx,"SELECT * FROM return_quarantine");
-        result["customers"] = RawRows(db,tx,"SELECT guid, name, phone, note, archived, revision, created_at FROM debt_customers");
+        bool hasReturns = Convert.ToInt64(Scalar(db,tx,"SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='returns'")) > 0;
+        result["returns"] = hasReturns ? RawRows(db,tx,$"SELECT * FROM returns WHERE {since}=0 OR guid IN (SELECT entity_guid FROM sync_journal WHERE kind='return' AND seq>{since} AND seq<={high})") : new JArray();
+        result["returnItems"] = hasReturns ? RawRows(db,tx,$"SELECT * FROM return_items WHERE {since}=0 OR return_guid IN (SELECT entity_guid FROM sync_journal WHERE kind='return' AND seq>{since} AND seq<={high})") : new JArray();
+        result["returnQuarantine"] = hasReturns ? RawRows(db,tx,"SELECT * FROM return_quarantine") : new JArray();
+        bool hasCustomers = Convert.ToInt64(Scalar(db,tx,"SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='debt_customers'")) > 0;
+        result["customers"] = hasCustomers ? RawRows(db,tx,"SELECT guid, name, phone, note, archived, revision, created_at FROM debt_customers") : new JArray();
         tx.Commit(); return result;
     }
     internal static JArray RawRows(SqliteConnection db, SqliteTransaction tx, string sql, params (string,object?)[] args)
