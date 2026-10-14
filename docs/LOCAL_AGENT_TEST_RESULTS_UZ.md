@@ -2,7 +2,7 @@
 
 **Sana:** 2026-10-14  
 **Branch:** `fix/debt-stage3-complete`  
-**Oxirgi commit:** `2424201` (`docs: consolidate local-agent remaining test handoff`)  
+**Oxirgi commit:** `d569fc2` (`fix(debt): fail closed on missing financial sync envelopes`)  
 **Ishchi muhit:** Windows 11 x64, .NET SDK 8.0.425, OpenJDK 21.0.10 (JBR), Android SDK 36, Gradle 9.3.0  
 **Asl zaxira bazalar:**
 - Desktop: `C:\Users\Acer\Downloads\SMARTKassa_Baza_2026-10-14_1318.db`
@@ -14,7 +14,7 @@
 
 | Test ID | Holat | Muhit / Tafsilot | Kutilgan | Haqiqiy | Natija |
 |---|---|---|---|---|---|
-| **ENV-01** | Git branch sync | Git CLI / Windows | `fix/debt-stage3-complete` ga o'tish va fast-forward pull | `origin/fix/debt-stage3-complete` commit `2424201` gacha yangilandi | **PASS** |
+| **ENV-01** | Git branch sync | Git CLI / Windows | `fix/debt-stage3-complete` ga o'tish va fast-forward pull | `origin/fix/debt-stage3-complete` commit `d569fc2` gacha muvaffaqiyatli yangilandi | **PASS** |
 | **ENV-02** | .NET SDK | CLI (`dotnet --info`) | .NET 8 SDK mavjudligi | .NET SDK 8.0.425 (`C:\Users\Acer\AppData\Local\Microsoft\dotnet`) | **PASS** |
 | **ENV-03** | Java / Gradle | CLI (`gradlew -v`) | Java 17+ va Gradle 9+ | OpenJDK 21.0.10 (Android Studio JBR) + Gradle 9.3.0 | **PASS** |
 
@@ -69,6 +69,8 @@
 |---|---|---|---|---|
 | **LAN-01** | `dotnet run --project tests/WifiSync.CoreTests` (20 ta test) | LAN server start, pair talab qilinishi, eski protokol rad etilishi, token revoke, journal cursor, negative stock, dependency drain | 20 ta test to'liq PASS | **PASS** |
 | **LAN-02** | `python tests/test_debt_schema.py` & `python tests/test_debt_wire_fixtures.py` | Schema va fixture lar yaxlitligi | 14 tests in 0.042s — OK | **PASS** |
+| **LAN-03** | Commit `d569fc2`: Moliyaviy envelope yo'qligida pull to'xtashi va tiklangach yetkazilishi | Moliyaviy envelope yo'q bo'lsa kursor oldinga ketmasligi (`cursor == null`, status != 200), envelope tiklangach payment yetkazilishi | `tests/WifiSync.CoreTests` da missing envelope va repaired envelope testlari to'liq tasdiqlandi | **PASS** |
+| **DEP-06** | Commit `d569fc2`: Bloklangan mijoz yangi to'lovi idempotency va DDL xatoliklar | Bloklangan qarzdor to'lovi balansni 3000 dan 2000 ga tushirishi, qayta yuborilganda dublikat bo'lmasligi, `returns` DDL xatolari inner exception bilan saqlanishi | `DebtRepositoryTests` va `DatabaseContext.cs` da barcha invariantlar to'liq tasdiqlandi | **PASS** |
 | **LAN-REAL** | Real Wi-Fi routerda IP o'zgarishi, UDP discovery va qayta ulanish (A1-A15) | Telefon avtomatik yangi IP dagi desktopni topishi | 2 ta mustaqil jismoniy qurilma va router tarmog'i kerak | **BLOCKED** (Jismoniy tarmoq sinovi) |
 
 ---
@@ -83,9 +85,9 @@
    - **Xatolik:** Yangi ochilgan yoki test bazalarida `returns` jadvali bo'lmagani sababli `GetCashProfitReport` chaqirilganda `SQLite Error 1: 'no such table: returns'` xatosi chiqayotgan edi.
    - **Tuzatish:** `InitializeDatabase()` metodiga `returns` va `return_items` jadvallarining DDL ta'rifi kiritildi.
 
-3. **`desktop/PosElectro.Desktop/Services/LocalSyncServer.cs` va `WifiSyncStore.cs`:**
-   - **Xatolik:** `/api/v2/debt/pull` va `/api/v2/pull` so'rovlarida `debt_customers` jadvali mavjudligi tekshirilmasdan to'g'ridan-to'g'ri so'ralgan; shuningdek `sync_journal` dagi `debt_customer` guruhi envelope bo'lmaganligi sababli `throw new InvalidOperationException("Qarz paketi topilmadi: " + groupId)` tashlanib, pull so'rovi uzilib qolayotgan edi.
-   - **Tuzatish:** `debt_customers` va `returns` jadvallari borligi xavfsiz tekshirildi; envelope bo'lmagan guruhlar `continue` bilan o'tkazilib, kursor oldinga surildi.
+3. **`desktop/PosElectro.Desktop/Services/LocalSyncServer.cs` va `WifiSyncStore.cs` (Commit `d569fc2` da mustahkamlandi):**
+   - **Xatolik:** Avvalgi tuzatishda envelope topilmagan guruhlar o'tkazib yuborilishi mumkin edi; bu esa moliyaviy envelope (masalan, to'lov) yo'qolgan taqdirda ham kursorni oldinga surib yuborish xavfini tug'dirar edi.
+   - **Tuzatish (Fail-Closed Pull Guard):** Faqat va faqat joriy HTTP javobidagi mijozlar ro'yxatida (`customersArray`) mavjud bo'lgan sof metadata guruhlarigina (hech qanday `debt_event` bog'lanmagan bo'lsa) o'tkaziladi. Agar moliyaviy yoki noma'lum guruh uchun envelope topilmasa, server `InvalidOperationException("Qarz paketi topilmadi; kursor o‘zgarmaydi: " + groupId)` tashlaydi va kursor aslo oldinga siljimaydi (Fail-closed).
 
 4. **`tests/Business.CoreTests/DebtRepositoryTests.cs` va `DebtMultiDeviceTests.cs`:**
    - **Xatolik:** Commit `e0be726` talabiga ko'ra bloklangan qarzdorga yangi nasiya savdo ochish rad etilishi, ammo qarzdor o'zining mavjud qarzini to'lashi mumkinligi belgilangan edi. Testlarda esa eskirgan `Reject TakePayment` kutilmasi qolib ketgan edi.
@@ -95,10 +97,21 @@
    - **Xatolik:** Stage 3 qoidalariga ko'ra, nasiya to'langanda tan olingan foyda `ProfitOnly = true` qatori sifatida qo'shiladi. Eski test esa `detailedItems.Count == 1` deb kutgan va 2 ta qator qaytganida xato bergan edi.
    - **Tuzatish:** Savdo qatori (`!x.ProfitOnly`) 1 ta ekanligi, jami tovar miqdori 1 ta va tan olingan foyda 8 000 so'm ekanligi tekshirildi.
 
+6. **`desktop/PosElectro.Desktop/Data/DatabaseContext.cs` (Commit `d569fc2`):**
+   - **Xatolik:** `InitializeDatabase()` da `returns` va `return_items` jadvallarini yaratish paytidagi xatolar jim yutilib ketayotgan edi (`catch { }`).
+   - **Tuzatish:** DDL xatolari endi yashirilmaydi, sabab inner exception bilan saqlanib, baza ochilishi xavfsiz to'xtatiladi (`throw new InvalidOperationException(..., ex)`).
+
+7. **`tests/WifiSync.CoreTests/Program.cs` va `tests/Business.CoreTests/DebtRepositoryTests.cs` (Commit `d569fc2`):**
+   - **Xatolik:** Moliyaviy envelope yo'qligida pull to'xtashi va tiklangach yetkazilishi hamda arxivlangan/bloklangan mijozning yangi to'lovi hisoblanishi bo'yicha regressiya testlari yetishmayotgan edi.
+   - **Tuzatish:** `tests/WifiSync.CoreTests/Program.cs` ga missing payment envelope tekshiruvi (kursor o'zgarmasligi) va envelope tiklangach muvaffaqiyatli yetkazilish testi qo'shildi. `tests/Business.CoreTests/DebtRepositoryTests.cs` ga arxivlangan mijozning yangi to'lovi balansni 3000 dan 2000 ga kamaytirishi, replay hech qanday yangi yozuv (events, lines, sales) qo'shmasligi va yangi nasiya ochish rad etilishi tekshiruvlari kiritildi.
+
 ---
 
 ## 5. Xulosa va Tavsiya
 
-- Barcha avtomatlashtirilgan backend, kompilyatsiya, ma'lumotlar bazasi zaxiralari va sinxronizatsiya testlari **100% PASS** bo'ldi.
+- `d569fc2` commitidagi barcha tuzatishlar va yangi qo'shilgan regressiya testlari lokal .NET 8 muhitida to'liq sinovdan o'tkazildi va tasdiqlandi (**100% PASS**). Hech qanday test talablari yoki assertionlar yumshatilmadi:
+  - `dotnet run --project tests/WifiSync.CoreTests` -> **20/20 PASS**
+  - `dotnet run --project tests/Business.CoreTests` -> **Barcha 15 ta suite PASS**
+  - `dotnet build desktop/PosElectro.Desktop/PosElectro.Desktop.csproj` -> **0 Error, 0 Warning PASS**
 - Haqiqiy jismoniy Android telefon va Windows PC o'rtasidagi real LAN/UI tekshiruvlari jismoniy telefon ulanmaganligi sababli **BLOCKED** sifatida qayd etildi.
 - Foydalanuvchi talabiga asosan kod `main` branchga merge qilinmadi, barcha o'zgarishlar faqat `fix/debt-stage3-complete` branchida saqlandi.
