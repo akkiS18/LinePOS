@@ -105,8 +105,10 @@ fun ReturnDialog(receipt: SaleWithItems, viewModel: ReportsViewModel, onDismiss:
     var result by remember { mutableStateOf<JSONObject?>(null) }
     var busy by remember { mutableStateOf(true) }
     var draftLoaded by remember { mutableStateOf(false) }
+    var confirmation by remember { mutableStateOf<JSONObject?>(null) }
+    var confirmationOffset by remember { mutableStateOf(BigDecimal.ZERO) }
     val isDebt = receipt.sale.paymentType == PaymentType.DEBT
-    val editable = !busy && draftLoaded && quote != null && state == "draft"
+    val editable = !busy && confirmation == null && draftLoaded && quote != null && state == "draft"
     fun number(value: String) = returnNumber(value)
     fun paymentNumber(value: String): BigDecimal = number(value).also {
         require(it.stripTrailingZeros().scale() <= 2) { "Pul summasida ko‘pi bilan 2 kasr xona bo‘lsin" }
@@ -210,7 +212,7 @@ fun ReturnDialog(receipt: SaleWithItems, viewModel: ReportsViewModel, onDismiss:
             busy = false
         }
     }
-    Dialog(onDismissRequest = { if (!busy) onDismiss() }) {
+    Dialog(onDismissRequest = { if (!busy && confirmation == null) onDismiss() }) {
         Surface(shape = MaterialTheme.shapes.large) {
             Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
                 Text("Mahsulot qaytarish", style = MaterialTheme.typography.titleLarge)
@@ -273,16 +275,22 @@ fun ReturnDialog(receipt: SaleWithItems, viewModel: ReportsViewModel, onDismiss:
                                 // Refresh only a new request. An uncertain submitted request
                                 // must reach idempotent replay without requiring a new quote.
                                 val fresh = validateReturnQuote(viewModel.returnSync.quoteReturn(receipt.sale.guid), receipt.sale.guid, isDebt)
-                                val previous = quote
-                                val changed = previous == null || !sameReturnCalculation(previous, fresh, isDebt)
                                 quote = fresh
-                                if (changed) {
-                                    message = "Qarz balansi, qaytarilgan miqdor yoki komissiya o‘zgargan. Hisob yangilandi. Miqdor, naqd/karta va komissiyani tekshirib, qayta tasdiqlang. Hozircha qaytarish yuborilmadi."
-                                    return@launch
+                                val total = refund()
+                                val split = if (isDebt) debtSplit(total) else null
+                                val expected = split?.let { BigDecimal.valueOf(it.refundMinor).movePointLeft(2) } ?: total
+                                if ((paymentNumber(cash) + paymentNumber(card)).compareTo(expected) != 0) {
+                                    val keptCard = paymentNumber(card).min(expected)
+                                    card = keptCard.toPlainString()
+                                    cash = (expected - keptCard).toPlainString()
                                 }
-                                viewModel.returnSync.saveReturnDraft(payload())
+                                confirmationOffset = split?.let { BigDecimal.valueOf(it.debtOffsetMinor).movePointLeft(2) } ?: BigDecimal.ZERO
+                                confirmation = payload()
+                                return@launch
                             }
                             state = "submitted"; result = viewModel.returnSync.confirmReturn(receipt.sale.guid); state = "confirmed"
+                            viewModel.returnSync.acknowledgeReturn(receipt.sale.guid)
+                            onDismiss()
                         } catch (e: CancellationException) { throw e
                         } catch (e: Exception) {
                             message = e.message ?: "Aloqa xatosi — shu so'rovni qayta tekshiring"
@@ -297,6 +305,44 @@ fun ReturnDialog(receipt: SaleWithItems, viewModel: ReportsViewModel, onDismiss:
             }
         }
     }
+    confirmation?.let { prepared ->
+        val refundValue = prepared.getString("CashRefund").toBigDecimal() + prepared.getString("CardRefund").toBigDecimal()
+        AlertDialog(
+            onDismissRequest = { if (!busy) confirmation = null },
+            title = { Text("Qaytarish") },
+            text = { Column {
+                Text("Mijozga qaytariladi: ${refundValue.toPlainString()} so‘m")
+                if (confirmationOffset.signum() > 0) Text("Qarzdan chegiriladi: ${confirmationOffset.toPlainString()} so‘m")
+                if (prepared.getString("CardRefund").toBigDecimal().signum() > 0)
+                    Text("Naqd: ${prepared.getString("CashRefund")} · Karta: ${prepared.getString("CardRefund")}")
+            } },
+            dismissButton = { TextButton(enabled = !busy, onClick = { confirmation = null }) { Text("Yo‘q") } },
+            confirmButton = { TextButton(enabled = !busy, onClick = {
+                busy = true
+                scope.launch {
+                    try {
+                        // Persist exactly the amounts the cashier saw. Server revalidates
+                        // atomically; an uncertain request retains its original ID.
+                        viewModel.returnSync.saveReturnDraft(prepared)
+                        confirmation = null
+                        state = "submitted"
+                        result = viewModel.returnSync.confirmReturn(receipt.sale.guid)
+                        state = "confirmed"
+                        viewModel.returnSync.acknowledgeReturn(receipt.sale.guid)
+                        onDismiss()
+                    } catch (e: CancellationException) { throw e
+                    } catch (e: Exception) {
+                        confirmation = null
+                        message = e.message ?: "Qaytarish natijasini tekshiring"
+                        try { state = viewModel.returnSync.getReturnDraft(receipt.sale.guid)?.getString("state") ?: "draft" }
+                        catch (cancel: CancellationException) { throw cancel }
+                        catch (_: Exception) { draftLoaded = false }
+                    } finally { busy = false }
+                }
+            }) { Text("Ha, qaytarish") } }
+        )
+    }
+
 }
 
 @Composable
@@ -334,6 +380,8 @@ private fun ReturnReversalDialog(receipt: SaleWithItems, viewModel: ReportsViewM
                     require(reason.isNotBlank()) { "Sababni kiriting" }
                     if(!submitted) viewModel.returnSync.saveReturnDraft(JSONObject().put("RequestGuid", id).put("SaleGuid",receipt.sale.guid).put("ReturnGuid",receipt.sale.guid).put("Reason",reason))
                     submitted = true; result = viewModel.returnSync.confirmReturn(receipt.sale.guid)
+                    viewModel.returnSync.acknowledgeReturn(receipt.sale.guid)
+                    onDismiss()
                 }
             } catch(e: CancellationException) { throw e
             } catch(e: Exception) {

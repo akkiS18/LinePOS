@@ -665,7 +665,7 @@
                                 <DataGridTemplateColumn Header="Holati" Width="*">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Grid VerticalAlignment="Center" Margin="0,3"><Grid.ColumnDefinitions><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                                                 <Ellipse Width="6" Height="6" Margin="0,0,6,0" VerticalAlignment="Center">
                                                     <Ellipse.Style>
                                                         <Style TargetType="Ellipse">
@@ -681,7 +681,7 @@
                                                         </Style>
                                                     </Ellipse.Style>
                                                 </Ellipse>
-                                                <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center">
+                                                <TextBlock Grid.Column="1" Text="{Binding StatusText}" TextWrapping="Wrap" VerticalAlignment="Center" ToolTip="{Binding StatusText}">
                                                     <TextBlock.Style>
                                                         <Style TargetType="TextBlock">
                                                             <Setter Property="Foreground" Value="#F87171"/>
@@ -696,7 +696,7 @@
                                                         </Style>
                                                     </TextBlock.Style>
                                                 </TextBlock>
-                                            </StackPanel>
+                                            </Grid>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>

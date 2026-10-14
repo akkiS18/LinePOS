@@ -145,7 +145,7 @@ object ExcelExporter {
                             <td>Sotish Narxi (so'm)</td>
                             <td>Jami Summa (so'm)</td>
                             <td>Nasiya (so'm)</td>
-                            <td>Sof Foyda (so'm)</td>
+                            <td>Foyda / ta’sir<br/>(so'm)</td>
                             <td>Rentabellik %</td>
                         </tr>
             """.trimIndent())

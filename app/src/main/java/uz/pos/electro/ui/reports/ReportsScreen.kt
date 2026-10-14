@@ -2,6 +2,7 @@ package uz.pos.electro.ui.reports
 
 import android.app.DatePickerDialog
 import android.content.Context
+import uz.pos.electro.data.model.PaymentType
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -903,9 +904,9 @@ private fun SaleHistoryCard(
                     color = MaterialTheme.colorScheme.primary
                 )
                 val profitText = if (profit < 0)
-                    "Foyda: ${numberFormat.format(profit)} so'm"
+                    "${if (saleWithItems.sale.paymentType in listOf(PaymentType.RETURN, PaymentType.RETURN_REVERSAL)) "Foydaga ta’siri:" else "Foyda:"}\n${numberFormat.format(profit)} so'm"
                 else
-                    "Foyda: +${numberFormat.format(profit)} so'm"
+                    "${if (saleWithItems.sale.paymentType in listOf(PaymentType.RETURN, PaymentType.RETURN_REVERSAL)) "Foydaga ta’siri:" else "Foyda:"}\n+${numberFormat.format(profit)} so'm"
                 val profitColor = if (profit < 0) Color(0xFFEF4444) else LineSecondary
                 Text(
                     text = profitText,
@@ -1019,7 +1020,7 @@ private fun SaleDetailDialog(
                         "${numberFormat.format(profit)} SO'M"
                     else
                         "+${numberFormat.format(profit)} SO'M"
-                    Text("SOF FOYDA:", fontWeight = FontWeight.Bold, color = profitLabelColor)
+                    Text(if (saleWithItems.sale.paymentType in listOf(PaymentType.RETURN, PaymentType.RETURN_REVERSAL)) "FOYDAGA\nTA’SIRI:" else "SOF FOYDA:", fontWeight = FontWeight.Bold, color = profitLabelColor)
                     Text(
                         profitValueText,
                         fontWeight = FontWeight.Bold,

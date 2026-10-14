@@ -55,7 +55,7 @@
                     <TextBlock x:Name="TxtTotalAmount" Text="0 so'm" HorizontalAlignment="Right" Foreground="#F8FAFC" FontWeight="ExtraBold" FontSize="16"/>
                 </Grid>
                 <Grid>
-                    <TextBlock Text="SOF FOYDA:" Foreground="#10B981" FontWeight="Bold" FontSize="14"/>
+                    <TextBlock x:Name="TxtProfitLabel" TextWrapping="Wrap" MaxWidth="150" Text="SOF FOYDA:" Foreground="#10B981" FontWeight="Bold" FontSize="14"/>
                     <TextBlock x:Name="TxtTotalProfit" Text="+0 so'm" HorizontalAlignment="Right" Foreground="#10B981" FontWeight="Bold" FontSize="16"/>
                 </Grid>
             </StackPanel>

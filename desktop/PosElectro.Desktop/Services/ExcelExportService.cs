@@ -165,7 +165,7 @@ namespace PosElectro.Desktop.Services
             <td>Sotish Narxi (so'm)</td>
             <td>Jami Summa (so'm)</td>
             <td>Nasiya (so'm)</td>
-            <td>Sof Foyda (so'm)</td>
+            <td>Foyda / ta’sir<br/>(so'm)</td>
         </tr>");
 
                 for (int i = 0; i < items.Count; i++)

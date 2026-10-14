@@ -22,7 +22,8 @@ namespace PosElectro.Desktop.Views
             TxtTitle.Text = $"Chek #{sale.ReceiptNumber} Tafsilotlari";
             TxtDate.Text = sale.CreatedDateTime.ToString("dd.MM.yyyy HH:mm");
             TxtTotalAmount.Text = $"{sale.TotalAmount:N0} SO'M";
-            TxtTotalProfit.Text = $"+{sale.Profit:N0} SO'M";
+            TxtProfitLabel.Text = sale.PaymentType is PaymentType.RETURN or PaymentType.RETURN_REVERSAL ? "FOYDAGA\nTA’SIRI:" : "SOF FOYDA:";
+            TxtTotalProfit.Text = $"{(sale.Profit > 0 ? "+" : "")}{sale.Profit:N0} SO'M";
 
             GridItems.ItemsSource = sale.Items;
             if (database != null) {
@@ -85,8 +86,10 @@ namespace PosElectro.Desktop.Views
         {
             if (_database == null) return;
             try {
-                if (_sale.PaymentType == PaymentType.RETURN) new ReturnReversalDialog(_database, _sale) { Owner = this }.ShowDialog();
-                else new ReturnDialog(_database, _sale) { Owner = this }.ShowDialog();
+                bool? completed = _sale.PaymentType == PaymentType.RETURN
+                    ? new ReturnReversalDialog(_database, _sale) { Owner = this }.ShowDialog()
+                    : new ReturnDialog(_database, _sale) { Owner = this }.ShowDialog();
+                if (completed == true) Close();
             }
             catch (System.Exception ex) { MessageBox.Show(this, ex.Message, "Qaytarish"); }
         }

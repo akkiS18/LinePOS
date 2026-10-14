@@ -726,7 +726,8 @@
                         <DataGridTextColumn Header="Jami summa" Binding="{Binding TotalAmount, StringFormat='{}{0:N0} so\'m'}" Width="*" FontWeight="Bold"/>
 
                         <!-- Foyda: minus bo'lsa qizil, musbat bo'lsa yashil -->
-                        <DataGridTemplateColumn Header="Foyda" Width="*">
+                        <DataGridTemplateColumn Width="*">
+                            <DataGridTemplateColumn.Header><TextBlock Text="Foyda /&#10;ta’siri" TextWrapping="Wrap" MaxWidth="90"/></DataGridTemplateColumn.Header>
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <TextBlock Text="{Binding ProfitDisplay}" FontWeight="Bold" VerticalAlignment="Center">

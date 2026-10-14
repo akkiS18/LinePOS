@@ -140,6 +140,24 @@ public sealed class ReturnDialog : Window
             }
         } catch (Exception e) { total.Text = e.Message; }
     }
+    bool ConfirmAmounts(string text)
+    {
+        var dialog = new Window { Owner=this, Title="Qaytarish", Width=390,
+            SizeToContent=SizeToContent.Height, ResizeMode=ResizeMode.NoResize,
+            WindowStartupLocation=WindowStartupLocation.CenterOwner,
+            Background=Background, Foreground=Foreground };
+        var panel = new StackPanel { Margin=new Thickness(20) };
+        panel.Children.Add(new TextBlock { Text=text, TextWrapping=TextWrapping.Wrap,
+            FontSize=16, Margin=new Thickness(0,0,0,18) });
+        var buttons = new StackPanel { Orientation=Orientation.Horizontal, HorizontalAlignment=HorizontalAlignment.Right };
+        var no = new Button { Content="Yo‘q", IsCancel=true, MinWidth=80, Padding=new Thickness(12,8,12,8), Margin=new Thickness(0,0,8,0) };
+        var yes = new Button { Content="Ha, qaytarish", MinWidth=120, Padding=new Thickness(12,8,12,8) };
+        no.Click += (_,_) => dialog.DialogResult=false;
+        yes.Click += (_,_) => dialog.DialogResult=true;
+        buttons.Children.Add(no); buttons.Children.Add(yes); panel.Children.Add(buttons);
+        dialog.Content=panel;
+        return dialog.ShowDialog()==true;
+    }
     void Confirm(object sender, RoutedEventArgs args)
     {
         if (saved || !confirm.IsEnabled) return;
@@ -151,15 +169,32 @@ public sealed class ReturnDialog : Window
                 var fresh = store.Quote(quote.SaleGuid);
                 var changed = !SameCalculation(quote, fresh);
                 ApplyQuote(fresh);
-                if (changed) {
-                    Preview(updatePayments: false);
-                    MessageBox.Show(this, "Qarz balansi, qaytarilgan miqdor yoki komissiya o‘zgargan. Hisob yangilandi. Miqdor, naqd/karta va komissiyani tekshirib, qayta tasdiqlang. Hozircha qaytarish saqlanmadi.", "Hisob yangilandi");
-                    return;
-                }
+                if (changed) Preview(updatePayments: false);
                 // Build before assigning: malformed input must not freeze a draft.
                 var request = new ReturnRequest(requestId, quote.SaleGuid, reason.Text.Trim(), Number(cash.Text), Number(card.Text), Number(fee.Text),
                     rows.Where(r => Number(r.Quantity.Text) != 0).Select(r => new ReturnSelection(r.Line.Guid, Number(r.Quantity.Text),
                         (string?)r.Warehouse.SelectedValue ?? "", r.Damaged.IsChecked != true)).ToList());
+                decimal returned = 0;
+                foreach (var item in request.Items) {
+                    var line = quote.Lines.Single(l => l.Guid == item.SaleItemGuid);
+                    returned += ReturnAccounting.Calculate(line.Sold,line.Revenue,line.Cost,
+                        new(line.Returned,line.Refunded,line.CostBasis),item.Quantity,item.Resellable).Refund;
+                }
+                if (returned <= 0) throw new ArgumentException("Qaytariladigan miqdorni kiriting.");
+                var offset = quote.DebtAccountGuid == null ? 0m :
+                    DebtAccounting.SplitReturn(checked((long)(returned * 100)),quote.AccountBalanceMinor).DebtOffsetMinor / 100m;
+                var refund = returned - offset;
+                if (request.CashRefund + request.CardRefund != refund) {
+                    if (!changed) throw new ArgumentException("Naqd va karta yig‘indisi mos emas.");
+                    var keptCard = Math.Min(request.CardRefund,refund);
+                    request = request with { CashRefund = refund-keptCard, CardRefund = keptCard };
+                    cash.Text=request.CashRefund.ToString(CultureInfo.InvariantCulture);
+                    card.Text=request.CardRefund.ToString(CultureInfo.InvariantCulture);
+                }
+                var text = $"Mijozga qaytariladi: {refund:N2} so‘m";
+                if (offset > 0) text += $"\nQarzdan chegiriladi: {offset:N2} so‘m";
+                if (request.CardRefund > 0) text += $"\nNaqd: {request.CashRefund:N2} · Karta: {request.CardRefund:N2}";
+                if (!ConfirmAmounts(text)) return;
                 submitted = request;
             }
             SetEditable(false);
@@ -171,10 +206,6 @@ public sealed class ReturnDialog : Window
             store.FinishDesktopDraft(requestId, result);
             saved = true;
             try { db.RaiseProductsChanged(); } catch { }
-            var msg = result.DebtOffset > 0
-                ? $"Qaytarish saqlandi: RT-{result.Guid.Replace("-", "").ToUpperInvariant()}\nQarzdan chegirildi: {result.DebtOffset:N2} so‘m\nXaridorga qaytarildi: {result.Refund:N2} so‘m"
-                : $"Qaytarish saqlandi: RT-{result.Guid.Replace("-", "").ToUpperInvariant()}\nSumma: {result.Refund:N2} so‘m";
-            MessageBox.Show(this, msg, "Qaytarish");
             store.FinishDesktopDraft(requestId, null);
             DialogResult = true;
         } catch (DesktopReturnRejectedException e) {
