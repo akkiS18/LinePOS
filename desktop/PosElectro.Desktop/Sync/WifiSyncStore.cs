@@ -127,6 +127,10 @@ public sealed class WifiSyncStore
     private static void Stock(SqliteConnection db,SqliteTransaction tx,string guid,string warehouse,double delta)
     {
         if(!double.IsFinite(delta))throw new ArgumentException("Qoldiq soni noto'g'ri.");
+        // Old clients can have zero-delta tombstones for already removed products.
+        // They change no stock, but Push must still journal/ACK their original IDs
+        // so retries remain idempotent and the following pull is not blocked.
+        if(delta == 0d)return;
         if(Scalar(db,tx,"SELECT 1 FROM products WHERE guid=@guid",("@guid",guid))==null || Scalar(db,tx,"SELECT 1 FROM warehouses WHERE guid=@guid",("@guid",warehouse))==null)throw new ArgumentException("Tovar yoki ombor topilmadi; navbat saqlanadi.");
         Exec(db,tx,"INSERT INTO product_stocks(product_guid,warehouse_guid,quantity,updated_at) VALUES(@guid,@wh,@delta,@now) ON CONFLICT(product_guid,warehouse_guid) DO UPDATE SET quantity=quantity+excluded.quantity,updated_at=excluded.updated_at",("@guid",guid),("@wh",warehouse),("@delta",delta),("@now",DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()));
         Exec(db,tx,"UPDATE products SET stock_quantity=(SELECT COALESCE(SUM(quantity),0) FROM product_stocks WHERE product_guid=@guid) WHERE guid=@guid",("@guid",guid));

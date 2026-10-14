@@ -21,11 +21,15 @@ CREATE TRIGGER IF NOT EXISTS sync_warehouses_update AFTER UPDATE ON warehouses W
 -- statement
 CREATE TRIGGER IF NOT EXISTS sync_sales_insert AFTER INSERT ON sales WHEN (SELECT applying FROM sync_control WHERE id=1)=0 BEGIN INSERT INTO sync_journal(op_id,kind,entity_guid,base_revision,group_id) VALUES(lower(hex(randomblob(16))),'sale',NEW.guid,COALESCE((SELECT revision FROM sync_versions WHERE kind='sale' AND entity_guid=NEW.guid),0),(SELECT current_group FROM sync_control WHERE id=1)); END;
 -- statement
-CREATE TRIGGER IF NOT EXISTS sync_stocks_insert AFTER INSERT ON product_stocks WHEN (SELECT applying FROM sync_control WHERE id=1)=0 BEGIN INSERT INTO sync_journal(op_id,kind,entity_guid,warehouse_guid,delta,group_id) VALUES(lower(hex(randomblob(16))),'stock',NEW.product_guid,NEW.warehouse_guid,NEW.quantity,(SELECT current_group FROM sync_control WHERE id=1)); END;
+DROP TRIGGER IF EXISTS sync_stocks_insert;
+-- statement
+CREATE TRIGGER IF NOT EXISTS sync_stocks_insert AFTER INSERT ON product_stocks WHEN (SELECT applying FROM sync_control WHERE id=1)=0 AND NEW.quantity != 0 BEGIN INSERT INTO sync_journal(op_id,kind,entity_guid,warehouse_guid,delta,group_id) VALUES(lower(hex(randomblob(16))),'stock',NEW.product_guid,NEW.warehouse_guid,NEW.quantity,(SELECT current_group FROM sync_control WHERE id=1)); END;
 -- statement
 CREATE TRIGGER IF NOT EXISTS sync_stocks_update AFTER UPDATE ON product_stocks WHEN (SELECT applying FROM sync_control WHERE id=1)=0 AND NEW.quantity IS NOT OLD.quantity BEGIN INSERT INTO sync_journal(op_id,kind,entity_guid,warehouse_guid,delta,group_id) VALUES(lower(hex(randomblob(16))),'stock',NEW.product_guid,NEW.warehouse_guid,NEW.quantity-OLD.quantity,(SELECT current_group FROM sync_control WHERE id=1)); END;
 -- statement
-CREATE TRIGGER IF NOT EXISTS sync_stocks_delete AFTER DELETE ON product_stocks WHEN (SELECT applying FROM sync_control WHERE id=1)=0 BEGIN INSERT INTO sync_journal(op_id,kind,entity_guid,warehouse_guid,delta,group_id) VALUES(lower(hex(randomblob(16))),'stock',OLD.product_guid,OLD.warehouse_guid,-OLD.quantity,(SELECT current_group FROM sync_control WHERE id=1)); END;
+DROP TRIGGER IF EXISTS sync_stocks_delete;
+-- statement
+CREATE TRIGGER IF NOT EXISTS sync_stocks_delete AFTER DELETE ON product_stocks WHEN (SELECT applying FROM sync_control WHERE id=1)=0 AND OLD.quantity != 0 BEGIN INSERT INTO sync_journal(op_id,kind,entity_guid,warehouse_guid,delta,group_id) VALUES(lower(hex(randomblob(16))),'stock',OLD.product_guid,OLD.warehouse_guid,-OLD.quantity,(SELECT current_group FROM sync_control WHERE id=1)); END;
 
 -- statement
 CREATE TABLE IF NOT EXISTS returns (
