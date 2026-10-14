@@ -2,6 +2,14 @@ using PosElectro.Desktop.Data;
 using PosElectro.Desktop.Models;
 using Microsoft.Data.Sqlite;
 
+// Focused returns regression: avoid unrelated report/accounting suites.
+if (args.Contains("--returns")) {
+    ReturnAccountingTests.Run();
+    ReturnStoreTests.Run();
+    DebtReturnAndReversalTests.Run();
+    return;
+}
+
 DebtStage1AccountingTests.Run();
 if (args.Contains("--stage1")) return;
 DebtSyncStoreTests.Run();
