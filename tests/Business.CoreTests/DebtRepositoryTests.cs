@@ -83,6 +83,19 @@ static class DebtRepositoryTests
                 Check(payload==expected.GetProperty("payload").GetString(),"Canonical payload mismatch "+name);
                 Check(Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(payload))).ToLowerInvariant()==expected.GetProperty("hash").GetString(),"Canonical hash mismatch "+name);
             }
+            // A NEW payment (not merely a replay) remains allowed for an archived customer.
+            using(var c=new SqliteConnection("Data Source="+path)) { c.Open();Exec(c,null,"UPDATE debt_customers SET archived=1 WHERE guid=@p0",G(3)); }
+            var archivedPayment=payment with {RequestGuid=G(75),CashMinor=1000,CardMinor=0,FeeMinor=0};
+            var eventsBefore=Count(path,"debt_events");
+            var linesBefore=Count(path,"debt_event_lines");
+            var salesBefore=Count(path,"sales");
+            repo.TakePayment(archivedPayment);
+            Check(repo.ReadAccounts(G(3)).Single().BalanceMinor==2000,"Archived customer payment did not reduce balance");
+            Repo().TakePayment(archivedPayment);
+            Check(repo.ReadAccounts(G(3)).Single().BalanceMinor==2000 && Count(path,"debt_events")==eventsBefore+1
+                && Count(path,"debt_event_lines")==linesBefore+1 && Count(path,"sales")==salesBefore,
+                "Archived customer payment replay duplicated financial effects");
+            Reject(()=>repo.OpenSale(open with {RequestGuid=G(76),SaleGuid=G(77)},(c,t)=>SaveSale(c,t,G(77))));
             Console.WriteLine("PASS debt repository: atomic sale/payment/outbox, restart/concurrent retry, payload/owner/permission guards, held groups, immutable allocation, shared canonical fixtures");
         } finally { SqliteConnection.ClearAllPools();Directory.Delete(dir,true); }
     }

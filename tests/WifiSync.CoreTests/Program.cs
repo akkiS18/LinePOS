@@ -288,6 +288,37 @@ try {
             var allEnvelopes = (JArray)JObject.Parse(pullAllResp.Content.ReadAsStringAsync().Result)["envelopes"]!;
             Assert(allEnvelopes.Any(w => DebtEnvelope.Decode((string)w!, debtStoreGuid).Guid == depReqGuid), "Orphan packet was not drained upon dependency arrival");
 
+            // Customer-only groups are delivered as metadata, without blocking later envelopes.
+            var metadataPull=http.GetAsync("/api/v2/debt/pull?cursor=0&full=1").Result;
+            Assert(metadataPull.IsSuccessStatusCode,"Customer metadata blocked full debt pull");
+            var metadataBody=JObject.Parse(metadataPull.Content.ReadAsStringAsync().Result);
+            Assert(metadataBody["customers"]!.Any(c=>(string?)c["guid"]==missingCustGuid),"Skipped customer not present in response");
+            // Remove a real persisted payment envelope. Neither full nor incremental pull may
+            // acknowledge a cursor past it, even when valid later groups are available.
+            string envelopeKey="debt_envelope_v1:"+depReqGuid;
+            string savedEnvelope;
+            using(var c=store.Open()) {
+                using var cmd=c.CreateCommand();cmd.CommandText="SELECT value FROM sync_meta WHERE key=@key";
+                cmd.Parameters.AddWithValue("@key",envelopeKey);savedEnvelope=(string)cmd.ExecuteScalar()!;
+                Assert(!string.IsNullOrEmpty(savedEnvelope),"Missing payment regression fixture");
+                cmd.CommandText="DELETE FROM sync_meta WHERE key=@key";cmd.ExecuteNonQuery();
+            }
+            try {
+                foreach(var url in new[]{"/api/v2/debt/pull?cursor=0","/api/v2/debt/pull?cursor=0&full=1"}) {
+                    var failed=http.GetAsync(url).Result;
+                    var body=JObject.Parse(failed.Content.ReadAsStringAsync().Result);
+                    Assert(!failed.IsSuccessStatusCode && body["cursor"]==null,"Missing financial envelope silently advanced cursor");
+                }
+            } finally {
+                using var c=store.Open();using var cmd=c.CreateCommand();
+                cmd.CommandText="INSERT INTO sync_meta(key,value) VALUES(@key,@value)";
+                cmd.Parameters.AddWithValue("@key",envelopeKey);cmd.Parameters.AddWithValue("@value",savedEnvelope);cmd.ExecuteNonQuery();
+            }
+            var recovered=http.GetAsync("/api/v2/debt/pull?cursor=0&full=1").Result;
+            Assert(recovered.IsSuccessStatusCode,"Repaired envelope did not recover pull");
+            Assert(JObject.Parse(recovered.Content.ReadAsStringAsync().Result)["envelopes"]!
+                .Any(w=>DebtEnvelope.Decode((string)w!,debtStoreGuid).Guid==depReqGuid),"Recovered payment was skipped");
+
             // Product conflict in sync_conflicts does not break debt operations
             Sql("INSERT INTO sync_conflicts(kind, entity_guid, revision, message) VALUES('product', 'p', 99, 'Test conflict')");
             var debtWithConflictResp = http.GetAsync("/api/v2/debt/pull?cursor=0").Result;

@@ -374,9 +374,19 @@ namespace PosElectro.Desktop.Services
                                 var (groupId,minSeq,maxSeq)=groupList[i];
                                 var kind=WifiSyncStore.Scalar(db,tx,"SELECT kind FROM debt_events WHERE guid=@g",("@g",groupId)) as string;
                                 if(!full && kind!=null && DebtExtendedWire.Supports(kind)) { returnedCursor=maxSeq; continue; }
-                                if(!Guid.TryParseExact(groupId,"D",out _))continue;
+                                if(!Guid.TryParseExact(groupId,"D",out _))throw new InvalidOperationException("Qarz guruhining GUIDi noto‘g‘ri; kursor o‘zgarmaydi.");
                                 var wire=_debtInbox.ExportApplied(db,tx,groupId);
-                                if(wire==null) { returnedCursor=maxSeq; continue; }
+                                if(wire==null)
+                                {
+                                    // Only customer-only metadata already present in this very response
+                                    // may advance without an envelope. Financial groups must fail closed.
+                                    bool customerOnly = kind == null && customersArray.OfType<JObject>().Any(c => (string?)c["guid"] == groupId)
+                                        && Convert.ToInt64(WifiSyncStore.Scalar(db,tx,
+                                            "SELECT COUNT(*) FROM sync_journal WHERE group_id=@g AND (kind<>'debt_customer' OR entity_guid<>@g)",("@g",groupId))) == 0;
+                                    if(!customerOnly)throw new InvalidOperationException("Qarz paketi topilmadi; kursor o‘zgarmaydi: "+groupId);
+                                    returnedCursor=maxSeq;
+                                    continue;
+                                }
                                 if(envelopes.Count>=(full?64:250) || totalChars+wire.Length>6*1024*1024)break;
                                 envelopes.Add(wire);sequences[groupId]=maxSeq; totalChars+=wire.Length; returnedCursor=maxSeq;
                             }

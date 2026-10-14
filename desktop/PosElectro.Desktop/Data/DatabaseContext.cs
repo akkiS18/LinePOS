@@ -617,7 +617,10 @@ namespace PosElectro.Desktop.Data
                 ";
                 retCmd.ExecuteNonQuery();
             }
-            catch { }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException("Qaytarish jadvallarini tayyorlab bo‘lmadi. Baza ochilishi to‘xtatildi.", ex);
+            }
         }
 
         // --- APP SETTINGS OPERATIONS ---
