@@ -1966,8 +1966,8 @@ namespace PosElectro.Desktop.Data
 
             if (ids.Count == 0) return list;
 
-            // Topilgan cheklarni (eng yangisi birinchi) paketlab o'qish
-            var ordered = ids.OrderByDescending(i => i).Take(limit).ToList();
+            // Topilgan cheklarni paketlab o'qish; yakuniy tartib sotuv vaqti bo'yicha (eng yangisi birinchi)
+            var ordered = ids.ToList();
             for (int offset = 0; offset < ordered.Count; offset += 500)
             {
                 var chunk = ordered.Skip(offset).Take(500).ToList();
@@ -1978,11 +1978,12 @@ namespace PosElectro.Desktop.Data
                     names.Add("@i" + i);
                     cmd.Parameters.AddWithValue("@i" + i, chunk[i]);
                 }
-                cmd.CommandText = $"SELECT * FROM sales WHERE id IN ({string.Join(",", names)}) ORDER BY id DESC";
+                cmd.CommandText = $"SELECT * FROM sales WHERE id IN ({string.Join(",", names)})";
                 using var reader = cmd.ExecuteReader();
                 while (reader.Read()) list.Add(ReadSale(reader));
             }
-            list = list.OrderByDescending(s => s.Id).ToList();
+            // id emas, sotuv vaqti bo'yicha: sinxron orqali keyin kelgan eski cheklar yuqoriga chiqib ketmasin
+            list = list.OrderByDescending(s => s.CreatedAt).ThenByDescending(s => s.Id).Take(limit).ToList();
             foreach (var s in list)
             {
                 s.Items = GetSaleItems(s.Id, conn);

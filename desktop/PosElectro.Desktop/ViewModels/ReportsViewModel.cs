@@ -500,7 +500,8 @@ namespace PosElectro.Desktop.ViewModels
                 (catFilter == null || string.Equals(item.Category, catFilter, StringComparison.OrdinalIgnoreCase)) &&
                 (whGuidFilter == null || item.WarehouseGuid == whGuidFilter)).ToList();
             var ids = _reportLines.Where(i=>!i.ProfitOnly).Select(i => i.SaleId).ToHashSet();
-            foreach (var sale in rawSales.Where(s => ids.Contains(s.Id))) {
+            // Ro'yxat har doim sotuv vaqti bo'yicha: eng oxirgi sotilgan birinchi
+            foreach (var sale in rawSales.Where(s => ids.Contains(s.Id)).OrderByDescending(s => s.CreatedAt).ThenByDescending(s => s.Id)) {
                 if(profitReport.Receipts.TryGetValue(sale.Id,out var profit))sale.RecognisedProfit=profit;
                 Sales.Add(sale);
             }

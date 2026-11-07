@@ -188,6 +188,31 @@ namespace PosElectro.Desktop.Tests
         }
 
         [Fact]
+        public void Results_are_newest_sale_first_by_sale_time_not_by_insert_order()
+        {
+            // Sinxron orqali keyin kelgan ESKI chek id bo'yicha oxirida bo'ladi, lekin ro'yxatda pastda turishi kerak
+            var p = _db.GetAllProducts().First(x => x.Name.StartsWith("Kabel"));
+            var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            var newer = NewSale(p, PaymentType.CASH);
+            var olderInsertedLater = NewSale(p, PaymentType.CASH);
+            using (var c = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={_db.DatabaseFilePath}"))
+            {
+                c.Open();
+                using var cmd = c.CreateCommand();
+                cmd.CommandText = "UPDATE sales SET created_at=@t WHERE id=@id";
+                cmd.Parameters.AddWithValue("@t", now + 60_000); cmd.Parameters.AddWithValue("@id", newer.Id); cmd.ExecuteNonQuery();
+                cmd.Parameters["@t"].Value = now - 3_600_000; cmd.Parameters["@id"].Value = olderInsertedLater.Id; cmd.ExecuteNonQuery();
+            }
+            Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+
+            var found = _db.SearchSales("kabel");
+            var times = found.Select(s => s.CreatedAt).ToList();
+            Assert.Equal(times.OrderByDescending(t => t).ToList(), times);            // vaqt bo'yicha kamayish tartibida
+            Assert.Equal(newer.Id, found.First().Id);                                  // eng oxirgi sotilgan birinchi
+            Assert.Equal(olderInsertedLater.Id, found.Last().Id);                      // id kattaligiga qaramay eng eskisi oxirida
+        }
+
+        [Fact]
         public void Reopening_existing_database_keeps_all_data()
         {
             // Yangi versiya o'rnatilganda dastur mavjud bazani qayta ochadi — ombor va cheklar saqlanib qolishi shart
