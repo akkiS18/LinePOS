@@ -652,9 +652,11 @@
                 </Grid>
 
                 <!-- Jadval -->
+                <!-- CanUserSortColumns=False: sarlavha bosilganda ro'yxat tasodifan boshqa tartibga o'tib ketmasin (doim eng oxirgi sotilgan birinchi) -->
                 <DataGrid Grid.Row="1" x:Name="GridSales"
                           ItemsSource="{Binding Sales}" 
                           AutoGenerateColumns="False" 
+                          CanUserSortColumns="False"
                           CanUserAddRows="False"
                           IsReadOnly="True"
                           Background="Transparent" 
