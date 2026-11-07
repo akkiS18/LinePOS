@@ -257,6 +257,37 @@ namespace PosElectro.Desktop.Services
         }
 
         /// <summary>
+        /// Mahsulotlar ro'yxatini aqlli tarzda filtrlash va reyting bo'yicha saralash (Pre-normalized keshdan foydalanib yashin tezligida)
+        /// </summary>
+        public static List<Models.Product> FilterAndRankProducts(
+            IEnumerable<Models.Product> source,
+            string query)
+        {
+            var tokens = PrepareTokens(query);
+            if (tokens.Count == 0) return source.ToList();
+
+            var matches = new List<(Models.Product item, int score)>();
+
+            foreach (var item in source)
+            {
+                var normName = item.NormalizedName;
+                var barcode = item.NormalizedBarcode;
+                var note = item.NormalizedNote;
+
+                if (IsMatch(normName, barcode, note, tokens, out int score))
+                {
+                    matches.Add((item, score));
+                }
+            }
+
+            return matches
+                .OrderByDescending(m => m.score)
+                .ThenBy(m => m.item.Name, StringComparer.CurrentCultureIgnoreCase)
+                .Select(m => m.item)
+                .ToList();
+        }
+
+        /// <summary>
         /// Mahsulotlar ro'yxatini aqlli tarzda filtrlash va reyting bo'yicha saralash
         /// </summary>
         public static List<T> FilterAndRank<T>(
@@ -266,6 +297,11 @@ namespace PosElectro.Desktop.Services
             Func<T, string?> barcodeSelector,
             Func<T, string?> noteSelector)
         {
+            if (source is IEnumerable<Models.Product> prodList)
+            {
+                return (FilterAndRankProducts(prodList, query) as List<T>)!;
+            }
+
             var tokens = PrepareTokens(query);
             if (tokens.Count == 0) return source.ToList();
 

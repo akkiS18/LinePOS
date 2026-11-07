@@ -270,6 +270,20 @@
 
                 <!-- O'ng tomon: Baza zaxirasi va Bog'lanish tugmalari -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- Ombordagi tovarlar tan narxi hisoboti (Excel) -->
+                    <Button Command="{Binding ExportWarehouseCostReportCommand}"
+                            ToolTip="Ombordagi tovarlar tan narxi va toifalar bo'yicha Excel hisobot"
+                            Background="#25FFFFFF" Foreground="#38BDF8" BorderBrush="#45FFFFFF" BorderThickness="1"
+                            Width="36" Height="36" Padding="0" Cursor="Hand" Margin="0,0,10,0">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="8"/>
+                            </Style>
+                        </Button.Resources>
+                        <Path Data="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 2v3H5V5h14zm-8 5v4H5v-4h6zm2 0h6v4h-6v-4zm-2 6v4H5v-4h6zm2 0h6v4h-6v-4z" 
+                              Fill="#38BDF8" Width="16" Height="16" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Button>
+
                     <!-- Karta solig'i foizi (faqat icon, text siz) -->
                     <Button Command="{Binding OpenCardTaxModalCommand}"
                             ToolTip="Karta to'lovi solig'i foizini sozlash"
@@ -722,6 +736,417 @@
                                 Style="{StaticResource SuccessButton}" Margin="6,0,0,0" Padding="0,10" IsDefault="True"/>
                     </Grid>
                 </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- ======================================================== -->
+        <!-- PASTKI CHAP TOMONDAGI STICKY PROGRESS BAR VIDJETI        -->
+        <!-- ======================================================== -->
+        <Border Grid.Row="1" HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                Margin="24,0,0,24" Panel.ZIndex="99999" Width="330" CornerRadius="12" Padding="14,12"
+                Visibility="{Binding PrintService.IsStickyVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Background" Value="#1E293B"/>
+                    <Setter Property="BorderBrush" Value="#06B6D4"/>
+                    <Setter Property="BorderThickness" Value="1.5"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding PrintService.IsCompleted}" Value="True">
+                            <Setter Property="Background" Value="#064E3B"/>
+                            <Setter Property="BorderBrush" Value="#10B981"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding PrintService.HasError}" Value="True">
+                            <Setter Property="Background" Value="#450A0A"/>
+                            <Setter Property="BorderBrush" Value="#EF4444"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="25" ShadowDepth="6" Direction="270" Color="#000000" Opacity="0.8"/>
+            </Border.Effect>
+            <StackPanel>
+                <!-- Yuqori qator: Ikonka, Mahsulot nomi va [X] Yopish tugmasi -->
+                <Grid Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Ikonka -->
+                    <Border Grid.Column="0" Width="26" Height="26" CornerRadius="6" Margin="0,0,8,0" VerticalAlignment="Center">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Background" Value="#0E7490"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding PrintService.IsCompleted}" Value="True">
+                                        <Setter Property="Background" Value="#059669"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="13">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="🖨️"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding PrintService.IsCompleted}" Value="True">
+                                            <Setter Property="Text" Value="✓"/>
+                                            <Setter Property="Foreground" Value="#FFFFFF"/>
+                                            <Setter Property="FontWeight" Value="Bold"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Border>
+
+                    <!-- Sarlavha / Mahsulot nomi -->
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding PrintService.ProductName}" Foreground="#F8FAFC" FontSize="13" FontWeight="Bold"
+                                   TextTrimming="CharacterEllipsis"/>
+                        <TextBlock FontSize="11" Foreground="#94A3B8">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="Orqa fonda chop etilmoqda..."/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding PrintService.IsCompleted}" Value="True">
+                                            <Setter Property="Text" Value="Stikerlar tayyor"/>
+                                            <Setter Property="Foreground" Value="#34D399"/>
+                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding PrintService.IsCancelled}" Value="True">
+                                            <Setter Property="Text" Value="Chop etish to'xtatildi"/>
+                                            <Setter Property="Foreground" Value="#F87171"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+
+                    <!-- [X] Yopish tugmasi -->
+                    <Button Grid.Column="2" Command="{Binding PrintService.CloseStickyCommand}"
+                            Background="Transparent" BorderThickness="0" Cursor="Hand" Padding="4,2" VerticalAlignment="Top">
+                        <TextBlock Text="✕" Foreground="#94A3B8" FontSize="14" FontWeight="Bold"/>
+                    </Button>
+                </Grid>
+
+                <!-- Mini Progress Bar (faqat chop etilayotganda ko'rinadi) -->
+                <ProgressBar Minimum="0" Maximum="100" Value="{Binding PrintService.ProgressPercentage, Mode=OneWay}"
+                             Height="6" Background="#334155" Foreground="#06B6D4" BorderThickness="0" Margin="0,0,0,6">
+                    <ProgressBar.Style>
+                        <Style TargetType="ProgressBar">
+                            <Setter Property="Visibility" Value="Visible"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding PrintService.IsCompleted}" Value="True">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ProgressBar.Style>
+                    <ProgressBar.Template>
+                        <ControlTemplate TargetType="ProgressBar">
+                            <Border Background="{TemplateBinding Background}" CornerRadius="3" ClipToBounds="True">
+                                <Grid x:Name="PART_Track">
+                                    <Border x:Name="PART_Indicator" Background="{TemplateBinding Foreground}" CornerRadius="3" HorizontalAlignment="Left"/>
+                                </Grid>
+                            </Border>
+                        </ControlTemplate>
+                    </ProgressBar.Template>
+                </ProgressBar>
+
+                <!-- Pastki qator: Nechtasi chiqdi / To'xtatish yoki Tayyor nishoni -->
+                <Grid>
+                    <!-- Chop etilayotgandagi holat -->
+                    <Grid>
+                        <Grid.Style>
+                            <Style TargetType="Grid">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding PrintService.IsCompleted}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Grid.Style>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0" Foreground="#38BDF8" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center">
+                            <Run Text="{Binding PrintService.CurrentCount}"/>
+                            <Run Text="/"/>
+                            <Run Text="{Binding PrintService.TotalCount}"/>
+                            <Run Text="dona ("/>
+                            <Run Text="{Binding PrintService.ProgressPercentage, StringFormat={}{0:0}}"/>
+                            <Run Text="%)"/>
+                        </TextBlock>
+
+                        <Button Grid.Column="1" Content="To'xtatish" Command="{Binding PrintService.CancelPrintCommand}"
+                                Background="#334155" Foreground="#F87171" FontSize="10" FontWeight="SemiBold"
+                                Padding="8,2" BorderThickness="0" Cursor="Hand">
+                            <Button.Resources>
+                                <Style TargetType="Border"><Setter Property="CornerRadius" Value="4"/></Style>
+                            </Button.Resources>
+                        </Button>
+                    </Grid>
+
+                    <!-- Yakunlangandagi (Tayyor) holat -->
+                    <Grid>
+                        <Grid.Style>
+                            <Style TargetType="Grid">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding PrintService.IsCompleted}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Grid.Style>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0" Foreground="#A7F3D0" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center">
+                            <Run Text="Chop etildi: "/>
+                            <Run Text="{Binding PrintService.TotalCount}" FontWeight="Bold"/>
+                            <Run Text=" dona"/>
+                        </TextBlock>
+
+                        <Border Grid.Column="1" Background="#16A34A" CornerRadius="4" Padding="8,2">
+                            <TextBlock Text="Tayyor" Foreground="#FFFFFF" FontSize="11" FontWeight="Bold"/>
+                        </Border>
+                    </Grid>
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <!-- ======================================================== -->
+        <!-- STIKER CHOP ETISH PROGRESS MODALI (KATTA OYNA)           -->
+        <!-- ======================================================== -->
+        <Grid Grid.Row="0" Grid.RowSpan="2" Panel.ZIndex="100005"
+              Background="#CC000000"
+              Visibility="{Binding PrintService.IsModalOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Border Background="#1E293B" BorderBrush="#06B6D4" BorderThickness="1.5"
+                    CornerRadius="16" Width="440" Padding="24"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="40" ShadowDepth="0" Opacity="0.9" Color="#000000"/>
+                </Border.Effect>
+                <StackPanel>
+                    <!-- Header -->
+                    <Grid Margin="0,0,0,16">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Border Background="#0E7490" CornerRadius="10" Width="42" Height="42" Margin="0,0,12,0" BorderBrush="#06B6D4" BorderThickness="1">
+                                <TextBlock Text="🖨️" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel>
+                                <TextBlock Text="Stikerlar chop etilmoqda" Foreground="#F8FAFC" FontSize="17" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding PrintService.ProductName}" Foreground="#94A3B8" FontSize="12" TextTrimming="CharacterEllipsis" MaxWidth="280"/>
+                            </StackPanel>
+                        </StackPanel>
+                        <Button Command="{Binding PrintService.CloseModalCommand}" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                Background="Transparent" BorderThickness="0" Cursor="Hand" Padding="6,2">
+                            <TextBlock Text="✕" Foreground="#94A3B8" FontSize="16" FontWeight="Bold"/>
+                        </Button>
+                    </Grid>
+
+                    <Separator Background="#334155" Margin="0,0,0,18"/>
+
+                    <!-- Nechtasi chiqdi info -->
+                    <Grid Margin="0,0,0,8">
+                        <TextBlock HorizontalAlignment="Left" Foreground="#F8FAFC" FontSize="14" FontWeight="SemiBold">
+                            <Run Text="Nechtasi chiqdi: " Foreground="#94A3B8"/>
+                            <Run Text="{Binding PrintService.CurrentCount}" FontWeight="Bold" Foreground="#38BDF8"/>
+                            <Run Text=" / " Foreground="#64748B"/>
+                            <Run Text="{Binding PrintService.TotalCount}" FontWeight="Bold" Foreground="#F8FAFC"/>
+                            <Run Text=" dona" Foreground="#94A3B8"/>
+                        </TextBlock>
+
+                        <TextBlock HorizontalAlignment="Right" Foreground="#38BDF8" FontSize="14" FontWeight="Bold">
+                            <Run Text="{Binding PrintService.ProgressPercentage, StringFormat={}{0:0}}"/>
+                            <Run Text="%"/>
+                        </TextBlock>
+                    </Grid>
+
+                    <!-- Katta Progress Bar -->
+                    <ProgressBar Minimum="0" Maximum="100" Value="{Binding PrintService.ProgressPercentage, Mode=OneWay}"
+                                 Height="12" Background="#0F172A" Foreground="#06B6D4" BorderThickness="0" Margin="0,0,0,16">
+                        <ProgressBar.Template>
+                            <ControlTemplate TargetType="ProgressBar">
+                                <Border Background="{TemplateBinding Background}" CornerRadius="6" ClipToBounds="True">
+                                    <Grid x:Name="PART_Track">
+                                        <Border x:Name="PART_Indicator" Background="{TemplateBinding Foreground}" CornerRadius="6" HorizontalAlignment="Left"/>
+                                    </Grid>
+                                </Border>
+                            </ControlTemplate>
+                        </ProgressBar.Template>
+                    </ProgressBar>
+
+                    <!-- Holat xabarlari -->
+                    <!-- 1. Bajarildi -->
+                    <Border Background="#064E3B" BorderBrush="#059669" BorderThickness="1" CornerRadius="8" Padding="12,8" Margin="0,0,0,16">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding PrintService.IsCompleted}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <TextBlock Text="✅ Barcha stikerlar muvaffaqiyatli chop etildi!" Foreground="#A7F3D0" FontSize="13" FontWeight="SemiBold" TextAlignment="Center"/>
+                    </Border>
+
+                    <!-- 2. Bekor qilindi -->
+                    <Border Background="#450A0A" BorderBrush="#DC2626" BorderThickness="1" CornerRadius="8" Padding="12,8" Margin="0,0,0,16">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding PrintService.IsCancelled}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <TextBlock Text="⚠️ Chop etish foydalanuvchi tomonidan to'xtatildi." Foreground="#FCA5A5" FontSize="13" FontWeight="SemiBold" TextAlignment="Center"/>
+                    </Border>
+
+                    <!-- 3. Xatolik -->
+                    <Border Background="#450A0A" BorderBrush="#DC2626" BorderThickness="1" CornerRadius="8" Padding="12,8" Margin="0,0,0,16">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding PrintService.HasError}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <TextBlock Text="{Binding PrintService.StatusText}" Foreground="#FCA5A5" FontSize="13" FontWeight="SemiBold" TextAlignment="Center"/>
+                    </Border>
+
+                    <!-- Tugmalar -->
+                    <!-- Chop etilayotgandagi tugmalar -->
+                    <Grid>
+                        <Grid.Style>
+                            <Style TargetType="Grid">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding PrintService.IsPrinting}" Value="False">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Grid.Style>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="12"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Button Grid.Column="0" Content="⬇️ Orqa fonga o'tkazish"
+                                Command="{Binding PrintService.SendToBackgroundCommand}"
+                                Background="#0E7490" Style="{StaticResource ModernButton}" Height="42" FontSize="13" FontWeight="Bold"/>
+
+                        <Button Grid.Column="2" Content="⏹ Bekor qilish"
+                                Command="{Binding PrintService.CancelPrintCommand}"
+                                Background="#334155" Foreground="#F87171" Style="{StaticResource ModernButton}" Height="42" Padding="16,0" FontSize="13" FontWeight="Bold"/>
+                    </Grid>
+
+                    <!-- Chop etish yakunlangandagi / to'xtatilgandagi tugma -->
+                    <Button Content="Yopish (OK)"
+                            Command="{Binding PrintService.CloseModalCommand}"
+                            Height="42" FontSize="14" FontWeight="Bold" IsDefault="True">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource ModernButton}">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding PrintService.IsPrinting}" Value="False">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding PrintService.IsCompleted}" Value="True">
+                                        <Setter Property="Background" Value="#16A34A"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                </StackPanel>
+            </Border>
+        </Grid>
+    
+        <!-- ============================================================== -->
+        <!-- MAHSULOT RASMINI KATTA KO'RISH (LIGHTBOX MODAL) -->
+        <!-- ============================================================== -->
+        <Grid Grid.RowSpan="2" Panel.ZIndex="1000"
+              Visibility="{Binding IsImagePreviewOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <!-- To'q yarim-shaffof fon (fonni bosganda yopiladi) -->
+            <Border Background="#E6020617">
+                <Border.InputBindings>
+                    <MouseBinding Gesture="LeftClick" Command="{Binding CloseImagePreviewCommand}"/>
+                </Border.InputBindings>
+            </Border>
+
+            <!-- Markaziy Rasm Konteyneri -->
+            <Border HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Background="#0F172A" BorderBrush="#334155" BorderThickness="1.5"
+                    CornerRadius="16" MaxWidth="1100" MaxHeight="780" Margin="40">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="40" Color="#000000" Opacity="0.8" ShadowDepth="10"/>
+                </Border.Effect>
+
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Yuqori qator: Tovar nomi va X yopish tugmasi -->
+                    <Border Grid.Row="0" Background="#1E293B" CornerRadius="16,16,0,0" Padding="20,14" BorderBrush="#334155" BorderThickness="0,0,0,1">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Path Data="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" 
+                                      Stroke="#38BDF8" StrokeThickness="1.5" Width="18" Height="18" Stretch="Uniform" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <TextBlock Text="{Binding PreviewImageTitle}" Foreground="#F8FAFC" FontSize="16" FontWeight="Bold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="850"/>
+                            </StackPanel>
+
+                            <!-- X Yopish tugmasi -->
+                            <Button Grid.Column="1" Command="{Binding CloseImagePreviewCommand}"
+                                    ToolTip="Yopish (ESC)"
+                                    Width="36" Height="36" Padding="0" Cursor="Hand"
+                                    Background="#25FFFFFF" BorderBrush="#45FFFFFF" BorderThickness="1" Foreground="#F8FAFC">
+                                <Button.Resources>
+                                    <Style TargetType="Border">
+                                        <Setter Property="CornerRadius" Value="10"/>
+                                    </Style>
+                                </Button.Resources>
+                                <Path Data="M6 18L18 6M6 6l12 12" Stroke="#F8FAFC" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="14" Height="14" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Button>
+                        </Grid>
+                    </Border>
+
+                    <!-- Asosiy rasm maydoni -->
+                    <Border Grid.Row="1" Background="#090E17" CornerRadius="0,0,16,16" Padding="16" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Image Source="{Binding PreviewImagePath}"
+                               Stretch="Uniform"
+                               MaxWidth="1040" MaxHeight="680"
+                               RenderOptions.BitmapScalingMode="HighQuality"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                </Grid>
             </Border>
         </Grid>
     </Grid>

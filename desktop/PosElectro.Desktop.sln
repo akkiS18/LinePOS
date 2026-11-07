@@ -1,8 +1,10 @@
-Microsoft Visual Studio Solution File, Format Version 12.00
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PosElectro.Desktop", "PosElectro.Desktop\PosElectro.Desktop.csproj", "{8F1E1983-518D-4348-9F3E-7281D8CAE719}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PosElectro.Desktop.Tests", "PosElectro.Desktop.Tests\PosElectro.Desktop.Tests.csproj", "{310E0AB8-F185-4C6B-AFDD-A8CE1F76FCF6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -14,5 +16,9 @@ Global
 		{8F1E1983-518D-4348-9F3E-7281D8CAE719}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8F1E1983-518D-4348-9F3E-7281D8CAE719}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8F1E1983-518D-4348-9F3E-7281D8CAE719}.Release|Any CPU.Build.0 = Release|Any CPU
+		{310E0AB8-F185-4C6B-AFDD-A8CE1F76FCF6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{310E0AB8-F185-4C6B-AFDD-A8CE1F76FCF6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{310E0AB8-F185-4C6B-AFDD-A8CE1F76FCF6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{310E0AB8-F185-4C6B-AFDD-A8CE1F76FCF6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

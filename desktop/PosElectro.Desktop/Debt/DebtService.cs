@@ -126,8 +126,43 @@ public sealed record DebtEventItemDto(
     public double CashUz => CashMinor / 100.0;
     public double CardUz => CardMinor / 100.0;
     public double FeeUz => FeeMinor / 100.0;
-    public double AmountUz => TotalPaymentUz;
-    public string AmountDisplay => TotalPaymentUz != 0 ? $"{TotalPaymentUz:N0} so'm" : "-";
+    public double DebtOffsetUz => Lines.Count > 0 ? Math.Abs(Lines.Sum(l => l.DebtDeltaMinor)) / 100.0 : 0.0;
+    public double AmountUz => Kind switch
+    {
+        "return_offset" or "return_reversal" or "credit_refund" or "credit_transfer" => DebtOffsetUz,
+        _ => TotalPaymentUz != 0 ? TotalPaymentUz : (DebtOffsetUz != 0 && Kind != "sale_open" ? DebtOffsetUz : 0)
+    };
+    public string AmountDisplay
+    {
+        get
+        {
+            if (Kind is "return_offset" or "return_reversal" or "credit_refund" or "credit_transfer")
+            {
+                var offset = DebtOffsetUz;
+                return offset != 0 ? $"{offset:N0} so'm" : "-";
+            }
+            if (TotalPaymentUz != 0)
+            {
+                return $"{TotalPaymentUz:N0} so'm";
+            }
+            if (DebtOffsetUz != 0 && Kind != "sale_open")
+            {
+                return $"{DebtOffsetUz:N0} so'm";
+            }
+            return "-";
+        }
+    }
+    public string DetailsDisplay => Kind switch
+    {
+        "return_offset" => $"{Lines.Count} ta chekdan chegirildi",
+        "return_reversal" => $"{Lines.Count} ta chekka tiklandi",
+        "sale_open" => "Nasiya savdo ochildi",
+        "payment" => $"{Lines.Count} ta chekka taqsimlangan",
+        "payment_reversal" => "To'lov bekor qilindi",
+        "credit_refund" => "Ortiqcha to'lov qaytarildi",
+        "credit_transfer" => "Cheklararo o'tkazildi",
+        _ => $"{Lines.Count} ta chek"
+    };
 }
 
 public sealed record DebtEventLineDto(

@@ -175,6 +175,25 @@ namespace PosElectro.Desktop.Views
             Close();
         }
 
+        private void Window_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == System.Windows.Input.Key.Escape)
+            {
+                BtnCancel_Click(this, null!);
+                e.Handled = true;
+            }
+            else if (e.Key == System.Windows.Input.Key.Enter)
+            {
+                // Agar fokus ko'p qatorli TextBoxda bo'lsa (agar bo'lsa), yangi qatorga ruxsat
+                if (System.Windows.Input.Keyboard.FocusedElement is TextBox tb && tb.AcceptsReturn)
+                {
+                    return;
+                }
+                BtnSave_Click(this, null!);
+                e.Handled = true;
+            }
+        }
+
         private void TxtName_TextChanged(object sender, TextChangedEventArgs e)
         {
             if (sender is not TextBox tb) return;

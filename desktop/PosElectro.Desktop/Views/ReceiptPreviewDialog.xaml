@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Chekni Oldindan Ko'rish (Preview)" Height="750" Width="680"
         WindowStartupLocation="CenterOwner" ResizeMode="CanResize"
+        PreviewKeyDown="Window_PreviewKeyDown"
         Background="#0B132B">
     <Grid Margin="18">
         <Grid.RowDefinitions>
@@ -141,10 +142,12 @@
             </StackPanel>
 
             <Button Grid.Column="1" Content="Yopish (Esc)" Click="BtnClose_Click"
+                    IsCancel="True"
                     Style="{StaticResource ModernButton}" Width="120" Height="40" Margin="0,0,10,0"/>
 
-            <Button Grid.Column="2" x:Name="BtnPrint" Content="🖨️ Chop etish" Click="BtnPrint_Click"
-                    Style="{StaticResource SuccessButton}" Width="150" Height="40" FontWeight="Bold"/>
+            <Button Grid.Column="2" x:Name="BtnPrint" Content="🖨️ Chop etish (Enter)" Click="BtnPrint_Click"
+                    IsDefault="True"
+                    Style="{StaticResource SuccessButton}" Width="160" Height="40" FontWeight="Bold"/>
         </Grid>
     </Grid>
 </Window>

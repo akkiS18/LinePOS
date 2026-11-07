@@ -364,6 +364,7 @@ namespace PosElectro.Desktop.Data
                     min_stock_alert REAL NOT NULL DEFAULT 3.0,
                     is_deleted INTEGER NOT NULL DEFAULT 0,
                     note TEXT DEFAULT '',
+                    image_path TEXT DEFAULT '',
                     updated_at INTEGER NOT NULL
                 );
 
@@ -441,6 +442,15 @@ namespace PosElectro.Desktop.Data
             {
                 // Ustun mavjud bo'lsa xatolik bo'lmaydi
             }
+
+            // Mavjud bazalar uchun 'image_path' ustunini tekshirib qo'shish
+            try
+            {
+                using var alterImgCmd = conn.CreateCommand();
+                alterImgCmd.CommandText = "ALTER TABLE products ADD COLUMN image_path TEXT DEFAULT '';";
+                alterImgCmd.ExecuteNonQuery();
+            }
+            catch { }
 
             // Mavjud bazalar uchun sales jadvaliga cash_amount, card_amount, tax_amount, tax_rate qo'shish
             string[] salesCols = {
@@ -1398,8 +1408,8 @@ namespace PosElectro.Desktop.Data
             if (p.Id == 0)
             {
                 cmd.CommandText = @"
-                    INSERT INTO products (guid, barcode, name, category, cost_price, cost_currency, selling_price, selling_price_2, stock_quantity, unit_type, min_stock_alert, is_deleted, note, updated_at)
-                    VALUES (@guid, @barcode, @name, @category, @cost_price, @cost_currency, @selling_price, @selling_price_2, @stock_quantity, @unit_type, @min_stock_alert, @is_deleted, @note, @updated_at);
+                    INSERT INTO products (guid, barcode, name, category, cost_price, cost_currency, selling_price, selling_price_2, stock_quantity, unit_type, min_stock_alert, is_deleted, note, image_path, updated_at)
+                    VALUES (@guid, @barcode, @name, @category, @cost_price, @cost_currency, @selling_price, @selling_price_2, @stock_quantity, @unit_type, @min_stock_alert, @is_deleted, @note, @image_path, @updated_at);
                     SELECT last_insert_rowid();
                 ";
             }
@@ -1419,6 +1429,7 @@ namespace PosElectro.Desktop.Data
                         min_stock_alert = @min_stock_alert,
                         is_deleted = @is_deleted,
                         note = @note,
+                        image_path = @image_path,
                         updated_at = @updated_at
                     WHERE id = @id;
                 ";
@@ -1438,6 +1449,7 @@ namespace PosElectro.Desktop.Data
             cmd.Parameters.AddWithValue("@min_stock_alert", p.MinStockAlert);
             cmd.Parameters.AddWithValue("@is_deleted", p.IsDeleted ? 1 : 0);
             cmd.Parameters.AddWithValue("@note", p.Note ?? string.Empty);
+            cmd.Parameters.AddWithValue("@image_path", p.ImagePath ?? string.Empty);
             cmd.Parameters.AddWithValue("@updated_at", p.UpdatedAt);
 
             if (p.Id == 0)
@@ -1900,35 +1912,112 @@ namespace PosElectro.Desktop.Data
             return list;
         }
 
-        public List<Sale> SearchSalesByReceiptNumber(string query, int limit = 1000000)
+        /// <summary>
+        /// Cheklarni bitta qidiruv satri bilan topadi: chek raqami (LP-/RT-/RV-, #15, guid bo'lagi),
+        /// chek ichidagi mahsulot nomi (kirill/lotin, ko'p so'zli) yoki shtrix-kod bo'yicha.
+        /// Faqat o'qiydi — bazaga hech narsa yozmaydi.
+        /// </summary>
+        public List<Sale> SearchSales(string query, int limit = 1000000)
         {
             var list = new List<Sale>();
             if (string.IsNullOrWhiteSpace(query)) return list;
-            var clean = query.Trim().TrimStart('#').ToUpperInvariant();
-            if (clean.StartsWith("LP-") || clean.StartsWith("RT-") || clean.StartsWith("RV-")) clean = clean.Substring(3);
-            clean = clean.Replace("-", "");
 
             using var conn = CreateConnection();
-            using var cmd = conn.CreateCommand();
-            cmd.CommandText = @"
-                SELECT * FROM sales 
-                WHERE instr(upper(replace(guid, '-', '')), @pattern) > 0 OR instr(CAST(id AS TEXT), @pattern) > 0
-                ORDER BY id DESC 
-                LIMIT @limit;
-            ";
-            cmd.Parameters.AddWithValue("@pattern", clean.ToUpperInvariant());
-            cmd.Parameters.AddWithValue("@limit", limit);
-            using var reader = cmd.ExecuteReader();
-            while (reader.Read())
+            var ids = new HashSet<long>();
+
+            // 1) Chek raqami bo'yicha (faqat so'rov chek raqamiga o'xshasa — "cab" kabi so'z guid bilan tasodifan mos kelmasin)
+            if (LooksLikeReceiptQuery(query, out var receiptPattern, out var matchSaleId))
             {
-                list.Add(ReadSale(reader));
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = matchSaleId
+                    ? "SELECT id FROM sales WHERE instr(upper(replace(guid, '-', '')), @pattern) > 0 OR instr(CAST(id AS TEXT), @pattern) > 0"
+                    : "SELECT id FROM sales WHERE instr(upper(replace(guid, '-', '')), @pattern) > 0";
+                cmd.Parameters.AddWithValue("@pattern", receiptPattern);
+                using var r = cmd.ExecuteReader();
+                while (r.Read()) ids.Add(r.GetInt64(0));
             }
-            reader.Close();
+
+            // 2) Mahsulot nomi va shtrix-kod bo'yicha (chek ichidagi tovarlar).
+            //    Nom SQLite'da emas, C#da solishtiriladi: SQLite lower()/LIKE faqat ASCII harflar uchun ishlaydi.
+            var tokens = Services.SmartSearchHelper.PrepareTokens(query);
+            if (tokens.Count > 0)
+            {
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = @"
+                    SELECT si.sale_id, si.product_name, p.name, p.barcode
+                    FROM sale_items si
+                    LEFT JOIN products p
+                      ON (si.product_guid <> '' AND p.guid = si.product_guid)
+                      OR (si.product_guid = '' AND p.id = si.product_id)";
+                using var r = cmd.ExecuteReader();
+                while (r.Read())
+                {
+                    var saleId = r.GetInt64(0);
+                    if (ids.Contains(saleId)) continue;
+                    var barcode = r.IsDBNull(3) ? null : r.GetString(3);
+                    // Sotuv paytidagi nom ham, mahsulotning hozirgi (o'zgartirilgan) nomi ham hisobga olinadi
+                    var soldName = Services.SmartSearchHelper.Normalize(r.IsDBNull(1) ? string.Empty : r.GetString(1));
+                    var currentName = r.IsDBNull(2) ? string.Empty : Services.SmartSearchHelper.Normalize(r.GetString(2));
+                    if (Services.SmartSearchHelper.IsMatch(soldName, barcode, null, tokens, out _) ||
+                        (currentName.Length > 0 && Services.SmartSearchHelper.IsMatch(currentName, barcode, null, tokens, out _)))
+                        ids.Add(saleId);
+                }
+            }
+
+            if (ids.Count == 0) return list;
+
+            // Topilgan cheklarni (eng yangisi birinchi) paketlab o'qish
+            var ordered = ids.OrderByDescending(i => i).Take(limit).ToList();
+            for (int offset = 0; offset < ordered.Count; offset += 500)
+            {
+                var chunk = ordered.Skip(offset).Take(500).ToList();
+                using var cmd = conn.CreateCommand();
+                var names = new List<string>();
+                for (int i = 0; i < chunk.Count; i++)
+                {
+                    names.Add("@i" + i);
+                    cmd.Parameters.AddWithValue("@i" + i, chunk[i]);
+                }
+                cmd.CommandText = $"SELECT * FROM sales WHERE id IN ({string.Join(",", names)}) ORDER BY id DESC";
+                using var reader = cmd.ExecuteReader();
+                while (reader.Read()) list.Add(ReadSale(reader));
+            }
+            list = list.OrderByDescending(s => s.Id).ToList();
             foreach (var s in list)
             {
                 s.Items = GetSaleItems(s.Id, conn);
             }
             return list;
+        }
+
+        /// <summary>Eski nom bilan moslik uchun.</summary>
+        public List<Sale> SearchSalesByReceiptNumber(string query, int limit = 1000000) => SearchSales(query, limit);
+
+        /// <summary>
+        /// So'rov chek raqamiga o'xshaydimi: prefiks/#/defis bor, yoki sof raqam (chek ID), yoki ≥ 6 ta hex belgi.
+        /// Ko'p so'zli so'rov hech qachon chek raqami emas.
+        /// </summary>
+        public static bool LooksLikeReceiptQuery(string query, out string pattern, out bool matchSaleId)
+        {
+            pattern = string.Empty; matchSaleId = false;
+            var raw = query.Trim();
+            if (raw.Length == 0 || raw.Any(char.IsWhiteSpace)) return false;
+
+            var upper = raw.ToUpperInvariant();
+            bool explicitReceipt = upper.StartsWith("#") || upper.StartsWith("LP-") || upper.StartsWith("RT-") || upper.StartsWith("RV-");
+            var clean = upper.TrimStart('#');
+            if (clean.StartsWith("LP-") || clean.StartsWith("RT-") || clean.StartsWith("RV-")) clean = clean.Substring(3);
+            clean = clean.Replace("-", "");
+            if (clean.Length == 0 || !clean.All(c => (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F'))) return false;
+
+            bool digitsOnly = clean.All(c => c >= '0' && c <= '9');
+            // Harfli (a-f) so'rov faqat aniq belgilangan bo'lsa yoki yetarlicha uzun bo'lsa chek bo'lagi deb hisoblanadi
+            if (!explicitReceipt && !digitsOnly && !raw.Contains('-') && clean.Length < 6) return false;
+
+            pattern = clean;
+            // Chek ID (kichik son) faqat qisqa raqamli so'rovda; uzun raqam (shtrix-kod) ID sifatida qidirilmaydi
+            matchSaleId = digitsOnly && clean.Length <= 7;
+            return true;
         }
 
         private List<SaleItem> GetSaleItems(long saleId, SqliteConnection conn, SqliteTransaction? transaction = null)
@@ -2007,8 +2096,34 @@ namespace PosElectro.Desktop.Data
             MinStockAlert = r.GetDouble(r.GetOrdinal("min_stock_alert")),
             IsDeleted = r.GetInt32(r.GetOrdinal("is_deleted")) == 1,
             Note = r.IsDBNull(r.GetOrdinal("note")) ? string.Empty : r.GetString(r.GetOrdinal("note")),
+            ImagePath = GetStringSafe(r, "image_path"),
             UpdatedAt = r.GetInt64(r.GetOrdinal("updated_at"))
         };
+
+        private static string GetStringSafe(SqliteDataReader r, string col)
+        {
+            try
+            {
+                int ord = r.GetOrdinal(col);
+                return (ord >= 0 && !r.IsDBNull(ord)) ? r.GetString(ord) : string.Empty;
+            }
+            catch
+            {
+                return string.Empty;
+            }
+        }
+
+        public void UpdateProductImage(string productGuid, string imagePath)
+        {
+            if (string.IsNullOrWhiteSpace(productGuid)) return;
+            using var conn = CreateConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "UPDATE products SET image_path = @img, updated_at = @now WHERE guid = @guid";
+            cmd.Parameters.AddWithValue("@img", imagePath ?? string.Empty);
+            cmd.Parameters.AddWithValue("@now", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+            cmd.Parameters.AddWithValue("@guid", productGuid);
+            cmd.ExecuteNonQuery();
+        }
 
         private static Sale ReadSale(SqliteDataReader r)
         {

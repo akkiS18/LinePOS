@@ -234,6 +234,20 @@ namespace PosElectro.Desktop.ViewModels
             set => SetProperty(ref _transferQuantity, value);
         }
 
+        private string? _formImagePath;
+        public string? FormImagePath
+        {
+            get => _formImagePath;
+            set
+            {
+                if (SetProperty(ref _formImagePath, value))
+                {
+                    OnPropertyChanged(nameof(FormHasImage));
+                }
+            }
+        }
+        public bool FormHasImage => !string.IsNullOrWhiteSpace(FormImagePath) && System.IO.File.Exists(FormImagePath);
+
         private string _transferErrorMessage = string.Empty;
         public string TransferErrorMessage
         {
@@ -277,6 +291,11 @@ namespace PosElectro.Desktop.ViewModels
         public ICommand PrintReorderReceiptCommand { get; }
         public ICommand ExportReorderExcelCommand { get; }
         public ICommand OpenQuickStockAddCommand { get; }
+        public ICommand PickFormImageCommand { get; }
+        public ICommand RemoveFormImageCommand { get; }
+        public ICommand AttachProductImageCommand { get; }
+        public ICommand RemoveProductImageCommand { get; }
+        public ICommand OpenProductImagePreviewCommand { get; }
 
         public InventoryViewModel(DatabaseContext db, ProductService productService, CurrencyService currencyService)
         {
@@ -468,6 +487,60 @@ namespace PosElectro.Desktop.ViewModels
             });
 
             RefreshCommand = new RelayCommand(Refresh);
+
+            PickFormImageCommand = new RelayCommand(PickFormImage);
+            RemoveFormImageCommand = new RelayCommand(() => FormImagePath = null);
+
+            OpenProductImagePreviewCommand = new RelayCommand<Product>(p =>
+            {
+                if (p != null && p.HasImage)
+                {
+                    MainViewModel.ShowImage(p.ImagePath, p.Name);
+                }
+            });
+
+            AttachProductImageCommand = new RelayCommand<Product>(p =>
+            {
+                if (p == null) return;
+                try
+                {
+                    var dlg = new Microsoft.Win32.OpenFileDialog
+                    {
+                        Title = $"{p.Name} uchun rasm tanlang",
+                        Filter = "Rasm fayllari (*.jpg;*.jpeg;*.png;*.webp;*.bmp)|*.jpg;*.jpeg;*.png;*.webp;*.bmp|Barcha fayllar (*.*)|*.*"
+                    };
+
+                    if (dlg.ShowDialog() == true)
+                    {
+                        var ext = System.IO.Path.GetExtension(dlg.FileName);
+                        var imagesDir = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "product_images");
+                        if (!System.IO.Directory.Exists(imagesDir))
+                        {
+                            System.IO.Directory.CreateDirectory(imagesDir);
+                        }
+
+                        var destPath = System.IO.Path.Combine(imagesDir, $"prod_{p.Guid}_{DateTime.Now.Ticks}{ext}");
+                        System.IO.File.Copy(dlg.FileName, destPath, overwrite: true);
+
+                        p.ImagePath = destPath;
+                        _db.SaveProduct(p);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Rasmni saqlashda xatolik yuz berdi: {ex.Message}", "Xatolik", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            });
+
+            RemoveProductImageCommand = new RelayCommand<Product>(p =>
+            {
+                if (p == null) return;
+                if (MessageBox.Show($"'{p.Name}' mahsulotining rasmini o'chirishni xohlaysizmi?", "Rasmni o'chirish", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                {
+                    p.ImagePath = null;
+                    _db.SaveProduct(p);
+                }
+            });
             SelectWarehouseCommand = new RelayCommand<Warehouse>(w => { if (w != null) SelectWarehouse(w); });
             BackToWarehousesCommand = new RelayCommand(BackToWarehouses);
 
@@ -1024,6 +1097,7 @@ namespace PosElectro.Desktop.ViewModels
             FormUnitTypeIndex = 0;
             FormMinStockAlert = "3";
             FormNote = string.Empty;
+            FormImagePath = null;
             FormErrorMessage = string.Empty;
             UpdateCostConversion();
 
@@ -1059,10 +1133,43 @@ namespace PosElectro.Desktop.ViewModels
             };
             FormMinStockAlert = p.MinStockAlert.ToString(CultureInfo.InvariantCulture);
             FormNote = p.Note ?? string.Empty;
+            FormImagePath = p.ImagePath;
             FormErrorMessage = string.Empty;
             UpdateCostConversion();
 
             CurrentViewState = InventoryViewState.AddEditForm;
+        }
+
+        public void PickFormImage()
+        {
+            try
+            {
+                var dlg = new Microsoft.Win32.OpenFileDialog
+                {
+                    Title = "Mahsulot rasmini tanlang",
+                    Filter = "Rasm fayllari (*.jpg;*.jpeg;*.png;*.webp;*.bmp)|*.jpg;*.jpeg;*.png;*.webp;*.bmp|Barcha fayllar (*.*)|*.*"
+                };
+
+                if (dlg.ShowDialog() == true)
+                {
+                    var ext = System.IO.Path.GetExtension(dlg.FileName);
+                    var imagesDir = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "product_images");
+                    if (!System.IO.Directory.Exists(imagesDir))
+                    {
+                        System.IO.Directory.CreateDirectory(imagesDir);
+                    }
+
+                    var guid = _editingProduct?.Guid ?? Guid.NewGuid().ToString();
+                    var destPath = System.IO.Path.Combine(imagesDir, $"prod_{guid}_{DateTime.Now.Ticks}{ext}");
+                    System.IO.File.Copy(dlg.FileName, destPath, overwrite: true);
+
+                    FormImagePath = destPath;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Rasmni tanlashda xatolik yuz berdi: {ex.Message}", "Xatolik", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         public void CancelAddEdit()
@@ -1177,6 +1284,7 @@ namespace PosElectro.Desktop.ViewModels
             product.UnitType = unitType;
             product.MinStockAlert = minStockAlert;
             product.Note = FormNote.Trim();
+            product.ImagePath = FormImagePath;
             if (SelectedWarehouse != null)
             {
                 product.WarehouseGuid = SelectedWarehouse.Guid;

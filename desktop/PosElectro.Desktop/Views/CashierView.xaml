@@ -44,27 +44,29 @@
                 </Grid>
 
                 <!-- ============================================================= -->
-                <!-- TOP-SELLERS: Bo'sh qidiruv => Eng ko'p sotiladigan tovarlar   -->
+                <!-- KATALOG / QIDIRUV NATIJALARI (Yagona, tezkor va virtualizatsiyalangan) -->
                 <!-- ============================================================= -->
-                <Grid Grid.Row="1" Visibility="{Binding IsShowingTopSellers, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <Grid Grid.Row="1">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <!-- Sarlavha -->
-                    <TextBlock Grid.Row="0" Text="⭐ ENG KO'P SOTILADIGAN TOVARLAR" 
+                    <!-- Sarlavha (Katalog holatiga mos) -->
+                    <TextBlock Grid.Row="0" Text="{Binding CatalogHeaderTitle}" 
                                Foreground="#94A3B8" FontSize="12" FontWeight="Bold"
                                Margin="0,0,0,10"/>
 
-                    <!-- Katta kartalarda ko'rsatish, kenglikka moslashuvchan (Adaptive) -->
+                    <!-- Yagona tovarlar ro'yxati -->
                     <ListBox Grid.Row="1"
-                             ItemsSource="{Binding TopSellingProducts}"
+                             x:Name="ProductListBox"
+                             ItemsSource="{Binding DisplayProducts}"
                              Background="Transparent"
                              BorderThickness="0"
                              Focusable="False"
                              KeyboardNavigation.TabNavigation="None"
-                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             ScrollViewer.ScrollChanged="ProductList_ScrollChanged">
                         <ListBox.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <controls:AdaptiveGridPanel MinItemWidth="190" ItemHeight="172" Spacing="12"/>
@@ -123,11 +125,36 @@
                                             <RowDefinition Height="Auto"/>
                                         </Grid.RowDefinitions>
 
-                                        <!-- Tovar nomi -->
-                                        <TextBlock Grid.Row="0" Text="{Binding Name}" 
-                                                   Foreground="#F1F5F9" FontWeight="Bold" FontSize="15" 
-                                                   TextWrapping="Wrap" MaxHeight="48" TextTrimming="CharacterEllipsis"
-                                                   LineHeight="18"/>
+                                        <!-- Tovar nomi va Rasmi -->
+                                        <Grid Grid.Row="0" VerticalAlignment="Top">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- Tovar nomi -->
+                                            <TextBlock Grid.Column="0" Text="{Binding Name}" 
+                                                       Foreground="#F1F5F9" FontWeight="Bold" FontSize="15" 
+                                                       TextWrapping="Wrap" MaxHeight="48" TextTrimming="CharacterEllipsis"
+                                                       LineHeight="18" VerticalAlignment="Top"/>
+
+                                            <!-- Rasm miniaturasi (faqat rasm mavjud bo'lganda) -->
+                                            <Button Grid.Column="1" 
+                                                    Command="{Binding DataContext.OpenImagePreviewCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}"
+                                                    Visibility="{Binding HasImage, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                    ToolTip="Rasmni kattalashtirib ko'rish"
+                                                    Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand"
+                                                    VerticalAlignment="Top" Margin="8,0,0,0">
+                                                <Border Width="44" Height="44" CornerRadius="8" Background="#0F172A" BorderBrush="#0284C7" BorderThickness="1.2">
+                                                    <Image Source="{Binding ImagePath}" Stretch="UniformToFill">
+                                                        <Image.Clip>
+                                                            <RectangleGeometry Rect="0,0,42,42" RadiusX="7" RadiusY="7"/>
+                                                        </Image.Clip>
+                                                    </Image>
+                                                </Border>
+                                            </Button>
+                                        </Grid>
 
                                         <!-- Qoldiq miqdori -->
                                         <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,5,0,0">
@@ -142,7 +169,7 @@
                                                    Text="{Binding SellingPrice, StringFormat='{}{0:N0} so\'m'}" 
                                                    Foreground="#10B981" FontWeight="Bold" FontSize="15" Margin="0,4,0,0"/>
 
-                                        <!-- Mahsulot ombori belgisi -->
+                                        <!-- Mahsulot ombori / toifasi belgisi -->
                                         <Border Grid.Row="3" Background="#0F243A" BorderBrush="#0284C7" BorderThickness="1" CornerRadius="4" Padding="6,2" HorizontalAlignment="Left" Margin="0,5,0,0"
                                                 Visibility="{Binding HasWarehouse, Converter={StaticResource BooleanToVisibilityConverter}}"
                                                 ToolTip="Ushbu tovar ombori">
@@ -156,92 +183,19 @@
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
+
+                    <!-- Qidiruv bo'yicha tovar topilmaganda chiroyli xabar -->
+                    <Border Grid.Row="1" Background="#1E293B" CornerRadius="14" BorderBrush="#334155" BorderThickness="1" 
+                            Padding="28,24" HorizontalAlignment="Center" VerticalAlignment="Center"
+                            Visibility="{Binding IsEmptySearchResult, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <StackPanel HorizontalAlignment="Center">
+                            <Path Stretch="Uniform" Width="30" Height="30" Data="M21 21l-4.35-4.35M19 10a9 9 0 11-18 0 9 9 0 0118 0z"
+                                  Stroke="#64748B" StrokeThickness="2" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                            <TextBlock Text="Bunday tovar topilmadi" Foreground="#F8FAFC" FontSize="15" FontWeight="Bold" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Nomi yoki shtrix-kodini tekshirib qayta kiritib ko'ring" Foreground="#94A3B8" FontSize="12" Margin="0,4,0,0" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
                 </Grid>
-
-                <!-- ============================================================= -->
-                <!-- QIDIRUV NATIJALARI: SearchQuery bo'sh emas => filtr ko'rsatish -->
-                <!-- ============================================================= -->
-                <ListBox Grid.Row="1"
-                         ItemsSource="{Binding FilteredProducts}"
-                         Background="Transparent"
-                         BorderThickness="0"
-                         Focusable="False"
-                         KeyboardNavigation.TabNavigation="None"
-                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                         Visibility="{Binding IsShowingSearch, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <ListBox.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <controls:AdaptiveGridPanel MinItemWidth="190" ItemHeight="172" Spacing="12"/>
-                        </ItemsPanelTemplate>
-                    </ListBox.ItemsPanel>
-                    <ListBox.ItemContainerStyle>
-                        <Style TargetType="ListBoxItem">
-                            <Setter Property="Focusable" Value="False"/>
-                            <Setter Property="Padding" Value="0"/>
-                            <Setter Property="Margin" Value="0"/>
-                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                            <Setter Property="VerticalContentAlignment" Value="Stretch"/>
-                            <Setter Property="Background" Value="Transparent"/>
-                            <Setter Property="BorderThickness" Value="0"/>
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="ListBoxItem">
-                                        <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
-                    </ListBox.ItemContainerStyle>
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <Border Background="#1E293B" 
-                                    BorderBrush="#334155" 
-                                    BorderThickness="1" 
-                                    CornerRadius="14" 
-                                    HorizontalAlignment="Stretch"
-                                    Height="172" 
-                                    Padding="14"
-                                    Cursor="Hand">
-                                <Border.InputBindings>
-                                    <MouseBinding Gesture="LeftClick" 
-                                                  Command="{Binding DataContext.AddToCartCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                                                  CommandParameter="{Binding}"/>
-                                </Border.InputBindings>
-                                <Grid>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="*"/>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                    </Grid.RowDefinitions>
-                                    <TextBlock Grid.Row="0" Text="{Binding Name}" 
-                                               Foreground="#F1F5F9" FontWeight="Bold" FontSize="15" 
-                                               TextWrapping="Wrap" MaxHeight="48" TextTrimming="CharacterEllipsis"
-                                               LineHeight="18"/>
-                                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,5,0,0">
-                                        <TextBlock Text="Qoldiq: " Foreground="#64748B" FontSize="12"/>
-                                        <TextBlock Text="{Binding StockQuantity}" Foreground="#94A3B8" FontWeight="SemiBold" FontSize="12"/>
-                                        <TextBlock Text=" "/>
-                                        <TextBlock Text="{Binding UnitDisplay}" Foreground="#64748B" FontSize="12"/>
-                                    </StackPanel>
-                                    <TextBlock Grid.Row="2" 
-                                               Text="{Binding SellingPrice, StringFormat='{}{0:N0} so\'m'}" 
-                                               Foreground="#10B981" FontWeight="Bold" FontSize="15" Margin="0,4,0,0"/>
-
-                                    <!-- Mahsulot ombori belgisi -->
-                                    <Border Grid.Row="3" Background="#0F243A" BorderBrush="#0284C7" BorderThickness="1" CornerRadius="4" Padding="6,2" HorizontalAlignment="Left" Margin="0,5,0,0"
-                                            Visibility="{Binding HasWarehouse, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                            ToolTip="Ushbu tovar ombori">
-                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                            <TextBlock Text="🏢 " FontSize="9" Foreground="#38BDF8"/>
-                                            <TextBlock Text="{Binding WarehouseBadgeDisplay}" Foreground="#38BDF8" FontSize="11" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxWidth="170"/>
-                                        </StackPanel>
-                                    </Border>
-                                </Grid>
-                            </Border>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
             </Grid>
 
             <!-- O'NG TOMON: SAVATCHA VA TO'LOV -->
@@ -1536,9 +1490,9 @@
                             <ColumnDefinition Width="12"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <Button Grid.Column="0" Content="Bekor qilish" Command="{Binding CloseQuickCustomerModalCommand}"
+                        <Button Grid.Column="0" Content="Bekor qilish (Esc)" Command="{Binding CloseQuickCustomerModalCommand}"
                                 Background="#334155" Style="{StaticResource ModernButton}" Padding="0,10" Cursor="Hand"/>
-                        <Button Grid.Column="2" Content="Saqlash" Command="{Binding SaveQuickCustomerModalCommand}"
+                        <Button Grid.Column="2" Content="Saqlash (Enter)" Command="{Binding SaveQuickCustomerModalCommand}"
                                 Background="#8B5CF6" Style="{StaticResource ModernButton}" Padding="0,10" Cursor="Hand"/>
                     </Grid>
                 </StackPanel>

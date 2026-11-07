@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Shtrix-kod etiketka chop etish" Height="670" Width="780"
         WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+        PreviewKeyDown="Window_PreviewKeyDown"
         Background="#0F172A">
     <Grid Margin="18">
         <Grid.RowDefinitions>
@@ -246,7 +247,8 @@
             </Grid.ColumnDefinitions>
 
             <!-- Bekor qilish -->
-            <Button Grid.Column="0" Content="Bekor qilish" Click="BtnCancel_Click"
+            <Button Grid.Column="0" Content="Bekor qilish (Esc)" Click="BtnCancel_Click"
+                    IsCancel="True"
                     Background="#334155" Foreground="White" Style="{StaticResource ModernButton}" 
                     Padding="18,10" Height="42"/>
 
@@ -256,7 +258,8 @@
                     Style="{StaticResource ModernButton}" Padding="16,10" Height="42" Margin="0,0,10,0"/>
 
             <!-- Asosiy Chop Etish -->
-            <Button x:Name="BtnPrint" Grid.Column="3" Content="🖨️ Chop etish (1 ta)" Click="BtnPrint_Click"
+            <Button x:Name="BtnPrint" Grid.Column="3" Content="🖨️ Chop etish (Enter)" Click="BtnPrint_Click"
+                    IsDefault="True"
                     Style="{StaticResource SuccessButton}" Padding="22,10" Height="42" FontSize="14" FontWeight="Bold"/>
         </Grid>
     </Grid>

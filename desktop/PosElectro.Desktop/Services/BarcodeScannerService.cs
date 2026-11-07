@@ -9,12 +9,22 @@ namespace PosElectro.Desktop.Services
     {
         private readonly StringBuilder _buffer = new();
         private readonly Stopwatch _stopwatch = new();
-        private const int MaxInterKeyDelayMs = 120; // Skanerlar harflarni o'ta tez (odatda < 50ms) yuboradi
+        private const int MaxInterKeyDelayMs = 40; // Haqiqiy apparat skanerlar harflarni o'ta tez (5-30ms) yuboradi
 
         public event Action<string>? BarcodeScanned;
 
         public void HandlePreviewKeyDown(KeyEventArgs e)
         {
+            // Agar fokus biror matn kiritish maydonida bo'lsa (masalan SearchBox, izoh yoki narx maydoni),
+            // skaner xizmati klaviatura hodisalariga aralashmaydi va buferni tozalaydi!
+            if (Keyboard.FocusedElement is System.Windows.Controls.TextBox || 
+                Keyboard.FocusedElement is System.Windows.Controls.PasswordBox)
+            {
+                _buffer.Clear();
+                _stopwatch.Reset();
+                return;
+            }
+
             var key = e.Key;
 
             // Enter bosilganda shtrix-kod tugallandi deb hisoblanadi

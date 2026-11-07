@@ -28,6 +28,19 @@ namespace PosElectro.Desktop
             }
             catch { }
 
+            // Barcha ochiladigan oynalarga avtomatik to'q sarlavha paneli (#0F172A) berish
+            try
+            {
+                EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.LoadedEvent, new RoutedEventHandler((s, _) =>
+                {
+                    if (s is Window w)
+                    {
+                        Services.WindowStyleHelper.ApplyDarkTheme(w);
+                    }
+                }));
+            }
+            catch { }
+
             PosElectro.Desktop.Services.KeyboardLayoutHelper.ForceEnglishLayout();
 
             bool isShowingError = false;

@@ -1,8 +1,9 @@
 <Window x:Class="PosElectro.Desktop.Views.ReorderListDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Buyurtma Ro'yxati (Zakaz)" Height="620" Width="780"
+        Title="Buyurtma Ro'yxati (Zakaz)" Height="640" Width="860"
         WindowStartupLocation="CenterOwner" ResizeMode="CanResize"
+        PreviewKeyDown="Window_PreviewKeyDown"
         Background="#0F172A">
     <Grid Margin="18">
         <Grid.RowDefinitions>
@@ -21,22 +22,30 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <StackPanel VerticalAlignment="Center">
-                <TextBlock Text="🛒 Buyurtma Uchun Tanlangan Tovarlar" Foreground="#F8FAFC" FontSize="18" FontWeight="Bold"/>
+            <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Path Stretch="Uniform" Width="20" Height="20" Margin="0,0,10,0" VerticalAlignment="Center"
+                          Data="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
+                          Stroke="#38BDF8" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Fill="Transparent"/>
+                    <TextBlock Text="Buyurtma Uchun Tanlangan Tovarlar" Foreground="#F8FAFC" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
+                </StackPanel>
                 <TextBlock x:Name="TxtSummary" Text="Ro'yxatni tekshiring, adashib qo'shilganlarini o'chiring yoki chek/Excelga chiqaring" 
-                           Foreground="#94A3B8" FontSize="12" Margin="0,4,0,0"/>
+                           Foreground="#94A3B8" FontSize="12" Margin="0,6,0,0" TextWrapping="Wrap"/>
             </StackPanel>
 
             <Button Grid.Column="1" Click="BtnClearAll_Click"
                     Background="#334155" Foreground="#F87171" BorderBrush="#EF4444" BorderThickness="1"
-                    Padding="12,6" Cursor="Hand" FontWeight="SemiBold" FontSize="12">
+                    Padding="12,8" Cursor="Hand" FontWeight="SemiBold" FontSize="12" VerticalAlignment="Center">
                 <Button.Resources>
                     <Style TargetType="Border">
                         <Setter Property="CornerRadius" Value="8"/>
                     </Style>
                 </Button.Resources>
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="🗑️ Barchasini tozalash" VerticalAlignment="Center"/>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Path Stretch="Uniform" Width="14" Height="14" Margin="0,0,7,0" VerticalAlignment="Center"
+                          Data="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14zM10 11v6M14 11v6"
+                          Stroke="#F87171" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Fill="Transparent"/>
+                    <TextBlock Text="Barchasini tozalash" VerticalAlignment="Center"/>
                 </StackPanel>
             </Button>
         </Grid>
@@ -64,20 +73,90 @@
                         <Setter Property="Foreground" Value="#94A3B8"/>
                         <Setter Property="FontWeight" Value="SemiBold"/>
                         <Setter Property="FontSize" Value="13"/>
-                        <Setter Property="BorderThickness" Value="0,0,0,1"/>
-                        <Setter Property="BorderBrush" Value="#334155"/>
-                        <Setter Property="Padding" Value="10,8"/>
+                        <Setter Property="BorderThickness" Value="0"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="DataGridColumnHeader">
+                                    <Border Background="{TemplateBinding Background}" 
+                                            BorderBrush="#334155" 
+                                            BorderThickness="0,0,0,1" 
+                                            Padding="10,8">
+                                        <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Left"/>
+                                    </Border>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
                     </Style>
                 </DataGrid.ColumnHeaderStyle>
                 <DataGrid.CellStyle>
                     <Style TargetType="DataGridCell">
                         <Setter Property="Background" Value="Transparent"/>
                         <Setter Property="BorderThickness" Value="0"/>
-                        <Setter Property="Padding" Value="10,8"/>
                         <Setter Property="Foreground" Value="#F8FAFC"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="DataGridCell">
+                                    <Border Background="{TemplateBinding Background}" 
+                                            BorderThickness="0" 
+                                            Padding="10,8" 
+                                            SnapsToDevicePixels="True">
+                                        <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Left" 
+                                                          SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                                    </Border>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                        <Style.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Background" Value="#334155"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                        </Style.Triggers>
                     </Style>
                 </DataGrid.CellStyle>
                 <DataGrid.Columns>
+                    <!-- Rasm ustuni -->
+                    <DataGridTemplateColumn Header="Rasm" Width="68">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Button Click="BtnChangeImage_Click" Tag="{Binding}" 
+                                        Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand"
+                                        ToolTip="Rasm biriktirish uchun bosing (O'chirish uchun o'ng tugmani bosing)">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <ContentPresenter/>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                    <Border Width="38" Height="38" CornerRadius="6" Background="#0F172A" BorderBrush="#334155" BorderThickness="1">
+                                        <Border.ContextMenu>
+                                            <ContextMenu Background="#1E293B" Foreground="#F8FAFC">
+                                                <MenuItem Header="Rasm tanlash..." Click="MenuSelectImage_Click" Tag="{Binding}"/>
+                                                <MenuItem Header="Rasmni o'chirish" Click="MenuRemoveImage_Click" Tag="{Binding}" IsEnabled="{Binding HasImage}"/>
+                                            </ContextMenu>
+                                        </Border.ContextMenu>
+                                        <Grid>
+                                            <!-- Rasm mavjud bo'lsa -->
+                                            <Image Source="{Binding ImagePath}" Stretch="UniformToFill"
+                                                   Visibility="{Binding HasImage, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                <Image.Clip>
+                                                    <RectangleGeometry Rect="0,0,36,36" RadiusX="5" RadiusY="5"/>
+                                                </Image.Clip>
+                                            </Image>
+
+                                            <!-- Rasm bo'lmasa kamera ikonkasi -->
+                                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                                                        Visibility="{Binding HasImage, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                                                <Path Stretch="Uniform" Width="14" Height="14" 
+                                                      Data="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" 
+                                                      Stroke="#64748B" StrokeThickness="1.5" Fill="Transparent"/>
+                                                <TextBlock Text="+" FontSize="9" Foreground="#64748B" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,-2,0,0"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </Button>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
                     <!-- Mahsulot nomi -->
                     <DataGridTextColumn Header="Mahsulot nomi" Binding="{Binding Name}" Width="2*" MinWidth="160">
                         <DataGridTextColumn.ElementStyle>
@@ -100,7 +179,7 @@
                     </DataGridTextColumn>
 
                     <!-- Qoldiq -->
-                    <DataGridTemplateColumn Header="Hozirgi qoldiq" Width="100">
+                    <DataGridTemplateColumn Header="Hozirgi qoldiq" Width="120">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding StockDisplay}" Foreground="#EF4444" FontWeight="Bold" VerticalAlignment="Center"/>
@@ -109,7 +188,7 @@
                     </DataGridTemplateColumn>
 
                     <!-- Birlik -->
-                    <DataGridTextColumn Header="Birlik" Binding="{Binding UnitDisplay}" Width="65">
+                    <DataGridTextColumn Header="Birlik" Binding="{Binding UnitDisplay}" Width="75">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="Foreground" Value="#94A3B8"/>
@@ -129,22 +208,40 @@
                     </DataGridTextColumn>
 
                     <!-- Olib tashlash (❌) -->
-                    <DataGridTemplateColumn Header="Amal" Width="95">
+                    <DataGridTemplateColumn Header="Amal" Width="105">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <Button Click="BtnRemoveItem_Click"
                                         Tag="{Binding}"
                                         ToolTip="Buyurtma ro'yxatidan olib tashlash"
-                                        Background="#451A1A" BorderBrush="#EF4444" BorderThickness="1"
-                                        Foreground="#F87171" FontWeight="Bold" FontSize="11"
-                                        Padding="6,4" Cursor="Hand" HorizontalAlignment="Center">
-                                    <Button.Resources>
-                                        <Style TargetType="Border">
-                                            <Setter Property="CornerRadius" Value="6"/>
+                                        Background="Transparent" BorderThickness="0"
+                                        Foreground="#F87171" FontWeight="SemiBold" FontSize="12"
+                                        Padding="0" Cursor="Hand" HorizontalAlignment="Left">
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Setter Property="Background" Value="Transparent"/>
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border Background="{TemplateBinding Background}" BorderThickness="0">
+                                                            <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Left"/>
+                                                        </Border>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                            <Style.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter Property="Foreground" Value="#EF4444"/>
+                                                </Trigger>
+                                            </Style.Triggers>
                                         </Style>
-                                    </Button.Resources>
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="❌ O'chirish" VerticalAlignment="Center"/>
+                                    </Button.Style>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Path Stretch="Uniform" Width="11" Height="11" Margin="0,0,6,0" VerticalAlignment="Center"
+                                              Data="M6 18L18 6M6 6l12 12"
+                                              Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+                                              StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                                        <TextBlock Text="O'chirish" VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Button>
                             </DataTemplate>
@@ -176,8 +273,11 @@
                             <Setter Property="CornerRadius" Value="10"/>
                         </Style>
                     </Button.Resources>
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="🖨️ Chek chiqarish" VerticalAlignment="Center"/>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Path Stretch="Uniform" Width="15" Height="15" Margin="0,0,8,0" VerticalAlignment="Center"
+                              Data="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6v-8z"
+                              Stroke="White" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Fill="Transparent"/>
+                        <TextBlock Text="Chek chiqarish" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
 
@@ -190,13 +290,17 @@
                             <Setter Property="CornerRadius" Value="10"/>
                         </Style>
                     </Button.Resources>
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="📊 Excelga saqlash" VerticalAlignment="Center"/>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Path Stretch="Uniform" Width="14" Height="14" Margin="0,0,8,0" VerticalAlignment="Center"
+                              Data="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z M14 2v6h6 M8 13h2m-2 4h4m-4-8h1 M16 13l-3 3m0 0l-3-3m3 3v-6"
+                              Stroke="White" StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Fill="Transparent"/>
+                        <TextBlock Text="Excelga saqlash" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
 
                 <!-- Yopish -->
                 <Button Click="BtnClose_Click"
+                        IsCancel="True"
                         Background="#334155" Foreground="White" BorderThickness="0"
                         Padding="16,9" Cursor="Hand" FontWeight="SemiBold" FontSize="13">
                     <Button.Resources>
@@ -204,7 +308,12 @@
                             <Setter Property="CornerRadius" Value="10"/>
                         </Style>
                     </Button.Resources>
-                    <TextBlock Text="Yopish"/>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Path Stretch="Uniform" Width="12" Height="12" Margin="0,0,7,0" VerticalAlignment="Center"
+                              Data="M6 18L18 6M6 6l12 12"
+                              Stroke="#94A3B8" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                        <TextBlock Text="Yopish (Esc)" VerticalAlignment="Center"/>
+                    </StackPanel>
                 </Button>
             </StackPanel>
         </Grid>

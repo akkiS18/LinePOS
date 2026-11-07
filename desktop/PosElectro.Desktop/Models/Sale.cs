@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace PosElectro.Desktop.Models
 {
@@ -22,6 +23,9 @@ namespace PosElectro.Desktop.Models
         public bool IsSynced { get; set; } = false;
 
         public List<SaleItem> Items { get; set; } = new();
+        public string ItemsSummary => Items != null && Items.Count > 0
+            ? string.Join(", ", Items.Select(i => i.ProductName))
+            : string.Empty;
 
         public DateTime CreatedDateTime => DateTimeOffset.FromUnixTimeMilliseconds(CreatedAt).LocalDateTime;
         public double? RecognisedProfit { get; set; }

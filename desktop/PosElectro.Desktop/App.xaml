@@ -463,12 +463,21 @@
                                         Background="Transparent"
                                         BorderThickness="0"
                                         Cursor="Hand"
-                                        Padding="6,0,6,0">
+                                        Padding="2,0,4,0">
                                     <Button.Template>
                                         <ControlTemplate TargetType="Button">
-                                            <Border Background="Transparent" Padding="{TemplateBinding Padding}">
-                                                <TextBlock Text="📅" FontSize="15" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                            <Border x:Name="btnBorder" Background="#1E293B" CornerRadius="6" Padding="6,5" BorderBrush="#334155" BorderThickness="1">
+                                                <Path Stretch="Uniform" Width="14" Height="14"
+                                                      Data="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                                      Stroke="#38BDF8" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                                      VerticalAlignment="Center" HorizontalAlignment="Center"/>
                                             </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="btnBorder" Property="Background" Value="#2A3B52"/>
+                                                    <Setter TargetName="btnBorder" Property="BorderBrush" Value="#38BDF8"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
                                         </ControlTemplate>
                                     </Button.Template>
                                 </Button>

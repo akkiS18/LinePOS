@@ -27,9 +27,43 @@ namespace PosElectro.Desktop.Models
         public double MinStockAlert { get; set; } = 3.0;
         public bool IsDeleted { get; set; } = false;
         public string Note { get; set; } = string.Empty;
+        private string? _imagePath;
+        public string? ImagePath
+        {
+            get => _imagePath;
+            set
+            {
+                if (_imagePath != value)
+                {
+                    _imagePath = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(HasImage));
+                }
+            }
+        }
+        public bool HasImage => !string.IsNullOrWhiteSpace(ImagePath) && System.IO.File.Exists(ImagePath);
         public string? WarehouseGuid { get; set; }
         public string? WarehouseName { get; set; }
         public long UpdatedAt { get; set; } = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+        private string? _normalizedName;
+        public string NormalizedName => _normalizedName ??= NormalizeSearchText(Name);
+
+        private string? _normalizedBarcode;
+        public string NormalizedBarcode => _normalizedBarcode ??= (Barcode?.Trim().ToLowerInvariant() ?? string.Empty);
+
+        private string? _normalizedNote;
+        public string NormalizedNote => _normalizedNote ??= (Note != null ? NormalizeSearchText(Note) : string.Empty);
+
+        private static string NormalizeSearchText(string? input)
+        {
+            if (string.IsNullOrWhiteSpace(input)) return string.Empty;
+            var s = input.Trim().ToLowerInvariant();
+            s = System.Text.RegularExpressions.Regex.Replace(s, @"[''`ʹʻʼ’‘]", "'");
+            s = System.Text.RegularExpressions.Regex.Replace(s, @"(?<=\d),(?=\d)", ".");
+            s = System.Text.RegularExpressions.Regex.Replace(s, @"\s+", " ");
+            return s;
+        }
 
         private bool _isSelected;
         public bool IsSelected

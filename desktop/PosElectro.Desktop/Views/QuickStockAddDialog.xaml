@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Qoldiqni oshirish (Kirim)" Height="430" Width="470"
         WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+        PreviewKeyDown="Window_PreviewKeyDown"
         Background="#0F172A" WindowStyle="SingleBorderWindow">
     <Grid Margin="20">
         <Grid.RowDefinitions>
@@ -92,6 +93,7 @@
             </Grid.ColumnDefinitions>
 
             <Button Grid.Column="0" Content="Bekor qilish (Esc)" Click="BtnCancel_Click"
+                    IsCancel="True"
                     Background="#334155" Foreground="#94A3B8" BorderThickness="0"
                     Padding="0,10" Margin="0,0,8,0" Cursor="Hand" FontWeight="SemiBold" FontSize="13">
                 <Button.Resources>
@@ -100,6 +102,7 @@
             </Button>
 
             <Button Grid.Column="1" Content="✓ Qo'shish (Enter)" Click="BtnConfirm_Click"
+                    IsDefault="True"
                     Background="#0B6477" Foreground="White" BorderBrush="#2DD4BF" BorderThickness="1"
                     Padding="0,10" Margin="8,0,0,0" Cursor="Hand" FontWeight="Bold" FontSize="13">
                 <Button.Resources>

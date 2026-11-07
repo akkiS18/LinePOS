@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.Windows;
+using PosElectro.Desktop.Data;
 using PosElectro.Desktop.Models;
 using PosElectro.Desktop.Services;
 
@@ -14,6 +16,7 @@ namespace PosElectro.Desktop.Views
         private readonly Action<Product>? _onRemoveItem;
         private readonly Action? _onClearAll;
         private readonly PrinterService _printerService;
+        private readonly DatabaseContext _db;
         private readonly string _warehouseName;
 
         public ReorderListDialog(
@@ -21,9 +24,12 @@ namespace PosElectro.Desktop.Views
             Action<Product>? onRemoveItem, 
             Action? onClearAll,
             PrinterService printerService,
+            DatabaseContext? db = null,
             string warehouseName = "Barcha omborlar")
         {
             InitializeComponent();
+            WindowStyleHelper.ApplyDarkTheme(this);
+            _db = db ?? new DatabaseContext();
             _items = new ObservableCollection<Product>(items);
             _onRemoveItem = onRemoveItem;
             _onClearAll = onClearAll;
@@ -40,6 +46,73 @@ namespace PosElectro.Desktop.Views
             TxtSummary.Text = _items.Count > 0 
                 ? $"Ro'yxatda {_items.Count} ta mahsulot mavjud. Adashib qo'shilganlarini o'chirishingiz yoki chek/Excelga chiqarishingiz mumkin."
                 : "Buyurtma uchun hech qanday tovar qolmadi.";
+        }
+
+        private void BtnChangeImage_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement fe && fe.Tag is Product product)
+            {
+                SelectImageForProduct(product);
+            }
+        }
+
+        private void MenuSelectImage_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement fe && fe.Tag is Product product)
+            {
+                SelectImageForProduct(product);
+            }
+        }
+
+        private void MenuRemoveImage_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement fe && fe.Tag is Product product)
+            {
+                product.ImagePath = string.Empty;
+                _db.UpdateProductImage(product.Guid, string.Empty);
+            }
+        }
+
+        private void SelectImageForProduct(Product product)
+        {
+            try
+            {
+                var dialog = new Microsoft.Win32.OpenFileDialog
+                {
+                    Title = $"{product.Name} uchun rasm tanlang",
+                    Filter = "Rasm fayllari (*.jpg;*.jpeg;*.png;*.webp;*.bmp)|*.jpg;*.jpeg;*.png;*.webp;*.bmp|Barcha fayllar (*.*)|*.*",
+                    CheckFileExists = true
+                };
+
+                if (dialog.ShowDialog() == true)
+                {
+                    var sourcePath = dialog.FileName;
+                    if (!File.Exists(sourcePath)) return;
+
+                    var ext = Path.GetExtension(sourcePath).ToLowerInvariant();
+                    if (string.IsNullOrWhiteSpace(ext)) ext = ".jpg";
+
+                    var imagesDir = Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                        "PosElectro",
+                        "ProductImages");
+
+                    if (!Directory.Exists(imagesDir))
+                    {
+                        Directory.CreateDirectory(imagesDir);
+                    }
+
+                    var targetPath = Path.Combine(imagesDir, $"{product.Guid}_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}{ext}");
+                    File.Copy(sourcePath, targetPath, overwrite: true);
+
+                    product.ImagePath = targetPath;
+                    _db.UpdateProductImage(product.Guid, targetPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Rasmni saqlashda xatolik yuz berdi:\n{ex.Message}", "Xatolik", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private void BtnRemoveItem_Click(object sender, RoutedEventArgs e)
@@ -72,6 +145,7 @@ namespace PosElectro.Desktop.Views
                 _items.Clear();
                 _onClearAll?.Invoke();
                 UpdateSummary();
+                Close();
             }
         }
 
@@ -90,7 +164,6 @@ namespace PosElectro.Desktop.Views
             }
             else
             {
-                // Agar chek printeri topilmasa yoki xatolik bo'lsa
                 MessageBox.Show("Chek printeri topilmadi yoki ulanmagan. Iltimos, printer ulanishini tekshiring.", "Xatolik", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
@@ -109,6 +182,15 @@ namespace PosElectro.Desktop.Views
         private void BtnClose_Click(object sender, RoutedEventArgs e)
         {
             Close();
+        }
+
+        private void Window_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == System.Windows.Input.Key.Escape)
+            {
+                Close();
+                e.Handled = true;
+            }
         }
     }
 }

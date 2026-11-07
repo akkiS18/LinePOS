@@ -23,14 +23,91 @@ namespace PosElectro.Desktop.Views
 
         private void InventoryView_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
-            if (DataContext is InventoryViewModel vm && vm.IsAddEditFormVisible)
+            if (DataContext is not InventoryViewModel vm) return;
+
+            // 1. Yangi ombor qo'shish modali
+            if (vm.IsAddWarehouseModalOpen)
             {
-                // Agar ustki modal dialoglar ochiq bo'lsa (kategoriya/ombor modallari), ularga xalaqit bermaslik
-                if (vm.IsAddCategoryModalOpen || vm.IsEditCategoryModalOpen || vm.IsAddWarehouseModalOpen || vm.IsTransferModalOpen)
+                if (e.Key == System.Windows.Input.Key.Escape)
                 {
+                    vm.CloseAddWarehouseModalCommand.Execute(null);
+                    e.Handled = true;
                     return;
                 }
+                else if (e.Key == System.Windows.Input.Key.Enter)
+                {
+                    if (vm.SaveNewWarehouseCommand.CanExecute(null))
+                    {
+                        vm.SaveNewWarehouseCommand.Execute(null);
+                        e.Handled = true;
+                    }
+                    return;
+                }
+            }
 
+            // 2. Omborlararo o'tkazma (Transfer) modali
+            if (vm.IsTransferModalOpen)
+            {
+                if (e.Key == System.Windows.Input.Key.Escape)
+                {
+                    vm.CloseTransferModalCommand.Execute(null);
+                    e.Handled = true;
+                    return;
+                }
+                else if (e.Key == System.Windows.Input.Key.Enter)
+                {
+                    if (vm.ExecuteTransferCommand.CanExecute(null))
+                    {
+                        vm.ExecuteTransferCommand.Execute(null);
+                        e.Handled = true;
+                    }
+                    return;
+                }
+            }
+
+            // 3. Kategoriya qo'shish modali
+            if (vm.IsAddCategoryModalOpen)
+            {
+                if (e.Key == System.Windows.Input.Key.Escape)
+                {
+                    vm.CloseAddCategoryModalCommand.Execute(null);
+                    e.Handled = true;
+                    return;
+                }
+                else if (e.Key == System.Windows.Input.Key.Enter)
+                {
+                    if (vm.SaveNewCategoryCommand.CanExecute(null))
+                    {
+                        vm.SaveNewCategoryCommand.Execute(null);
+                        e.Handled = true;
+                    }
+                    return;
+                }
+            }
+
+            // 4. Kategoriya tahrirlash modali
+            if (vm.IsEditCategoryModalOpen)
+            {
+                if (e.Key == System.Windows.Input.Key.Escape)
+                {
+                    vm.CloseEditCategoryModalCommand.Execute(null);
+                    e.Handled = true;
+                    return;
+                }
+                else if (e.Key == System.Windows.Input.Key.Enter)
+                {
+                    if (vm.SaveEditCategoryCommand.CanExecute(null))
+                    {
+                        vm.SaveEditCategoryCommand.Execute(null);
+                        e.Handled = true;
+                    }
+                    return;
+                }
+            }
+
+            // 5. Tovar qo'shish / tahrirlash formasi
+            if (vm.IsAddEditFormVisible)
+            {
                 if (e.Key == System.Windows.Input.Key.Escape)
                 {
                     if (vm.CancelAddEditCommand.CanExecute(null))

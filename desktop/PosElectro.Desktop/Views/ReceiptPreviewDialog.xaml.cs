@@ -154,5 +154,19 @@ namespace PosElectro.Desktop.Views
         {
             Close();
         }
+
+        private void Window_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == System.Windows.Input.Key.Escape)
+            {
+                Close();
+                e.Handled = true;
+            }
+            else if (e.Key == System.Windows.Input.Key.Enter)
+            {
+                BtnPrint_Click(this, null!);
+                e.Handled = true;
+            }
+        }
     }
 }

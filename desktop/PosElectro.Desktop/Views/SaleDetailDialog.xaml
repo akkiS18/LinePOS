@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Chek Tafsilotlari" Height="560" Width="550"
         WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+        PreviewKeyDown="Window_PreviewKeyDown"
         Background="#0F172A">
     <Grid Margin="20">
         <Grid.RowDefinitions>
@@ -97,11 +98,14 @@
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <Button Grid.Column="0" Content="Yopish" Click="BtnClose_Click"
+            <Button Grid.Column="0" Content="Yopish (Esc)" Click="BtnClose_Click"
+                    IsCancel="True"
                     Style="{StaticResource ModernButton}" Height="40" Margin="0,0,6,0"/>
 
-            <Button x:Name="BtnReturn" Grid.Column="1" Content="Qaytarish" Click="BtnReturn_Click" Height="40" Margin="6,0,6,0"/>
-            <Button x:Name="BtnPrintReceipt" Grid.Column="2" Content="🖨️ Chop etish" Click="BtnPrintReceipt_Click"
+            <Button x:Name="BtnReturn" Grid.Column="1" Content="↩️ Qaytarish" Click="BtnReturn_Click" 
+                    Style="{StaticResource DangerButton}" Height="40" Margin="6,0,6,0"/>
+            <Button x:Name="BtnPrintReceipt" Grid.Column="2" Content="🖨️ Chop etish (Enter)" Click="BtnPrintReceipt_Click"
+                    IsDefault="True"
                     Style="{StaticResource SuccessButton}" Height="40" Margin="6,0,0,0" FontWeight="Bold"/>
         </Grid>
     </Grid>

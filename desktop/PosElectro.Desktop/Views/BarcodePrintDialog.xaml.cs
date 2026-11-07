@@ -393,7 +393,42 @@ namespace PosElectro.Desktop.Views
 
             string labelSizeId = (CmbLabelSize.SelectedItem as LabelSizeConfig)?.Id ?? "40x30";
 
-            bool ok = _printerService.PrintBarcodeLabel(
+            if (isTest)
+            {
+                bool ok = _printerService.PrintBarcodeLabel(
+                    _barcode,
+                    _productName,
+                    _sellingPrice,
+                    1,
+                    showName,
+                    showPrice,
+                    showBarcode,
+                    _detectedPrinter,
+                    labelSizeId,
+                    _currentOffsetMm,
+                    _currentNameOffsetMm,
+                    _currentNameAlignment,
+                    _currentNameLines);
+
+                if (ok)
+                {
+                    ShowStatus("✅ 1 dona sinov stikeri printerga yuborildi!", isError: false);
+                }
+                else
+                {
+                    ShowStatus("❌ Printerga yuborishda xatolik! Printer ulanganligini tekshiring.", isError: true);
+                }
+                return;
+            }
+
+            // Asosiy stikerlarni chop etish (Fonda asinxron ishlaydi)
+            if (LabelPrintService.Instance.IsPrinting)
+            {
+                ShowStatus("⚠️ Hozirda boshqa stiker chop etilmoqda! Iltimos, u yakunlanishini kuting.", isError: true);
+                return;
+            }
+
+            bool started = LabelPrintService.Instance.StartPrintJob(
                 _barcode,
                 _productName,
                 _sellingPrice,
@@ -408,21 +443,14 @@ namespace PosElectro.Desktop.Views
                 _currentNameAlignment,
                 _currentNameLines);
 
-            if (ok)
+            if (started)
             {
-                if (isTest)
-                {
-                    ShowStatus("✅ 1 dona sinov stikeri printerga yuborildi!", isError: false);
-                }
-                else
-                {
-                    DialogResult = true;
-                    Close();
-                }
+                DialogResult = true;
+                Close();
             }
             else
             {
-                ShowStatus("❌ Printerga yuborishda xatolik! Printer ulanganligini tekshiring.", isError: true);
+                ShowStatus("❌ Printerga yuborishda xatolik yuz berdi!", isError: true);
             }
         }
 
@@ -439,6 +467,20 @@ namespace PosElectro.Desktop.Views
         {
             DialogResult = false;
             Close();
+        }
+
+        private void Window_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == System.Windows.Input.Key.Escape)
+            {
+                BtnCancel_Click(this, null!);
+                e.Handled = true;
+            }
+            else if (e.Key == System.Windows.Input.Key.Enter)
+            {
+                BtnPrint_Click(this, null!);
+                e.Handled = true;
+            }
         }
     }
 }

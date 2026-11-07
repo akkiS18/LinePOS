@@ -112,11 +112,40 @@ namespace PosElectro.Desktop.ViewModels
                 if (SetProperty(ref _searchReceiptNumber, value))
                 {
                     OnPropertyChanged(nameof(HasSearchReceiptNumber));
-                    LoadData();
+                    if (!HasSearchReceiptNumber)
+                    {
+                        // Qidiruv tozalandi — darhol oddiy ko'rinishga qaytish
+                        _searchDebounce?.Stop();
+                        LoadData();
+                    }
+                    else
+                    {
+                        // Har harfda butun tarixni qayta hisoblamaslik uchun yozish tugashini kutamiz
+                        if (_searchDebounce == null)
+                        {
+                            _searchDebounce = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(350) };
+                            _searchDebounce.Tick += (_, _) => { _searchDebounce!.Stop(); LoadData(reuseSearchProfit: true); };
+                        }
+                        _searchDebounce.Stop();
+                        _searchDebounce.Start();
+                    }
                 }
             }
         }
         public bool HasSearchReceiptNumber => !string.IsNullOrWhiteSpace(SearchReceiptNumber);
+
+        private System.Windows.Threading.DispatcherTimer? _searchDebounce;
+        // Qidiruv paytida butun tarix bo'yicha foyda hisobi har harfda qayta hisoblanmasligi uchun vaqtincha saqlanadi.
+        // Har qanday boshqa yangilanishda (LoadData()) tozalanadi, shuning uchun eskirgan ma'lumot ko'rsatilmaydi.
+        private PosElectro.Desktop.Debt.DebtProfitProjection.Result? _searchProfitCache;
+
+        private string _searchInfoText = string.Empty;
+        public string SearchInfoText
+        {
+            get => _searchInfoText;
+            private set { if (SetProperty(ref _searchInfoText, value)) OnPropertyChanged(nameof(HasSearchInfo)); }
+        }
+        public bool HasSearchInfo => !string.IsNullOrEmpty(_searchInfoText);
 
 
 
@@ -431,13 +460,17 @@ namespace PosElectro.Desktop.ViewModels
             StatusMessage = $"✅ Ma'lumotlar yangilandi ({DateTime.Now:HH:mm:ss})";
         }
 
-        public void LoadData()
+        public void LoadData() => LoadData(reuseSearchProfit: false);
+
+        private void LoadData(bool reuseSearchProfit)
         {
           try {
+            _searchDebounce?.Stop();
             List<Sale> rawSales;
             if (HasSearchReceiptNumber)
             {
-                rawSales = _db.SearchSalesByReceiptNumber(SearchReceiptNumber);
+                // Chek raqami, mahsulot nomi yoki shtrix-kod bo'yicha (butun tarix)
+                rawSales = _db.SearchSales(SearchReceiptNumber);
             }
             else
             {
@@ -448,8 +481,18 @@ namespace PosElectro.Desktop.ViewModels
             string? catFilter = (SelectedCategory == "Barchasi") ? null : SelectedCategory;
             string? whGuidFilter = (_selectedWarehouse == null || _selectedWarehouse.Guid == "all") ? null : _selectedWarehouse.Guid;
 
-            var profitReport = _db.GetCashProfitReport(HasSearchReceiptNumber ? 0 : new DateTimeOffset(_startDate).ToUnixTimeMilliseconds(),
-                HasSearchReceiptNumber ? long.MaxValue : new DateTimeOffset(_endDate).ToUnixTimeMilliseconds());
+            PosElectro.Desktop.Debt.DebtProfitProjection.Result profitReport;
+            if (HasSearchReceiptNumber)
+            {
+                if (!reuseSearchProfit || _searchProfitCache == null) _searchProfitCache = _db.GetCashProfitReport(0, long.MaxValue);
+                profitReport = _searchProfitCache;
+            }
+            else
+            {
+                _searchProfitCache = null;
+                profitReport = _db.GetCashProfitReport(new DateTimeOffset(_startDate).ToUnixTimeMilliseconds(),
+                    new DateTimeOffset(_endDate).ToUnixTimeMilliseconds());
+            }
             var matchingIds = rawSales.Select(s=>s.Id).ToHashSet();
             _reportLines = profitReport.Lines.Where(item =>
                 (!HasSearchReceiptNumber || matchingIds.Contains(item.SaleId)) &&
@@ -462,12 +505,26 @@ namespace PosElectro.Desktop.ViewModels
                 Sales.Add(sale);
             }
 
+            // Qidiruv natijasi filtr (kategoriya/ombor/tur) tufayli jim yo'qolib qolmasligi uchun foydalanuvchiga aytamiz
+            if (!HasSearchReceiptNumber) SearchInfoText = string.Empty;
+            else if (matchingIds.Count == 0) SearchInfoText = "Hech narsa topilmadi (butun tarix bo'yicha qidirildi)";
+            else
+            {
+                var hidden = matchingIds.Count - Sales.Count;
+                SearchInfoText = Sales.Count == 0
+                    ? $"{matchingIds.Count} ta chek topildi, lekin tanlangan filtr (kategoriya/ombor/tur) tufayli yashirilgan"
+                    : hidden > 0
+                        ? $"{Sales.Count} ta chek ko'rsatildi, yana {hidden} tasi filtr tufayli yashirilgan"
+                        : $"{Sales.Count} ta chek topildi (butun tarix bo'yicha)";
+            }
+
             _debtSummary = _db.GetDebtPeriodSummary(_startDate, _endDate);
             _profitError = null;
             RecalculateSummary();
           } catch(Exception e) {
             _profitError = "Foyda hisoblanmadi: " + e.Message;
             StatusMessage = _profitError;
+            SearchInfoText = string.Empty;
             _reportLines.Clear(); Sales.Clear(); RecalculateSummary();
           }
         }

@@ -151,5 +151,19 @@ namespace PosElectro.Desktop.Views
             DialogResult = false;
             Close();
         }
+
+        private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Escape)
+            {
+                BtnCancel_Click(this, null!);
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Enter)
+            {
+                BtnConfirm_Click(this, null!);
+                e.Handled = true;
+            }
+        }
     }
 }

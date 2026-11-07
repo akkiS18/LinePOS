@@ -304,34 +304,29 @@ namespace PosElectro.Desktop.ViewModels
 
         public ObservableCollection<CartItemModel> CartItems { get; } = new();
         public ObservableCollection<HeldCartModel> HeldCarts { get; } = new();
-        private ObservableCollection<Product> _filteredProducts = new();
-        public ObservableCollection<Product> FilteredProducts
+        private ObservableCollection<Product> _displayProducts = new();
+        public ObservableCollection<Product> DisplayProducts
         {
-            get => _filteredProducts;
-            private set => SetProperty(ref _filteredProducts, value);
+            get => _displayProducts;
+            private set => SetProperty(ref _displayProducts, value);
         }
 
-        private ObservableCollection<Product> _topSellingProducts = new();
-        public ObservableCollection<Product> TopSellingProducts
+        public ObservableCollection<Product> FilteredProducts => DisplayProducts;
+        public ObservableCollection<Product> TopSellingProducts => DisplayProducts;
+
+        private string _catalogHeaderTitle = "⭐ ENG KO'P SOTILADIGAN TOVARLAR";
+        public string CatalogHeaderTitle
         {
-            get => _topSellingProducts;
-            private set => SetProperty(ref _topSellingProducts, value);
+            get => _catalogHeaderTitle;
+            set => SetProperty(ref _catalogHeaderTitle, value);
         }
+
         public ObservableCollection<string> Categories { get; } = new();
 
-        private bool _isShowingTopSellers = true;
-        public bool IsShowingTopSellers
-        {
-            get => _isShowingTopSellers;
-            set
-            {
-                if (SetProperty(ref _isShowingTopSellers, value))
-                {
-                    OnPropertyChanged(nameof(IsShowingSearch));
-                }
-            }
-        }
-        public bool IsShowingSearch => !_isShowingTopSellers;
+        public bool IsShowingTopSellers => string.IsNullOrWhiteSpace(SearchQuery);
+        public bool IsShowingSearch => !string.IsNullOrWhiteSpace(SearchQuery);
+        public bool HasSearchQuery => !string.IsNullOrWhiteSpace(SearchQuery);
+        public bool IsEmptySearchResult => DisplayProducts.Count == 0 && !string.IsNullOrWhiteSpace(SearchQuery);
 
         public ICommand AddToCartCommand { get; }
         public ICommand RemoveFromCartCommand { get; }
@@ -341,6 +336,7 @@ namespace PosElectro.Desktop.ViewModels
         public ICommand CompleteSaleCommand { get; }
         public ICommand SelectCategoryCommand { get; }
         public ICommand SearchQueryEnterCommand { get; }
+        public ICommand OpenImagePreviewCommand { get; }
 
         // Hold Cart komandalari va modal holatlari
         private bool _isHoldModalOpen;
@@ -423,9 +419,10 @@ namespace PosElectro.Desktop.ViewModels
         private System.Windows.Threading.DispatcherTimer? _toastTimer;
         private readonly System.Windows.Threading.DispatcherTimer _searchDebounceTimer;
         private List<Product>? _cachedAllProducts;
-        private List<Warehouse>? _cachedActiveWarehouses;
-        private Dictionary<(string, string), double>? _cachedStockMap;
-        private Warehouse? _cachedPrimaryWarehouse;
+        private List<Product>? _cachedTopSellingProducts;
+        private List<Product> _currentSearchResults = new();
+        private int _loadedSearchCount = 0;
+        private const int PageBatchSize = 40;
 
         public bool IsToastVisible
         {
@@ -735,7 +732,7 @@ namespace PosElectro.Desktop.ViewModels
             _searchDebounceTimer.Tick += (s, e) =>
             {
                 _searchDebounceTimer.Stop();
-                ApplyProductFilter();
+                ApplyFilter();
             };
 
             AddToCartCommand = new RelayCommand<Product>(p => 
@@ -745,6 +742,13 @@ namespace PosElectro.Desktop.ViewModels
                     AddToCart(p); 
                     SearchQuery = string.Empty; 
                 } 
+            });
+            OpenImagePreviewCommand = new RelayCommand<Product>(p =>
+            {
+                if (p != null && p.HasImage)
+                {
+                    MainViewModel.ShowImage(p.ImagePath, p.Name);
+                }
             });
             RemoveFromCartCommand = new RelayCommand<CartItemModel>(c => { if (c != null) RemoveFromCart(c); });
             IncreaseQuantityCommand = new RelayCommand<CartItemModel>(c => { if (c != null) ChangeQuantity(c, 1.0); });
@@ -806,6 +810,7 @@ namespace PosElectro.Desktop.ViewModels
                 var fixedVal = Services.KeyboardLayoutHelper.FixBarcodeString(value);
                 if (SetProperty(ref _searchQuery, fixedVal))
                 {
+                    OnPropertyChanged(nameof(HasSearchQuery));
                     _searchDebounceTimer.Stop();
                     _searchDebounceTimer.Start();
                 }
@@ -928,39 +933,32 @@ namespace PosElectro.Desktop.ViewModels
                 return;
             }
 
-            // 2. Filtrlanganlar orasidan shtrix-kodi aynan mos kelganini topish (Zaxira ustuvorligi bo'yicha)
-            var matchingBcItems = FilteredProducts.Where(p => 
+            // 2. Natijalar orasidan shtrix-kodi aynan mos kelganini topish
+            var matchingBc = _currentSearchResults.FirstOrDefault(p => 
                 string.Equals(p.Barcode?.Trim(), q, StringComparison.OrdinalIgnoreCase) ||
-                (qEn != q && string.Equals(p.Barcode?.Trim(), qEn, StringComparison.OrdinalIgnoreCase))).ToList();
-            if (matchingBcItems.Count > 0)
+                (qEn != q && string.Equals(p.Barcode?.Trim(), qEn, StringComparison.OrdinalIgnoreCase)));
+            if (matchingBc != null)
             {
-                var bestItem = matchingBcItems.FirstOrDefault(p => p.StockQuantity > 0) ?? matchingBcItems[0];
-                AddToCart(bestItem);
+                AddToCart(matchingBc);
                 SearchQuery = string.Empty;
-                StatusMessage = $"✅ '{bestItem.Name}' savatchaga qo'shildi";
+                StatusMessage = $"✅ '{matchingBc.Name}' savatchaga qo'shildi";
                 return;
             }
 
-            // 3. Qidiruv natijasida faqat 1 ta karta chiqqan bo'lsa, o'shani qo'shish
-            if (FilteredProducts.Count == 1)
+            // 3. Qidiruv natijasida faqat 1 ta tovar chiqqan bo'lsa, o'shani qo'shish
+            if (_currentSearchResults.Count == 1)
             {
-                var singleProduct = FilteredProducts[0];
+                var singleProduct = _currentSearchResults[0];
                 AddToCart(singleProduct);
                 SearchQuery = string.Empty;
                 StatusMessage = $"✅ '{singleProduct.Name}' savatchaga qo'shildi";
                 return;
             }
 
-            // 3b. Agar FilteredProducts hali yuklanib ulgurmagan bo'lsa (foydalanuvchi tez Enter bosgan bo'lsa), keshdan tezkor tekshirish
+            // 3b. Agar natijalar hali yuklanib ulgurmagan bo'lsa (foydalanuvchi tez Enter bosgan bo'lsa), keshdan tezkor tekshirish
             EnsureProductCache();
             var cachedProds = _cachedAllProducts ?? new List<Product>();
-            var exactOrSingleMatches = SmartSearchHelper.FilterAndRank(
-                cachedProds,
-                q,
-                p => p.Name,
-                p => p.Barcode,
-                p => p.Note
-            );
+            var exactOrSingleMatches = SmartSearchHelper.FilterAndRankProducts(cachedProds, q);
             if (exactOrSingleMatches.Count == 1)
             {
                 var singleProduct = exactOrSingleMatches[0];
@@ -971,7 +969,7 @@ namespace PosElectro.Desktop.ViewModels
             }
             else if (exactOrSingleMatches.Count > 1)
             {
-                ApplyProductFilter();
+                ApplyFilter();
                 StatusMessage = $"🔍 {exactOrSingleMatches.Count} ta tovar topildi. Keraklisini tanlang.";
                 return;
             }
@@ -1789,21 +1787,15 @@ namespace PosElectro.Desktop.ViewModels
         public void InvalidateProductCache()
         {
             _cachedAllProducts = null;
-            _cachedActiveWarehouses = null;
-            _cachedStockMap = null;
-            _cachedPrimaryWarehouse = null;
+            _cachedTopSellingProducts = null;
         }
 
         private void EnsureProductCache()
         {
-            if (_cachedAllProducts == null || _cachedActiveWarehouses == null || _cachedStockMap == null || _cachedPrimaryWarehouse == null)
+            if (_cachedAllProducts == null || _cachedTopSellingProducts == null)
             {
-                _cachedActiveWarehouses = _db.GetWarehouses(includeDeleted: false);
-                _cachedStockMap = _db.GetAllActiveProductWarehouseStocks();
-                _cachedPrimaryWarehouse = _cachedActiveWarehouses.FirstOrDefault(w => w.IsPrimary) 
-                                ?? _cachedActiveWarehouses.FirstOrDefault() 
-                                ?? new Warehouse { Guid = "main-default-warehouse", Name = "Do'kondagi ombor", IsPrimary = true };
                 _cachedAllProducts = _db.GetAllProducts(includeDeleted: false);
+                _cachedTopSellingProducts = _db.GetTopSellingProducts(50);
             }
         }
 
@@ -1811,89 +1803,50 @@ namespace PosElectro.Desktop.ViewModels
         {
             InvalidateProductCache();
             EnsureProductCache();
-            ApplyProductFilter();
+            ApplyFilter();
         }
 
-        private void ApplyProductFilter()
+        public void ApplyFilter()
         {
             EnsureProductCache();
-            var allProducts = _cachedAllProducts ?? new List<Product>();
-            var activeWarehouses = _cachedActiveWarehouses ?? new List<Warehouse>();
-            var stockMap = _cachedStockMap ?? new Dictionary<(string, string), double>();
-            var primaryWh = _cachedPrimaryWarehouse ?? new Warehouse { Guid = "main-default-warehouse", Name = "Do'kondagi ombor", IsPrimary = true };
-
             var query = SearchQuery?.Trim();
+
             if (string.IsNullOrWhiteSpace(query))
             {
-                // Bo'sh qidiruv: eng ko'p sotiladigan tovarlarni ko'rsat
-                IsShowingTopSellers = true;
-                var topProds = _db.GetTopSellingProducts(50);
-                var list = new List<Product>(topProds.Count * 2);
-                foreach (var p in topProds)
-                {
-                    ExpandProductForWarehouses(p, activeWarehouses, stockMap, primaryWh, list);
-                }
-                TopSellingProducts = new ObservableCollection<Product>(list);
-                FilteredProducts = new ObservableCollection<Product>();
+                var topSellers = _cachedTopSellingProducts ?? new List<Product>();
+                _currentSearchResults = topSellers;
+                _loadedSearchCount = topSellers.Count;
+                CatalogHeaderTitle = "⭐ ENG KO'P SOTILADIGAN TOVARLAR";
+                DisplayProducts = new ObservableCollection<Product>(topSellers);
+                OnPropertyChanged(nameof(IsShowingTopSellers));
+                OnPropertyChanged(nameof(IsShowingSearch));
+                OnPropertyChanged(nameof(IsEmptySearchResult));
                 return;
             }
 
-            IsShowingTopSellers = false;
-            var ranked = SmartSearchHelper.FilterAndRank(
-                allProducts,
-                query,
-                p => p.Name,
-                p => p.Barcode,
-                p => p.Note
-            );
+            var allProducts = _cachedAllProducts ?? new List<Product>();
+            var matches = SmartSearchHelper.FilterAndRankProducts(allProducts, query);
+            _currentSearchResults = matches;
 
-            // Eng mos kelgan dastlabki 40 ta natijani olamiz
-            var topResults = ranked.Take(40).ToList();
-            var cards = new List<Product>(topResults.Count * 2);
-            foreach (var p in topResults)
-            {
-                ExpandProductForWarehouses(p, activeWarehouses, stockMap, primaryWh, cards);
-            }
+            CatalogHeaderTitle = $"🔍 QIDIRUV NATIJALARI ({matches.Count} ta)";
 
-            FilteredProducts = new ObservableCollection<Product>(cards);
+            var initialBatch = matches.Take(PageBatchSize).ToList();
+            _loadedSearchCount = initialBatch.Count;
+            DisplayProducts = new ObservableCollection<Product>(initialBatch);
+            OnPropertyChanged(nameof(IsShowingTopSellers));
+            OnPropertyChanged(nameof(IsShowingSearch));
+            OnPropertyChanged(nameof(IsEmptySearchResult));
         }
 
-        private static void ExpandProductForWarehouses(
-            Product p, 
-            List<Warehouse> activeWarehouses, 
-            Dictionary<(string, string), double> stockMap, 
-            Warehouse primaryWh, 
-            ICollection<Product> targetCollection)
+        public void LoadNextBatch()
         {
-            if (activeWarehouses.Count <= 1)
+            if (_loadedSearchCount >= _currentSearchResults.Count) return;
+            var nextBatch = _currentSearchResults.Skip(_loadedSearchCount).Take(PageBatchSize).ToList();
+            foreach (var item in nextBatch)
             {
-                var wh = activeWarehouses.Count == 1 ? activeWarehouses[0] : primaryWh;
-                double stock = stockMap.TryGetValue((p.Guid, wh.Guid), out var s) ? s : p.StockQuantity;
-                var card = p.CloneForWarehouse(wh.Guid, wh.Name, orderIndex: 1, stock: stock);
-                targetCollection.Add(card);
-                return;
+                DisplayProducts.Add(item);
             }
-
-            // Ko'p omborli rejim:
-            // 1-o'rinda: Har doim Asosiy ombor (1)
-            double primaryStock = stockMap.TryGetValue((p.Guid, primaryWh.Guid), out var ps) ? ps : 0.0;
-            var primaryCard = p.CloneForWarehouse(primaryWh.Guid, primaryWh.Name, orderIndex: 1, stock: primaryStock);
-            targetCollection.Add(primaryCard);
-
-            // Keyingi o'rinlarda: Qolgan faol omborlar (2, 3...) - faqat qoldig'i 0 dan katta bo'lsa
-            for (int i = 0; i < activeWarehouses.Count; i++)
-            {
-                var wh = activeWarehouses[i];
-                if (wh.Guid == primaryWh.Guid) continue;
-
-                int orderIndex = i + 1;
-                bool hasStock = stockMap.TryGetValue((p.Guid, wh.Guid), out var whStock);
-                if (hasStock && whStock > 0)
-                {
-                    var secCard = p.CloneForWarehouse(wh.Guid, wh.Name, orderIndex: orderIndex, stock: whStock);
-                    targetCollection.Add(secCard);
-                }
-            }
+            _loadedSearchCount += nextBatch.Count;
         }
 
         private void NotifyTotals()

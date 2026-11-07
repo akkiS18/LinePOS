@@ -13,10 +13,38 @@ namespace PosElectro.Desktop.Views
             InitializeComponent();
         }
 
+        private void ProductList_ScrollChanged(object sender, ScrollChangedEventArgs e)
+        {
+            if (e.VerticalChange > 0 && e.VerticalOffset >= e.ExtentHeight - e.ViewportHeight - 120)
+            {
+                if (DataContext is CashierViewModel vm)
+                {
+                    vm.LoadNextBatch();
+                }
+            }
+        }
+
         private void SearchTextBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (DataContext is CashierViewModel vm)
             {
+                if (vm.IsQuickCustomerModalOpen)
+                {
+                    if (e.Key == Key.Enter)
+                    {
+                        vm.SaveQuickCustomerModalCommand.Execute(null);
+                        e.Handled = true;
+                        return;
+                    }
+                    else if (e.Key == Key.Escape)
+                    {
+                        vm.CloseQuickCustomerModalCommand.Execute(null);
+                        e.Handled = true;
+                        return;
+                    }
+                    return;
+                }
+
                 if (vm.IsPaymentModalOpen)
                 {
                     if (e.Key == Key.Enter)
@@ -52,7 +80,7 @@ namespace PosElectro.Desktop.Views
                 var searchKey = e.Key == Key.System ? e.SystemKey : e.Key;
                 if (!vm.IsPaymentModalOpen && !vm.IsEditModalOpen && !vm.IsUnrecognizedBarcodeModalOpen && !vm.IsHoldModalOpen && !vm.IsBrakModalOpen && vm.HasCartItems)
                 {
-                    if ((searchKey == Key.Space && string.IsNullOrWhiteSpace(SearchBox.Text)) || searchKey == Key.F8)
+                    if (searchKey == Key.F8)
                     {
                         vm.OpenPaymentModal(0);
                         e.Handled = true;
@@ -127,6 +155,9 @@ namespace PosElectro.Desktop.Views
         {
             if (DataContext is CashierViewModel vm && vm.IsPaymentModalOpen)
             {
+                // Agar ustidagi Tezkor mijoz qo'shish modali ochiq bo'lsa, to'lov modali tugmalarni qabul qilmasin!
+                if (vm.IsQuickCustomerModalOpen) return;
+
                 if (e.Key == Key.Enter)
                 {
                     vm.ConfirmSale();
@@ -234,7 +265,24 @@ namespace PosElectro.Desktop.Views
         {
             if (DataContext is CashierViewModel vm)
             {
-                // 1. Agar To'lov tasdiqlash modali ochiq bo'lsa:
+                // 1. Agar Tezkor mijoz qo'shish modali ochiq bo'lsa (To'lov ustida turgan bo'lsa ham eng birinchi bajariladi!):
+                if (vm.IsQuickCustomerModalOpen)
+                {
+                    if (e.Key == Key.Enter)
+                    {
+                        vm.SaveQuickCustomerModalCommand.Execute(null);
+                        e.Handled = true;
+                        return;
+                    }
+                    else if (e.Key == Key.Escape)
+                    {
+                        vm.CloseQuickCustomerModalCommand.Execute(null);
+                        e.Handled = true;
+                        return;
+                    }
+                }
+
+                // 2. Agar To'lov tasdiqlash modali ochiq bo'lsa:
                 if (vm.IsPaymentModalOpen)
                 {
                     if (e.Key == Key.Enter)
@@ -251,7 +299,7 @@ namespace PosElectro.Desktop.Views
                     }
                 }
 
-                // 2. Agar Savatni kutishga qo'yish (Hold) modali ochiq bo'lsa:
+                // 3. Agar Savatni kutishga qo'yish (Hold) modali ochiq bo'lsa:
                 if (vm.IsHoldModalOpen)
                 {
                     if (e.Key == Key.Enter)
@@ -268,7 +316,7 @@ namespace PosElectro.Desktop.Views
                     }
                 }
 
-                // 3. Agar Brak tasdiqlash modali ochiq bo'lsa:
+                // 4. Agar Brak tasdiqlash modali ochiq bo'lsa:
                 if (vm.IsBrakModalOpen)
                 {
                     if (e.Key == Key.Enter || e.Key == Key.Y)
@@ -285,25 +333,61 @@ namespace PosElectro.Desktop.Views
                     }
                 }
 
+                // 3c. Agar Tovar tahrirlash modali ochiq bo'lsa:
+                if (vm.IsEditModalOpen)
+                {
+                    if (e.Key == Key.Enter)
+                    {
+                        vm.SaveEditModal();
+                        e.Handled = true;
+                        return;
+                    }
+                    else if (e.Key == Key.Escape)
+                    {
+                        vm.CancelEditModal();
+                        e.Handled = true;
+                        return;
+                    }
+                }
+
+                // 3d. Agar Noma'lum shtrix-kod modali ochiq bo'lsa:
+                if (vm.IsUnrecognizedBarcodeModalOpen)
+                {
+                    if (e.Key == Key.Enter)
+                    {
+                        vm.ConfirmAddUnrecognizedBarcode();
+                        e.Handled = true;
+                        return;
+                    }
+                    else if (e.Key == Key.Escape)
+                    {
+                        vm.CloseUnrecognizedBarcode();
+                        e.Handled = true;
+                        return;
+                    }
+                }
+
                 // 4. Asosiy kassa ekranida tezkor to'lov tugmalari (Space / F8: Naqd, F9: Karta, F10: Aralash):
                 if (!vm.IsPaymentModalOpen && !vm.IsEditModalOpen && !vm.IsUnrecognizedBarcodeModalOpen && !vm.IsHoldModalOpen && !vm.IsBrakModalOpen && vm.HasCartItems)
                 {
                     var actualKey = e.Key == Key.System ? e.SystemKey : e.Key;
+                    var isInput = Keyboard.FocusedElement is TextBox || Keyboard.FocusedElement is PasswordBox;
 
-                    // Space yoki F8: Naqd to'lov
-                    if (actualKey == Key.Space || actualKey == Key.F8)
+                    // Space: faqat biror matn maydonida bo'lmagandagina naqd to'lov
+                    if (actualKey == Key.Space)
                     {
-                        // Agar qidiruv maydonida bir nechta so'z yozilayotgan bo'lsa (masalan: "kabel 2x1.5"):
-                        if (actualKey == Key.Space && Keyboard.FocusedElement is TextBox tb && tb == SearchBox && !string.IsNullOrWhiteSpace(tb.Text))
-                        {
-                            // Matn ichidagi oddiy probel
-                        }
-                        else
+                        if (!isInput)
                         {
                             vm.OpenPaymentModal(0);
                             e.Handled = true;
                             return;
                         }
+                    }
+                    else if (actualKey == Key.F8)
+                    {
+                        vm.OpenPaymentModal(0);
+                        e.Handled = true;
+                        return;
                     }
                     else if (actualKey == Key.F9)
                     {

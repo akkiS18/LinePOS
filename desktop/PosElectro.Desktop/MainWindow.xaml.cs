@@ -17,6 +17,7 @@ namespace PosElectro.Desktop
         public MainWindow()
         {
             InitializeComponent();
+            Services.WindowStyleHelper.ApplyDarkTheme(this);
             Services.KeyboardLayoutHelper.ForceEnglishLayout();
             _viewModel = new MainViewModel();
             if (Data.DatabaseContext.IsTestEnvironment)
@@ -168,11 +169,72 @@ namespace PosElectro.Desktop
 
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
         {
+            // 0. Global rasm ko'rish (Lightbox)
+            if (_viewModel.IsImagePreviewOpen)
+            {
+                if (e.Key == Key.Escape || e.Key == Key.Enter)
+                {
+                    _viewModel.CloseImagePreviewCommand.Execute(null);
+                    e.Handled = true;
+                    return;
+                }
+            }
+
+            // Global modallar (PIN aktivatsiya, Dasturchi bilan aloqa, Karta solig'i)
+            if (_viewModel.IsPinModalOpen)
+            {
+                if (e.Key == Key.Escape)
+                {
+                    _viewModel.ClosePinModalCommand.Execute(null);
+                    e.Handled = true;
+                    return;
+                }
+                else if (e.Key == Key.Enter)
+                {
+                    _viewModel.SubmitPinCommand.Execute(null);
+                    e.Handled = true;
+                    return;
+                }
+            }
+
+            if (_viewModel.IsContactModalOpen)
+            {
+                if (e.Key == Key.Escape || e.Key == Key.Enter)
+                {
+                    _viewModel.CloseContactModalCommand.Execute(null);
+                    e.Handled = true;
+                    return;
+                }
+            }
+
+            if (_viewModel.IsCardTaxModalOpen)
+            {
+                if (e.Key == Key.Escape)
+                {
+                    _viewModel.CloseCardTaxModalCommand.Execute(null);
+                    e.Handled = true;
+                    return;
+                }
+                else if (e.Key == Key.Enter)
+                {
+                    _viewModel.SaveCardTaxCommand.Execute(null);
+                    e.Handled = true;
+                    return;
+                }
+            }
+
             // Skaner apparat savatga qo'shishi FAQAT KASSA oynasida bo'lgandagina ishlasin!
             // Ombor yoki boshqa ekranda bo'lganda klaviatura kabi faol maydonga yoziladi.
             if (_viewModel.CurrentView == _viewModel.CashierVM)
             {
-                _viewModel.ScannerService.HandlePreviewKeyDown(e);
+                var isTextInput = Keyboard.FocusedElement is TextBox || Keyboard.FocusedElement is PasswordBox;
+
+                // Agar foydalanuvchi biror matn maydonida (masalan SearchBox) yozayotgan bo'lsa,
+                // skaner xizmati hodisani ushlab qolmasligi va harflar yutilib ketmasligi uchun o'tkazib yuboramiz.
+                if (!isTextInput)
+                {
+                    _viewModel.ScannerService.HandlePreviewKeyDown(e);
+                }
 
                 if (!e.Handled && _viewModel.CashierVM != null)
                 {
@@ -180,18 +242,25 @@ namespace PosElectro.Desktop
                     if (!cvm.IsPaymentModalOpen && !cvm.IsEditModalOpen && !cvm.IsUnrecognizedBarcodeModalOpen && !cvm.IsHoldModalOpen && !cvm.IsBrakModalOpen && cvm.HasCartItems)
                     {
                         var key = e.Key == Key.System ? e.SystemKey : e.Key;
-                        if (key == Key.F8 || key == Key.Space)
+                        
+                        // Space tugmasi faqat matn maydonida bo'lmagandagina naqd to'lovni ochadi.
+                        // Agar matn maydoni (SearchBox yoki boshqa) fokusda bo'lsa, matn ichida probel yozilishiga ruxsat beriladi.
+                        if (key == Key.Space)
                         {
-                            if (key == Key.Space && Keyboard.FocusedElement is TextBox tb && !string.IsNullOrWhiteSpace(tb.Text))
+                            if (isTextInput)
                             {
-                                // Qidiruv maydonida faol so'zlar yozilayotgan bo'lsa, probelga ruxsat
-                            }
-                            else
-                            {
-                                cvm.OpenPaymentModal(0);
-                                e.Handled = true;
                                 return;
                             }
+                            cvm.OpenPaymentModal(0);
+                            e.Handled = true;
+                            return;
+                        }
+
+                        if (key == Key.F8)
+                        {
+                            cvm.OpenPaymentModal(0);
+                            e.Handled = true;
+                            return;
                         }
                         if (key == Key.F9)
                         {

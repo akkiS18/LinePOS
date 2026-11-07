@@ -24,6 +24,7 @@ namespace PosElectro.Desktop.ViewModels
         public DebtsViewModel DebtsVM { get; }
         public ReportsViewModel ReportsVM { get; }
         public SyncViewModel SyncVM { get; }
+        public LabelPrintService PrintService => LabelPrintService.Instance;
 
         public ICommand NavigateCashierCommand { get; }
         public ICommand NavigateInventoryCommand { get; }
@@ -32,6 +33,8 @@ namespace PosElectro.Desktop.ViewModels
         public ICommand NavigateSyncCommand { get; }
         public ICommand BackupDatabaseCommand { get; }
         public ICommand RestoreDatabaseCommand { get; }
+        public ICommand ExportWarehouseCostReportCommand { get; }
+        public ICommand CloseImagePreviewCommand { get; }
 
         // Jonli Wi-Fi sinxron holati
         private int _liveClientsCount;
@@ -84,6 +87,7 @@ namespace PosElectro.Desktop.ViewModels
 
         public MainViewModel()
         {
+            Instance = this;
             Database = new DatabaseContext();
             ProductService = new ProductService(Database);
             CurrencyService = new CurrencyService(Database);
@@ -171,6 +175,8 @@ namespace PosElectro.Desktop.ViewModels
             NavigateSyncCommand = new RelayCommand(() => CurrentView = SyncVM);
             BackupDatabaseCommand = new RelayCommand(PerformDatabaseBackup);
             RestoreDatabaseCommand = new RelayCommand(PerformDatabaseRestore);
+            ExportWarehouseCostReportCommand = new RelayCommand(() => ExcelExportService.ExportWarehouseCostReport(Database, CurrencyService));
+            CloseImagePreviewCommand = new RelayCommand(CloseImage);
 
             OpenPinModalCommand = new RelayCommand(() =>
             {
@@ -542,6 +548,46 @@ namespace PosElectro.Desktop.ViewModels
         {
             get => _cardTaxErrorMessage;
             set => SetProperty(ref _cardTaxErrorMessage, value);
+        }
+
+        // --- Mahsulot rasmini to'liq ekranda ko'rish (Lightbox) ---
+        public static MainViewModel? Instance { get; private set; }
+
+        public static void ShowImage(string? imagePath, string title)
+        {
+            if (string.IsNullOrWhiteSpace(imagePath) || !System.IO.File.Exists(imagePath)) return;
+            if (Instance == null) return;
+            Instance.PreviewImagePath = imagePath;
+            Instance.PreviewImageTitle = string.IsNullOrWhiteSpace(title) ? "Mahsulot rasmi" : title;
+            Instance.IsImagePreviewOpen = true;
+        }
+
+        public static void CloseImage()
+        {
+            if (Instance == null) return;
+            Instance.IsImagePreviewOpen = false;
+            Instance.PreviewImagePath = null;
+        }
+
+        private bool _isImagePreviewOpen;
+        public bool IsImagePreviewOpen
+        {
+            get => _isImagePreviewOpen;
+            set => SetProperty(ref _isImagePreviewOpen, value);
+        }
+
+        private string? _previewImagePath;
+        public string? PreviewImagePath
+        {
+            get => _previewImagePath;
+            set => SetProperty(ref _previewImagePath, value);
+        }
+
+        private string _previewImageTitle = string.Empty;
+        public string PreviewImageTitle
+        {
+            get => _previewImageTitle;
+            set => SetProperty(ref _previewImageTitle, value);
         }
     }
 }

@@ -37,9 +37,18 @@ public sealed class ReturnDialog : Window
         var textPrimary = (System.Windows.Media.Brush?)Application.Current?.Resources["TextPrimary"] ?? System.Windows.Media.Brushes.White;
         var textSecondary = (System.Windows.Media.Brush?)Application.Current?.Resources["TextSecondary"] ?? System.Windows.Media.Brushes.LightGray;
         var btnStyle = (Style?)Application.Current?.Resources["ModernButton"];
+        var txtStyle = (Style?)Application.Current?.Resources["ModernTextBox"];
+        var successBtnStyle = (Style?)Application.Current?.Resources["SuccessButton"];
 
         Background = bgDark;
         Foreground = textPrimary;
+
+        PreviewKeyDown += (s, e) => {
+            if (e.Key == System.Windows.Input.Key.Escape) {
+                Close();
+                e.Handled = true;
+            }
+        };
 
         var panel = new StackPanel { Margin = new Thickness(24) }; Content = new ScrollViewer { Content = panel };
         panel.Children.Add(new TextBlock { Text = "Asl narx bo‘yicha qaytarish. Nuqsonli tovar sotiladigan qoldiqqa kirmaydi.", Foreground = textSecondary, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 16) });
@@ -49,16 +58,18 @@ public sealed class ReturnDialog : Window
             var label = new TextBlock { Text = LineText(line), Foreground = textPrimary, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 12, 0, 6), TextWrapping = TextWrapping.Wrap };
             lineLabels.Add(line.Guid, label); panel.Children.Add(label);
             var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 8) };
-            var qty = new TextBox { Text = "0", Width = 90, Height = 34, VerticalContentAlignment = VerticalAlignment.Center, Padding = new Thickness(6, 0, 6, 0), Margin = new Thickness(0, 0, 12, 0) };
-            var wh = new ComboBox { ItemsSource = warehouses, DisplayMemberPath = "Name", SelectedValuePath = "Guid", SelectedValue = line.WarehouseGuid, Width = 260, Height = 34, VerticalContentAlignment = VerticalAlignment.Center };
+            var qty = new TextBox { Text = "0", Width = 100, Height = 38, VerticalContentAlignment = VerticalAlignment.Center, Padding = new Thickness(8, 0, 8, 0), Margin = new Thickness(0, 0, 12, 0) };
+            if (txtStyle != null) qty.Style = txtStyle;
+            var wh = new ComboBox { ItemsSource = warehouses, DisplayMemberPath = "Name", SelectedValuePath = "Guid", SelectedValue = line.WarehouseGuid, Width = 260, Height = 38, VerticalContentAlignment = VerticalAlignment.Center };
             if (wh.SelectedIndex < 0) wh.SelectedIndex = 0;
             var damaged = new CheckBox { Content = "Nuqsonli (brak)", Foreground = textPrimary, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(14, 0, 0, 0) };
             row.Children.Add(qty); row.Children.Add(wh); row.Children.Add(damaged); panel.Children.Add(row);
             rows.Add((line, qty, wh, damaged)); qty.TextChanged += (_, _) => Preview();
         }
         void Field(string label, TextBox field) {
-            panel.Children.Add(new TextBlock { Text = label, Foreground = textSecondary, Margin = new Thickness(0, 12, 0, 4) });
-            field.Height = 34; field.VerticalContentAlignment = VerticalAlignment.Center; field.Padding = new Thickness(6, 0, 6, 0);
+            panel.Children.Add(new TextBlock { Text = label, Foreground = textSecondary, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 12, 0, 4) });
+            field.Height = 38; field.VerticalContentAlignment = VerticalAlignment.Center; field.Padding = new Thickness(10, 0, 10, 0);
+            if (txtStyle != null) field.Style = txtStyle;
             panel.Children.Add(field);
         }
         Field("Qaytarish sababi", reason);
@@ -68,8 +79,29 @@ public sealed class ReturnDialog : Window
         Field("Naqd qaytarish (so‘m)", cash); Field("Karta qaytarish (so‘m)", card);
         Field("Haqiqatan qaytarilgan karta xarajati (odatda 0)", fee);
         panel.Children.Add(new TextBlock { Text = "Tasdiqlash bank orqali avtomatik pul o‘tkazmaydi.", Foreground = textSecondary, Margin = new Thickness(0, 14, 0, 14) });
-        if (btnStyle != null) confirm.Style = btnStyle;
-        panel.Children.Add(confirm); confirm.Click += Confirm; Preview();
+
+        var btnGrid = new Grid { Margin = new Thickness(0, 14, 0, 10) };
+        btnGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        btnGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(14) });
+        btnGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(2, GridUnitType.Star) });
+
+        var btnCancel = new Button { Content = "Yopish (Esc)", Height = 42, IsCancel = true };
+        if (btnStyle != null) btnCancel.Style = btnStyle;
+        btnCancel.Click += (_, _) => Close();
+        Grid.SetColumn(btnCancel, 0);
+        btnGrid.Children.Add(btnCancel);
+
+        confirm.Content = "↩️ Qaytarishni tasdiqlash (Enter)";
+        confirm.Height = 42;
+        confirm.IsDefault = true;
+        if (successBtnStyle != null) confirm.Style = successBtnStyle;
+        else if (btnStyle != null) confirm.Style = btnStyle;
+        confirm.Click += Confirm;
+        Grid.SetColumn(confirm, 2);
+        btnGrid.Children.Add(confirm);
+
+        panel.Children.Add(btnGrid);
+        Preview();
         var draft=store.DesktopDraft(sale.Guid);
         if(draft.Request != null) {
             submitted=draft.Request; requestId=submitted.RequestGuid;

@@ -117,6 +117,7 @@ public class DebtsViewModel : ViewModelBase
                 OnPropertyChanged(nameof(HasActiveDebt));
                 OnPropertyChanged(nameof(CanTransferCredit));
                 OnPropertyChanged(nameof(BlockButtonText));
+                OnPropertyChanged(nameof(SelectedCustomerNoteOrEmpty));
                 LoadSelectedCustomerDetails();
             }
         }
@@ -324,6 +325,12 @@ public class DebtsViewModel : ViewModelBase
 
     public ICommand GoToCashierForCustomerCommand { get; }
     public ICommand PrintStatementCommand { get; }
+    public ICommand OpenCustomerInfoModalCommand { get; }
+    public ICommand CloseCustomerInfoModalCommand { get; }
+
+    private bool _isCustomerInfoModalOpen;
+    public bool IsCustomerInfoModalOpen { get => _isCustomerInfoModalOpen; set => SetProperty(ref _isCustomerInfoModalOpen, value); }
+    public string SelectedCustomerNoteOrEmpty => string.IsNullOrWhiteSpace(SelectedCustomer?.Note) ? "Izoh kiritilmagan" : SelectedCustomer.Note;
 
     public void ReloadDebtDatabase() {
         _debtService=new DebtService(_db);
@@ -392,6 +399,15 @@ public class DebtsViewModel : ViewModelBase
         });
 
         PrintStatementCommand = new RelayCommand(PrintStatement);
+        OpenCustomerInfoModalCommand = new RelayCommand(() =>
+        {
+            if (SelectedCustomer != null)
+            {
+                OnPropertyChanged(nameof(SelectedCustomerNoteOrEmpty));
+                IsCustomerInfoModalOpen = true;
+            }
+        });
+        CloseCustomerInfoModalCommand = new RelayCommand(() => IsCustomerInfoModalOpen = false);
 
         RefreshAll();
     }
