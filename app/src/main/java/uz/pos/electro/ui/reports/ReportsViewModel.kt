@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,6 +32,7 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
+import uz.pos.electro.util.SaleSearchMatcher
 
 @HiltViewModel
 class ReportsViewModel @Inject constructor(
@@ -107,7 +109,22 @@ class ReportsViewModel @Inject constructor(
     private var rawSales: List<SaleWithItems> = emptyList()
     private var rangeStart = 0L
     private var rangeEnd = Long.MAX_VALUE
-    fun setSearchQuery(value: String) { _searchQuery.value = value; loadCustomReportData(rangeStart, rangeEnd) }
+    // Qidiruvga mos kelgan cheklar soni (filtrlardan oldin): filtr tufayli yashirilgan natijani aniqlash uchun
+    private val _searchMatchedCount = MutableStateFlow(0)
+    val searchMatchedCount: StateFlow<Int> = _searchMatchedCount.asStateFlow()
+    private var searchDebounceJob: Job? = null
+    fun setSearchQuery(value: String) {
+        val wasBlank = _searchQuery.value.isBlank()
+        _searchQuery.value = value
+        searchDebounceJob?.cancel()
+        if (value.isBlank() || wasBlank) {
+            // Qidiruv boshlandi yoki tozalandi: ma'lumot manbasi (davr / butun tarix) almashadi
+            loadCustomReportData(rangeStart, rangeEnd)
+        } else {
+            // Har harfda butun tarixni qayta hisoblamaslik uchun yozish tugashini kutamiz
+            searchDebounceJob = viewModelScope.launch { delay(350); applyFilters() }
+        }
+    }
     fun setRecordKind(value: String) { _recordKind.value = value; applyFilters() }
     private fun kindMatches(item: uz.pos.electro.data.model.SaleReportItem) = when (_recordKind.value) {
         "Savdo" -> !item.isBrak && !item.isReturn; "Brak" -> item.isBrak; "Qaytarish" -> item.isReturn; else -> true
@@ -120,20 +137,36 @@ class ReportsViewModel @Inject constructor(
     private var summaryJob: Job? = null
     private fun applyFilters() {
         summaryJob?.cancel()
-        val query = _searchQuery.value.trim().removePrefix("#").uppercase(java.util.Locale.ROOT)
-        val matched = rawSales.filter { query.isBlank() || it.sale.receiptNumber.contains(query) ||
-            it.sale.guid.replace("-", "").contains(query.removePrefix("LP-").replace("-", ""), true) || it.sale.id.toString().contains(query) }
+        val rawQuery = _searchQuery.value.trim()
+        val searchQuery = SaleSearchMatcher.prepare(rawQuery)
+
         val category = _selectedCategory.value
         val warehouse = _selectedWarehouseGuid.value
         val kind = _recordKind.value
-        val periodStart = if (query.isBlank()) rangeStart else 0L
-        val periodEnd = if (query.isBlank()) rangeEnd else Long.MAX_VALUE
+        val periodStart = if (rawQuery.isBlank()) rangeStart else 0L
+        val periodEnd = if (rawQuery.isBlank()) rangeEnd else Long.MAX_VALUE
+
         summaryJob = viewModelScope.launch {
           try {
+            // Mahsulotlar (shtrix-kod va hozirgi nom uchun) faqat qidiruv paytida o'qiladi; o'chirilganlari ham kiradi
+            val products = if (rawQuery.isNotBlank()) productRepository.getAllProductsList() else emptyList()
+            val productByGuid = products.filter { it.guid.isNotBlank() }.associateBy { it.guid }
+            val productById = products.associateBy { it.id }
+
+            val matched = if (rawQuery.isBlank()) rawSales else rawSales.filter { saleWithItems ->
+                // 1. Chek raqami, guid bo'lagi yoki ID bo'yicha
+                searchQuery.matchesReceipt(saleWithItems.sale.guid, saleWithItems.sale.id) ||
+                // 2. Chekdagi tovar nomi yoki shtrix-kodi bo'yicha (Lotin <-> Kril, ko'p so'zli)
+                saleWithItems.items.any { item ->
+                    val product = productByGuid[item.productGuid] ?: productById[item.productId]
+                    searchQuery.matchesItem(item.productName, product?.name, product?.barcode)
+                }
+            }
+
+            val matchedIds = matched.map { it.sale.id }.toSet()
             val report = saleRepository.getCashProfitReport(periodStart, periodEnd)
             val lines = report.lines.filter { item ->
-                (query.isBlank() || item.receiptNumber.contains(query, true) ||
-                    item.receiptNumber.replace("-", "").contains(query.replace("-", ""), true) || item.saleId.toString().contains(query)) &&
+                (rawQuery.isBlank() || item.saleId in matchedIds) &&
                 (when(kind) { "Savdo" -> !item.isBrak && !item.isReturn; "Brak" -> item.isBrak; "Qaytarish" -> item.isReturn; else -> true }) &&
                 (category == "Barchasi" || item.category.equals(category, true)) &&
                 (warehouse == "Barchasi" || item.warehouseGuid == warehouse)
@@ -141,6 +174,7 @@ class ReportsViewModel @Inject constructor(
             val ids = lines.filterNot { it.profitOnly }.map { it.saleId }.toSet()
             _receiptProfits.value = report.receipts
             _salesList.value = matched.filter { it.sale.id in ids }
+            _searchMatchedCount.value = if (rawQuery.isBlank()) 0 else matched.size
             _detailedReportItems.value = lines
             val baseSummary = uz.pos.electro.data.model.SaleAccounting.summary(lines, _usdRate.value)
             val debtPeriod = debtService.getDebtPeriodSummary(periodStart, periodEnd)
@@ -163,7 +197,7 @@ class ReportsViewModel @Inject constructor(
           } catch(e: kotlinx.coroutines.CancellationException) { throw e
           } catch(e: Exception) {
             _profitError.value = "Foyda hisoblanmadi: ${e.message}. Sinxron va baza tarixini tekshiring."
-            _salesList.value = emptyList(); _detailedReportItems.value = emptyList(); _receiptProfits.value = emptyMap()
+            _salesList.value = emptyList(); _detailedReportItems.value = emptyList(); _receiptProfits.value = emptyMap(); _searchMatchedCount.value = 0
           }
         }
     }
@@ -305,14 +339,14 @@ class ReportsViewModel @Inject constructor(
             val catFilter = if (_selectedCategory.value == "Barchasi") null else _selectedCategory.value
             val whFilter = if (_selectedWarehouseGuid.value == "Barchasi") null else _selectedWarehouseGuid.value
 
-            val receiptQuery = _searchQuery.value.trim().removePrefix("#").uppercase(java.util.Locale.ROOT)
+            val rawQuery = _searchQuery.value.trim()
+            val matchedIds = _salesList.value.map { it.sale.id }.toSet()
             val detailedItems = try { saleRepository.getDetailedReportItems(
-                startTimestamp = if (receiptQuery.isBlank()) start else 0L,
-                endTimestamp = if (receiptQuery.isBlank()) end else Long.MAX_VALUE,
+                startTimestamp = if (rawQuery.isBlank()) start else 0L,
+                endTimestamp = if (rawQuery.isBlank()) end else Long.MAX_VALUE,
                 categoryFilter = catFilter,
                 warehouseGuidFilter = whFilter
-            ).filter { kindMatches(it) && (receiptQuery.isBlank() || it.receiptNumber.contains(receiptQuery, true) ||
-                it.receiptNumber.replace("-", "").contains(receiptQuery.replace("-", ""), true) || it.saleId.toString().contains(receiptQuery)) }
+            ).filter { kindMatches(it) && (rawQuery.isBlank() || it.saleId in matchedIds) }
             } catch(e: kotlinx.coroutines.CancellationException) { throw e
             } catch(e: Exception) { Toast.makeText(context, "Eksport uchun foyda hisoblanmadi: ${e.message}", Toast.LENGTH_LONG).show(); return@launch }
 

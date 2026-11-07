@@ -115,6 +115,7 @@ fun ReportsScreen(
 
     // Chek raqami bo'yicha qidiruv
     val searchQuery by viewModel.searchQuery.collectAsState()
+    val searchMatchedCount by viewModel.searchMatchedCount.collectAsState()
     val recordKind by viewModel.recordKind.collectAsState()
     val filteredSales = salesList
 
@@ -272,7 +273,7 @@ fun ReportsScreen(
                         value = searchQuery,
                         onValueChange = { viewModel.setSearchQuery(it) },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Chek № bo'yicha qidirish...", fontSize = 14.sp) },
+                        placeholder = { Text("Chek №, tovar yoki shtrix-kod...", fontSize = 14.sp) },
                         leadingIcon = {
                             Icon(
                                 imageVector = Icons.Default.ReceiptLong,
@@ -329,10 +330,14 @@ fun ReportsScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = if (searchQuery.isNotBlank()) "Chek #${searchQuery.trim()} topilmadi"
+                                text = if (searchQuery.isNotBlank() && searchMatchedCount > 0)
+                                    "$searchMatchedCount ta chek topildi, lekin tanlangan filtr (kategoriya/ombor/tur) tufayli yashirilgan"
+                                else if (searchQuery.isNotBlank()) "Chek yoki tovar \"${searchQuery.trim()}\" topilmadi"
                                 else "Ushbu davrda cheklar mavjud emas",
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = MaterialTheme.typography.bodyMedium
+                                style = MaterialTheme.typography.bodyMedium,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                modifier = Modifier.padding(horizontal = 24.dp)
                             )
                         }
                     } else {
@@ -894,6 +899,16 @@ private fun SaleHistoryCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                if (saleWithItems.items.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = saleWithItems.items.joinToString(", ") { it.productName },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    )
+                }
             }
 
             Column(horizontalAlignment = Alignment.End) {

@@ -21,6 +21,8 @@ class ProductRepository @Inject constructor(
 ) {
     fun getAllProducts(): Flow<List<ProductEntity>> = productDao.getAllProducts()
 
+    suspend fun getAllProductsList(): List<ProductEntity> = productDao.getAllProductsIncludingDeleted()
+
     fun searchProducts(query: String): Flow<List<ProductEntity>> = productDao.searchProducts(query)
 
     fun getDistinctCategories(): Flow<List<String>> = productDao.getDistinctCategories()
