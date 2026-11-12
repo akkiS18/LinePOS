@@ -110,7 +110,7 @@
                         <Style.Triggers>
                             <Trigger Property="IsSelected" Value="True">
                                 <Setter Property="Background" Value="{DynamicResource Line}"/>
-                                <Setter Property="Foreground" Value="White"/>
+                                <Setter Property="Foreground" Value="{DynamicResource Ink}"/>
                             </Trigger>
                         </Style.Triggers>
                     </Style>
@@ -303,7 +303,7 @@
                 <!-- Yopish -->
                 <Button Click="BtnClose_Click"
                         IsCancel="True"
-                        Background="{DynamicResource Line}" Foreground="White" BorderThickness="0"
+                        Background="{DynamicResource Line}" Foreground="{DynamicResource Ink}" BorderThickness="0"
                         Padding="16,9" Cursor="Hand" FontWeight="SemiBold" FontSize="13">
                     <Button.Resources>
                         <Style TargetType="Border">

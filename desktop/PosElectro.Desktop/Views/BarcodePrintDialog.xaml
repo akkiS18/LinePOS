@@ -249,7 +249,7 @@
             <!-- Bekor qilish -->
             <Button Grid.Column="0" Content="Bekor qilish (Esc)" Click="BtnCancel_Click"
                     IsCancel="True"
-                    Background="{DynamicResource Line}" Foreground="White" Style="{StaticResource ModernButton}" 
+                    Background="{DynamicResource Line}" Foreground="{DynamicResource Ink}" Style="{StaticResource ModernButton}" 
                     Padding="18,10" Height="42"/>
 
             <!-- 1 dona sinov (Test Print) -->

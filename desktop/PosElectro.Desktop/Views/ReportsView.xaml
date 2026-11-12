@@ -465,7 +465,7 @@
                     </Button.Triggers>
                     <Path Stretch="Uniform" x:Name="ReportsRefreshIcon"
                           Data="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                          Stroke="White" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                          Stroke="{DynamicResource Ink}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
                           Width="15" Height="15" RenderTransformOrigin="0.5,0.5" HorizontalAlignment="Center" VerticalAlignment="Center">
                         <Path.RenderTransform>
                             <RotateTransform Angle="0"/>
@@ -780,7 +780,7 @@
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <Button Click="BtnViewDetail_Click"
-                                            Background="{DynamicResource Line}" Foreground="White" FontSize="11" FontWeight="SemiBold"
+                                            Background="{DynamicResource Line}" Foreground="{DynamicResource Ink}" FontSize="11" FontWeight="SemiBold"
                                             Padding="10,5" Cursor="Hand">
                                         <Button.Template>
                                             <ControlTemplate TargetType="Button">

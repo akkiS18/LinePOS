@@ -2,6 +2,9 @@
 
 Ushbu faylda loyihada amalga oshirilgan barcha o'zgarishlar, arxitektura qarorlari va keyingi qadamlar qayd etib boriladi.
 
+> **Desktop redesign (SMART kassa maketi):** ishni boshlashdan oldin [`docs/MAKET_KOCHIRISH_UZ.md`](docs/MAKET_KOCHIRISH_UZ.md) ni o'qing.
+> Maketdan kodga ko'chirilgan har bir qadamdan keyin o'sha faylni **shu commit ichida** yangilang (ekran holati, "Oxirgi qadam", kamchiliklar).
+
 ## 📌 Loyiha Haqida
 - **Nomi:** Line
 - **Turi:** Mobil POS (Kassa va Ombor nazorati)

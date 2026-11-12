@@ -323,14 +323,16 @@
                                         <Border.Style>
                                             <Style TargetType="Border">
                                                 <Setter Property="Background" Value="{DynamicResource Accent}"/>
+<Setter Property="TextElement.Foreground" Value="{DynamicResource OnAccent}"/>
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding HasCartItems}" Value="False">
                                                         <Setter Property="Background" Value="{DynamicResource LineStrong}"/>
+<Setter Property="TextElement.Foreground" Value="{DynamicResource Ink}"/>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
                                         </Border.Style>
-                                        <TextBlock Text="{Binding TotalItemsCount}" Foreground="White" FontSize="12" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding TotalItemsCount}" FontSize="12" FontWeight="Bold"/>
                                     </Border>
                                 </StackPanel>
                             </Border>

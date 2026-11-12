@@ -1060,7 +1060,7 @@
                             <Button Grid.Column="1" Command="{Binding CloseImagePreviewCommand}"
                                     ToolTip="Yopish (ESC)"
                                     Width="36" Height="36" Padding="0" Cursor="Hand"
-                                    Background="#25FFFFFF" BorderBrush="#45FFFFFF" BorderThickness="1" Foreground="{DynamicResource Ink}">
+                                    Background="{DynamicResource Surface2}" BorderBrush="{DynamicResource Line}" BorderThickness="1" Foreground="{DynamicResource Ink}">
                                 <Button.Resources>
                                     <Style TargetType="Border">
                                         <Setter Property="CornerRadius" Value="10"/>

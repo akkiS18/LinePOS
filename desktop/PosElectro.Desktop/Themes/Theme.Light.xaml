@@ -1,0 +1,54 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- SMART kassa — yorug' tema rang tokenlari (asosiy tema).
+         Qiymatlar maketdagi LIGHT palitradan olingan (claude.ai/artifact/2yXLhCCGrta5kSoMmyzk3z, Main.dc.html).
+         Kalitlar Theme.Dark.xaml bilan bir xil: biror kalit qo'shilsa, ikkala faylga ham qo'shilsin. -->
+
+    <!-- Sirtlar -->
+    <SolidColorBrush x:Key="Bg"          Color="#F2F4F6"/>
+    <SolidColorBrush x:Key="Surface"     Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="Surface2"    Color="#F6F8F9"/>
+
+    <!-- Chiziqlar -->
+    <SolidColorBrush x:Key="LineSoft"    Color="#EEF1F3"/>
+    <SolidColorBrush x:Key="Line"        Color="#E1E6EA"/>
+    <SolidColorBrush x:Key="LineStrong"  Color="#C9D2D8"/>
+
+    <!-- Matn -->
+    <SolidColorBrush x:Key="Ink"         Color="#0F1B21"/>
+    <SolidColorBrush x:Key="Ink2"        Color="#4F5F68"/>
+    <SolidColorBrush x:Key="Ink3"        Color="#64737C"/>
+    <SolidColorBrush x:Key="OnAccent"    Color="#FFFFFF"/>
+
+    <!-- Yagona aksent (teal) -->
+    <SolidColorBrush x:Key="Accent"      Color="#0B6477"/>
+    <SolidColorBrush x:Key="AccentHover" Color="#074F61"/>
+    <SolidColorBrush x:Key="AccentInk"   Color="#0B6477"/>
+    <SolidColorBrush x:Key="AccentSoft"  Color="#E3F0F2"/>
+
+    <!-- Holat ranglari (faqat holat uchun) -->
+    <SolidColorBrush x:Key="Ok"          Color="#157A3B"/>
+    <SolidColorBrush x:Key="OkSolid"     Color="#157A3B"/>
+    <SolidColorBrush x:Key="OkSoft"      Color="#E6F4EB"/>
+    <SolidColorBrush x:Key="OkLine"      Color="#A9D8B9"/>
+    <SolidColorBrush x:Key="Warn"        Color="#A04B06"/>
+    <SolidColorBrush x:Key="WarnSolid"   Color="#B45309"/>
+    <SolidColorBrush x:Key="WarnSoft"    Color="#FDF2E2"/>
+    <SolidColorBrush x:Key="WarnLine"    Color="#F2CF9C"/>
+    <SolidColorBrush x:Key="Bad"         Color="#C21F1F"/>
+    <SolidColorBrush x:Key="BadSolid"    Color="#C21F1F"/>
+    <SolidColorBrush x:Key="BadSoft"     Color="#FDEDED"/>
+    <SolidColorBrush x:Key="BadLine"     Color="#F3BDBD"/>
+
+    <!-- Modal orqa fon: rgba(15,27,33,0.45) -->
+    <SolidColorBrush x:Key="Scrim"       Color="#730F1B21"/>
+
+    <!-- Eski kalitlar (ReturnDialog.cs / ReturnReversalDialog.cs kodidan o'qiladi).
+         Nomlari "Dark" bo'lsa ham, qiymati shu temaning sirtlari. Dialoglar qayta chizilganda olib tashlanadi. -->
+    <SolidColorBrush x:Key="BgDark"          Color="#F2F4F6"/>
+    <SolidColorBrush x:Key="CardDark"        Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="BorderDark"      Color="#E1E6EA"/>
+    <SolidColorBrush x:Key="TextPrimary"     Color="#0F1B21"/>
+    <SolidColorBrush x:Key="TextSecondary"   Color="#4F5F68"/>
+    <SolidColorBrush x:Key="AccentTealLight" Color="#0B6477"/>
+</ResourceDictionary>

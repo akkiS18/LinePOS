@@ -117,7 +117,7 @@
 
             <Button Grid.Column="0" Content="Bekor qilish (Esc)" Click="BtnCancel_Click"
                     IsCancel="True"
-                    Background="{DynamicResource Line}" Foreground="White" Style="{StaticResource ModernButton}" Margin="0,0,6,0"/>
+                    Background="{DynamicResource Line}" Foreground="{DynamicResource Ink}" Style="{StaticResource ModernButton}" Margin="0,0,6,0"/>
 
             <Button Grid.Column="1" Content="Saqlash (Enter)" Click="BtnSave_Click"
                     IsDefault="True"

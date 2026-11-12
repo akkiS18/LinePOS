@@ -250,7 +250,7 @@
                         </Button.Triggers>
                         <Path Stretch="Uniform" x:Name="DebtsRefreshIcon"
                               Data="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                              Stroke="White" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                              Stroke="{DynamicResource Ink}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
                               Width="15" Height="15" RenderTransformOrigin="0.5,0.5" HorizontalAlignment="Center" VerticalAlignment="Center">
                             <Path.RenderTransform>
                                 <RotateTransform Angle="0"/>
@@ -340,7 +340,7 @@
                                     <!-- Nomi va Status Badge -->
                                     <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                                         <TextBlock Text="{Binding Name}" Foreground="{DynamicResource Ink}" FontSize="14" FontWeight="Bold" Margin="0,0,6,0"/>
-                                        <Border CornerRadius="4" Padding="4,1" Margin="0,0,0,0" Background="#26334155">
+                                        <Border CornerRadius="4" Padding="4,1" Margin="0,0,0,0" Background="{DynamicResource Surface2}">
                                             <TextBlock Text="{Binding StatusBadge}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource Ink2}"/>
                                         </Border>
                                     </StackPanel>
@@ -526,10 +526,10 @@
                                         <!-- Ko'chirma (Faqat vektor ikonka) -->
                                         <Button Command="{Binding PrintStatementCommand}"
                                                 ToolTip="Hisob ko'chirmasi (sverka) chop etish yoki xotiraga nusxalash"
-                                                Style="{StaticResource RoundedActionButton}" Background="{DynamicResource LineStrong}" Foreground="White"
+                                                Style="{StaticResource RoundedActionButton}" Background="{DynamicResource LineStrong}" Foreground="{DynamicResource Ink}"
                                                 Width="40" Height="40" Padding="0" Margin="0,0,8,0">
                                             <Path Stretch="Uniform" Data="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
-                                                  Stroke="White" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                                  Stroke="{DynamicResource Ink}" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
                                                   Width="16" Height="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         </Button>
 
@@ -539,7 +539,7 @@
                                                 Style="{StaticResource RoundedActionButton}" Background="{DynamicResource Line}" Foreground="{DynamicResource Ink}"
                                                 Width="40" Height="40" Padding="0" Margin="0,0,8,0">
                                             <Path Stretch="Uniform" Data="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                                                  Stroke="White" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                                  Stroke="{DynamicResource Ink}" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
                                                   Width="16" Height="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         </Button>
 
@@ -951,7 +951,7 @@
                                         <DataTrigger Binding="{Binding IsPaymentCash}" Value="True">
                                             <Setter Property="Background" Value="{DynamicResource OkSoft}"/>
                                             <Setter Property="BorderBrush" Value="{DynamicResource Ok}"/>
-                                            <Setter Property="Foreground" Value="White"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource Ok}"/>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
@@ -965,7 +965,7 @@
                                         <DataTrigger Binding="{Binding IsPaymentCard}" Value="True">
                                             <Setter Property="Background" Value="{DynamicResource AccentSoft}"/>
                                             <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
-                                            <Setter Property="Foreground" Value="White"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource AccentInk}"/>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
@@ -979,7 +979,7 @@
                                         <DataTrigger Binding="{Binding IsPaymentSplit}" Value="True">
                                             <Setter Property="Background" Value="{DynamicResource AccentSoft}"/>
                                             <Setter Property="BorderBrush" Value="{DynamicResource AccentInk}"/>
-                                            <Setter Property="Foreground" Value="White"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource AccentInk}"/>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
