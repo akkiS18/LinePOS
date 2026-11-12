@@ -65,6 +65,8 @@ namespace PosElectro.Desktop.ViewModels
                     OnPropertyChanged(nameof(DiscountAmount));
                     OnPropertyChanged(nameof(IsPrice2Active));
                     OnPropertyChanged(nameof(PriceNumberDisplay));
+                    OnPropertyChanged(nameof(PriceLineText));
+                    OnPropertyChanged(nameof(ShowOriginalPrice));
                 }
             }
         }
@@ -103,6 +105,10 @@ namespace PosElectro.Desktop.ViewModels
         public bool IsPrice2Active => HasSellingPrice2 && Math.Abs(PriceAtSale - Product.SellingPrice2!.Value) < 0.01;
         public string PriceNumberDisplay => IsPrice2Active ? " 2" : " 1";
 
+        // Savat qatori (maket 1.1): "12 000 so'm / m", chegirmada asl narx chizilgan holda
+        public string PriceLineText => $"{PriceAtSale:N0} so'm / {(Product.UnitType == UnitType.METR ? "m" : UnitDisplay)}";
+        public bool ShowOriginalPrice => IsDiscounted && !IsPrice2Active;
+
         public void TogglePrice()
         {
             if (!HasSellingPrice2) return;
@@ -114,6 +120,20 @@ namespace PosElectro.Desktop.ViewModels
             {
                 PriceAtSale = Product.SellingPrice2!.Value;
             }
+        }
+    }
+
+    /// <summary>Kassa ekranidagi kategoriya chipi (maket 1.1): nomi, tovarlar soni, tanlanganmi.</summary>
+    public class CategoryChip : ViewModelBase
+    {
+        public string Name { get; init; } = string.Empty;
+        public string Label { get; init; } = string.Empty;
+        public int Count { get; init; }
+        private bool _isSelected;
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set => SetProperty(ref _isSelected, value);
         }
     }
 
@@ -322,6 +342,22 @@ namespace PosElectro.Desktop.ViewModels
         }
 
         public ObservableCollection<string> Categories { get; } = new();
+        public ObservableCollection<CategoryChip> CategoryChips { get; } = new();
+
+        // Maket 1.1 / 1.3: tovarlar plitka yoki ro'yxat ko'rinishida
+        private bool _isListMode;
+        public bool IsListMode
+        {
+            get => _isListMode;
+            set
+            {
+                if (SetProperty(ref _isListMode, value))
+                    OnPropertyChanged(nameof(IsTileMode));
+            }
+        }
+        public bool IsTileMode => !_isListMode;
+        public ICommand SetTileModeCommand { get; private set; } = null!;
+        public ICommand SetListModeCommand { get; private set; } = null!;
 
         public bool IsShowingTopSellers => string.IsNullOrWhiteSpace(SearchQuery);
         public bool IsShowingSearch => !string.IsNullOrWhiteSpace(SearchQuery);
@@ -781,6 +817,8 @@ namespace PosElectro.Desktop.ViewModels
             OpenSplitSaleCommand = new RelayCommand(_ => OpenPaymentModal(2));
             OpenDebtSaleCommand = new RelayCommand(_ => OpenPaymentModal(3));
             SelectCategoryCommand = new RelayCommand<string>(cat => { if (cat != null) SelectedCategory = cat; });
+            SetTileModeCommand = new RelayCommand(_ => IsListMode = false);
+            SetListModeCommand = new RelayCommand(_ => IsListMode = true);
             SearchQueryEnterCommand = new RelayCommand(HandleSearchQueryEnter);
 
             OpenPaymentModalCommand = new RelayCommand(p => {
@@ -844,6 +882,8 @@ namespace PosElectro.Desktop.ViewModels
             {
                 if (SetProperty(ref _selectedCategory, value))
                 {
+                    foreach (var chip in CategoryChips)
+                        chip.IsSelected = string.Equals(chip.Name, value, StringComparison.OrdinalIgnoreCase);
                     RefreshProducts();
                 }
             }
@@ -865,6 +905,13 @@ namespace PosElectro.Desktop.ViewModels
         public double TotalAmount => SaleAccounting.Money(CartItems.Sum(i => i.TotalPrice));
         public double TotalCost => CartItems.Sum(i => i.TotalCost);
         public int TotalItemsCount => CartItems.Count;
+        // To'lov paneli (maket 1.1): "5 xil · 48 birlik", chegirmasiz summa, chegirma
+        public double SubtotalAmount => SaleAccounting.Money(CartItems.Sum(i => i.Quantity * i.OriginalPrice));
+        public double DiscountTotal => Math.Max(0, SubtotalAmount - TotalAmount);
+        public string CartItemsLine => CartItems.Count == 0
+            ? "Tovar yo'q"
+            : $"{CartItems.Count} xil · {CartItems.Sum(i => i.Quantity):0.##} birlik";
+        public string DiscountText => DiscountTotal > 0.5 ? $"−{DiscountTotal:N0}" : "0";
         public bool HasCartItems => CartItems.Count > 0;
         public bool HasHeldCarts => HeldCarts.Count > 0;
         public string CompleteSaleButtonText => CartItems.Count > 0 ? $"🛒 SOTISH ({TotalAmount:N0} so'm)" : "🛒 SOTISH";
@@ -1855,6 +1902,36 @@ namespace PosElectro.Desktop.ViewModels
             {
                 Categories.Add(c);
             }
+
+            // Chiplar: "Hammasi" + tovari bor kategoriyalar (soni bilan)
+            var all = _db.GetAllProducts(includeDeleted: false);
+            CategoryChips.Clear();
+            CategoryChips.Add(new CategoryChip
+            {
+                Name = ProductService.CATEGORY_ALL,
+                Label = "Hammasi",
+                Count = all.Count,
+                IsSelected = _selectedCategory == ProductService.CATEGORY_ALL
+            });
+            foreach (var g in all
+                         .Where(p => !string.IsNullOrWhiteSpace(p.Category) && p.Category != ProductService.CATEGORY_ALL)
+                         .GroupBy(p => p.Category.Trim(), StringComparer.OrdinalIgnoreCase)
+                         .OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase))
+            {
+                CategoryChips.Add(new CategoryChip
+                {
+                    Name = g.Key,
+                    Label = g.Key,
+                    Count = g.Count(),
+                    IsSelected = string.Equals(_selectedCategory, g.Key, StringComparison.OrdinalIgnoreCase)
+                });
+            }
+            if (!CategoryChips.Any(c => c.IsSelected))
+            {
+                _selectedCategory = ProductService.CATEGORY_ALL;
+                CategoryChips[0].IsSelected = true;
+                OnPropertyChanged(nameof(SelectedCategory));
+            }
         }
 
         public void InvalidateProductCache()
@@ -1884,6 +1961,30 @@ namespace PosElectro.Desktop.ViewModels
             EnsureProductCache();
             var query = SearchQuery?.Trim();
 
+            var category = _selectedCategory;
+            bool hasCategory = !string.IsNullOrWhiteSpace(category) && category != ProductService.CATEGORY_ALL;
+            bool InCategory(Product p) => !hasCategory
+                || (category == ProductService.CATEGORY_LOW_STOCK
+                    ? p.IsLowStock
+                    : string.Equals(p.Category?.Trim(), category, StringComparison.OrdinalIgnoreCase));
+
+            if (string.IsNullOrWhiteSpace(query) && hasCategory)
+            {
+                var inCat = (_cachedAllProducts ?? new List<Product>())
+                    .Where(InCategory)
+                    .OrderBy(p => p.Name, StringComparer.CurrentCultureIgnoreCase)
+                    .ToList();
+                _currentSearchResults = inCat;
+                CatalogHeaderTitle = $"{category} ({inCat.Count} ta)";
+                var firstBatch = inCat.Take(PageBatchSize).ToList();
+                _loadedSearchCount = firstBatch.Count;
+                DisplayProducts = new ObservableCollection<Product>(firstBatch);
+                OnPropertyChanged(nameof(IsShowingTopSellers));
+                OnPropertyChanged(nameof(IsShowingSearch));
+                OnPropertyChanged(nameof(IsEmptySearchResult));
+                return;
+            }
+
             if (string.IsNullOrWhiteSpace(query))
             {
                 var topSellers = _cachedTopSellingProducts ?? new List<Product>();
@@ -1899,6 +2000,7 @@ namespace PosElectro.Desktop.ViewModels
 
             var allProducts = _cachedAllProducts ?? new List<Product>();
             var matches = SmartSearchHelper.FilterAndRankProducts(allProducts, query);
+            if (hasCategory) matches = matches.Where(InCategory).ToList();
             _currentSearchResults = matches;
 
             CatalogHeaderTitle = $"🔍 QIDIRUV NATIJALARI ({matches.Count} ta)";
@@ -1927,6 +2029,10 @@ namespace PosElectro.Desktop.ViewModels
             OnPropertyChanged(nameof(TotalAmount));
             OnPropertyChanged(nameof(TotalCost));
             OnPropertyChanged(nameof(TotalItemsCount));
+            OnPropertyChanged(nameof(SubtotalAmount));
+            OnPropertyChanged(nameof(DiscountTotal));
+            OnPropertyChanged(nameof(CartItemsLine));
+            OnPropertyChanged(nameof(DiscountText));
             OnPropertyChanged(nameof(HasCartItems));
             OnPropertyChanged(nameof(CompleteSaleButtonText));
             OnPropertyChanged(nameof(IsAllPrice2Active));

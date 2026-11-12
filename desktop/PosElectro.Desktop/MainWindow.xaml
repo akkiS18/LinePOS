@@ -24,7 +24,7 @@
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="{DynamicResource Ink2}"/>
             <Setter Property="FontSize" Value="14"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontWeight" Value="Medium"/>
             <Setter Property="Height" Value="40"/>
             <Setter Property="Padding" Value="14,0"/>
             <Setter Property="Margin" Value="0,0,4,0"/>
@@ -47,7 +47,7 @@
                 <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="True">
                     <Setter Property="Background" Value="{DynamicResource AccentSoft}"/>
                     <Setter Property="Foreground" Value="{DynamicResource AccentInk}"/>
-                    <Setter Property="FontWeight" Value="Bold"/>
+                    <Setter Property="FontWeight" Value="SemiBold"/>
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -112,6 +112,16 @@
             <Setter Property="Background" Value="{DynamicResource BadSoft}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
+        <Style x:Key="NavIc" TargetType="Path">
+            <Setter Property="Width" Value="24"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="Stretch" Value="None"/>
+            <Setter Property="StrokeThickness" Value="2"/>
+            <Setter Property="StrokeStartLineCap" Value="Round"/>
+            <Setter Property="StrokeEndLineCap" Value="Round"/>
+            <Setter Property="StrokeLineJoin" Value="Round"/>
+            <Setter Property="Stroke" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Control}}"/>
+        </Style>
     </Window.Resources>
 
     <Grid>
@@ -122,8 +132,15 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- YUQORI NAVIGATSIYA PANELI -->
+        <!-- YUQORI NAVIGATSIYA PANELI (maket: TopBar). Qayta qurilgan: yorug' tema shu panel ichida. -->
         <Border Grid.Row="0" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Line}" BorderThickness="0,0,0,1" Padding="16,0">
+            <Border.Resources>
+                <ResourceDictionary>
+                    <ResourceDictionary.MergedDictionaries>
+                        <ResourceDictionary Source="/PosElectro.Desktop;component/Themes/Theme.Light.xaml"/>
+                    </ResourceDictionary.MergedDictionaries>
+                </ResourceDictionary>
+            </Border.Resources>
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -131,82 +148,81 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Logotip -->
-                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,28,0">
-                    <Border Width="32" Height="32" CornerRadius="8" Margin="0,0,10,0" VerticalAlignment="Center" Background="{DynamicResource AccentSoft}" Padding="2">
-                        <Image Source="Assets/app_logo.png" RenderOptions.BitmapScalingMode="HighQuality"/>
+                <!-- Logotip: 32px "S" plitka + SMART -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,24,0">
+                    <Border Width="32" Height="32" CornerRadius="8" Background="{DynamicResource Accent}" VerticalAlignment="Center">
+                        <TextBlock Text="S" Foreground="{DynamicResource OnAccent}" FontWeight="ExtraBold" FontSize="15"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
-                    <TextBlock Text="SMART kassa" Foreground="{DynamicResource Ink}" FontSize="17" FontWeight="Bold" VerticalAlignment="Center"/>
+                    <TextBlock Text="SMART" Foreground="{DynamicResource Ink}" FontSize="17" FontWeight="ExtraBold" Margin="10,0,0,0" VerticalAlignment="Center"/>
                 </StackPanel>
 
                 <!-- Bo'limlar -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                     <Button Style="{StaticResource NavTab}" Command="{Binding NavigateCashierCommand}" Tag="{Binding IsCashierSelected}">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Path Data="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"
-                                  Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                  Width="16" Height="16" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <Viewbox Width="18" Height="18" Margin="0,0,8,0">
+                                <Path Style="{StaticResource NavIc}" Data="M7 21a1 1 0 1 0 2 0a1 1 0 1 0-2 0 M18 21a1 1 0 1 0 2 0a1 1 0 1 0-2 0 M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>
+                            </Viewbox>
                             <TextBlock Text="Kassa" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
                     <Button Style="{StaticResource NavTab}" Command="{Binding NavigateInventoryCommand}" Tag="{Binding IsInventorySelected}">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Path Data="M20 2H4c-1.1 0-2 .9-2 2v3.01c0 .72.38 1.36.95 1.7L3 9.7V20c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V9.7l.05-.99c.57-.34.95-.98.95-1.7V4c0-1.1-.9-2-2-2zm-1 18H5V10h14v10zm1-13H4V4h16v3z"
-                                  Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                  Width="16" Height="16" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <Viewbox Width="18" Height="18" Margin="0,0,8,0">
+                                <Path Style="{StaticResource NavIc}" Data="M21 8L12 3L3 8v8l9 5l9-5z M3 8l9 5l9-5 M12 13v8"/>
+                            </Viewbox>
                             <TextBlock Text="Ombor" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
                     <Button Style="{StaticResource NavTab}" Command="{Binding NavigateDebtsCommand}" Tag="{Binding IsDebtsSelected}">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Path Data="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z"
-                                  Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                  Width="16" Height="16" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <Viewbox Width="18" Height="18" Margin="0,0,8,0">
+                                <Path Style="{StaticResource NavIc}" Data="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M5 7a4 4 0 1 0 8 0a4 4 0 1 0-8 0 M22 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75"/>
+                            </Viewbox>
                             <TextBlock Text="Qarzlar" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
                     <Button Style="{StaticResource NavTab}" Command="{Binding NavigateReportsCommand}" Tag="{Binding IsReportsSelected}">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Path Data="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"
-                                  Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                  Width="16" Height="16" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <Viewbox Width="18" Height="18" Margin="0,0,8,0">
+                                <Path Style="{StaticResource NavIc}" Data="M3 3v18h18 M7 15l4-4l3 3l5-6"/>
+                            </Viewbox>
                             <TextBlock Text="Hisobotlar" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
-                    <Button Style="{StaticResource NavTab}" Command="{Binding NavigateSyncCommand}" Tag="{Binding IsSyncSelected}">
+                    <Button Style="{StaticResource NavTab}" Command="{Binding NavigateSyncCommand}" Tag="{Binding IsSyncSelected}"
+                            ToolTip="{Binding LiveSyncStatusText}">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Path Data="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z"
-                                  Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                  Width="16" Height="16" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <Viewbox Width="18" Height="18" Margin="0,0,8,0">
+                                <Path Style="{StaticResource NavIc}" Data="M5 12.55a11 11 0 0 1 14 0 M8.5 16.1a6 6 0 0 1 7 0 M2 8.82a15 15 0 0 1 20 0 M12 20h.01"/>
+                            </Viewbox>
                             <TextBlock Text="Wi-Fi Sinxron" VerticalAlignment="Center"/>
-                            <Border Margin="8,0,0,0" Padding="7,2" CornerRadius="9" VerticalAlignment="Center">
-                                <Border.Style>
-                                    <Style TargetType="Border">
-                                        <Setter Property="Background" Value="{DynamicResource Line}"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsLiveSyncActive}" Value="True">
-                                                <Setter Property="Background" Value="{DynamicResource OkSolid}"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Border.Style>
-                                <TextBlock Text="{Binding LiveSyncStatusText}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource OnAccent}"/>
+                            <!-- Ulangan telefonlar soni (faqat ulanish bo'lsa) -->
+                            <Border Margin="8,0,0,0" Padding="8,2" CornerRadius="10" VerticalAlignment="Center" Background="{DynamicResource OkSoft}"
+                                    Visibility="{Binding IsLiveSyncActive, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <StackPanel Orientation="Horizontal">
+                                    <Ellipse Width="6" Height="6" Fill="{DynamicResource Ok}" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding LiveClientsCount}" Margin="4,0,0,0" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource Ok}"/>
+                                </StackPanel>
                             </Border>
                         </StackPanel>
                     </Button>
                 </StackPanel>
 
                 <!-- Admin rejimi ochiq belgisi (PIN yoqilgan va qulf ochilgan bo'lsa) -->
-                <Button Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0"
+                <Button Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,8,0"
                         Command="{Binding LockAdminCommand}" Cursor="Hand" ToolTip="Yashirin ma'lumotlarni qayta yopish"
+                        Foreground="{DynamicResource Warn}"
                         Visibility="{Binding ShowUnlockedChip, Source={x:Static services:AdminGate.Current}, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <Button.Template>
                         <ControlTemplate TargetType="Button">
-                            <Border x:Name="bd" Background="{DynamicResource WarnSoft}" BorderBrush="{DynamicResource WarnLine}" BorderThickness="1" CornerRadius="18" Padding="12,0" Height="36">
+                            <Border x:Name="bd" Background="{DynamicResource WarnSoft}" BorderBrush="{DynamicResource WarnLine}" BorderThickness="1" CornerRadius="8" Padding="12,0" Height="36">
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Path Data="M12 17c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6-9h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6h1.9c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm0 12H6V10h12v10z" Fill="{DynamicResource Warn}" Width="15" Height="15" Stretch="Uniform" Margin="0,0,8,0"/>
-                                    <TextBlock Text="Admin rejimi ochiq" Foreground="{DynamicResource Warn}" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
-                                    <TextBlock Text=" · Qulflash" Foreground="{DynamicResource Ink}" FontWeight="Bold" FontSize="13" VerticalAlignment="Center"/>
+                                    <Viewbox Width="16" Height="16" Margin="0,0,8,0">
+                                        <Path Style="{StaticResource NavIc}" Data="M6 11h12a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2z M8 11V7a4 4 0 0 1 7.9-1"/>
+                                    </Viewbox>
+                                    <TextBlock Text="Admin rejimi ochiq · Qulflash" Foreground="{DynamicResource Warn}" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Border>
                             <ControlTemplate.Triggers>
@@ -218,17 +234,21 @@
                     </Button.Template>
                 </Button>
 
-                <!-- O'ng tomon: bitta sozlamalar menyusi -->
-                <Grid Grid.Column="2" VerticalAlignment="Center">
+                <!-- O'ng tomon: soat va sozlamalar menyusi -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding ClockText}" FontSize="13" Foreground="{DynamicResource Ink2}" Margin="8,0,16,0" VerticalAlignment="Center"/>
+                <Grid VerticalAlignment="Center">
                     <ToggleButton x:Name="SettingsToggle" Style="{StaticResource GearButton}" ToolTip="Sozlamalar" AutomationProperties.Name="Sozlamalar">
-                        <Path Data="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}" Width="18" Height="18" Stretch="Uniform"/>
+                        <Viewbox Width="18" Height="18">
+                            <Path Style="{StaticResource NavIc}" Data="M9 12a3 3 0 1 0 6 0a3 3 0 1 0-6 0 M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                        </Viewbox>
                     </ToggleButton>
                     <Popup IsOpen="{Binding IsChecked, ElementName=SettingsToggle, Mode=TwoWay}"
                            PlacementTarget="{Binding ElementName=SettingsToggle}" Placement="Custom"
                            CustomPopupPlacementCallback="SettingsPopup_Placement" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade">
-                        <Border Width="310" Margin="8" Padding="6" CornerRadius="12" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Line}" BorderThickness="1">
+                        <Border Width="312" Margin="24,8,24,40" Padding="6" CornerRadius="12" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Line}" BorderThickness="1">
                             <Border.Effect>
-                                <DropShadowEffect BlurRadius="24" ShadowDepth="6" Opacity="0.5" Color="#000000"/>
+                                <DropShadowEffect BlurRadius="40" ShadowDepth="16" Direction="270" Opacity="0.18" Color="#0F1B21"/>
                             </Border.Effect>
                             <StackPanel>
                                 <TextBlock Text="SOZLAMALAR" Foreground="{DynamicResource Ink3}" FontSize="11" FontWeight="Bold" Margin="10,6,10,2"/>
@@ -274,6 +294,7 @@
                         </Border>
                     </Popup>
                 </Grid>
+                </StackPanel>
             </Grid>
         </Border>
         <!-- ASOSIY ISH MAYDONI: Doimiy yuklangan Grid (0ms lahzalik almashish, qayta yuklanmaydi) -->

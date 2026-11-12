@@ -34,7 +34,7 @@ namespace PosElectro.Desktop
             return new[]
             {
                 new System.Windows.Controls.Primitives.CustomPopupPlacement(
-                    new Point(targetSize.Width - popupSize.Width + 8, targetSize.Height),
+                    new Point(targetSize.Width - popupSize.Width + 24, targetSize.Height - 4),
                     System.Windows.Controls.Primitives.PopupPrimaryAxis.None)
             };
         }

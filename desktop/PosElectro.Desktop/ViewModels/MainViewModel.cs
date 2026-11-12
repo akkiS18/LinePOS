@@ -55,6 +55,10 @@ namespace PosElectro.Desktop.ViewModels
         public bool IsLiveSyncActive => LiveClientsCount > 0;
         public string LiveSyncStatusText => LiveClientsCount > 0 ? $"🟢 {LiveClientsCount} ta mobil" : "Wi-Fi faol";
 
+        // Yuqori panel soati (maket TopBar: "14:32")
+        public string ClockText => DateTime.Now.ToString("HH:mm");
+        private System.Windows.Threading.DispatcherTimer? _clockTimer;
+
         // Aktivatsiya holatlari va buyruqlari
         private bool _isDeviceLocked;
         private bool _isPinModalOpen;
@@ -114,6 +118,10 @@ namespace PosElectro.Desktop.ViewModels
             };
 
             CashierVM = new CashierViewModel(Database, ProductService, CurrencyService);
+
+            _clockTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(15) };
+            _clockTimer.Tick += (_, _) => OnPropertyChanged(nameof(ClockText));
+            _clockTimer.Start();
             InventoryVM = new InventoryViewModel(Database, ProductService, CurrencyService);
 
             // Kassada topilmagan shtrix-kod uchun "Ha, qo'shish" tanlanganda omborga yangi mahsulot qo'shish oynasiga o'tish

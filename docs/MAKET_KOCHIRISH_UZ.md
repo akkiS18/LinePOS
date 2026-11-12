@@ -23,13 +23,22 @@
 4. Ranglar faqat `{DynamicResource <token>}` orqali (`Themes/Theme.Light.xaml`, `Themes/Theme.Dark.xaml`).
    Yangi token qo'shilsa, ikkala faylga ham qo'shiladi (kalitlar bir xil bo'lishi shart).
    Kod ichida (C#) rang kerak bo'lsa: `SetResourceReference(..., "<token>")`.
+5. "Maketni ko'chirish" = ekranning **tuzilishini** (joylashuv, komponentlar, o'lchamlar, ikonkalar) maketdagidek qayta qurish.
+   Eski ekranni maket ranglariga bo'yash progress hisoblanmaydi.
+6. Vaqtinchalik tema qoidasi: `App.xaml` qorong'i temani yuklaydi. Qayta qurilgan ekran o'z `Resources`iga
+   `Theme.Light.xaml`ni qo'shadi (namuna: `CashierView.xaml` boshi, `MainWindow.xaml` yuqori panel).
+   Hamma ekran qayta qurilgach, `App.xaml` yorug' temaga o'tkaziladi va bu qo'shimchalar olib tashlanadi.
+7. Ikonkalar: maketdagi SVG yo'llari 24×24 koordinatada, `Viewbox` + `Path Style="{StaticResource Ic}"` (Stretch=None) bilan.
+   SVG `rect`/`circle` → yo'lga aylantiriladi (`a` yoy buyrug'i bilan).
+8. Ekran rasmini olish (ilovani ochmasdan): `scratchpad`dagi `Render` loyihasi kabi kichik .NET 8 dastur
+   `CashierView`/`MainWindow`ni test bazasi nusxasida yuklab `RenderTargetBitmap` bilan PNG saqlaydi.
 
 ## Umumiy bosqichlar
 
 | # | Bosqich | Holat | Izoh |
 |---|---------|-------|------|
 | A | Rang tokenlari, barcha ekranlar `DynamicResource`ga | ✅ | commit `51ff859` |
-| B | Yorug' tema (maketning LIGHT palitrasi) asosiy qilindi | 🟡 | `Theme.Light.xaml`, `App.xaml` shuni yuklaydi. Build o'tdi, **ekranda ko'rilmagan** |
+| B | Yorug' tema (maketning LIGHT palitrasi) | 🟡 | `Theme.Light.xaml` tayyor. Eski ekranlar ustiga qo'yilganda xatolar chiqdi → `App.xaml` qorong'iga qaytarildi, yorug' tema faqat qayta qurilgan ekranlarda (qoida 6) |
 | C | Soyalar yorug' temaga moslash | ⬜ | `DropShadowEffect` hamma joyda qora, Opacity 0.5–0.9 (qorong'i tema uchun). Maketda: `0 16px 40px rgba(15,27,33,0.18)`. Rang/shaffoflikni tokenga chiqarish kerak |
 | D | Emoji ikonkalarni vektor ikonkaga almashtirish | ⬜ | Masalan MainWindow: 🛡️ (aktivatsiya), 🖨️ (stiker), SyncView: 💡. Maketda hammasi chiziqli SVG |
 | E | Har bir ekranning joylashuvini (layout) maketga moslash | ⬜ | Quyidagi jadval |
@@ -41,10 +50,10 @@ Ranglar ustuni: A+B bosqichidan keyin hammasi tokenda, lekin yorug' temada ekran
 
 | Maket | Ekran | Kodda | Joylashuv | Izoh |
 |-------|-------|-------|-----------|------|
-| TopBar | Yuqori panel | `MainWindow.xaml` | ⬜ | |
-| 1.1 | Kassa (asosiy) | `Views/CashierView.xaml` | ⬜ | |
+| TopBar | Yuqori panel | `MainWindow.xaml` | 🟡 | Qayta qurildi: "S" logotip, chiziqli ikonkalar, Wi-Fi soni (yashil, faqat ulanishda), admin belgisi, soat, ⚙. Rasm olinib maket bilan solishtirildi; egasi ekranda ko'rmagan. "Kassa 1" nomi yo'q (dasturda kassa raqami tushunchasi yo'q) — faqat soat |
+| 1.1 | Kassa (asosiy) | `Views/CashierView.xaml` | 🟡 | Qayta qurildi: qidiruv (48px, halqa, "Enter — savatga"), plitka/ro'yxat tugmalari, kategoriya chiplari (soni bilan, endi filtrlaydi), plitkalar 176px/212px, savat sarlavhasi + 4 asbob, kutishdagi savat chiplari, savat qatori (2 qator, stepper 40px), bo'sh savat, to'lov paneli (xil·birlik, chegirma, Jami 30px, Naqd 56px, Karta/Aralash). Rasm olinib solishtirildi; egasi ekranda ko'rmagan |
 | 1.2 | To'lov · Naqd (qaytim) | `CashierView.xaml` (to'lov oynasi) | ⬜ | |
-| 1.3 | Ro'yxat rejimi, ⚙ menyu, bo'sh savat | `CashierView.xaml`, `MainWindow.xaml` | ⬜ | |
+| 1.3 | Ro'yxat rejimi, ⚙ menyu, bo'sh savat | `CashierView.xaml`, `MainWindow.xaml` | 🟡 | Ro'yxat rejimi va bo'sh savat qurildi. ⚙ menyu: faqat o'lcham (312px), joyi va soya; qatorlar ichi (ikonkalar) hali eski |
 | 1.4 | To'lov · Karta | `CashierView.xaml` | ⬜ | |
 | 1.5 | To'lov · Aralash | `CashierView.xaml` | ⬜ | |
 | 1.6 | To'lov · Nasiyaga yozish | `CashierView.xaml` | ⬜ | |
@@ -97,20 +106,19 @@ Ranglar ustuni: A+B bosqichidan keyin hammasi tokenda, lekin yorug' temada ekran
 
 ## Oxirgi qadam
 
-**2026-11-13 (Claude Code):**
-- Commit `51ff859`: rang tokenlari, tovar rasmlari, admin PIN (avvalgi, commit qilinmagan ish).
-- Yorug' tema: `Themes/Theme.Light.xaml` yaratildi va asosiy qilindi.
-- Yorug' fonda ko'rinmay qoladigan joylar tuzatildi:
-  - kulrang (`Line`/`LineStrong`) tugmalardagi oq matn va ikonkalar `Ink` qilindi;
-  - ombor kartochkasidagi yulduzcha va strelka tokenga o'tkazildi;
-  - savatdagi tovarlar soni belgisi tokenga o'tkazildi;
-  - qarz to'lov usuli tugmalari tokenga o'tkazildi;
-  - Sinxron qadam raqamlari och fonga o'tkazildi;
-  - rasm oynasining yopish tugmasi tokenga o'tkazildi.
-- Build o'tdi. Ilova ekranda **ochilmagan** (shu kompyuterdagi haqiqiy baza va aktivatsiya bilan ishlaydi).
-- **Keyingi qadam:** ilovani ochib, yorug' temani ko'rish (B → ✅). Keyin C (soyalar), so'ng E: 1.1 Kassa ekranidan boshlab joylashuvni maketga moslash.
+**2026-11-13 (Claude Code), 2-qadam — Kassa ekrani qayta qurildi:**
+- Egasi fikri: yorug' rang eski joylashuv ustiga tortilgani noto'g'ri, maket **tuzilishi** ko'chirilishi kerak (qoida 5).
+- `App.xaml` yana qorong'i tema; yorug' tema faqat `CashierView` va yuqori panelda (qoida 6).
+- `CashierView.xaml` asosiy qismi (1.1) va yuqori panel (TopBar) maketdagi tuzilishda qayta yozildi. Modal oynalar (1.2, 1.4–1.11) hali eski joylashuvda, lekin endi yorug' tema ichida.
+- ViewModel: `CategoryChips` (kategoriya bo'yicha filtr ishlaydi), `IsListMode`, `SubtotalAmount`/`DiscountText`/`CartItemsLine`; `Product.PriceText`/`StockPillText`/`CategoryWarehouseMeta`; `CartItemModel.PriceLineText`/`ShowOriginalPrice`; `MainViewModel.ClockText`.
+- Yangi tokenlar (ikkala temada): `AccentRing`, `IllusBg`, `OnAccentChip`.
+- Build o'tdi, 37 test o'tdi. Ekran rasmlari test bazasi nusxasida olinib maket bilan solishtirildi.
+- **Keyingi qadam:** egasi `Yangi_Dizaynni_Korish.bat` bilan ko'radi → 1.1 va TopBar ✅. So'ng 1.2 To'lov oynasi (maketdagi 920×712, chapda to'lov turlari, o'ngda 340px chek), keyin 1.4–1.11.
 
 ## Ma'lum muammolar
+
+- Raqamlar formati: maketda `12 000` (bo'sh joy), dasturda `12,000` (WPF binding `en-US` tilida). Butun dastur uchun bitta joyda hal qilish kerak (`FrameworkElement.Language` + `CurrentCulture`), bir ekranda emas.
+- Oyna sarlavha qatori qorong'i (`WindowStyleHelper.ApplyDarkTheme`). App to'liq yorug' temaga o'tganda yorug'ga almashtirish kerak.
 
 - `ReportsViewModelSearchTests.Search_lists_newest_first...` testi soat 03:00 gacha yiqiladi: "3 soat oldin" sotuv kechagi kunga tushadi. Kod xatosi emas, testni vaqtga bog'liq bo'lmaydigan qilish kerak.
 - Android ilovada (`app/`) commit qilinmagan o'zgarishlar bor: nom "Elektromarket", `versionCode` 6 → 5 (yangilanish o'rnatilmaydi), test ID olib tashlangan. Maketga aloqasi yo'q, egasining qarori kutilmoqda.

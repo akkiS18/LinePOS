@@ -15,6 +15,13 @@ namespace PosElectro.Desktop.Views
 
         private void ProductList_ScrollChanged(object sender, ScrollChangedEventArgs e)
         {
+            // Ro'yxat rejimi: aylantirish chizig'i chiqqanda sarlavha ustunlari qatorlar bilan bir tekisda qolsin
+            if (ReferenceEquals(sender, ProductRowsListBox) && e.OriginalSource is ScrollViewer sv)
+            {
+                double extra = sv.ComputedVerticalScrollBarVisibility == Visibility.Visible ? SystemParameters.VerticalScrollBarWidth : 0;
+                ProductRowsHeader.Padding = new Thickness(12, 0, 6 + extra, 0);
+            }
+
             if (e.VerticalChange > 0 && e.VerticalOffset >= e.ExtentHeight - e.ViewportHeight - 120)
             {
                 if (DataContext is CashierViewModel vm)

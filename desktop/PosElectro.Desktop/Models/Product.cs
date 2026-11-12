@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
@@ -94,6 +95,11 @@ namespace PosElectro.Desktop.Models
         public bool IsOutOfStock => StockQuantity <= 0;
         public string StockDisplay => IsNegativeStock ? $"⚠️ {StockQuantity}" : StockQuantity.ToString();
         public string CostPriceDisplay => CostCurrency == "USD" ? $"${CostPrice:N2}" : $"{CostPrice:N0} so'm";
+        // Kassa plitkasi / ro'yxati (maket 1.1): "Kabellar · Asosiy ombor", "340 dona" yoki "Tugagan"
+        public string CategoryWarehouseMeta => string.Join(" · ", new[] { Category, WarehouseName }
+            .Where(x => !string.IsNullOrWhiteSpace(x) && x != "Barchasi"));
+        public string PriceText => $"{SellingPrice:N0}" + (UnitType == UnitType.METR ? " /m" : "");
+        public string StockPillText => IsOutOfStock ? "Tugagan" : $"{StockQuantity:#,0.##} {UnitDisplay}";
         public string UnitDisplay => UnitType switch
         {
             UnitType.DONA => "dona",

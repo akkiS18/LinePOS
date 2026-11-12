@@ -25,6 +25,9 @@
     <SolidColorBrush x:Key="AccentHover" Color="#074F61"/>
     <SolidColorBrush x:Key="AccentInk"   Color="#0B6477"/>
     <SolidColorBrush x:Key="AccentSoft"  Color="#E3F0F2"/>
+    <SolidColorBrush x:Key="AccentRing"  Color="#240B6477"/>
+    <SolidColorBrush x:Key="OnAccentChip" Color="#2EFFFFFF"/>
+    <SolidColorBrush x:Key="IllusBg"     Color="#F1F5F6"/>
 
     <!-- Holat ranglari (faqat holat uchun) -->
     <SolidColorBrush x:Key="Ok"          Color="#157A3B"/>
