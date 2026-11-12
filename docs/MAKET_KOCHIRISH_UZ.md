@@ -3,6 +3,13 @@
 **Maket:** https://claude.ai/artifact/2yXLhCCGrta5kSoMmyzk3z ("SMART kassa — Kassa maketi", 53 ta ekran, 1366×768)
 **Kod:** `desktop/PosElectro.Desktop` (WPF), branch `feature/desktop-redesign`
 
+## O'zgarishlarni ekranda ko'rish
+
+- `Yangi_Dizaynni_Korish.bat` (loyiha ildizida): dasturni koddan yig'adi va **alohida test bazasi** bilan ochadi
+  (`%LOCALAPPDATA%\PosElectro_Dizayn\pos_desktop.db`, birinchi ochilishda ishchi bazadan nusxa olinadi). Ishchi bazaga tegmaydi.
+  Test oynasiga telefonlarni ulamang.
+- `Ishga_Tushirish.bat` esa ishchi kassa uchun: `PROD\LinePOS_Desktop`dagi eski o'rnatilgan build'ni ochadi, yangi dizayn unda **ko'rinmaydi**.
+
 ## Qoida (har bir agent / sessiya uchun)
 
 1. Ishni boshlashdan oldin shu faylni o'qing, tugatgandan keyin **shu commit ichida** yangilang:
