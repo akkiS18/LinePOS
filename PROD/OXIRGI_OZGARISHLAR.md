@@ -4,6 +4,50 @@ Ushbu hujjat mijozga oxirgi kiritilgan o'zgarishlar va yangi qulayliklarni ko'rs
 
 ---
 
+### 🖼️ Tovarlar Ro'yxati va Kassada Miniatura Rasmlar hamda Katta O'lchamda Ko'rish (Lightbox)
+- **Nima o'zgardi:**
+  1. **Tovarlar ro'yxatida (Ombor jadvalida) "Rasm" ustuni:**
+     - Jadvalda Checkbox va Mahsulot nomi orasiga alohida **"Rasm"** ustuni qo'shildi.
+     - Rasmi bor tovarlarda 36x36 ixcham miniatura ko'rinadi. Ustiga bosilganda rasm butun oyna bo'ylab katta o'lchamda ochiladi.
+     - Sichqonchaning o'ng tugmasi bosilganda "Rasmni almashtirish..." va "Rasmni o'chirish" menyusi chiqadi.
+     - Rasmi hali yo'q tovarlarda nozik `+` kamera ikonkasi ko'rinadi — ustiga bir marta bosish bilan darhol kompyuterdan rasm tanlab biriktirish mumkin!
+  2. **Kassadagi tovar kartochkalarida 44x44 miniatura:**
+     - Kassa katalogi va qidiruv natijalaridagi har bir tovar kartochkasining yuqori o'ng burchagida 44x44 yumaloq burchakli rasm miniaturasi joylashtirildi.
+     - Rasmni bosganda xaridga qo'shilmasdan, tovarning katta rasmi ochiladi.
+     - Rasmi yo'q tovarlarda kartochka ko'rinishi 100% toza saqlanadi (ortiqcha bo'sh joy egallamaydi).
+  3. **Butun oyna bo'ylab Katta Rasm Modali (Lightbox Preview):**
+     - Kassa yoki Ombor jadvalida miniatura rasmga bosilganda, to'q yarim-shaffof fon markazida mahsulotning rasmi o'zining tabiiy proporsiyasida (1040x680 gacha) yuqori sifatda ochiladi.
+     - Darchaning yuqori qismida tovar nomi va '✕' yopish tugmasi mavjud.
+     - Qulaylik uchun: fonning istalgan bo'sh joyiga bosganda, '✕' tugmasiga bosganda yoki klaviaturada **ESC / ENTER** tugmasi bosilganda darhol yopiladi.
+  4. **To'liq avtonom (Self-contained) Desktop Setup yangilandi:**
+     - Yangi installer paket [`PROD/Line_kassa_Desktop_Setup.exe`](file:///c:/Users/Acer/Documents/POS/PROD/Line_kassa_Desktop_Setup.exe) (52.4 MB) yig'ildi. Mijoz kompyuterida qo'shimcha hech narsa o'rnatish talab etilmaydi.
+- **Mijoz uchun foydasi:** Kassada va omborda tovarlarni rasmi orqali bir qarashda tanish, kerak bo'lganda bir klik bilan katta rasmda tekshirib olish va rasmsiz tovarlarga to'g'ridan-to'g'ri jadvaldan rasmni tezkor biriktirish juda osonlashdi.
+
+---
+
+### 🖼️ Tovarga Ixtiyoriy Rasm Biriktirish va Ombordagi Tovarlar Tan Narxi Excel Hisoboti
+- **Nima o'zgardi:**
+  1. **Tovarni qo'shish va tahrirlash darchasida rasm biriktirish imkoniyati:**
+     - "Ombor" bo'limida yangi tovar qo'shish yoki mavjud tovarni tahrirlash formasida "Izoh" inputidan keyin ixtiyoriy **"Mahsulot rasmi (Ixtiyoriy)"** bloki qo'shildi.
+     - Foydalanuvchi xohlasa kompyuterdan tovar rasmini tanlaydi, xohlamasa bo'sh qoldiradi.
+     - Rasm tanlanganda 64x64 miniatura (preview) ko'rinadi va "Almashtirish", "Rasmni o'chirish" tugmalari orqali boshqarish mumkin.
+     - Tanlangan rasm dasturning xavfsiz `product_images` papkasiga saqlanib, tovar kartochkasiga biriktiriladi hamda buyurtmalar ro'yxatida va boshqa joylarda avtomatik aks etadi.
+  2. **Navbarga "Ombordagi tovarlar tan narxi va toifalar" Excel hisobot tugmasi qo'shildi:**
+     - Yuqori o'ng navigatsiya panelidagi ixcham tugmalar qatoriga (Karta solig'i tugmasi yoniga) moviy jadval ikonkali yangi tugma qo'shildi.
+     - Tugma bosilganda barcha omborlardagi tovarlarning tan narxi va toifalar (kategoriyalar) bo'yicha to'liq umumlashtirilgan Excel (.xls) hisoboti yaratiladi.
+     - **Hisobot tarkibi:**
+       - Asosiy KPI ko'rsatkichlari (Jami tovar turlari soni, umumiy qoldiq miqdori, ombordagi barcha tovarlarning jami tan narxi qiymati).
+       - **1-Jadval (Omborlar kesimida):** Har bir ombor nomi, tovar turlari soni, jami qoldig'i, tan narxi qiymati va umumiy ombordagi ulushi (%).
+       - **2-Jadval (Toifalar kesimida):** Barcha omborlardagi tovarlar kategoriyalar bo'yicha guruhlangan holda saralanib (eng katta summali toifalar boshida), qoldiq miqdori, tan narxi va ulushi (%) bilan taqdim etiladi.
+       - **3-Jadvallar (Har bir ombor bo'yicha alohida toifalar):** Agar bir nechta ombor mavjud bo'lsa, har bir ombor ichidagi toifalar alohida jadval qilib chiqariladi.
+       - USD da kiritilgan tovarlarning tan narxi Markaziy bank kursi bo'yicha avtomatik so'mga (UZS) aylantiriladi.
+       - Jadvallardagi Jami qatorlar Excelning `=SUM(...)` dinamik formulalari bilan ishlaydi.
+  3. **To'liq avtonom (Self-contained) Desktop Setup yig'ildi:**
+     - Yangi dastur o'rnatuvchi [`PROD/Line_kassa_Desktop_Setup.exe`](file:///c:/Users/Acer/Documents/POS/PROD/Line_kassa_Desktop_Setup.exe) (52.4 MB) yig'ildi. Mijoz kompyuterida hech qanday qo'shimcha drayver yoki .NET yuklab olish talab qilinmaydi.
+- **Mijoz uchun foydasi:** Yangi tovar kiritayotganda rasmini darhol qo'shish imkoni paydo bo'ldi, do'kondagi barcha tovarlarning qancha summa tan narxga ega ekanligi va qaysi toifalarda qancha mablag' aylanayotganini bitta tugma orqali aniq Excel hisobot qilib olish mumkin bo'ldi.
+
+---
+
 ### 1. 📊 Tovarlar jadvalining ixchamlashishi va ustunlar yangi tartibi
 - **Nima o'zgardi:** 
   - Kam ishlatiladigan ustunlar (**Kategoriya**, **Birlik**, **2-sotish narxi**) asosiy jadvaldan olib tashlandi.
@@ -775,6 +819,19 @@ Ushbu hujjat mijozga oxirgi kiritilgan o'zgarishlar va yangi qulayliklarni ko'rs
 
 ---
 
+
+---
+
+### 54. Desktop Hisobotlar: cheklarni mahsulot nomi va shtrix-kod bo'yicha qidirish (hotfix 1.0.1)
+- **Muammo:** Qidiruv maydoni "Chek №, mahsulot nomi yoki shtrix-kod..." deb yozilgan, lekin backend faqat chek raqamini qidirardi (nom va shtrix-kod hech qachon yozilmagan edi).
+- **Qayerda o'zgardi:** `DatabaseContext.SearchSales`, `ReportsViewModel.cs`, `ReportsView.xaml`, yangi test loyihasi `PosElectro.Desktop.Tests`.
+- **Yechim:**
+  1. Chek raqami, chek ichidagi mahsulot nomi (kirill/lotin, ko'p so'zli, 2,5 = 2.5) va shtrix-kod (to'liq/qisman) bo'yicha qidiruv. Mahsulot keyin o'chirilgan yoki nomi o'zgartirilgan bo'lsa ham tarixdagi chek topiladi.
+  2. "cab" kabi so'z tasodifan chek guid'i bilan mos kelmaydi; uzun raqamli shtrix-kod chek ID sifatida qidirilmaydi.
+  3. Har harf bosilganda butun tarix qayta hisoblanishi o'rniga 350 ms kutish (debounce) va foyda hisobini vaqtincha saqlash — yozayotganda ilova qotmaydi.
+  4. Qidiruv natijasi filtr (kategoriya/ombor/tur) tufayli yashirilsa, jadval tepasida "N ta chek topildi, M tasi filtr tufayli yashirilgan" xabari chiqadi.
+- **Ma'lumot xavfsizligi:** bazaga sxema o'zgarishi kiritilmagan, qidiruv faqat o'qiydi. Baza `%LOCALAPPDATA%\PosElectro\pos_desktop.db` da, o'rnatuvchi unga tegmaydi.
+- **Testlar:** `dotnet test desktop/PosElectro.Desktop.sln` — 35 ta test (nom, shtrix-kod, chek raqami, chegaraviy holatlar, bazani qayta ochganda ma'lumot saqlanishi). Release oldidan majburiy.
 
 ---
 

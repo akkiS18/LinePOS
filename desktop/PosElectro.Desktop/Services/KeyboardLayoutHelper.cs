@@ -45,6 +45,17 @@ namespace PosElectro.Desktop.Services
             }
         }
 
+        // Faqat shtrix-kod maydonlarida ruscha harflar inglizchaga aylantiriladi:
+        //   <TextBox services:KeyboardLayoutHelper.IsScannerField="True" .../>
+        // Boshqa maydonlarda (tovar nomi, mijoz ismi, izoh) kirill harflari o'zgarmay qoladi.
+        public static readonly System.Windows.DependencyProperty IsScannerFieldProperty =
+            System.Windows.DependencyProperty.RegisterAttached(
+                "IsScannerField", typeof(bool), typeof(KeyboardLayoutHelper),
+                new System.Windows.PropertyMetadata(false));
+
+        public static bool GetIsScannerField(System.Windows.DependencyObject o) => (bool)o.GetValue(IsScannerFieldProperty);
+        public static void SetIsScannerField(System.Windows.DependencyObject o, bool v) => o.SetValue(IsScannerFieldProperty, v);
+
         public static string ConvertRuToEn(string? input)
         {
             if (string.IsNullOrEmpty(input)) return string.Empty;

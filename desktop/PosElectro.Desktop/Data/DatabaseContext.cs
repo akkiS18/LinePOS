@@ -129,6 +129,33 @@ namespace PosElectro.Desktop.Data
             }
         }
 
+        /// <summary>
+        /// Tiklashdan oldin: zaxiradagi oxirgi savdo vaqti va undan keyin hozirgi bazada qilingan
+        /// (tiklansa yo'qoladigan) savdolar soni hamda summasi.
+        /// </summary>
+        public (DateTime? backupLastSale, int lostSales, double lostAmount) PreviewRestoreLoss(string sourcePath)
+        {
+            long backupMax = 0;
+            var srcConn = new SqliteConnectionStringBuilder { DataSource = sourcePath, Mode = SqliteOpenMode.ReadOnly }.ToString();
+            using (var c = new SqliteConnection(srcConn))
+            {
+                c.Open();
+                using var cmd = c.CreateCommand();
+                cmd.CommandText = "SELECT COALESCE(MAX(created_at), 0) FROM sales;";
+                backupMax = Convert.ToInt64(cmd.ExecuteScalar());
+            }
+            SqliteConnection.ClearPool(new SqliteConnection(srcConn));
+
+            using var conn = CreateConnection();
+            using var q = conn.CreateCommand();
+            q.CommandText = "SELECT COUNT(*), COALESCE(SUM(total_amount), 0) FROM sales WHERE created_at > $t;";
+            q.Parameters.AddWithValue("$t", backupMax);
+            using var r = q.ExecuteReader();
+            r.Read();
+            DateTime? last = backupMax > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(backupMax).LocalDateTime : null;
+            return (last, r.GetInt32(0), r.GetDouble(1));
+        }
+
         public void RestoreDatabase(string sourcePath)
         {
             if (string.IsNullOrWhiteSpace(sourcePath) || !File.Exists(sourcePath))

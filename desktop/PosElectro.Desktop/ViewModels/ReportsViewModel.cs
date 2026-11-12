@@ -195,7 +195,11 @@ namespace PosElectro.Desktop.ViewModels
             QuickApplyPresetCommand = new RelayCommand<string>(QuickApplyPreset);
             RefreshCommand = new RelayCommand(RefreshData);
             RefreshUsdRateCommand = new RelayCommand(RefreshUsdRate);
-            ExecuteExportCommand = new RelayCommand(ExecuteExport);
+            ExecuteExportCommand = new RelayCommand(() =>
+            {
+                // Excel faylida foyda va tan narx bor — Admin PIN yoqilgan bo'lsa so'raladi
+                if (Services.AdminGate.Current.EnsureUnlocked("Excel hisobotda foyda bor. Yuklab olish uchun Admin PIN kerak.")) ExecuteExport();
+            });
             ClearReceiptSearchCommand = new RelayCommand(() => SearchReceiptNumber = string.Empty);
 
             LoadFilterOptions();
@@ -471,6 +475,12 @@ namespace PosElectro.Desktop.ViewModels
             {
                 // Chek raqami, mahsulot nomi yoki shtrix-kod bo'yicha (butun tarix)
                 rawSales = _db.SearchSales(SearchReceiptNumber);
+                // Skaner rus klaviaturasida ishlagan bo'lsa: lotincha shakli bilan qayta urinib ko'ramiz
+                if (rawSales.Count == 0)
+                {
+                    var en = Services.KeyboardLayoutHelper.ConvertRuToEn(SearchReceiptNumber);
+                    if (en != SearchReceiptNumber) rawSales = _db.SearchSales(en);
+                }
             }
             else
             {

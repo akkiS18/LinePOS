@@ -4,7 +4,7 @@
         Title="Chekni Oldindan Ko'rish (Preview)" Height="750" Width="680"
         WindowStartupLocation="CenterOwner" ResizeMode="CanResize"
         PreviewKeyDown="Window_PreviewKeyDown"
-        Background="#0B132B">
+        Background="{DynamicResource Bg}">
     <Grid Margin="18">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -20,12 +20,12 @@
             </Grid.ColumnDefinitions>
 
             <StackPanel VerticalAlignment="Center">
-                <TextBlock Text="🖨️ Chekni Oldindan Ko'rish" Foreground="#F8FAFC" FontSize="18" FontWeight="Bold"/>
-                <TextBlock x:Name="TxtSubtitle" Text="Qog'ozda qanday chiqishini tekshiring" Foreground="#94A3B8" FontSize="12" Margin="0,2,0,0"/>
+                <TextBlock Text="🖨️ Chekni Oldindan Ko'rish" Foreground="{DynamicResource Ink}" FontSize="18" FontWeight="Bold"/>
+                <TextBlock x:Name="TxtSubtitle" Text="Qog'ozda qanday chiqishini tekshiring" Foreground="{DynamicResource Ink2}" FontSize="12" Margin="0,2,0,0"/>
             </StackPanel>
 
             <!-- Format almashtirish: 58mm vs A4 -->
-            <Border Grid.Column="1" Background="#1E293B" CornerRadius="20" Padding="4" BorderBrush="#334155" BorderThickness="1">
+            <Border Grid.Column="1" Background="{DynamicResource Surface}" CornerRadius="20" Padding="4" BorderBrush="{DynamicResource Line}" BorderThickness="1">
                 <StackPanel Orientation="Horizontal">
                     <RadioButton x:Name="Rb58mm" Content="🧾 Xprinter 58mm" 
                                  IsChecked="True" Checked="FormatRadio_Checked"
@@ -40,7 +40,7 @@
         </Grid>
 
         <!-- O'rta qism: Qog'oz maydoni (Dark backdrop + Realistik oq qog'oz) -->
-        <Border Grid.Row="1" Background="#020617" CornerRadius="12" BorderBrush="#1E293B" BorderThickness="1" Padding="16">
+        <Border Grid.Row="1" Background="{DynamicResource Bg}" CornerRadius="12" BorderBrush="{DynamicResource Line}" BorderThickness="1" Padding="16">
             <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <StackPanel HorizontalAlignment="Center">
                     <!-- 1. XPRINTER 58MM LENTA CHEKI KO'RINISHI -->
@@ -51,7 +51,7 @@
                         <TextBlock x:Name="Txt58mmContent" 
                                    FontFamily="Consolas, Courier New" 
                                    FontSize="12" 
-                                   Foreground="#0F172A" 
+                                   Foreground="{DynamicResource OnAccent}" 
                                    LineHeight="17"
                                    TextWrapping="NoWrap"/>
                     </Border>
@@ -64,37 +64,37 @@
                         <StackPanel>
                             <!-- A4 Sarlavhasi -->
                             <TextBlock Text="LINE POS — TOVAR CHEKI / HISOB-FAKTURA" 
-                                       Foreground="#0B6477" FontSize="16" FontWeight="Bold" 
+                                       Foreground="{DynamicResource AccentInk}" FontSize="16" FontWeight="Bold" 
                                        HorizontalAlignment="Center" Margin="0,0,0,2"/>
                             <TextBlock Text="Elektr jihozlari va uskunalari do'koni" 
-                                       Foreground="#64748B" FontSize="11" 
+                                       Foreground="{DynamicResource Ink3}" FontSize="11" 
                                        HorizontalAlignment="Center" Margin="0,0,0,16"/>
 
                             <!-- A4 Metadata -->
                             <Grid Margin="0,0,0,14">
                                 <StackPanel HorizontalAlignment="Left">
-                                    <TextBlock x:Name="TxtA4ChekNum" Text="Hujjat: Chek #1" FontWeight="Bold" FontSize="12" Foreground="#0F172A"/>
-                                    <TextBlock x:Name="TxtA4Date" Text="Sana: 24.09.2026 13:00" FontSize="11" Foreground="#475569"/>
+                                    <TextBlock x:Name="TxtA4ChekNum" Text="Hujjat: Chek #1" FontWeight="Bold" FontSize="12" Foreground="{DynamicResource OnAccent}"/>
+                                    <TextBlock x:Name="TxtA4Date" Text="Sana: 24.09.2026 13:00" FontSize="11" Foreground="{DynamicResource Ink3}"/>
                                 </StackPanel>
                                 <StackPanel HorizontalAlignment="Right">
-                                    <TextBlock x:Name="TxtA4Payment" Text="To'lov: Naqd" FontWeight="SemiBold" FontSize="12" Foreground="#0F172A" HorizontalAlignment="Right"/>
-                                    <TextBlock Text="Holati: To'langan" FontSize="11" Foreground="#16A34A" FontWeight="Bold" HorizontalAlignment="Right"/>
+                                    <TextBlock x:Name="TxtA4Payment" Text="To'lov: Naqd" FontWeight="SemiBold" FontSize="12" Foreground="{DynamicResource OnAccent}" HorizontalAlignment="Right"/>
+                                    <TextBlock Text="Holati: To'langan" FontSize="11" Foreground="{DynamicResource Ok}" FontWeight="Bold" HorizontalAlignment="Right"/>
                                 </StackPanel>
                             </Grid>
 
                             <!-- A4 Jadvali -->
                             <DataGrid x:Name="GridA4Items" AutoGenerateColumns="False" CanUserAddRows="False"
-                                      IsReadOnly="True" Background="White" RowBackground="White" AlternatingRowBackground="#F8FAFC"
-                                      Foreground="#0F172A" BorderBrush="#E2E8F0" BorderThickness="1" GridLinesVisibility="All"
-                                      HorizontalGridLinesBrush="#E2E8F0" VerticalGridLinesBrush="#E2E8F0"
+                                      IsReadOnly="True" Background="White" RowBackground="White" AlternatingRowBackground="{DynamicResource Ink}"
+                                      Foreground="{DynamicResource OnAccent}" BorderBrush="{DynamicResource LineStrong}" BorderThickness="1" GridLinesVisibility="All"
+                                      HorizontalGridLinesBrush="{DynamicResource LineStrong}" VerticalGridLinesBrush="{DynamicResource LineStrong}"
                                       HeadersVisibility="Column" Margin="0,0,0,16">
                                 <DataGrid.ColumnHeaderStyle>
                                     <Style TargetType="DataGridColumnHeader">
-                                        <Setter Property="Background" Value="#F1F5F9"/>
-                                        <Setter Property="Foreground" Value="#0F172A"/>
+                                        <Setter Property="Background" Value="{DynamicResource Ink}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource OnAccent}"/>
                                         <Setter Property="FontWeight" Value="Bold"/>
                                         <Setter Property="Padding" Value="6,4"/>
-                                        <Setter Property="BorderBrush" Value="#E2E8F0"/>
+                                        <Setter Property="BorderBrush" Value="{DynamicResource LineStrong}"/>
                                         <Setter Property="BorderThickness" Value="0,0,1,1"/>
                                     </Style>
                                 </DataGrid.ColumnHeaderStyle>
@@ -109,16 +109,16 @@
 
                             <!-- A4 Jami summa -->
                             <StackPanel HorizontalAlignment="Right" Margin="0,0,0,24">
-                                <TextBlock Text="JAMI TO'LOV:" FontWeight="Bold" FontSize="12" Foreground="#64748B" HorizontalAlignment="Right"/>
-                                <TextBlock x:Name="TxtA4Total" Text="0 SO'M" FontWeight="ExtraBold" FontSize="18" Foreground="#10B981" HorizontalAlignment="Right"/>
+                                <TextBlock Text="JAMI TO'LOV:" FontWeight="Bold" FontSize="12" Foreground="{DynamicResource Ink3}" HorizontalAlignment="Right"/>
+                                <TextBlock x:Name="TxtA4Total" Text="0 SO'M" FontWeight="ExtraBold" FontSize="18" Foreground="{DynamicResource Ok}" HorizontalAlignment="Right"/>
                             </StackPanel>
 
                             <!-- Imzolar -->
                             <TextBlock Text="Tovarlar to'liq, butun va soz holatda topshirildi hamda qabul qilindi." 
-                                       FontSize="10" Foreground="#64748B" Margin="0,0,0,18"/>
+                                       FontSize="10" Foreground="{DynamicResource Ink3}" Margin="0,0,0,18"/>
                             <Grid>
-                                <TextBlock Text="Berdi (Sotuvchi): ___________________" FontSize="10" Foreground="#475569" HorizontalAlignment="Left"/>
-                                <TextBlock Text="Qabul qildi: ___________________" FontSize="10" Foreground="#475569" HorizontalAlignment="Right"/>
+                                <TextBlock Text="Berdi (Sotuvchi): ___________________" FontSize="10" Foreground="{DynamicResource Ink3}" HorizontalAlignment="Left"/>
+                                <TextBlock Text="Qabul qildi: ___________________" FontSize="10" Foreground="{DynamicResource Ink3}" HorizontalAlignment="Right"/>
                             </Grid>
                         </StackPanel>
                     </Border>
@@ -136,7 +136,7 @@
 
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                 <TextBlock x:Name="TxtPreviewStatus" VerticalAlignment="Center" 
-                           Foreground="#34D399" FontSize="12" FontWeight="SemiBold" Margin="0,0,10,0"/>
+                           Foreground="{DynamicResource Ok}" FontSize="12" FontWeight="SemiBold" Margin="0,0,10,0"/>
                 <ComboBox x:Name="CmbReceiptPrinters" Width="180" Height="32" 
                           VerticalContentAlignment="Center" SelectionChanged="CmbReceiptPrinters_SelectionChanged"/>
             </StackPanel>

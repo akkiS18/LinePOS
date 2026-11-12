@@ -4,7 +4,7 @@
         Title="Shtrix-kod etiketka chop etish" Height="670" Width="780"
         WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
         PreviewKeyDown="Window_PreviewKeyDown"
-        Background="#0F172A">
+        Background="{DynamicResource Bg}">
     <Grid Margin="18">
         <Grid.RowDefinitions>
             <!-- Header -->
@@ -20,12 +20,12 @@
         <!-- 1. Sarlavha -->
         <Grid Grid.Row="0" Margin="0,0,0,12">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <Border Background="#134E4A" CornerRadius="8" Padding="6,6" Margin="0,0,10,0">
+                <Border Background="{DynamicResource OkSoft}" CornerRadius="8" Padding="6,6" Margin="0,0,10,0">
                     <TextBlock Text="🏷️" FontSize="18" VerticalAlignment="Center"/>
                 </Border>
                 <StackPanel>
-                    <TextBlock Text="Shtrix-kod Etiketka Chop Etish" Foreground="#F8FAFC" FontSize="17" FontWeight="Bold"/>
-                    <TextBlock x:Name="TxtPrinterStatus" Text="🔍 Printer holati tekshirilmoqda..." Foreground="#38BDF8" FontSize="12" Margin="0,2,0,0"/>
+                    <TextBlock Text="Shtrix-kod Etiketka Chop Etish" Foreground="{DynamicResource Ink}" FontSize="17" FontWeight="Bold"/>
+                    <TextBlock x:Name="TxtPrinterStatus" Text="🔍 Printer holati tekshirilmoqda..." Foreground="{DynamicResource AccentInk}" FontSize="12" Margin="0,2,0,0"/>
                 </StackPanel>
             </StackPanel>
         </Grid>
@@ -40,7 +40,7 @@
             </Grid.ColumnDefinitions>
 
             <!-- CHAP: JONLI PREVIEW BLOKI (100% WYSIWYG) -->
-            <Border Grid.Column="0" Background="#1E293B" BorderBrush="#334155" BorderThickness="1" CornerRadius="12" Padding="14" Margin="0,0,14,0">
+            <Border Grid.Column="0" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="12" Padding="14" Margin="0,0,14,0">
                 <Grid VerticalAlignment="Center">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -49,11 +49,11 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <TextBlock Grid.Row="0" Text="JONLI KO'RINISH (PREVIEW)" Foreground="#94A3B8" FontSize="11" FontWeight="Bold" Margin="0,0,0,12" HorizontalAlignment="Center"/>
+                    <TextBlock Grid.Row="0" Text="JONLI KO'RINISH (PREVIEW)" Foreground="{DynamicResource Ink2}" FontSize="11" FontWeight="Bold" Margin="0,0,0,12" HorizontalAlignment="Center"/>
 
                     <!-- Oq Fonli Termostiker modeli (Printer renderi bilan 100% bir xil) -->
                     <Border Grid.Row="1" x:Name="StickerCard" Background="White" CornerRadius="4" 
-                            BorderBrush="#CBD5E1" BorderThickness="1"
+                            BorderBrush="{DynamicResource LineStrong}" BorderThickness="1"
                             HorizontalAlignment="Center" VerticalAlignment="Center"
                             ClipToBounds="True">
                         <Border.Effect>
@@ -63,29 +63,29 @@
                         <Image x:Name="ImgPreview" Stretch="Fill" RenderOptions.BitmapScalingMode="HighQuality"/>
                     </Border>
 
-                    <TextBlock Grid.Row="2" x:Name="TxtLabelSizeCaption" Text="40 x 30 mm (Standart)" Foreground="#64748B" FontSize="11" HorizontalAlignment="Center" Margin="0,12,0,4"/>
-                    <TextBlock Grid.Row="3" Text="💡 Ekranda qanday ko'rinsa, printerdan aynan shunday chiqadi" Foreground="#38BDF8" FontSize="10" TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center" Margin="10,0"/>
+                    <TextBlock Grid.Row="2" x:Name="TxtLabelSizeCaption" Text="40 x 30 mm (Standart)" Foreground="{DynamicResource Ink3}" FontSize="11" HorizontalAlignment="Center" Margin="0,12,0,4"/>
+                    <TextBlock Grid.Row="3" Text="💡 Ekranda qanday ko'rinsa, printerdan aynan shunday chiqadi" Foreground="{DynamicResource AccentInk}" FontSize="10" TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center" Margin="10,0"/>
                 </Grid>
             </Border>
 
             <!-- O'NG: SOZLAMALAR VA BOSHQARUV -->
-            <Border Grid.Column="1" Background="#1E293B" BorderBrush="#334155" BorderThickness="1" CornerRadius="12" Padding="14">
+            <Border Grid.Column="1" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="12" Padding="14">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <StackPanel Margin="0,0,10,0">
                         <!-- Printerni tanlash -->
-                        <TextBlock Text="🖨️ Printer (Xprinter XP-365B):" Foreground="#94A3B8" FontSize="12" Margin="0,0,0,4"/>
+                        <TextBlock Text="🖨️ Printer (Xprinter XP-365B):" Foreground="{DynamicResource Ink2}" FontSize="12" Margin="0,0,0,4"/>
                         <ComboBox x:Name="CmbPrinters" Height="32" FontSize="12" Margin="0,0,0,8" 
                                   SelectionChanged="CmbPrinters_SelectionChanged"/>
 
                         <!-- Stiker o'lchamini tanlash -->
-                        <TextBlock Text="📐 Stiker qog'oz o'lchami:" Foreground="#94A3B8" FontSize="12" Margin="0,0,0,4"/>
+                        <TextBlock Text="📐 Stiker qog'oz o'lchami:" Foreground="{DynamicResource Ink2}" FontSize="12" Margin="0,0,0,4"/>
                         <ComboBox x:Name="CmbLabelSize" Height="32" FontSize="12" Margin="0,0,0,10" 
                                   SelectionChanged="CmbLabelSize_SelectionChanged"/>
 
                         <!-- 1. MAHSULOT NOMI SOZLAMALARI -->
-                        <Border Background="#162235" BorderBrush="#334155" BorderThickness="1" CornerRadius="8" Padding="10,8" Margin="0,0,0,10">
+                        <Border Background="{DynamicResource Surface2}" BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="8" Padding="10,8" Margin="0,0,0,10">
                             <StackPanel>
-                                <TextBlock Text="📝 Mahsulot nomi sozlamasi:" Foreground="#38BDF8" FontSize="12" FontWeight="Bold" Margin="0,0,0,8"/>
+                                <TextBlock Text="📝 Mahsulot nomi sozlamasi:" Foreground="{DynamicResource AccentInk}" FontSize="12" FontWeight="Bold" Margin="0,0,0,8"/>
 
                                 <!-- Joylashuvi (Tekislash: Chapdan / O'rtadan) -->
                                 <Grid Margin="0,0,0,8">
@@ -93,7 +93,7 @@
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Joylashuvi:" Foreground="#94A3B8" FontSize="12" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Joylashuvi:" Foreground="{DynamicResource Ink2}" FontSize="12" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Orientation="Horizontal">
                                         <Button x:Name="BtnAlignLeft" Content="⬅️ Chapdan" Click="BtnAlignLeft_Click"
                                                 Style="{StaticResource ModernButton}" Height="28" Padding="8,2" FontSize="11" Margin="0,0,4,0" ToolTip="Nomni chapdan boshlash (boshi kesilmaydi)"/>
@@ -108,17 +108,17 @@
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="↔️ Nomni surish:" Foreground="#94A3B8" FontSize="12" VerticalAlignment="Center"/>
+                                    <TextBlock Text="↔️ Nomni surish:" Foreground="{DynamicResource Ink2}" FontSize="12" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Orientation="Horizontal">
                                         <Button Content="◀" Click="BtnNameOffsetLeft_Click"
                                                 Style="{StaticResource ModernButton}" Width="30" Height="28" FontSize="11" Padding="0" Margin="0,0,4,0" ToolTip="0.5 mm chapga surish"/>
-                                        <Border Background="#0F172A" BorderBrush="#334155" BorderThickness="1" CornerRadius="6" Padding="8,4" MinWidth="58">
-                                            <TextBlock x:Name="TxtNameOffset" Text="0.0 mm" Foreground="#38BDF8" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                        <Border Background="{DynamicResource Bg}" BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="6" Padding="8,4" MinWidth="58">
+                                            <TextBlock x:Name="TxtNameOffset" Text="0.0 mm" Foreground="{DynamicResource AccentInk}" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/>
                                         </Border>
                                         <Button Content="▶" Click="BtnNameOffsetRight_Click"
                                                 Style="{StaticResource ModernButton}" Width="30" Height="28" FontSize="11" Padding="0" Margin="4,0,0,0" ToolTip="0.5 mm o'ngga surish"/>
                                         <Button Content="↺" Click="BtnNameOffsetReset_Click"
-                                                Background="#334155" Foreground="#94A3B8" Style="{StaticResource ModernButton}" Width="26" Height="28" FontSize="11" Padding="0" Margin="4,0,0,0" ToolTip="0 mm ga qaytarish"/>
+                                                Background="{DynamicResource Line}" Foreground="{DynamicResource Ink2}" Style="{StaticResource ModernButton}" Width="26" Height="28" FontSize="11" Padding="0" Margin="4,0,0,0" ToolTip="0 mm ga qaytarish"/>
                                     </StackPanel>
                                 </Grid>
 
@@ -128,7 +128,7 @@
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Qator turi:" Foreground="#94A3B8" FontSize="12" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Qator turi:" Foreground="{DynamicResource Ink2}" FontSize="12" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Orientation="Horizontal">
                                         <Button x:Name="BtnLines1" Content="1 qator (ixcham)" Click="BtnLines1_Click"
                                                 Style="{StaticResource ModernButton}" Height="28" Padding="8,2" FontSize="11" Margin="0,0,4,0" ToolTip="Bitta qatorda chiqarish"/>
@@ -145,22 +145,22 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="⚙️ Printer kalibrovkasi:" Foreground="#94A3B8" FontSize="12" VerticalAlignment="Center" ToolTip="Barcha elementlarni stiker bo'ylab umumiy siljitish"/>
+                            <TextBlock Text="⚙️ Printer kalibrovkasi:" Foreground="{DynamicResource Ink2}" FontSize="12" VerticalAlignment="Center" ToolTip="Barcha elementlarni stiker bo'ylab umumiy siljitish"/>
                             <StackPanel Grid.Column="1" Orientation="Horizontal">
                                 <Button Content="◀" Click="BtnOffsetLeft_Click"
                                         Style="{StaticResource ModernButton}" Width="30" Height="28" FontSize="11" Padding="0" Margin="0,0,4,0" ToolTip="0.5 mm chapga surish"/>
-                                <Border Background="#0F172A" BorderBrush="#334155" BorderThickness="1" CornerRadius="6" Padding="8,4" MinWidth="58">
-                                    <TextBlock x:Name="TxtOffset" Text="0.0 mm" Foreground="#38BDF8" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                <Border Background="{DynamicResource Bg}" BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="6" Padding="8,4" MinWidth="58">
+                                    <TextBlock x:Name="TxtOffset" Text="0.0 mm" Foreground="{DynamicResource AccentInk}" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/>
                                 </Border>
                                 <Button Content="▶" Click="BtnOffsetRight_Click"
                                         Style="{StaticResource ModernButton}" Width="30" Height="28" FontSize="11" Padding="0" Margin="4,0,0,0" ToolTip="0.5 mm o'ngga surish"/>
                                 <Button Content="↺" Click="BtnOffsetReset_Click"
-                                        Background="#334155" Foreground="#94A3B8" Style="{StaticResource ModernButton}" Width="26" Height="28" FontSize="11" Padding="0" Margin="4,0,0,0" ToolTip="0 mm ga qaytarish"/>
+                                        Background="{DynamicResource Line}" Foreground="{DynamicResource Ink2}" Style="{StaticResource ModernButton}" Width="26" Height="28" FontSize="11" Padding="0" Margin="4,0,0,0" ToolTip="0 mm ga qaytarish"/>
                             </StackPanel>
                         </Grid>
 
                         <!-- 3. NUSXALAR SONI -->
-                        <TextBlock Text="Chop etiladigan nusxalar soni:" Foreground="#F8FAFC" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <TextBlock Text="Chop etiladigan nusxalar soni:" Foreground="{DynamicResource Ink}" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,4"/>
                         <Grid Margin="0,0,0,8">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="42"/>
@@ -179,7 +179,7 @@
                                      Style="{StaticResource ModernTextBox}" Height="36"
                                      FontSize="16" FontWeight="Bold" TextAlignment="Center" Margin="6,0"
                                      Padding="0" VerticalContentAlignment="Center" HorizontalContentAlignment="Center"
-                                     Foreground="#FFFFFF" Background="#0F172A" CaretBrush="#2DD4BF"
+                                     Foreground="{DynamicResource OnAccent}" Background="{DynamicResource Bg}" CaretBrush="{DynamicResource AccentInk}"
                                      TextChanged="TxtCopies_TextChanged"/>
 
                             <!-- Plus -->
@@ -192,37 +192,37 @@
                         <!-- Tezkor tugmalar -->
                         <WrapPanel Margin="0,0,0,10">
                             <Button Content="1 dona" Click="BtnQuickQty_Click" Tag="1"
-                                    Background="#334155" Foreground="#F8FAFC" Style="{StaticResource ModernButton}" 
+                                    Background="{DynamicResource Line}" Foreground="{DynamicResource Ink}" Style="{StaticResource ModernButton}" 
                                     Padding="8,3" Margin="0,0,4,4" FontSize="11"/>
                             <Button Content="5 dona" Click="BtnQuickQty_Click" Tag="5"
-                                    Background="#334155" Foreground="#F8FAFC" Style="{StaticResource ModernButton}" 
+                                    Background="{DynamicResource Line}" Foreground="{DynamicResource Ink}" Style="{StaticResource ModernButton}" 
                                     Padding="8,3" Margin="0,0,4,4" FontSize="11"/>
                             <Button Content="10 dona" Click="BtnQuickQty_Click" Tag="10"
-                                    Background="#334155" Foreground="#F8FAFC" Style="{StaticResource ModernButton}" 
+                                    Background="{DynamicResource Line}" Foreground="{DynamicResource Ink}" Style="{StaticResource ModernButton}" 
                                     Padding="8,3" Margin="0,0,4,4" FontSize="11"/>
                             <Button x:Name="BtnStockQty" Content="📦 Qoldiqcha (0)" Click="BtnStockQty_Click"
-                                    Background="#0F3642" BorderBrush="#0B6477" BorderThickness="1" Foreground="#2DD4BF" 
+                                    Background="{DynamicResource AccentSoft}" BorderBrush="{DynamicResource Accent}" BorderThickness="1" Foreground="{DynamicResource AccentInk}" 
                                     Style="{StaticResource ModernButton}" Padding="8,3" Margin="0,0,4,4" FontSize="11"/>
                         </WrapPanel>
 
-                        <Separator Background="#334155" Margin="0,0,0,8"/>
+                        <Separator Background="{DynamicResource Line}" Margin="0,0,0,8"/>
 
                         <!-- 4. Moslashuvchan Elementlar (Toggles) -->
-                        <TextBlock Text="Stikerda nimalar ko'rinsin?" Foreground="#F8FAFC" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                        <TextBlock Text="Stikerda nimalar ko'rinsin?" Foreground="{DynamicResource Ink}" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,6"/>
 
                         <!-- Checkbox: Mahsulot nomi -->
                         <CheckBox x:Name="ChkShowName" Content="Mahsulot nomi" IsChecked="True" 
-                                  Foreground="#E2E8F0" FontSize="12" Margin="0,0,0,6"
+                                  Foreground="{DynamicResource Ink}" FontSize="12" Margin="0,0,0,6"
                                   Checked="OnElementVisibilityChanged" Unchecked="OnElementVisibilityChanged"/>
 
                         <!-- Checkbox: Shtrix-kod va raqami -->
                         <CheckBox x:Name="ChkShowBarcode" Content="Shtrix-kod chiziqlari va raqami" IsChecked="True" 
-                                  Foreground="#E2E8F0" FontSize="12" Margin="0,0,0,6"
+                                  Foreground="{DynamicResource Ink}" FontSize="12" Margin="0,0,0,6"
                                   Checked="OnElementVisibilityChanged" Unchecked="OnElementVisibilityChanged"/>
 
                         <!-- Checkbox: Sotish narxi -->
                         <CheckBox x:Name="ChkShowPrice" Content="Sotish narxi (so'mda)" IsChecked="True" 
-                                  Foreground="#E2E8F0" FontSize="12" Margin="0,0,0,6"
+                                  Foreground="{DynamicResource Ink}" FontSize="12" Margin="0,0,0,6"
                                   Checked="OnElementVisibilityChanged" Unchecked="OnElementVisibilityChanged"/>
                     </StackPanel>
                 </ScrollViewer>
@@ -230,7 +230,7 @@
         </Grid>
 
         <!-- 3. Status xabari -->
-        <TextBlock x:Name="TxtStatus" Grid.Row="2" Text="" Foreground="#10B981" FontSize="12" 
+        <TextBlock x:Name="TxtStatus" Grid.Row="2" Text="" Foreground="{DynamicResource Ok}" FontSize="12" 
                    Margin="0,0,0,10" HorizontalAlignment="Center" FontWeight="SemiBold" Visibility="Collapsed"/>
 
         <!-- 4. Tugmalar qatori -->
@@ -249,12 +249,12 @@
             <!-- Bekor qilish -->
             <Button Grid.Column="0" Content="Bekor qilish (Esc)" Click="BtnCancel_Click"
                     IsCancel="True"
-                    Background="#334155" Foreground="White" Style="{StaticResource ModernButton}" 
+                    Background="{DynamicResource Line}" Foreground="White" Style="{StaticResource ModernButton}" 
                     Padding="18,10" Height="42"/>
 
             <!-- 1 dona sinov (Test Print) -->
             <Button Grid.Column="2" Content="🖨️ 1 dona sinov" Click="BtnTestPrint_Click"
-                    Background="#0F3642" BorderBrush="#0B6477" BorderThickness="1.5" Foreground="#2DD4BF" 
+                    Background="{DynamicResource AccentSoft}" BorderBrush="{DynamicResource Accent}" BorderThickness="1.5" Foreground="{DynamicResource AccentInk}" 
                     Style="{StaticResource ModernButton}" Padding="16,10" Height="42" Margin="0,0,10,0"/>
 
             <!-- Asosiy Chop Etish -->

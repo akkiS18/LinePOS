@@ -302,6 +302,7 @@ namespace PosElectro.Desktop.ViewModels
             _db = db;
             _productService = productService;
             _currencyService = currencyService;
+            Services.AdminGate.Current.Changed += () => OnPropertyChanged(nameof(IsFormCostMasked));
 
             _db.WarehousesChanged += () =>
             {
@@ -943,6 +944,9 @@ namespace PosElectro.Desktop.ViewModels
             set => SetProperty(ref _formCategory, value);
         }
 
+        /// <summary>Admin PIN qulfi yopiq bo'lsa mavjud tovarning tan narxi formada yashiriladi (yangi tovarga kiritish mumkin).</summary>
+        public bool IsFormCostMasked => Services.AdminGate.Current.IsLocked && _editingProduct != null;
+
         public string FormCostPrice
         {
             get => _formCostPrice;
@@ -983,7 +987,7 @@ namespace PosElectro.Desktop.ViewModels
         }
 
         public string FormCostPriceLabel => FormIsUsd ? "Tan narxi ($) *" : "Tan narxi (so'm) *";
-        public bool IsFormUsdConversionVisible => FormIsUsd;
+        public bool IsFormUsdConversionVisible => FormIsUsd && !IsFormCostMasked;
 
         public string FormUsdConversion
         {
@@ -1080,6 +1084,7 @@ namespace PosElectro.Desktop.ViewModels
             }
 
             _editingProduct = null;
+            OnPropertyChanged(nameof(IsFormCostMasked));
             _previousViewState = CurrentViewState;
 
             FormTitle = "Yangi Mahsulot Qo'shish";
@@ -1087,7 +1092,7 @@ namespace PosElectro.Desktop.ViewModels
             FormBarcode = barcode ?? string.Empty;
             var defaultCat = SelectedCategory != ProductService.CATEGORY_ALL && SelectedCategory != ProductService.CATEGORY_LOW_STOCK
                 ? SelectedCategory
-                : (ExistingCategories.Count > 0 ? ExistingCategories[0] : "Barchasi");
+                : string.Empty; // aniq kategoriya tanlanmagan bo'lsa jimgina birinchisini qo'ymaymiz
             FormCategory = defaultCat;
             FormCostPrice = "0";
             FormIsUsd = false;
@@ -1107,6 +1112,7 @@ namespace PosElectro.Desktop.ViewModels
         public void OpenEditProduct(Product p)
         {
             _editingProduct = p;
+            OnPropertyChanged(nameof(IsFormCostMasked));
             _previousViewState = CurrentViewState;
 
             FormTitle = $"Mahsulotni Tahrirlash: {p.Name}";

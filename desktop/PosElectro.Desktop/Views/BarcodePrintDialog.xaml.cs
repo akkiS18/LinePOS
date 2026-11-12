@@ -22,13 +22,6 @@ namespace PosElectro.Desktop.Views
         private string _currentNameAlignment = "left";
         private int _currentNameLines = 1;
 
-        private static readonly Brush ActiveBg = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#0B6477"));
-        private static readonly Brush ActiveBorder = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#2DD4BF"));
-        private static readonly Brush ActiveFg = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#2DD4BF"));
-
-        private static readonly Brush InactiveBg = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#334155"));
-        private static readonly Brush InactiveBorder = Brushes.Transparent;
-        private static readonly Brush InactiveFg = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#94A3B8"));
 
         public BarcodePrintDialog(
             string productName, 
@@ -106,10 +99,12 @@ namespace PosElectro.Desktop.Views
 
         private void SetButtonActive(Button btn, bool isActive)
         {
-            btn.Background = isActive ? ActiveBg : InactiveBg;
-            btn.BorderBrush = isActive ? ActiveBorder : InactiveBorder;
+            // Theme tokens by reference (not copied brushes), so a theme switch repaints these buttons too.
+            btn.SetResourceReference(Control.BackgroundProperty, isActive ? "AccentSoft" : "Surface2");
+            if (isActive) btn.SetResourceReference(Control.BorderBrushProperty, "AccentInk");
+            else btn.BorderBrush = Brushes.Transparent;
             btn.BorderThickness = new Thickness(isActive ? 1.5 : 1);
-            btn.Foreground = isActive ? ActiveFg : InactiveFg;
+            btn.SetResourceReference(Control.ForegroundProperty, isActive ? "AccentInk" : "Ink2");
             btn.FontWeight = isActive ? FontWeights.Bold : FontWeights.Normal;
         }
 

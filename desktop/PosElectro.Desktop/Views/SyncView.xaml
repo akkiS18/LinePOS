@@ -6,7 +6,7 @@
              mc:Ignorable="d" 
              PreviewKeyDown="SyncView_PreviewKeyDown"
              d:DesignHeight="700" d:DesignWidth="1100">
-    <Grid Background="#0F172A">
+    <Grid Background="{DynamicResource Bg}">
         <!-- Asosiy Tarkib -->
         <Grid Margin="24">
             <Grid.ColumnDefinitions>
@@ -17,14 +17,14 @@
             </Grid.ColumnDefinitions>
 
             <!-- CHAP: QR KOD VA SOZLAMALAR -->
-            <Border Grid.Column="0" Background="#1E293B" CornerRadius="16" BorderBrush="#334155" BorderThickness="1" Margin="0,0,20,0">
+            <Border Grid.Column="0" Background="{DynamicResource Surface}" CornerRadius="16" BorderBrush="{DynamicResource Line}" BorderThickness="1" Margin="0,0,20,0">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="20">
                 <StackPanel>
                     <!-- Sarlavha: Wi-Fi Orqali Ulanish (Vektor ikonka bilan) -->
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,18">
                         <Path Data="M12 3C7.03 3 2.7 5.4 0 9l12 13 12-13c-2.7-3.6-7.03-6-12-6zm0 3.5c3.6 0 6.9 1.4 9.3 3.7L12 19.4 2.7 11.2C5.1 8.9 8.4 7.5 12 7.5z"
-                              Fill="#38BDF8" Stretch="Uniform" Width="20" Height="17" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                        <TextBlock Text="Wi-Fi Orqali Ulanish" Foreground="#F8FAFC" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
+                              Fill="{DynamicResource Accent}" Stretch="Uniform" Width="20" Height="17" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Wi-Fi Orqali Ulanish" Foreground="{DynamicResource Ink}" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
                     </StackPanel>
 
                     <!-- QR Kod kartasi -->
@@ -33,28 +33,28 @@
                     </Border>
 
                     <!-- IP Manzil va Port -->
-                    <Border Background="#0F172A" CornerRadius="10" Padding="12" Margin="0,0,0,16" BorderBrush="#334155" BorderThickness="1">
+                    <Border Background="{DynamicResource Bg}" CornerRadius="10" Padding="12" Margin="0,0,0,16" BorderBrush="{DynamicResource Line}" BorderThickness="1">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <TextBlock Text="Lokal Server: " Foreground="#94A3B8" FontSize="13" VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding ServerIp}" Foreground="#16A34A" FontWeight="Bold" FontSize="14" VerticalAlignment="Center"/>
-                            <TextBlock Text=":" Foreground="#94A3B8" FontSize="13" VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding ServerPort}" Foreground="#16A34A" FontWeight="Bold" FontSize="14" VerticalAlignment="Center"/>
+                            <TextBlock Text="Lokal Server: " Foreground="{DynamicResource Ink2}" FontSize="13" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding ServerIp}" Foreground="{DynamicResource Ok}" FontWeight="Bold" FontSize="14" VerticalAlignment="Center"/>
+                            <TextBlock Text=":" Foreground="{DynamicResource Ink2}" FontSize="13" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding ServerPort}" Foreground="{DynamicResource Ok}" FontWeight="Bold" FontSize="14" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
 
                     <TextBlock Text="Telefonni bir marta QR orqali ulang. Keyingi sinxron avtomatik ishlaydi."
-                               TextWrapping="Wrap" Foreground="#94A3B8" FontSize="12" Margin="0,0,0,10"/>
+                               TextWrapping="Wrap" Foreground="{DynamicResource Ink2}" FontSize="12" Margin="0,0,0,10"/>
                     <Button Content="Yangi telefon uchun QR" Command="{Binding GenerateQrCommand}"
                             Style="{StaticResource ModernButton}" Margin="0,0,0,8"/>
-                    <Expander Header="Qo'shimcha ulanish sozlamalari" Foreground="#94A3B8" Margin="0,6,0,0">
+                    <Expander Header="Qo'shimcha ulanish sozlamalari" Foreground="{DynamicResource Ink2}" Margin="0,6,0,0">
                         <StackPanel Margin="0,10,0,0">
-                            <TextBlock Text="QR ishlamasa: ulanish kodi" Foreground="#94A3B8" HorizontalAlignment="Center"/>
-                            <TextBlock Text="{Binding PairingCode}" Foreground="#16A34A" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center"/>
-                            <TextBlock Text="5 daqiqa, bir qurilma uchun" Foreground="#94A3B8" HorizontalAlignment="Center" Margin="0,4,0,8"/>
+                            <TextBlock Text="QR ishlamasa: ulanish kodi" Foreground="{DynamicResource Ink2}" HorizontalAlignment="Center"/>
+                            <TextBlock Text="{Binding PairingCode}" Foreground="{DynamicResource Ok}" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center"/>
+                            <TextBlock Text="5 daqiqa, bir qurilma uchun" Foreground="{DynamicResource Ink2}" HorizontalAlignment="Center" Margin="0,4,0,8"/>
                             <Button Content="Telefonlar ruxsatini bekor qilish" Command="{Binding RevokeDevicesCommand}"
                                     Style="{StaticResource ModernButton}" Margin="0,0,0,8"/>
                             <Button Content="Windows Firewall ruxsatini ochish" Command="{Binding OpenFirewallCommand}"
-                                    Style="{StaticResource ModernButton}" Background="#D97706"/>
+                                    Style="{StaticResource ModernButton}" Background="{DynamicResource WarnSolid}"/>
                         </StackPanel>
                     </Expander>
                 </StackPanel>
@@ -62,7 +62,7 @@
             </Border>
 
             <!-- O'NG: REALTIME ULANGAN QURILMALAR VA TERMINAL JURNALI -->
-            <Border Grid.Column="1" Background="#1E293B" CornerRadius="16" Padding="20" BorderBrush="#334155" BorderThickness="1">
+            <Border Grid.Column="1" Background="{DynamicResource Surface}" CornerRadius="16" Padding="20" BorderBrush="{DynamicResource Line}" BorderThickness="1">
             <Grid>
                 <Grid.RowDefinitions>
                     <!-- 0: Ulangan Qurilmalar Bo'limi (Auto) -->
@@ -86,15 +86,15 @@
                         <!-- Sarlavha (Vektor ikonka bilan) -->
                         <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                             <Path Data="M2 16h3v5H2v-5zm5-4h3v9H7V12zm5-4h3v13h-3V8zm5-5h3v18h-3V3z"
-                                  Fill="#10B981" Stretch="Uniform" Width="18" Height="16" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="Ulangan Qurilmalar" Foreground="#F8FAFC" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
+                                  Fill="{DynamicResource OkSolid}" Stretch="Uniform" Width="18" Height="16" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="Ulangan Qurilmalar" Foreground="{DynamicResource Ink}" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
                         </StackPanel>
 
                         <!-- Realtime Qurilmalar Soni Nishoni -->
-                        <Border Grid.Column="1" Background="#064E3B" BorderBrush="#10B981" BorderThickness="1.5" CornerRadius="16" Padding="12,5" VerticalAlignment="Center">
+                        <Border Grid.Column="1" Background="{DynamicResource OkSoft}" BorderBrush="{DynamicResource Ok}" BorderThickness="1.5" CornerRadius="16" Padding="12,5" VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <Ellipse Width="8" Height="8" Fill="#10B981" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="{Binding ConnectedClientsCountText}" Foreground="#A7F3D0" FontSize="12" FontWeight="Bold" VerticalAlignment="Center"/>
+                                <Ellipse Width="8" Height="8" Fill="{DynamicResource OkSolid}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding ConnectedClientsCountText}" Foreground="{DynamicResource Ok}" FontSize="12" FontWeight="Bold" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Border>
                     </Grid>
@@ -108,30 +108,30 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="#0F172A" BorderBrush="#10B981" BorderThickness="1.5" CornerRadius="12" Padding="14,10" Margin="0,0,12,8" MinWidth="260">
+                                <Border Background="{DynamicResource Bg}" BorderBrush="{DynamicResource Ok}" BorderThickness="1.5" CornerRadius="12" Padding="14,10" Margin="0,0,12,8" MinWidth="260">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                              <ColumnDefinition Width="Auto"/>
                                              <ColumnDefinition Width="*"/>
                                              <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <Border Grid.Column="0" Background="#064E3B" BorderBrush="#10B981" BorderThickness="1" CornerRadius="10" Width="36" Height="42" Margin="0,0,12,0" VerticalAlignment="Center">
+                                        <Border Grid.Column="0" Background="{DynamicResource OkSoft}" BorderBrush="{DynamicResource Ok}" BorderThickness="1" CornerRadius="10" Width="36" Height="42" Margin="0,0,12,0" VerticalAlignment="Center">
                                             <Path Data="M7 2h10a2 2 0 012 2v16a2 2 0 01-2 2H7a2 2 0 01-2-2V4a2 2 0 012-2zm0 3v13h10V5H7zm5 14a1 1 0 100 2 1 1 0 000-2z" 
-                                                  Fill="#34D399" Stretch="Uniform" Width="18" Height="22" 
+                                                  Fill="{DynamicResource OkSolid}" Stretch="Uniform" Width="18" Height="22" 
                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         </Border>
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding DeviceName}" Foreground="#F8FAFC" FontSize="14" FontWeight="Bold"/>
-                                            <TextBlock Text="{Binding IpAddress}" Foreground="#38BDF8" FontSize="12" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding DeviceName}" Foreground="{DynamicResource Ink}" FontSize="14" FontWeight="Bold"/>
+                                            <TextBlock Text="{Binding IpAddress}" Foreground="{DynamicResource AccentInk}" FontSize="12" FontWeight="SemiBold"/>
                                         </StackPanel>
                                         <StackPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="10,0,0,0">
-                                            <Border Background="#064E3B" CornerRadius="8" Padding="8,3" Margin="0,0,0,2">
+                                            <Border Background="{DynamicResource OkSoft}" CornerRadius="8" Padding="8,3" Margin="0,0,0,2">
                                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                    <Ellipse Width="6" Height="6" Fill="#34D399" Margin="0,0,5,0" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="JONLI" Foreground="#34D399" FontSize="10" FontWeight="Bold" VerticalAlignment="Center"/>
+                                                    <Ellipse Width="6" Height="6" Fill="{DynamicResource OkSolid}" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="JONLI" Foreground="{DynamicResource Ok}" FontSize="10" FontWeight="Bold" VerticalAlignment="Center"/>
                                                 </StackPanel>
                                             </Border>
-                                            <TextBlock Text="{Binding ConnectedAtText}" Foreground="#64748B" FontSize="10" HorizontalAlignment="Right"/>
+                                            <TextBlock Text="{Binding ConnectedAtText}" Foreground="{DynamicResource Ink3}" FontSize="10" HorizontalAlignment="Right"/>
                                         </StackPanel>
                                     </Grid>
                                 </Border>
@@ -140,21 +140,21 @@
                     </ItemsControl>
 
                     <!-- Agar 0 ta bo'lsa ko'rsatiladigan qulay placeholder (Vektor ikonka bilan) -->
-                    <Border Background="#0F172A" CornerRadius="12" BorderBrush="#334155" BorderThickness="1" Padding="16,12"
+                    <Border Background="{DynamicResource Bg}" CornerRadius="12" BorderBrush="{DynamicResource Line}" BorderThickness="1" Padding="16,12"
                             Visibility="{Binding HasNoConnectedClients, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Border Background="#1E293B" BorderBrush="#0284C7" BorderThickness="1" CornerRadius="8" Width="32" Height="32" Margin="0,0,12,0" VerticalAlignment="Center">
+                            <Border Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Accent}" BorderThickness="1" CornerRadius="8" Width="32" Height="32" Margin="0,0,12,0" VerticalAlignment="Center">
                                 <Path Data="M7 2h10a2 2 0 012 2v16a2 2 0 01-2 2H7a2 2 0 01-2-2V4a2 2 0 012-2zm0 3v13h10V5H7zm5 14a1 1 0 100 2 1 1 0 000-2z" 
-                                      Fill="#38BDF8" Stretch="Uniform" Width="14" Height="17" 
+                                      Fill="{DynamicResource Accent}" Stretch="Uniform" Width="14" Height="17" 
                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
-                            <TextBlock Text="Hozirda ulangan mobil qurilma yo'q. Mobil ilovadan chapdagi QR kodni skanerlang." Foreground="#94A3B8" FontSize="13" VerticalAlignment="Center"/>
+                            <TextBlock Text="Hozirda ulangan mobil qurilma yo'q. Mobil ilovadan chapdagi QR kodni skanerlang." Foreground="{DynamicResource Ink2}" FontSize="13" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>
 
                 <!-- 1: DIVIDER -->
-                <Separator Grid.Row="1" Background="#334155" Margin="0,0,0,14"/>
+                <Separator Grid.Row="1" Background="{DynamicResource Line}" Margin="0,0,0,14"/>
 
                 <!-- 2: REALTIME TERMINAL SARLAVHASI -->
                 <Grid Grid.Row="2" Margin="0,0,0,10">
@@ -164,17 +164,17 @@
                     </Grid.ColumnDefinitions>
 
                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Path Data="M7 2v11h3v9l7-12h-4l4-8z" Fill="#F59E0B" Stretch="Uniform" Width="13" Height="16" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                        <TextBlock Text="Real-time Terminal &amp; O'tkazishlar" Foreground="#F8FAFC" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
+                        <Path Data="M7 2v11h3v9l7-12h-4l4-8z" Fill="{DynamicResource WarnSolid}" Stretch="Uniform" Width="13" Height="16" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Real-time Terminal &amp; O'tkazishlar" Foreground="{DynamicResource Ink}" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
                     </StackPanel>
 
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                         <!-- Tozalash tugmasi (Faqat vektor ikonka) -->
                         <Button Command="{Binding ClearLogsCommand}" ToolTip="Terminalni tozalash"
-                                Style="{StaticResource ModernButton}" Background="#334155"
+                                Style="{StaticResource ModernButton}" Background="{DynamicResource Line}"
                                 Width="36" Height="36" Padding="0" Margin="0,0,8,0" Cursor="Hand">
                             <Path Data="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14zM10 11v6M14 11v6" 
-                                  Stroke="#94A3B8" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" 
+                                  Stroke="{DynamicResource Ink2}" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" 
                                   Stretch="Uniform" Width="15" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Button>
                         <!-- Yangilash tugmasi (Faqat vektor ikonka va animatsiya) -->
@@ -205,7 +205,7 @@
                 </Grid>
 
                 <!-- 3: REALTIME TERMINAL TANA QISMI -->
-                <Border Grid.Row="3" Background="#0A0F1D" CornerRadius="12" BorderBrush="#1E293B" BorderThickness="1.5" Padding="8">
+                <Border Grid.Row="3" Background="{DynamicResource Bg}" CornerRadius="12" BorderBrush="{DynamicResource Line}" BorderThickness="1.5" Padding="8">
                     <ListBox ItemsSource="{Binding Activities}" 
                              Background="Transparent" BorderThickness="0"
                              ScrollViewer.VerticalScrollBarVisibility="Auto"
@@ -226,7 +226,7 @@
                         </ListBox.ItemContainerStyle>
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="#131C31" CornerRadius="8" Padding="10,7" Margin="0,2" BorderBrush="#1E293B" BorderThickness="1">
+                                <Border Background="{DynamicResource Surface2}" CornerRadius="8" Padding="10,7" Margin="0,2" BorderBrush="{DynamicResource Line}" BorderThickness="1">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto"/>
@@ -253,10 +253,10 @@
                                         </Border>
 
                                         <!-- Xabar: Uzun bo'lsa pastki qatorga chiroyli tushishi uchun Wrap -->
-                                        <TextBlock Grid.Column="1" Text="{Binding Message}" Foreground="#F1F5F9" FontFamily="Consolas, Segoe UI" FontSize="13" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Message}" Foreground="{DynamicResource Ink}" FontFamily="Consolas, Segoe UI" FontSize="13" VerticalAlignment="Center" TextWrapping="Wrap"/>
 
                                         <!-- Vaqt -->
-                                        <TextBlock Grid.Column="2" Text="{Binding TimeText}" Foreground="#64748B" FontFamily="Consolas, Segoe UI" FontSize="11" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding TimeText}" Foreground="{DynamicResource Ink3}" FontFamily="Consolas, Segoe UI" FontSize="11" VerticalAlignment="Center" Margin="10,0,0,0"/>
                                     </Grid>
                                 </Border>
                             </DataTemplate>
@@ -269,8 +269,8 @@
 
     <!-- YO'RIQNOMA MODALI (OK MODAL) -->
     <Grid Visibility="{Binding IsHelpModalOpen, Converter={StaticResource BooleanToVisibilityConverter}}"
-          Background="#CC000000" Panel.ZIndex="1000">
-        <Border Background="#1E293B" CornerRadius="16" BorderBrush="#0B6477" BorderThickness="1.5"
+          Background="{DynamicResource Scrim}" Panel.ZIndex="1000">
+        <Border Background="{DynamicResource Surface}" CornerRadius="16" BorderBrush="{DynamicResource Accent}" BorderThickness="1.5"
                 Width="460" VerticalAlignment="Center" HorizontalAlignment="Center" Padding="24">
             <Border.Effect>
                 <DropShadowEffect BlurRadius="30" ShadowDepth="0" Opacity="0.7" Color="#000000"/>
@@ -279,21 +279,21 @@
                 <!-- Modal Sarlavhasi -->
                 <Grid Margin="0,0,0,16">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <Border Background="#074F61" CornerRadius="8" Width="36" Height="36" Margin="0,0,10,0" BorderBrush="#2DD4BF" BorderThickness="1">
+                        <Border Background="{DynamicResource AccentHover}" CornerRadius="8" Width="36" Height="36" Margin="0,0,10,0" BorderBrush="{DynamicResource Accent}" BorderThickness="1">
                             <TextBlock Text="💡" FontFamily="Segoe UI Emoji" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
-                        <TextBlock Text="Qanday ulaniladi?" Foreground="#F8FAFC" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
+                        <TextBlock Text="Qanday ulaniladi?" Foreground="{DynamicResource Ink}" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
                     </StackPanel>
                     <Button Command="{Binding CloseHelpModalCommand}" HorizontalAlignment="Right" VerticalAlignment="Center"
                             Background="Transparent" BorderThickness="0" Cursor="Hand" Padding="6,2">
-                        <TextBlock Text="✕" Foreground="#94A3B8" FontSize="16" FontWeight="Bold"/>
+                        <TextBlock Text="✕" Foreground="{DynamicResource Ink2}" FontSize="16" FontWeight="Bold"/>
                     </Button>
                 </Grid>
 
-                <Separator Background="#334155" Margin="0,0,0,16"/>
+                <Separator Background="{DynamicResource Line}" Margin="0,0,0,16"/>
 
                 <!-- Yo'riqnoma Qadamlari -->
-                <Border Background="#0F172A" CornerRadius="12" Padding="16" Margin="0,0,0,20" BorderBrush="#334155" BorderThickness="1">
+                <Border Background="{DynamicResource Bg}" CornerRadius="12" Padding="16" Margin="0,0,0,20" BorderBrush="{DynamicResource Line}" BorderThickness="1">
                     <StackPanel>
                         <!-- 1-qadam -->
                         <Grid Margin="0,0,0,14">
@@ -301,11 +301,11 @@
                                 <ColumnDefinition Width="28"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <Border Grid.Column="0" Background="#074F61" CornerRadius="12" Width="24" Height="24" HorizontalAlignment="Left" VerticalAlignment="Top">
-                                <TextBlock Text="1" Foreground="#2DD4BF" FontWeight="Bold" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Border Grid.Column="0" Background="{DynamicResource AccentHover}" CornerRadius="12" Width="24" Height="24" HorizontalAlignment="Left" VerticalAlignment="Top">
+                                <TextBlock Text="1" Foreground="{DynamicResource AccentInk}" FontWeight="Bold" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
                             <TextBlock Grid.Column="1" Text="Telefon va kompyuter bitta Wi-Fi da bo'lsin (yoki telefon Hotspot yoqsin)." 
-                                       Foreground="#E2E8F0" FontSize="13" LineHeight="18" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                       Foreground="{DynamicResource Ink}" FontSize="13" LineHeight="18" TextWrapping="Wrap" VerticalAlignment="Center"/>
                         </Grid>
 
                         <!-- 2-qadam -->
@@ -314,11 +314,11 @@
                                 <ColumnDefinition Width="28"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <Border Grid.Column="0" Background="#074F61" CornerRadius="12" Width="24" Height="24" HorizontalAlignment="Left" VerticalAlignment="Top">
-                                <TextBlock Text="2" Foreground="#2DD4BF" FontWeight="Bold" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Border Grid.Column="0" Background="{DynamicResource AccentHover}" CornerRadius="12" Width="24" Height="24" HorizontalAlignment="Left" VerticalAlignment="Top">
+                                <TextBlock Text="2" Foreground="{DynamicResource AccentInk}" FontWeight="Bold" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
                             <TextBlock Grid.Column="1" Text="Mobil ilovada QR kodni skanerlang." 
-                                       Foreground="#E2E8F0" FontSize="13" LineHeight="18" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                       Foreground="{DynamicResource Ink}" FontSize="13" LineHeight="18" TextWrapping="Wrap" VerticalAlignment="Center"/>
                         </Grid>
 
                         <!-- 3-qadam -->
@@ -327,11 +327,11 @@
                                 <ColumnDefinition Width="28"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <Border Grid.Column="0" Background="#064E3B" CornerRadius="12" Width="24" Height="24" HorizontalAlignment="Left" VerticalAlignment="Top">
-                                <TextBlock Text="3" Foreground="#16A34A" FontWeight="Bold" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Border Grid.Column="0" Background="{DynamicResource OkSoft}" CornerRadius="12" Width="24" Height="24" HorizontalAlignment="Left" VerticalAlignment="Top">
+                                <TextBlock Text="3" Foreground="{DynamicResource Ok}" FontWeight="Bold" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
                             <TextBlock Grid.Column="1" Text="O'tkazishni tanlang — ma'lumotlar bir zumda yangilanadi!" 
-                                       Foreground="#16A34A" FontWeight="SemiBold" FontSize="13" LineHeight="18" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                       Foreground="{DynamicResource Ok}" FontWeight="SemiBold" FontSize="13" LineHeight="18" TextWrapping="Wrap" VerticalAlignment="Center"/>
                         </Grid>
                     </StackPanel>
                 </Border>

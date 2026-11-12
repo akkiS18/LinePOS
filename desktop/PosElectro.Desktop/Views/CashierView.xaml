@@ -8,14 +8,81 @@
              PreviewKeyDown="UserControl_PreviewKeyDown"
              mc:Ignorable="d" 
              d:DesignHeight="700" d:DesignWidth="1100">
-    <Grid Background="#0F172A">
+    <UserControl.Resources>
+        <!-- Klaviatura belgisi (F8, F9...) -->
+        <Style x:Key="KbdChip" TargetType="Border">
+            <Setter Property="Background" Value="#26FFFFFF"/>
+            <Setter Property="CornerRadius" Value="5"/>
+            <Setter Property="Padding" Value="6,1"/>
+            <Setter Property="Margin" Value="10,0,0,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <!-- Asosiy to'lov tugmasi (Naqd) -->
+        <Style x:Key="PayPrimary" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource Accent}"/>
+            <Setter Property="Foreground" Value="{DynamicResource OnAccent}"/>
+            <Setter Property="Height" Value="56"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="12">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentHover}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Opacity" Value="0.8"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="bd" Property="Opacity" Value="0.35"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Ikkinchi darajali to'lov tugmasi (Karta, Aralash) -->
+        <Style x:Key="PaySecondary" TargetType="Button" BasedOn="{StaticResource PayPrimary}">
+            <Setter Property="Background" Value="{DynamicResource Surface}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Ink}"/>
+            <Setter Property="Height" Value="48"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="{DynamicResource LineStrong}" BorderThickness="1" CornerRadius="10">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource Surface2}"/>
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource Accent}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Opacity" Value="0.8"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="bd" Property="Opacity" Value="0.35"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+    <Grid Background="{DynamicResource Bg}">
         <!-- ASOSIY KASSA EKRANI -->
         <Grid>
             <Grid.ColumnDefinitions>
-                <!-- Chap tomon: Tovarlar katalogi (60%) -->
+                <!-- Chap tomon: Tovarlar katalogi (qolgan joyni egallaydi) -->
                 <ColumnDefinition Width="6*"/>
-                <!-- O'ng tomon: Savatcha va To'lov (40%) -->
-                <ColumnDefinition Width="4*"/>
+                <!-- O'ng tomon: Savat va To'lov. Katta ekranda cheksiz kengaymaydi, kichikda siqilmaydi -->
+                <ColumnDefinition Width="4*" MinWidth="380" MaxWidth="560"/>
             </Grid.ColumnDefinitions>
 
             <!-- CHAP TOMON: TOVARLAR KATALOGI -->
@@ -37,7 +104,7 @@
 
                     <!-- Bitta qidiruv icon (o'ngda, toza SVG vektor) -->
                     <Path Data="M21 21l-4.35-4.35M19 10a9 9 0 11-18 0 9 9 0 0118 0z"
-                          Stroke="#94A3B8" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                          Stroke="{DynamicResource Ink2}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
                           Width="16" Height="16" Stretch="Uniform"
                           HorizontalAlignment="Right" VerticalAlignment="Center"
                           Margin="0,0,16,0" IsHitTestVisible="False"/>
@@ -54,7 +121,7 @@
 
                     <!-- Sarlavha (Katalog holatiga mos) -->
                     <TextBlock Grid.Row="0" Text="{Binding CatalogHeaderTitle}" 
-                               Foreground="#94A3B8" FontSize="12" FontWeight="Bold"
+                               Foreground="{DynamicResource Ink2}" FontSize="12" FontWeight="Bold"
                                Margin="0,0,0,10"/>
 
                     <!-- Yagona tovarlar ro'yxati -->
@@ -69,7 +136,7 @@
                              ScrollViewer.ScrollChanged="ProductList_ScrollChanged">
                         <ListBox.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <controls:AdaptiveGridPanel MinItemWidth="190" ItemHeight="172" Spacing="12"/>
+                                <controls:AdaptiveGridPanel MinItemWidth="190" ItemHeight="228" Spacing="12"/>
                             </ItemsPanelTemplate>
                         </ListBox.ItemsPanel>
                         <ListBox.ItemContainerStyle>
@@ -93,91 +160,109 @@
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <Border x:Name="productCard"
-                                        Background="#1E293B" 
-                                        BorderBrush="#334155" 
-                                        BorderThickness="1" 
-                                        CornerRadius="14" 
-                                        HorizontalAlignment="Stretch"
-                                        Height="172" 
-                                        Padding="14"
-                                        Cursor="Hand">
+                                        CornerRadius="12" BorderThickness="1" Padding="10"
+                                        HorizontalAlignment="Stretch" Height="228" Cursor="Hand">
                                     <Border.InputBindings>
-                                        <MouseBinding Gesture="LeftClick" 
-                                                      Command="{Binding DataContext.AddToCartCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                        <MouseBinding Gesture="LeftClick"
+                                                      Command="{Binding DataContext.AddToCartCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                       CommandParameter="{Binding}"/>
                                     </Border.InputBindings>
                                     <Border.Style>
                                         <Style TargetType="Border">
-                                            <Setter Property="Background" Value="#1E293B"/>
+                                            <Setter Property="Background" Value="{DynamicResource Surface}"/>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource Line}"/>
                                             <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsOutOfStock}" Value="True">
+                                                    <Setter Property="Opacity" Value="0.65"/>
+                                                </DataTrigger>
                                                 <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter Property="Background" Value="#243349"/>
-                                                    <Setter Property="BorderBrush" Value="#3B82F6"/>
+                                                    <Setter Property="Background" Value="{DynamicResource Surface2}"/>
+                                                    <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
                                                 </Trigger>
                                             </Style.Triggers>
                                         </Style>
                                     </Border.Style>
                                     <Grid>
                                         <Grid.RowDefinitions>
+                                            <RowDefinition Height="96"/>
+                                            <RowDefinition Height="Auto"/>
                                             <RowDefinition Height="*"/>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
                                             <RowDefinition Height="Auto"/>
                                         </Grid.RowDefinitions>
 
-                                        <!-- Tovar nomi va Rasmi -->
-                                        <Grid Grid.Row="0" VerticalAlignment="Top">
+                                        <!-- Rasm joyi: rasm bor bo'lsa rasm, bo'lmasa "Rasm yo'q" -->
+                                        <Border Grid.Row="0" CornerRadius="8" Background="{DynamicResource Surface2}">
+                                            <Grid>
+                                                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                            Visibility="{Binding HasImage, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                                                    <Path Data="M21 7.5l-9-5-9 5v9l9 5 9-5v-9zM12 4.7l5.9 3.3L12 11.3 6.1 8 12 4.7zM5 9.7l6 3.4v6.6l-6-3.4V9.7zm14 6.6l-6 3.4v-6.6l6-3.4v6.6z" Fill="{DynamicResource AccentInk}" Opacity="0.55"
+                                                          Width="30" Height="30" Stretch="Uniform" HorizontalAlignment="Center"/>
+                                                    <TextBlock Text="Rasm yo'q" Foreground="{DynamicResource Ink3}" FontSize="11" Margin="0,4,0,0" HorizontalAlignment="Center"/>
+                                                </StackPanel>
+
+                                                <Button Command="{Binding DataContext.OpenImagePreviewCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}"
+                                                        Visibility="{Binding HasImage, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                        ToolTip="Rasmni kattalashtirib ko'rish"
+                                                        Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand">
+                                                    <Button.Template>
+                                                        <ControlTemplate TargetType="Button">
+                                                            <Border CornerRadius="8">
+                                                                <Border.Background>
+                                                                    <ImageBrush ImageSource="{Binding ImagePath}" Stretch="UniformToFill"/>
+                                                                </Border.Background>
+                                                            </Border>
+                                                        </ControlTemplate>
+                                                    </Button.Template>
+                                                </Button>
+
+                                                <!-- Ombor belgisi -->
+                                                <Border Background="{DynamicResource Scrim}" CornerRadius="5" Padding="6,2" Margin="6" HorizontalAlignment="Left" VerticalAlignment="Top"
+                                                        Visibility="{Binding HasWarehouse, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                        ToolTip="Ushbu tovar ombori">
+                                                    <TextBlock Text="{Binding WarehouseBadgeDisplay}" Foreground="{DynamicResource Ink}" FontSize="10" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxWidth="110"/>
+                                                </Border>
+
+                                                <!-- Tugagan belgisi -->
+                                                <Border Background="{DynamicResource BadSoft}" BorderBrush="{DynamicResource BadLine}" BorderThickness="1" CornerRadius="5" Padding="6,2" Margin="6" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                                        Visibility="{Binding IsOutOfStock, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                    <TextBlock Text="Tugagan" Foreground="{DynamicResource Bad}" FontSize="10" FontWeight="Bold"/>
+                                                </Border>
+                                            </Grid>
+                                        </Border>
+
+                                        <!-- Tovar nomi -->
+                                        <TextBlock Grid.Row="1" Text="{Binding Name}" Margin="2,10,2,0"
+                                                   Foreground="{DynamicResource Ink}" FontWeight="SemiBold" FontSize="14"
+                                                   TextWrapping="Wrap" MaxHeight="38" TextTrimming="CharacterEllipsis" LineHeight="18"/>
+
+                                        <!-- Narx va qoldiq -->
+                                        <Grid Grid.Row="3" Margin="2,6,2,0">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
-
-                                            <!-- Tovar nomi -->
-                                            <TextBlock Grid.Column="0" Text="{Binding Name}" 
-                                                       Foreground="#F1F5F9" FontWeight="Bold" FontSize="15" 
-                                                       TextWrapping="Wrap" MaxHeight="48" TextTrimming="CharacterEllipsis"
-                                                       LineHeight="18" VerticalAlignment="Top"/>
-
-                                            <!-- Rasm miniaturasi (faqat rasm mavjud bo'lganda) -->
-                                            <Button Grid.Column="1" 
-                                                    Command="{Binding DataContext.OpenImagePreviewCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                    CommandParameter="{Binding}"
-                                                    Visibility="{Binding HasImage, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                                    ToolTip="Rasmni kattalashtirib ko'rish"
-                                                    Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand"
-                                                    VerticalAlignment="Top" Margin="8,0,0,0">
-                                                <Border Width="44" Height="44" CornerRadius="8" Background="#0F172A" BorderBrush="#0284C7" BorderThickness="1.2">
-                                                    <Image Source="{Binding ImagePath}" Stretch="UniformToFill">
-                                                        <Image.Clip>
-                                                            <RectangleGeometry Rect="0,0,42,42" RadiusX="7" RadiusY="7"/>
-                                                        </Image.Clip>
-                                                    </Image>
-                                                </Border>
-                                            </Button>
-                                        </Grid>
-
-                                        <!-- Qoldiq miqdori -->
-                                        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,5,0,0">
-                                            <TextBlock Text="Qoldiq: " Foreground="#64748B" FontSize="12"/>
-                                            <TextBlock Text="{Binding StockQuantity}" Foreground="#94A3B8" FontWeight="SemiBold" FontSize="12"/>
-                                            <TextBlock Text=" "/>
-                                            <TextBlock Text="{Binding UnitDisplay}" Foreground="#64748B" FontSize="12"/>
-                                        </StackPanel>
-
-                                        <!-- Narxi (yashil, katta) -->
-                                        <TextBlock Grid.Row="2" 
-                                                   Text="{Binding SellingPrice, StringFormat='{}{0:N0} so\'m'}" 
-                                                   Foreground="#10B981" FontWeight="Bold" FontSize="15" Margin="0,4,0,0"/>
-
-                                        <!-- Mahsulot ombori / toifasi belgisi -->
-                                        <Border Grid.Row="3" Background="#0F243A" BorderBrush="#0284C7" BorderThickness="1" CornerRadius="4" Padding="6,2" HorizontalAlignment="Left" Margin="0,5,0,0"
-                                                Visibility="{Binding HasWarehouse, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                                ToolTip="Ushbu tovar ombori">
-                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                <TextBlock Text="🏢 " FontSize="9" Foreground="#38BDF8"/>
-                                                <TextBlock Text="{Binding WarehouseBadgeDisplay}" Foreground="#38BDF8" FontSize="11" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxWidth="170"/>
+                                            <TextBlock Grid.Column="0" Text="{Binding SellingPrice, StringFormat='{}{0:N0} so\'m'}"
+                                                       Foreground="{DynamicResource Ink}" FontWeight="Bold" FontSize="15" VerticalAlignment="Center"/>
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding StockQuantity}" FontSize="12" FontWeight="SemiBold">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="{DynamicResource Ink2}"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsLowStock}" Value="True">
+                                                                    <Setter Property="Foreground" Value="{DynamicResource Warn}"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding IsOutOfStock}" Value="True">
+                                                                    <Setter Property="Foreground" Value="{DynamicResource Bad}"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                                <TextBlock Text="{Binding UnitDisplay, StringFormat=' {0}'}" Foreground="{DynamicResource Ink3}" FontSize="12"/>
                                             </StackPanel>
-                                        </Border>
+                                        </Grid>
                                     </Grid>
                                 </Border>
                             </DataTemplate>
@@ -185,21 +270,21 @@
                     </ListBox>
 
                     <!-- Qidiruv bo'yicha tovar topilmaganda chiroyli xabar -->
-                    <Border Grid.Row="1" Background="#1E293B" CornerRadius="14" BorderBrush="#334155" BorderThickness="1" 
+                    <Border Grid.Row="1" Background="{DynamicResource Surface}" CornerRadius="14" BorderBrush="{DynamicResource Line}" BorderThickness="1" 
                             Padding="28,24" HorizontalAlignment="Center" VerticalAlignment="Center"
                             Visibility="{Binding IsEmptySearchResult, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <StackPanel HorizontalAlignment="Center">
                             <Path Stretch="Uniform" Width="30" Height="30" Data="M21 21l-4.35-4.35M19 10a9 9 0 11-18 0 9 9 0 0118 0z"
-                                  Stroke="#64748B" StrokeThickness="2" HorizontalAlignment="Center" Margin="0,0,0,10"/>
-                            <TextBlock Text="Bunday tovar topilmadi" Foreground="#F8FAFC" FontSize="15" FontWeight="Bold" HorizontalAlignment="Center"/>
-                            <TextBlock Text="Nomi yoki shtrix-kodini tekshirib qayta kiritib ko'ring" Foreground="#94A3B8" FontSize="12" Margin="0,4,0,0" HorizontalAlignment="Center"/>
+                                  Stroke="{DynamicResource Ink3}" StrokeThickness="2" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                            <TextBlock Text="Bunday tovar topilmadi" Foreground="{DynamicResource Ink}" FontSize="15" FontWeight="Bold" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Nomi yoki shtrix-kodini tekshirib qayta kiritib ko'ring" Foreground="{DynamicResource Ink2}" FontSize="12" Margin="0,4,0,0" HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Border>
                 </Grid>
             </Grid>
 
             <!-- O'NG TOMON: SAVATCHA VA TO'LOV -->
-            <Border Grid.Column="1" Background="#1E293B" BorderBrush="#334155" BorderThickness="1,0,0,0">
+            <Border Grid.Column="1" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Line}" BorderThickness="1,0,0,0">
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <!-- 0: Savatcha sarlavhasi va Hold paneli -->
@@ -229,18 +314,18 @@
 
                             <!-- 1: Korzinka vektor ikonka bilan mahsulot soni -->
                             <Border Grid.Column="0" Height="38" Margin="0,0,6,0"
-                                    Background="#334155" BorderBrush="#475569" BorderThickness="1" CornerRadius="8">
+                                    Background="{DynamicResource Line}" BorderBrush="{DynamicResource LineStrong}" BorderThickness="1" CornerRadius="8">
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                                     <Path Stretch="Uniform" Width="16" Height="16"
                                           Data="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
-                                          Stroke="White" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" VerticalAlignment="Center"/>
+                                          Stroke="{DynamicResource Ink2}" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" VerticalAlignment="Center"/>
                                     <Border CornerRadius="8" Padding="6,1" Margin="6,0,0,0" VerticalAlignment="Center">
                                         <Border.Style>
                                             <Style TargetType="Border">
-                                                <Setter Property="Background" Value="#0B6477"/>
+                                                <Setter Property="Background" Value="{DynamicResource Accent}"/>
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding HasCartItems}" Value="False">
-                                                        <Setter Property="Background" Value="#475569"/>
+                                                        <Setter Property="Background" Value="{DynamicResource LineStrong}"/>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
@@ -253,20 +338,20 @@
                             <!-- 2: Brak tovar sotish (0 so'm / Backspace) -->
                             <Button Grid.Column="1" Command="{Binding OpenBrakModalCommand}"
                                     IsEnabled="{Binding HasCartItems}"
-                                    ToolTip="Brak tovar sifatida hisobdan chiqarish (0 so'm) [Backspace]"
-                                    Background="#334155" 
+                                    ToolTip="Brak sifatida hisobdan chiqarish (0 so'm)"
+                                    Background="{DynamicResource Line}" 
                                     Height="38" Margin="0,0,6,0"
                                     BorderThickness="0" Cursor="Hand">
                                 <Button.Template>
                                     <ControlTemplate TargetType="Button">
-                                        <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="#475569" BorderThickness="1" CornerRadius="8">
+                                        <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="{DynamicResource LineStrong}" BorderThickness="1" CornerRadius="8">
                                             <Path x:Name="ic" Data="M12 2L1 21h22L12 2zm0 3.5L20.2 19H3.8L12 5.5zM11 10v4h2v-4h-2zm0 6v2h2v-2h-2z" 
-                                                  Fill="White" HorizontalAlignment="Center" VerticalAlignment="Center" Width="15" Height="15" Stretch="Uniform"/>
+                                                  Fill="{DynamicResource Warn}" HorizontalAlignment="Center" VerticalAlignment="Center" Width="16" Height="16" Stretch="Uniform"/>
                                         </Border>
                                         <ControlTemplate.Triggers>
                                             <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="bd" Property="Background" Value="#475569"/>
-                                                <Setter TargetName="bd" Property="BorderBrush" Value="#64748B"/>
+                                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource LineStrong}"/>
+                                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource LineStrong}"/>
                                             </Trigger>
                                             <Trigger Property="IsEnabled" Value="False">
                                                 <Setter TargetName="bd" Property="Opacity" Value="0.35"/>
@@ -280,25 +365,25 @@
                             <Button Grid.Column="2" Command="{Binding ToggleAllCartPricesCommand}"
                                     IsEnabled="{Binding HasCartItems}"
                                     ToolTip="Barcha tovarlar narxini almashtirish (1-narx / 2-narx)"
-                                    Background="#334155" 
+                                    Background="{DynamicResource Line}" 
                                     Height="38" Margin="0,0,6,0"
                                     BorderThickness="0" Cursor="Hand">
                                 <Button.Template>
                                     <ControlTemplate TargetType="Button">
-                                        <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="#475569" BorderThickness="1" CornerRadius="8">
+                                        <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="{DynamicResource LineStrong}" BorderThickness="1" CornerRadius="8">
                                             <Path x:Name="ic" Data="M3 8h12m-3-3l3 3-3 3M17 14H5m3 3l-3-3 3-3" 
-                                                  Stroke="White" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" 
+                                                  Stroke="{DynamicResource Ink2}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" 
                                                   HorizontalAlignment="Center" VerticalAlignment="Center" Width="18" Height="18" Stretch="Uniform"/>
                                         </Border>
                                         <ControlTemplate.Triggers>
                                             <DataTrigger Binding="{Binding IsAllPrice2Active}" Value="True">
-                                                <Setter TargetName="bd" Property="Background" Value="#064E3B"/>
-                                                <Setter TargetName="bd" Property="BorderBrush" Value="#10B981"/>
-                                                <Setter TargetName="ic" Property="Stroke" Value="#34D399"/>
+                                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource OkSoft}"/>
+                                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource Ok}"/>
+                                                <Setter TargetName="ic" Property="Stroke" Value="{DynamicResource Ok}"/>
                                             </DataTrigger>
                                             <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="bd" Property="Background" Value="#475569"/>
-                                                <Setter TargetName="bd" Property="BorderBrush" Value="#64748B"/>
+                                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource LineStrong}"/>
+                                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource LineStrong}"/>
                                             </Trigger>
                                             <Trigger Property="IsEnabled" Value="False">
                                                 <Setter TargetName="bd" Property="Opacity" Value="0.35"/>
@@ -312,19 +397,19 @@
                             <Button Grid.Column="3" Command="{Binding HoldCurrentCartCommand}"
                                     IsEnabled="{Binding HasCartItems}"
                                     ToolTip="Kutishga qo'yish (Hold)"
-                                    Background="#334155" 
+                                    Background="{DynamicResource Line}" 
                                     Height="38" Margin="0,0,6,0"
                                     BorderThickness="0" Cursor="Hand">
                                 <Button.Template>
                                     <ControlTemplate TargetType="Button">
-                                        <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="#475569" BorderThickness="1" CornerRadius="8">
+                                        <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="{DynamicResource LineStrong}" BorderThickness="1" CornerRadius="8">
                                             <Path x:Name="ic" Data="M6 4h3v14H6zm9 0h3v14h-3z" 
-                                                  Fill="White" HorizontalAlignment="Center" VerticalAlignment="Center" Width="14" Height="14" Stretch="Uniform"/>
+                                                  Fill="{DynamicResource Ink2}" HorizontalAlignment="Center" VerticalAlignment="Center" Width="14" Height="14" Stretch="Uniform"/>
                                         </Border>
                                         <ControlTemplate.Triggers>
                                             <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="bd" Property="Background" Value="#475569"/>
-                                                <Setter TargetName="bd" Property="BorderBrush" Value="#64748B"/>
+                                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource LineStrong}"/>
+                                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource LineStrong}"/>
                                             </Trigger>
                                             <Trigger Property="IsEnabled" Value="False">
                                                 <Setter TargetName="bd" Property="Opacity" Value="0.35"/>
@@ -337,21 +422,19 @@
                             <!-- 5: Delete / Savatchani tozalash (Minus belgisi, qizil rangli) -->
                             <Button Grid.Column="4" Command="{Binding ClearCartCommand}"
                                     IsEnabled="{Binding HasCartItems}"
-                                    ToolTip="Savatchani tozalash (-)"
-                                    Background="#2A171D" 
+                                    ToolTip="Savatni tozalash"
+                                    Background="{DynamicResource BadSoft}" 
                                     Height="38" Margin="0"
                                     BorderThickness="0" Cursor="Hand">
                                 <Button.Template>
                                     <ControlTemplate TargetType="Button">
-                                        <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="#EF4444" BorderThickness="1.2" CornerRadius="8">
-                                            <Path x:Name="ic" Data="M4 12h16" 
-                                                  Stroke="#EF4444" StrokeThickness="2.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" 
-                                                  HorizontalAlignment="Center" VerticalAlignment="Center" Width="14" Height="14" Stretch="Uniform"/>
+                                        <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="{DynamicResource Bad}" BorderThickness="1.2" CornerRadius="8">
+                                            <Path x:Name="ic" Data="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" Fill="{DynamicResource Bad}" HorizontalAlignment="Center" VerticalAlignment="Center" Width="15" Height="15" Stretch="Uniform"/>
                                         </Border>
                                         <ControlTemplate.Triggers>
                                             <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="bd" Property="Background" Value="#451A23"/>
-                                                <Setter TargetName="bd" Property="BorderBrush" Value="#F87171"/>
+                                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource BadSoft}"/>
+                                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource Bad}"/>
                                             </Trigger>
                                             <Trigger Property="IsEnabled" Value="False">
                                                 <Setter TargetName="bd" Property="Opacity" Value="0.35"/>
@@ -372,7 +455,7 @@
                             </Grid.ColumnDefinitions>
 
                             <Button Grid.Column="0" Click="HeldCartsScrollLeft_Click"
-                                    Background="#334155" Foreground="#94A3B8"
+                                    Background="{DynamicResource Line}" Foreground="{DynamicResource Ink2}"
                                     Width="22" Height="32" Margin="0,0,4,6" BorderThickness="0" Cursor="Hand">
                                 <Button.Template>
                                     <ControlTemplate TargetType="Button">
@@ -381,7 +464,7 @@
                                         </Border>
                                         <ControlTemplate.Triggers>
                                             <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="bd" Property="Background" Value="#475569"/>
+                                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource LineStrong}"/>
                                             </Trigger>
                                         </ControlTemplate.Triggers>
                                     </ControlTemplate>
@@ -404,7 +487,7 @@
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <Border Background="#1E293B" BorderBrush="#F59E0B" BorderThickness="1"
+                                            <Border Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Warn}" BorderThickness="1"
                                                     CornerRadius="8" Padding="10,6" Margin="0,0,8,2" Cursor="Hand">
                                                 <Border.InputBindings>
                                                     <MouseBinding Gesture="LeftClick"
@@ -413,11 +496,11 @@
                                                 </Border.InputBindings>
                                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                     <TextBlock Text="⏸️ " FontSize="12"/>
-                                                    <TextBlock Text="{Binding DisplayText}" Foreground="#FBBF24" FontSize="12" FontWeight="SemiBold"/>
+                                                    <TextBlock Text="{Binding DisplayText}" Foreground="{DynamicResource Warn}" FontSize="12" FontWeight="SemiBold"/>
                                                     <Button Content="✕" 
                                                             Command="{Binding DataContext.DeleteHeldCartCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                             CommandParameter="{Binding}"
-                                                            Foreground="#94A3B8" Background="#334155" BorderThickness="0"
+                                                            Foreground="{DynamicResource Ink2}" Background="{DynamicResource Line}" BorderThickness="0"
                                                             Cursor="Hand" Margin="8,0,0,0" Padding="5,2" FontSize="11">
                                                         <Button.Template>
                                                             <ControlTemplate TargetType="Button">
@@ -435,7 +518,7 @@
                             </ScrollViewer>
 
                             <Button Grid.Column="2" Click="HeldCartsScrollRight_Click"
-                                    Background="#334155" Foreground="#94A3B8"
+                                    Background="{DynamicResource Line}" Foreground="{DynamicResource Ink2}"
                                     Width="22" Height="32" Margin="4,0,0,6" BorderThickness="0" Cursor="Hand">
                                 <Button.Template>
                                     <ControlTemplate TargetType="Button">
@@ -444,7 +527,7 @@
                                         </Border>
                                         <ControlTemplate.Triggers>
                                             <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="bd" Property="Background" Value="#475569"/>
+                                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource LineStrong}"/>
                                             </Trigger>
                                         </ControlTemplate.Triggers>
                                     </ControlTemplate>
@@ -479,14 +562,14 @@
                                     <Border.Style>
                                         <Style TargetType="Border">
                                             <!-- Oddiy tovar: qoramtir -->
-                                            <Setter Property="Background" Value="#1E293B"/>
-                                            <Setter Property="BorderBrush" Value="#334155"/>
+                                            <Setter Property="Background" Value="{DynamicResource Surface}"/>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource Line}"/>
                                             <Setter Property="BorderThickness" Value="1"/>
                                             <Style.Triggers>
                                                 <!-- Chegirma yoki 2-narx: nozik moviy chegara, toza qoramtir fon -->
                                                 <DataTrigger Binding="{Binding IsDiscounted}" Value="True">
-                                                    <Setter Property="BorderBrush" Value="#0284C7"/>
-                                                    <Setter Property="Background" Value="#1E293B"/>
+                                                    <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+                                                    <Setter Property="Background" Value="{DynamicResource Surface}"/>
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
@@ -501,7 +584,7 @@
                                             <!-- 1-Ustun: Nomi va narxi (chapda) -->
                                             <ColumnDefinition Width="*"/>
                                             <!-- 2-Ustun: Minus/Miqdor/Plyus (aniq bitta ustun, barcha qatorlarda bir tekisda) -->
-                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="138"/>
                                             <!-- 3-Ustun: Jami narx va O'chirish (o'ngda, qat'iy ustun) -->
                                             <ColumnDefinition Width="90"/>
                                         </Grid.ColumnDefinitions>
@@ -518,36 +601,36 @@
                                                     <Button.Template>
                                                         <ControlTemplate TargetType="Button">
                                                             <Border x:Name="bd" CornerRadius="6" Padding="8,4" MinWidth="46" Height="28"
-                                                                    Background="#1E293B" BorderBrush="#475569" BorderThickness="1.2">
+                                                                    Background="{DynamicResource Surface}" BorderBrush="{DynamicResource LineStrong}" BorderThickness="1.2">
                                                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                                    <TextBlock x:Name="ic" Text="⇄" FontSize="13" FontWeight="Bold" Foreground="#94A3B8"/>
-                                                                    <TextBlock x:Name="tx" Text="{Binding PriceNumberDisplay}" FontSize="12" FontWeight="Bold" Foreground="#94A3B8" Margin="3,0,0,0"/>
+                                                                    <TextBlock x:Name="ic" Text="⇄" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource Ink2}"/>
+                                                                    <TextBlock x:Name="tx" Text="{Binding PriceNumberDisplay}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource Ink2}" Margin="3,0,0,0"/>
                                                                 </StackPanel>
                                                             </Border>
                                                             <ControlTemplate.Triggers>
                                                                 <DataTrigger Binding="{Binding IsPrice2Active}" Value="True">
-                                                                    <Setter TargetName="bd" Property="Background" Value="#064E3B"/>
-                                                                    <Setter TargetName="bd" Property="BorderBrush" Value="#10B981"/>
-                                                                    <Setter TargetName="ic" Property="Foreground" Value="#34D399"/>
-                                                                    <Setter TargetName="tx" Property="Foreground" Value="#34D399"/>
+                                                                    <Setter TargetName="bd" Property="Background" Value="{DynamicResource OkSoft}"/>
+                                                                    <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource Ok}"/>
+                                                                    <Setter TargetName="ic" Property="Foreground" Value="{DynamicResource Ok}"/>
+                                                                    <Setter TargetName="tx" Property="Foreground" Value="{DynamicResource Ok}"/>
                                                                 </DataTrigger>
                                                                 <Trigger Property="IsMouseOver" Value="True">
-                                                                    <Setter TargetName="bd" Property="Background" Value="#334155"/>
-                                                                    <Setter TargetName="bd" Property="BorderBrush" Value="#64748B"/>
+                                                                    <Setter TargetName="bd" Property="Background" Value="{DynamicResource Line}"/>
+                                                                    <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource LineStrong}"/>
                                                                 </Trigger>
                                                                 <MultiDataTrigger>
                                                                     <MultiDataTrigger.Conditions>
                                                                         <Condition Binding="{Binding IsPrice2Active}" Value="True"/>
                                                                         <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True"/>
                                                                     </MultiDataTrigger.Conditions>
-                                                                    <Setter TargetName="bd" Property="Background" Value="#065F46"/>
-                                                                    <Setter TargetName="bd" Property="BorderBrush" Value="#34D399"/>
+                                                                    <Setter TargetName="bd" Property="Background" Value="{DynamicResource OkSolid}"/>
+                                                                    <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource Ok}"/>
                                                                 </MultiDataTrigger>
                                                             </ControlTemplate.Triggers>
                                                         </ControlTemplate>
                                                     </Button.Template>
                                                 </Button>
-                                                <TextBlock Text="{Binding Product.Name}" Foreground="#F8FAFC" FontWeight="Bold" FontSize="14" TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Text="{Binding Product.Name}" Foreground="{DynamicResource Ink}" FontWeight="Bold" FontSize="14" TextTrimming="CharacterEllipsis"/>
                                             </StackPanel>
                                             
                                             <!-- Narx va Ombor bloki -->
@@ -564,10 +647,10 @@
                                                     </TextBlock.InputBindings>
                                                     <TextBlock.Style>
                                                         <Style TargetType="TextBlock">
-                                                            <Setter Property="Foreground" Value="#94A3B8"/>
+                                                            <Setter Property="Foreground" Value="{DynamicResource Ink2}"/>
                                                             <Style.Triggers>
                                                                 <DataTrigger Binding="{Binding IsDiscounted}" Value="True">
-                                                                    <Setter Property="Foreground" Value="#38BDF8"/>
+                                                                    <Setter Property="Foreground" Value="{DynamicResource AccentInk}"/>
                                                                 </DataTrigger>
                                                             </Style.Triggers>
                                                         </Style>
@@ -576,16 +659,16 @@
 
                                                 <!-- Chegirma bo'lsa asl narx chizilgan -->
                                                 <TextBlock Text="{Binding OriginalPrice, StringFormat='{} ({0:N0})'}" 
-                                                           Foreground="#475569" FontSize="11" TextDecorations="Strikethrough" Margin="5,0,0,0"
+                                                           Foreground="{DynamicResource Ink3}" FontSize="11" TextDecorations="Strikethrough" Margin="5,0,0,0"
                                                            Visibility="{Binding IsDiscounted, Converter={StaticResource BooleanToVisibilityConverter}}"/>
 
                                                 <!-- Mahsulot qaysi ombordan ekanligi belgisi -->
-                                                <Border Background="#0F243A" BorderBrush="#0284C7" BorderThickness="1" CornerRadius="4" Padding="6,2" Margin="8,0,0,0" VerticalAlignment="Center"
+                                                <Border Background="{DynamicResource AccentSoft}" BorderBrush="{DynamicResource Accent}" BorderThickness="1" CornerRadius="4" Padding="6,2" Margin="8,0,0,0" VerticalAlignment="Center"
                                                         Visibility="{Binding HasWarehouse, Converter={StaticResource BooleanToVisibilityConverter}}"
                                                         ToolTip="Ushbu tovar beriladigan ombor">
                                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                        <TextBlock Text="🏢 " FontSize="10" Foreground="#38BDF8"/>
-                                                        <TextBlock Text="{Binding WarehouseName}" Foreground="#38BDF8" FontSize="11" FontWeight="SemiBold"/>
+                                                        <TextBlock Text="🏢 " FontSize="10" Foreground="{DynamicResource AccentInk}"/>
+                                                        <TextBlock Text="{Binding WarehouseName}" Foreground="{DynamicResource AccentInk}" FontSize="11" FontWeight="SemiBold"/>
                                                     </StackPanel>
                                                 </Border>
                                             </StackPanel>
@@ -595,35 +678,35 @@
                                         <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                                             <Button Command="{Binding DataContext.DecreaseQuantityCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                     CommandParameter="{Binding}"
-                                                    Width="30" Height="30" Cursor="Hand">
+                                                    Width="36" Height="36" Cursor="Hand">
                                                 <Button.Template>
                                                     <ControlTemplate TargetType="Button">
-                                                        <Border x:Name="btnBorder" Background="#334155" CornerRadius="6">
-                                                            <TextBlock Text="-" Foreground="White" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        <Border x:Name="btnBorder" Background="{DynamicResource Line}" CornerRadius="6">
+                                                            <TextBlock Text="&#x2212;" Foreground="{DynamicResource Ink}" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                         </Border>
                                                         <ControlTemplate.Triggers>
                                                             <Trigger Property="IsMouseOver" Value="True">
-                                                                <Setter TargetName="btnBorder" Property="Background" Value="#475569"/>
+                                                                <Setter TargetName="btnBorder" Property="Background" Value="{DynamicResource LineStrong}"/>
                                                             </Trigger>
                                                         </ControlTemplate.Triggers>
                                                     </ControlTemplate>
                                                 </Button.Template>
                                             </Button>
 
-                                            <TextBlock Text="{Binding Quantity}" Foreground="#F8FAFC" FontWeight="Bold" FontSize="15" 
+                                            <TextBlock Text="{Binding Quantity}" Foreground="{DynamicResource Ink}" FontWeight="Bold" FontSize="15" 
                                                        VerticalAlignment="Center" Margin="8,0" MinWidth="26" TextAlignment="Center"/>
 
                                             <Button Command="{Binding DataContext.IncreaseQuantityCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                     CommandParameter="{Binding}"
-                                                    Width="30" Height="30" Cursor="Hand">
+                                                    Width="36" Height="36" Cursor="Hand">
                                                 <Button.Template>
                                                     <ControlTemplate TargetType="Button">
-                                                        <Border x:Name="btnBorder" Background="#334155" CornerRadius="6">
-                                                            <TextBlock Text="+" Foreground="White" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        <Border x:Name="btnBorder" Background="{DynamicResource Line}" CornerRadius="6">
+                                                            <TextBlock Text="+" Foreground="{DynamicResource Ink}" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                         </Border>
                                                         <ControlTemplate.Triggers>
                                                             <Trigger Property="IsMouseOver" Value="True">
-                                                                <Setter TargetName="btnBorder" Property="Background" Value="#475569"/>
+                                                                <Setter TargetName="btnBorder" Property="Background" Value="{DynamicResource LineStrong}"/>
                                                             </Trigger>
                                                         </ControlTemplate.Triggers>
                                                     </ControlTemplate>
@@ -634,23 +717,21 @@
                                         <!-- 3-Ustun: Jami summa va o'chirish (so'm so'zi yo'q) -->
                                         <StackPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">
                                             <TextBlock Text="{Binding TotalPrice, StringFormat='{}{0:N0}'}" 
-                                                       Foreground="#10B981" FontWeight="Bold" FontSize="15" TextAlignment="Right"/>
+                                                       Foreground="{DynamicResource Ok}" FontWeight="Bold" FontSize="15" TextAlignment="Right"/>
                                             <Button Command="{Binding DataContext.RemoveFromCartCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                     CommandParameter="{Binding}"
-                                                    ToolTip="Savatdan chiqarish (-)"
-                                                    Width="28" Height="28"
+                                                    ToolTip="Savatdan olib tashlash"
+                                                    Width="32" Height="32"
                                                     Cursor="Hand" HorizontalAlignment="Right" Margin="0,4,0,0">
                                                 <Button.Template>
                                                     <ControlTemplate TargetType="Button">
-                                                        <Border x:Name="delBorder" Background="#2A171D" BorderBrush="#7F1D1D" BorderThickness="1" CornerRadius="6">
-                                                            <Path Data="M4 12h16"
-                                                                  Stroke="#EF4444" StrokeThickness="2.0" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                                                  Width="12" Height="12" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        <Border x:Name="delBorder" Background="{DynamicResource BadSoft}" BorderBrush="{DynamicResource BadLine}" BorderThickness="1" CornerRadius="6">
+                                                            <Path Data="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" Fill="{DynamicResource Bad}" Width="14" Height="14" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                         </Border>
                                                         <ControlTemplate.Triggers>
                                                             <Trigger Property="IsMouseOver" Value="True">
-                                                                <Setter TargetName="delBorder" Property="Background" Value="#7F1D1D"/>
-                                                                <Setter TargetName="delBorder" Property="BorderBrush" Value="#EF4444"/>
+                                                                <Setter TargetName="delBorder" Property="Background" Value="{DynamicResource BadSoft}"/>
+                                                                <Setter TargetName="delBorder" Property="BorderBrush" Value="{DynamicResource Bad}"/>
                                                             </Trigger>
                                                         </ControlTemplate.Triggers>
                                                     </ControlTemplate>
@@ -664,125 +745,58 @@
                     </ListBox>
 
                     <!-- YAGONA TO'LOV PANELI (MINIMALIST SUMMA VA 3 TA TO'LOV TUGMASI) -->
-                    <Border Grid.Row="2" Background="#0F172A" CornerRadius="14" Padding="14,14,14,14" Margin="0,10,0,0" BorderBrush="#334155" BorderThickness="1">
+                    <Border Grid.Row="2" Background="{DynamicResource Bg}" CornerRadius="14" Padding="14,14,14,14" Margin="0,10,0,0" BorderBrush="{DynamicResource Line}" BorderThickness="1">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/> <!-- Minimalist Summa qatori -->
-                                <RowDefinition Height="Auto"/> <!-- 3 ta To'lov tugmasi -->
+                                <RowDefinition Height="Auto"/> <!-- Naqd (asosiy) -->
+                                <RowDefinition Height="Auto"/> <!-- Karta va Aralash -->
                             </Grid.RowDefinitions>
 
                             <!-- 1-Qator: Minimalist Summa qatori ("Jami to'lov" so'zi yo'q!) -->
                             <Grid Grid.Row="0" Margin="2,0,2,14">
                                 <!-- Chapda: Tovar soni -->
                                 <TextBlock Text="{Binding TotalItemsCount, StringFormat='{}{0} ta tovar'}" 
-                                           Foreground="#94A3B8" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                           Foreground="{DynamicResource Ink2}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
 
                                 <!-- O'ngda: Katta, ko'zga tashlanadigan summa -->
                                 <TextBlock Text="{Binding TotalAmount, StringFormat='{}{0:N0} so\'m'}" 
-                                           Foreground="#10B981" FontSize="26" FontWeight="ExtraBold" 
+                                           Foreground="{DynamicResource Ink}" FontSize="28" FontWeight="ExtraBold" 
                                            HorizontalAlignment="Right" VerticalAlignment="Center"/>
                             </Grid>
 
-                            <!-- 2-Qator: 3 ta asosiy to'lov tugmasi (Naqd, Karta, Aralash) -->
-                            <Grid Grid.Row="1">
+                            <!-- 2-Qator: Naqd (asosiy) -->
+                            <Button Style="{StaticResource PayPrimary}" Command="{Binding OpenCashSaleCommand}" IsEnabled="{Binding HasCartItems}"
+                                    ToolTip="Naqd pul orqali sotish [Space / F8]" Grid.Row="1">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Path Data="M21 6H3C1.89 6 1 6.89 1 8V16C1 17.11 1.89 18 3 18H21C22.11 18 23 17.11 23 16V8C23 6.89 22.11 6 21 6ZM21 16H3V8H21V16ZM12 9C10.34 9 9 10.34 9 12C9 13.66 10.34 15 12 15C13.66 15 15 13.66 15 12C15 10.34 13.66 9 12 9Z" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Width="18" Height="18" Stretch="Uniform" Margin="0,0,10,0"/>
+                                    <TextBlock Text="Naqd" FontWeight="Bold" FontSize="16"/>
+                                    <Border Style="{StaticResource KbdChip}"><TextBlock Text="Space · F8" FontFamily="Consolas" FontSize="11" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Opacity="0.85"/></Border>
+                                </StackPanel>
+                            </Button>
+
+                            <!-- 3-Qator: Karta va Aralash -->
+                            <Grid Grid.Row="2" Margin="0,8,0,0">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-
-                                <!-- 1: Naqd -->
-                                <Button Grid.Column="0" Command="{Binding OpenCashSaleCommand}"
-                                        IsEnabled="{Binding HasCartItems}"
-                                        ToolTip="Naqd pul orqali sotish [Space / F8]"
-                                        Background="#1E293B" Height="58" Margin="0,0,6,0"
-                                        BorderThickness="0" Cursor="Hand">
-                                    <Button.Template>
-                                        <ControlTemplate TargetType="Button">
-                                            <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="#475569" BorderThickness="1.5" CornerRadius="10">
-                                                <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                    <Path x:Name="ic" Data="M21 6H3C1.89 6 1 6.89 1 8V16C1 17.11 1.89 18 3 18H21C22.11 18 23 17.11 23 16V8C23 6.89 22.11 6 21 6ZM21 16H3V8H21V16ZM12 9C10.34 9 9 10.34 9 12C9 13.66 10.34 15 12 15C13.66 15 15 13.66 15 12C15 10.34 13.66 9 12 9Z" 
-                                                          Fill="#F8FAFC" Width="18" Height="18" Stretch="Uniform" Margin="0,0,0,4" HorizontalAlignment="Center"/>
-                                                    <TextBlock Text="Naqd" FontWeight="Bold" FontSize="13" Foreground="#F8FAFC" HorizontalAlignment="Center"/>
-                                                </StackPanel>
-                                            </Border>
-                                            <ControlTemplate.Triggers>
-                                                <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter TargetName="bd" Property="Background" Value="#334155"/>
-                                                    <Setter TargetName="bd" Property="BorderBrush" Value="#38BDF8"/>
-                                                </Trigger>
-                                                <Trigger Property="IsPressed" Value="True">
-                                                    <Setter TargetName="bd" Property="Opacity" Value="0.75"/>
-                                                </Trigger>
-                                                <Trigger Property="IsEnabled" Value="False">
-                                                    <Setter TargetName="bd" Property="Opacity" Value="0.35"/>
-                                                </Trigger>
-                                            </ControlTemplate.Triggers>
-                                        </ControlTemplate>
-                                    </Button.Template>
-                                </Button>
-
-                                <!-- 2: Karta -->
-                                <Button Grid.Column="1" Command="{Binding OpenCardSaleCommand}"
-                                        IsEnabled="{Binding HasCartItems}"
-                                        ToolTip="Plastik karta orqali sotish (F9)"
-                                        Background="#1E293B" Height="58" Margin="0,0,6,0"
-                                        BorderThickness="0" Cursor="Hand">
-                                    <Button.Template>
-                                        <ControlTemplate TargetType="Button">
-                                            <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="#475569" BorderThickness="1.5" CornerRadius="10">
-                                                <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                    <Path x:Name="ic" Data="M20 4H4C2.89 4 2.01 4.89 2.01 6L2 18C2 19.1 2.89 20 4 20H20C21.1 20 22 19.1 22 18V6C22 4.89 21.1 4 20 4ZM20 18H4V12H20V18ZM20 8H4V6H20V8Z" 
-                                                          Fill="#F8FAFC" Width="18" Height="18" Stretch="Uniform" Margin="0,0,0,4" HorizontalAlignment="Center"/>
-                                                    <TextBlock Text="Karta" FontWeight="Bold" FontSize="13" Foreground="#F8FAFC" HorizontalAlignment="Center"/>
-                                                </StackPanel>
-                                            </Border>
-                                            <ControlTemplate.Triggers>
-                                                <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter TargetName="bd" Property="Background" Value="#334155"/>
-                                                    <Setter TargetName="bd" Property="BorderBrush" Value="#38BDF8"/>
-                                                </Trigger>
-                                                <Trigger Property="IsPressed" Value="True">
-                                                    <Setter TargetName="bd" Property="Opacity" Value="0.75"/>
-                                                </Trigger>
-                                                <Trigger Property="IsEnabled" Value="False">
-                                                    <Setter TargetName="bd" Property="Opacity" Value="0.35"/>
-                                                </Trigger>
-                                            </ControlTemplate.Triggers>
-                                        </ControlTemplate>
-                                    </Button.Template>
-                                </Button>
-
-                                <!-- 3: Aralash -->
-                                <Button Grid.Column="2" Command="{Binding OpenSplitSaleCommand}"
-                                        IsEnabled="{Binding HasCartItems}"
-                                        ToolTip="Aralash to'lov (Naqd + Karta) [F10]"
-                                        Background="#1E293B" Height="58" Margin="0"
-                                        BorderThickness="0" Cursor="Hand">
-                                    <Button.Template>
-                                        <ControlTemplate TargetType="Button">
-                                            <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="#475569" BorderThickness="1.5" CornerRadius="10">
-                                                <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                    <Path x:Name="ic" Data="M6.99 11L3 15L6.99 19V16H14V14H6.99V11ZM21 9L17.01 5V8H10V10H17.01V13L21 9Z" 
-                                                          Fill="#F8FAFC" Width="18" Height="18" Stretch="Uniform" Margin="0,0,0,4" HorizontalAlignment="Center"/>
-                                                    <TextBlock Text="Aralash" FontWeight="Bold" FontSize="13" Foreground="#F8FAFC" HorizontalAlignment="Center"/>
-                                                </StackPanel>
-                                            </Border>
-                                            <ControlTemplate.Triggers>
-                                                <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter TargetName="bd" Property="Background" Value="#334155"/>
-                                                    <Setter TargetName="bd" Property="BorderBrush" Value="#38BDF8"/>
-                                                </Trigger>
-                                                <Trigger Property="IsPressed" Value="True">
-                                                    <Setter TargetName="bd" Property="Opacity" Value="0.75"/>
-                                                </Trigger>
-                                                <Trigger Property="IsEnabled" Value="False">
-                                                    <Setter TargetName="bd" Property="Opacity" Value="0.35"/>
-                                                </Trigger>
-                                            </ControlTemplate.Triggers>
-                                        </ControlTemplate>
-                                    </Button.Template>
-                                </Button>
+                            <Button Style="{StaticResource PaySecondary}" Command="{Binding OpenCardSaleCommand}" IsEnabled="{Binding HasCartItems}"
+                                    ToolTip="Plastik karta orqali sotish (F9)" Grid.Column="0" Margin="0,0,4,0">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Path Data="M20 4H4C2.89 4 2.01 4.89 2.01 6L2 18C2 19.1 2.89 20 4 20H20C21.1 20 22 19.1 22 18V6C22 4.89 21.1 4 20 4ZM20 18H4V12H20V18ZM20 8H4V6H20V8Z" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Width="18" Height="18" Stretch="Uniform" Margin="0,0,10,0"/>
+                                    <TextBlock Text="Karta" FontWeight="Bold" FontSize="14"/>
+                                    <Border Style="{StaticResource KbdChip}"><TextBlock Text="F9" FontFamily="Consolas" FontSize="11" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Opacity="0.85"/></Border>
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource PaySecondary}" Command="{Binding OpenSplitSaleCommand}" IsEnabled="{Binding HasCartItems}"
+                                    ToolTip="Aralash to'lov (Naqd + Karta) [F10]" Grid.Column="1" Margin="4,0,0,0">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Path Data="M6.99 11L3 15L6.99 19V16H14V14H6.99V11ZM21 9L17.01 5V8H10V10H17.01V13L21 9Z" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Width="18" Height="18" Stretch="Uniform" Margin="0,0,10,0"/>
+                                    <TextBlock Text="Aralash" FontWeight="Bold" FontSize="14"/>
+                                    <Border Style="{StaticResource KbdChip}"><TextBlock Text="F10" FontFamily="Consolas" FontSize="11" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Opacity="0.85"/></Border>
+                                </StackPanel>
+                            </Button>
                             </Grid>
                         </Grid>
                     </Border>
@@ -791,45 +805,45 @@
         </Grid>
 
         <!-- NARX VA MIQDORNI TAHRIRLASH MODAL OYNASI -->
-        <Border Background="#CC000000" Panel.ZIndex="100"
+        <Border Background="{DynamicResource Scrim}" Panel.ZIndex="100"
                 Visibility="{Binding IsEditModalOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <Border Background="#1E293B" BorderBrush="#0B6477" BorderThickness="1.5"
+            <Border Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Accent}" BorderThickness="1.5"
                     CornerRadius="16" Padding="24" Width="440"
                     HorizontalAlignment="Center" VerticalAlignment="Center">
                 <StackPanel>
                     <!-- Modal Sarlavhasi -->
-                    <TextBlock Text="✏️ Mahsulot Narxi va Miqdorini Tahrirlash" Foreground="#F8FAFC" FontSize="17" FontWeight="Bold" Margin="0,0,0,6"/>
-                    <TextBlock Text="Mana shu sotuv uchun narxni o'zgartiring (Chegirma). Ombordagi asl narx o'zgarmaydi." Foreground="#94A3B8" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,16"/>
+                    <TextBlock Text="✏️ Mahsulot Narxi va Miqdorini Tahrirlash" Foreground="{DynamicResource Ink}" FontSize="17" FontWeight="Bold" Margin="0,0,0,6"/>
+                    <TextBlock Text="Mana shu sotuv uchun narxni o'zgartiring (Chegirma). Ombordagi asl narx o'zgarmaydi." Foreground="{DynamicResource Ink2}" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,16"/>
 
                     <!-- Tovar Nomi va Ombori -->
-                    <Border Background="#0F172A" CornerRadius="8" Padding="12" Margin="0,0,0,14" BorderBrush="#334155" BorderThickness="1">
+                    <Border Background="{DynamicResource Bg}" CornerRadius="8" Padding="12" Margin="0,0,0,14" BorderBrush="{DynamicResource Line}" BorderThickness="1">
                         <StackPanel>
-                            <TextBlock Text="{Binding EditProductName}" Foreground="#F8FAFC" FontSize="15" FontWeight="Bold"/>
+                            <TextBlock Text="{Binding EditProductName}" Foreground="{DynamicResource Ink}" FontSize="15" FontWeight="Bold"/>
                             <StackPanel Orientation="Horizontal" Margin="0,4,0,0" VerticalAlignment="Center">
-                                <TextBlock Text="{Binding EditOriginalPrice, StringFormat='{}Asl sotish narxi: {0:N0} so\'m'}" Foreground="#94A3B8" FontSize="12"/>
-                                <Border Background="#0F243A" BorderBrush="#0284C7" BorderThickness="1" CornerRadius="4" Padding="6,1" Margin="10,0,0,0" VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding EditWarehouseName, StringFormat='{}🏢 {0}'}" Foreground="#38BDF8" FontSize="11" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding EditOriginalPrice, StringFormat='{}Asl sotish narxi: {0:N0} so\'m'}" Foreground="{DynamicResource Ink2}" FontSize="12"/>
+                                <Border Background="{DynamicResource AccentSoft}" BorderBrush="{DynamicResource Accent}" BorderThickness="1" CornerRadius="4" Padding="6,1" Margin="10,0,0,0" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding EditWarehouseName, StringFormat='{}🏢 {0}'}" Foreground="{DynamicResource AccentInk}" FontSize="11" FontWeight="SemiBold"/>
                                 </Border>
                             </StackPanel>
                         </StackPanel>
                     </Border>
 
                     <!-- Narx kiritish maydoni -->
-                    <TextBlock Text="Ushbu sotuv uchun narx (so'm):" Foreground="#F8FAFC" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                    <TextBlock Text="Ushbu sotuv uchun narx (so'm):" Foreground="{DynamicResource Ink}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,6"/>
                     <TextBox Style="{StaticResource ModernTextBox}"
                              Text="{Binding EditPriceText, UpdateSourceTrigger=PropertyChanged}"
                              KeyDown="EditModal_KeyDown"
                              FontSize="16" FontWeight="Bold" Padding="10,8" Margin="0,0,0,14"/>
 
                     <!-- Miqdor kiritish maydoni -->
-                    <TextBlock Text="{Binding EditUnitDisplay, StringFormat='{}Miqdori ({0}):'}" Foreground="#F8FAFC" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                    <TextBlock Text="{Binding EditUnitDisplay, StringFormat='{}Miqdori ({0}):'}" Foreground="{DynamicResource Ink}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,6"/>
                     <TextBox Style="{StaticResource ModernTextBox}"
                              Text="{Binding EditQuantityText, UpdateSourceTrigger=PropertyChanged}"
                              KeyDown="EditModal_KeyDown"
                              FontSize="16" FontWeight="Bold" Padding="10,8" Margin="0,0,0,14"/>
 
                     <!-- Xatolik matni -->
-                    <TextBlock Text="{Binding EditErrorMessage}" Foreground="#EF4444" FontSize="12" FontWeight="SemiBold" 
+                    <TextBlock Text="{Binding EditErrorMessage}" Foreground="{DynamicResource Bad}" FontSize="12" FontWeight="SemiBold" 
                                Margin="0,0,0,12" Visibility="{Binding EditErrorMessage, Converter={x:Null}}"/>
 
                     <!-- Tugmalar -->
@@ -841,7 +855,7 @@
 
                         <Button Grid.Column="0" Content="Bekor qilish (Esc)" 
                                 Command="{Binding CancelEditModalCommand}"
-                                Background="#334155" Style="{StaticResource ModernButton}" 
+                                Background="{DynamicResource Line}" Style="{StaticResource ModernButton}" 
                                 Margin="0,0,6,0" Padding="0,12"/>
 
                         <Button Grid.Column="1" Content="Saqlash (Enter)" 
@@ -854,12 +868,12 @@
         </Border>
 
         <!-- TO'LOV TURINI TANLASH VA JONLI PREVIEW MODAL OYNASI -->
-        <Border Background="#CC000000" Panel.ZIndex="110"
+        <Border Background="{DynamicResource Scrim}" Panel.ZIndex="110"
                 x:Name="PaymentModalBorder"
                 Visibility="{Binding IsPaymentModalOpen, Converter={StaticResource BooleanToVisibilityConverter}}"
                 IsVisibleChanged="PaymentModal_IsVisibleChanged"
                 KeyDown="PaymentModal_KeyDown">
-            <Border Background="#1E293B" BorderBrush="#0B6477" BorderThickness="1.5"
+            <Border Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Accent}" BorderThickness="1.5"
                     CornerRadius="16" Padding="24" Width="920" Height="570"
                     HorizontalAlignment="Center" VerticalAlignment="Center">
                 <Border.Effect>
@@ -886,15 +900,15 @@
                         <!-- Header -->
                         <Grid Grid.Row="0" Margin="0,0,0,14">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <Border Background="#042F2E" BorderBrush="#0D9488" BorderThickness="1" Width="36" Height="36" CornerRadius="10" Margin="0,0,10,0" VerticalAlignment="Center">
+                                <Border Background="{DynamicResource OkSoft}" BorderBrush="{DynamicResource Accent}" BorderThickness="1" Width="36" Height="36" CornerRadius="10" Margin="0,0,10,0" VerticalAlignment="Center">
                                     <Path Data="M20 4H4C2.89 4 2 4.89 2 6V18C2 19.1 2.89 20 4 20H20C21.1 20 22 19.1 22 18V6C22 4.89 21.1 4 20 4ZM20 8H4V6H20V8ZM20 18H4V12H20V18Z" 
-                                          Fill="#2DD4BF" Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                          Fill="{DynamicResource Accent}" Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
-                                <TextBlock Text="To'lovni tasdiqlash" Foreground="#F8FAFC" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
+                                <TextBlock Text="To'lovni tasdiqlash" Foreground="{DynamicResource Ink}" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
                             </StackPanel>
                             <Button HorizontalAlignment="Right" Content="✕" 
                                     Command="{Binding ClosePaymentModalCommand}"
-                                    Background="Transparent" Foreground="#94A3B8" BorderThickness="0"
+                                    Background="Transparent" Foreground="{DynamicResource Ink2}" BorderThickness="0"
                                     FontSize="16" Cursor="Hand" Padding="6"/>
                         </Grid>
 
@@ -902,25 +916,25 @@
                         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,0,0,12" Padding="0,0,8,0">
                             <StackPanel>
                                 <!-- Jami to'lov va tanlangan to'lov turi -->
-                                <Border Background="#0F172A" CornerRadius="12" Padding="14,12" Margin="0,0,0,12" BorderBrush="#334155" BorderThickness="1">
+                                <Border Background="{DynamicResource Bg}" CornerRadius="12" Padding="14,12" Margin="0,0,0,12" BorderBrush="{DynamicResource Line}" BorderThickness="1">
                                     <Grid>
                                         <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="Jami to'lov miqdori:" Foreground="#94A3B8" FontSize="13"/>
-                                            <Border Background="#1E293B" BorderBrush="#334155" BorderThickness="1" CornerRadius="6" Padding="8,2" Margin="0,4,0,0" HorizontalAlignment="Left">
-                                                <TextBlock Text="{Binding SelectedPaymentTypeTitle}" Foreground="#38BDF8" FontSize="12" FontWeight="SemiBold"/>
+                                            <TextBlock Text="Jami to'lov miqdori:" Foreground="{DynamicResource Ink2}" FontSize="13"/>
+                                            <Border Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="6" Padding="8,2" Margin="0,4,0,0" HorizontalAlignment="Left">
+                                                <TextBlock Text="{Binding SelectedPaymentTypeTitle}" Foreground="{DynamicResource AccentInk}" FontSize="12" FontWeight="SemiBold"/>
                                             </Border>
                                         </StackPanel>
                                         <TextBlock Text="{Binding TotalAmount, StringFormat='{}{0:N0} so\'m'}" 
-                                                   Foreground="#10B981" FontSize="20" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                                   Foreground="{DynamicResource Ok}" FontSize="20" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/>
                                     </Grid>
                                 </Border>
 
                                 <!-- Karta tanlanganda Soliq xabarnomasi -->
-                                <Border Background="#0F172A" BorderBrush="#0284C7" BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="0,0,0,10"
+                                <Border Background="{DynamicResource Bg}" BorderBrush="{DynamicResource Accent}" BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="0,0,0,10"
                                         Visibility="{Binding IsCardSelected, Converter={StaticResource BooleanToVisibilityConverter}}">
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                         <TextBlock Text="ℹ️" FontSize="14" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                        <TextBlock Foreground="#38BDF8" FontSize="13" VerticalAlignment="Center">
+                                        <TextBlock Foreground="{DynamicResource AccentInk}" FontSize="13" VerticalAlignment="Center">
                                             <Run Text="Karta solig'i ("/><Run Text="{Binding CurrentCardTaxRate, Mode=OneWay}"/><Run Text="%): "/><Run Text="{Binding PreviewCardTax, StringFormat='-{0:N0} so\'m', Mode=OneWay}" FontWeight="Bold"/>
                                         </TextBlock>
                                     </StackPanel>
@@ -928,31 +942,31 @@
 
                                 <!-- Aralash to'lov maydonlari -->
                                 <StackPanel Visibility="{Binding IsSplitSelected, Converter={StaticResource BooleanToVisibilityConverter}}" Margin="0,0,0,10">
-                                    <TextBlock Text="Naqd to'lanadigan qismi (so'm):" Foreground="#F8FAFC" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <TextBlock Text="Naqd to'lanadigan qismi (so'm):" Foreground="{DynamicResource Ink}" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,4"/>
                                     <TextBox Style="{StaticResource ModernTextBox}"
                                              Text="{Binding CashAmountInput, UpdateSourceTrigger=PropertyChanged}"
                                              FontSize="14" FontWeight="Bold" Padding="10,6" Margin="0,0,0,8"/>
 
-                                    <TextBlock Text="Kartadan to'lanadigan qismi (so'm):" Foreground="#F8FAFC" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <TextBlock Text="Kartadan to'lanadigan qismi (so'm):" Foreground="{DynamicResource Ink}" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,4"/>
                                     <TextBox Style="{StaticResource ModernTextBox}"
                                              Text="{Binding CardAmountInput, UpdateSourceTrigger=PropertyChanged}"
                                              FontSize="14" FontWeight="Bold" Padding="10,6" Margin="0,0,0,8"/>
 
                                     <!-- Aralash soliq hisobi -->
-                                    <Border Background="#0F172A" BorderBrush="#0284C7" BorderThickness="1" CornerRadius="8" Padding="10,6">
-                                        <TextBlock Foreground="#38BDF8" FontSize="12">
+                                    <Border Background="{DynamicResource Bg}" BorderBrush="{DynamicResource Accent}" BorderThickness="1" CornerRadius="8" Padding="10,6">
+                                        <TextBlock Foreground="{DynamicResource AccentInk}" FontSize="12">
                                             <Run Text="Kartadan soliq ("/><Run Text="{Binding CurrentCardTaxRate, Mode=OneWay}"/><Run Text="%): "/><Run Text="{Binding PreviewCardTax, StringFormat='-{0:N0} so\'m', Mode=OneWay}" FontWeight="Bold"/>
                                         </TextBlock>
                                     </Border>
                                 </StackPanel>
 
                                 <!-- Nasiyaga yozish (Qarz) Checkbox -->
-                                <Border Background="#1E1B4B" BorderBrush="#7C3AED" BorderThickness="1" CornerRadius="10" Padding="12,10" Margin="0,0,0,12">
+                                <Border Background="{DynamicResource AccentSoft}" BorderBrush="{DynamicResource AccentInk}" BorderThickness="1" CornerRadius="10" Padding="12,10" Margin="0,0,0,12">
                                     <CheckBox IsChecked="{Binding IsDebtSale, Mode=TwoWay}" Cursor="Hand">
                                         <CheckBox.Content>
                                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                <TextBlock Text="📒 Nasiyaga yozish (Qarz)" Foreground="#C084FC" FontSize="13" FontWeight="Bold"/>
-                                                <TextBlock Text="— to'lovni mijoz qarziga o'tkazish" Foreground="#A78BFA" FontSize="11" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                                <TextBlock Text="📒 Nasiyaga yozish (Qarz)" Foreground="{DynamicResource AccentInk}" FontSize="13" FontWeight="Bold"/>
+                                                <TextBlock Text="— to'lovni mijoz qarziga o'tkazish" Foreground="{DynamicResource AccentInk}" FontSize="11" Margin="6,0,0,0" VerticalAlignment="Center"/>
                                             </StackPanel>
                                         </CheckBox.Content>
                                     </CheckBox>
@@ -961,7 +975,7 @@
                                 <!-- Nasiya to'lov maydonlari (Faqat checkbox belgilanganda ko'rinadi) -->
                                 <StackPanel Visibility="{Binding IsDebtSale, Converter={StaticResource BooleanToVisibilityConverter}}" Margin="0,0,0,12">
                                     <!-- Mijoz tanlash va Yangi qo'shish -->
-                                    <TextBlock Text="Mijozni tanlang:" Foreground="#F8FAFC" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <TextBlock Text="Mijozni tanlang:" Foreground="{DynamicResource Ink}" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,4"/>
                                     <Grid Margin="0,0,0,6">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
@@ -973,13 +987,13 @@
                                                   DisplayMemberPath="FullName"
                                                   Height="36" VerticalContentAlignment="Center"/>
                                         <Button Grid.Column="2" Content="+ Yangi" Command="{Binding OpenQuickCustomerModalCommand}"
-                                                Style="{StaticResource ModernButton}" Background="#8B5CF6" Height="36" Padding="12,0" Cursor="Hand"/>
+                                                Style="{StaticResource ModernButton}" Background="{DynamicResource Accent}" Height="36" Padding="12,0" Cursor="Hand"/>
                                     </Grid>
 
                                     <!-- Mijoz joriy qarzdorligi -->
-                                    <Border Background="#1E1B4B" BorderBrush="#818CF8" BorderThickness="1" CornerRadius="6" Padding="10,6" Margin="0,0,0,8"
+                                    <Border Background="{DynamicResource AccentSoft}" BorderBrush="{DynamicResource AccentInk}" BorderThickness="1" CornerRadius="6" Padding="10,6" Margin="0,0,0,8"
                                             Visibility="{Binding HasSelectedDebtCustomer, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                        <TextBlock Text="{Binding CustomerDebtBalanceText}" Foreground="#C7D2FE" FontSize="12" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding CustomerDebtBalanceText}" Foreground="{DynamicResource Ink}" FontSize="12" FontWeight="Bold"/>
                                     </Border>
 
                                     <!-- Oldindan to'lov (Avans) -->
@@ -990,13 +1004,13 @@
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
                                         <StackPanel Grid.Column="0">
-                                            <TextBlock Text="Naqd avans (so'm):" Foreground="#94A3B8" FontSize="11" Margin="0,0,0,2"/>
+                                            <TextBlock Text="Naqd avans (so'm):" Foreground="{DynamicResource Ink2}" FontSize="11" Margin="0,0,0,2"/>
                                             <TextBox Style="{StaticResource ModernTextBox}"
                                                      Text="{Binding DebtCashAdvanceInput, UpdateSourceTrigger=PropertyChanged}"
                                                      FontSize="13" FontWeight="Bold" Padding="8,4"/>
                                         </StackPanel>
                                         <StackPanel Grid.Column="2">
-                                            <TextBlock Text="Karta avans (so'm):" Foreground="#94A3B8" FontSize="11" Margin="0,0,0,2"/>
+                                            <TextBlock Text="Karta avans (so'm):" Foreground="{DynamicResource Ink2}" FontSize="11" Margin="0,0,0,2"/>
                                             <TextBox Style="{StaticResource ModernTextBox}"
                                                      Text="{Binding DebtCardAdvanceInput, UpdateSourceTrigger=PropertyChanged}"
                                                      FontSize="13" FontWeight="Bold" Padding="8,4"/>
@@ -1011,13 +1025,13 @@
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
                                         <StackPanel Grid.Column="0">
-                                            <TextBlock Text="Nasiyaga qolgan:" Foreground="#94A3B8" FontSize="11" Margin="0,0,0,2"/>
-                                            <Border Background="#0F172A" BorderBrush="#334155" BorderThickness="1" CornerRadius="6" Padding="8,6">
-                                                <TextBlock Text="{Binding DebtRemainingAmountText}" Foreground="#F43F5E" FontSize="13" FontWeight="Bold"/>
+                                            <TextBlock Text="Nasiyaga qolgan:" Foreground="{DynamicResource Ink2}" FontSize="11" Margin="0,0,0,2"/>
+                                            <Border Background="{DynamicResource Bg}" BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="6" Padding="8,6">
+                                                <TextBlock Text="{Binding DebtRemainingAmountText}" Foreground="{DynamicResource Bad}" FontSize="13" FontWeight="Bold"/>
                                             </Border>
                                         </StackPanel>
                                         <StackPanel Grid.Column="2">
-                                            <TextBlock Text="To'lash muddati:" Foreground="#94A3B8" FontSize="11" Margin="0,0,0,2"/>
+                                            <TextBlock Text="To'lash muddati:" Foreground="{DynamicResource Ink2}" FontSize="11" Margin="0,0,0,2"/>
                                             <DatePicker SelectedDate="{Binding DebtDueDate, Mode=TwoWay}" Height="34" VerticalContentAlignment="Center"/>
                                         </StackPanel>
                                     </Grid>
@@ -1025,7 +1039,7 @@
 
                                 <!-- Chek chop etish tanlovi (Dropdown) -->
                                 <StackPanel Margin="0,0,0,10">
-                                    <TextBlock Text="Chek yoki hisob-faktura chop etish:" Foreground="#94A3B8" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                                    <TextBlock Text="Chek yoki hisob-faktura chop etish:" Foreground="{DynamicResource Ink2}" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,6"/>
                                     <ComboBox SelectedIndex="{Binding SelectedReceiptPrintOption}" Height="38" VerticalContentAlignment="Center">
                                         <ComboBoxItem Content="🚫 Chek chiqarilmasin"/>
                                         <ComboBoxItem Content="🧾 Termo printer (Kassa cheki)"/>
@@ -1039,7 +1053,7 @@
                                                 <ColumnDefinition Width="Auto"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Text="🖨️ Printer:" Foreground="#94A3B8" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                            <TextBlock Text="🖨️ Printer:" Foreground="{DynamicResource Ink2}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                             <ComboBox Grid.Column="1" ItemsSource="{Binding AvailablePrinters}" 
                                                       SelectedItem="{Binding SelectedReceiptPrinter, Mode=TwoWay}"
                                                       Height="34" VerticalContentAlignment="Center"/>
@@ -1060,7 +1074,7 @@
                                     x:Name="PaymentCancelBtn"
                                     IsCancel="True"
                                     Command="{Binding ClosePaymentModalCommand}"
-                                    Background="#334155" Style="{StaticResource ModernButton}" 
+                                    Background="{DynamicResource Line}" Style="{StaticResource ModernButton}" 
                                     Margin="0,0,6,0" Padding="0,12"/>
 
                             <Button Grid.Column="1" Content="Tasdiqlash (Enter)" 
@@ -1083,28 +1097,28 @@
                         <!-- Header: Preview Sarlavhasi va Printer statusi -->
                         <Grid Grid.Row="0" Margin="0,0,0,10">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock Text="JONLI KO'RINISH (PREVIEW)" Foreground="#94A3B8" FontSize="12" FontWeight="Bold"/>
+                                <TextBlock Text="JONLI KO'RINISH (PREVIEW)" Foreground="{DynamicResource Ink2}" FontSize="12" FontWeight="Bold"/>
                             </StackPanel>
                             <!-- Printer holati badge (Faqat printer tanlanganda ko'rinadi) -->
-                            <Border HorizontalAlignment="Right" Background="#0F172A" BorderBrush="#334155" BorderThickness="1" CornerRadius="12" Padding="8,4"
+                            <Border HorizontalAlignment="Right" Background="{DynamicResource Bg}" BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="12" Padding="8,4"
                                     Visibility="{Binding HasPrinterStatus, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <TextBlock Text="{Binding PrinterStatusText}" Foreground="{Binding PrinterStatusColor}" FontSize="11" FontWeight="SemiBold"/>
                             </Border>
                         </Grid>
 
                         <!-- Asosiy Preview hududi (Fonda to'q ko'k ramka) -->
-                        <Border Grid.Row="1" Background="#0B132B" BorderBrush="#334155" BorderThickness="1" CornerRadius="12" Padding="12" VerticalAlignment="Stretch">
+                        <Border Grid.Row="1" Background="{DynamicResource Bg}" BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="12" Padding="12" VerticalAlignment="Stretch">
                             <Grid>
                                 <!-- 1. CHEKSIZ REJIM PREVIEW (IsNoReceiptPreview) -->
                                 <StackPanel Visibility="{Binding IsNoReceiptPreview, Converter={StaticResource BooleanToVisibilityConverter}}"
                                             VerticalAlignment="Center" HorizontalAlignment="Center">
-                                    <Border Background="#1E293B" BorderBrush="#475569" BorderThickness="1.5"
+                                    <Border Background="{DynamicResource Surface}" BorderBrush="{DynamicResource LineStrong}" BorderThickness="1.5"
                                             Width="64" Height="64" CornerRadius="32" HorizontalAlignment="Center" Margin="0,0,0,16">
                                         <TextBlock Text="🚫" FontSize="28" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
-                                    <TextBlock Text="Chek chop etilmaydi" Foreground="#F8FAFC" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,6"/>
+                                    <TextBlock Text="Chek chop etilmaydi" Foreground="{DynamicResource Ink}" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,6"/>
                                     <TextBlock Text="Savdo faqat tizim xotirasida saqlanadi. Qog'oz chek yoki faktura chiqarilmaydi." 
-                                               Foreground="#94A3B8" FontSize="12" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="280"/>
+                                               Foreground="{DynamicResource Ink2}" FontSize="12" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="280"/>
                                 </StackPanel>
 
                                 <!-- 2. XPRINTER 58MM TERMO-CHEK PREVIEW (Is58mmPreview) -->
@@ -1113,12 +1127,12 @@
                                               HorizontalAlignment="Center">
                                     <Border Background="#FFFFFF" CornerRadius="6" Width="220" HorizontalAlignment="Center"
                                             Padding="12,14" Margin="0,4,0,16"
-                                            BorderBrush="#CBD5E1" BorderThickness="1">
+                                            BorderBrush="{DynamicResource LineStrong}" BorderThickness="1">
                                         <Border.Effect>
                                             <DropShadowEffect BlurRadius="12" ShadowDepth="4" Direction="270" Color="#000000" Opacity="0.5"/>
                                         </Border.Effect>
                                         <TextBlock Text="{Binding Receipt58mmPreviewText}" 
-                                                   FontFamily="Consolas, Courier New" FontSize="11" Foreground="#0F172A" LineHeight="15" 
+                                                   FontFamily="Consolas, Courier New" FontSize="11" Foreground="{DynamicResource OnAccent}" LineHeight="15" 
                                                    TextWrapping="NoWrap" HorizontalAlignment="Center"/>
                                     </Border>
                                 </ScrollViewer>
@@ -1126,28 +1140,28 @@
                                 <!-- 3. A4 PRINTER (HISOB-FAKTURA) PREVIEW (IsA4Preview) -->
                                 <Border Visibility="{Binding IsA4Preview, Converter={StaticResource BooleanToVisibilityConverter}}"
                                         Background="#FFFFFF" CornerRadius="6" HorizontalAlignment="Stretch" Padding="16,14"
-                                        BorderBrush="#CBD5E1" BorderThickness="1">
+                                        BorderBrush="{DynamicResource LineStrong}" BorderThickness="1">
                                     <Border.Effect>
                                         <DropShadowEffect BlurRadius="12" ShadowDepth="4" Direction="270" Color="#000000" Opacity="0.5"/>
                                     </Border.Effect>
                                     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                                         <StackPanel>
                                             <!-- A4 Mini Header -->
-                                            <Border BorderBrush="#0F172A" BorderThickness="0,0,0,1.5" Padding="0,0,0,8" Margin="0,0,0,10">
+                                            <Border BorderBrush="{DynamicResource Bg}" BorderThickness="0,0,0,1.5" Padding="0,0,0,8" Margin="0,0,0,10">
                                                 <Grid>
                                                     <StackPanel>
-                                                        <TextBlock Text="HISOB-FAKTURA (A4)" FontSize="14" FontWeight="Bold" Foreground="#0F172A"/>
-                                                        <TextBlock Text="LinePOS Savdo Tizimi" FontSize="10" Foreground="#64748B"/>
+                                                        <TextBlock Text="HISOB-FAKTURA (A4)" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource OnAccent}"/>
+                                                        <TextBlock Text="LinePOS Savdo Tizimi" FontSize="10" Foreground="{DynamicResource Ink3}"/>
                                                     </StackPanel>
                                                     <StackPanel HorizontalAlignment="Right">
-                                                        <TextBlock Text="{Binding A4DateDisplay}" FontSize="10" Foreground="#475569" HorizontalAlignment="Right"/>
-                                                        <TextBlock Text="{Binding A4PaymentDisplay}" FontSize="10" FontWeight="SemiBold" Foreground="#0284C7" HorizontalAlignment="Right"/>
+                                                        <TextBlock Text="{Binding A4DateDisplay}" FontSize="10" Foreground="{DynamicResource Ink3}" HorizontalAlignment="Right"/>
+                                                        <TextBlock Text="{Binding A4PaymentDisplay}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource AccentInk}" HorizontalAlignment="Right"/>
                                                     </StackPanel>
                                                 </Grid>
                                             </Border>
 
                                             <!-- A4 Jadval Sarlavhasi -->
-                                            <Grid Background="#F1F5F9" Margin="0,0,0,4">
+                                            <Grid Background="{DynamicResource Ink}" Margin="0,0,0,4">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="22"/>
                                                     <ColumnDefinition Width="*"/>
@@ -1155,18 +1169,18 @@
                                                     <ColumnDefinition Width="65"/>
                                                     <ColumnDefinition Width="70"/>
                                                 </Grid.ColumnDefinitions>
-                                                <TextBlock Grid.Column="0" Text="#" FontSize="10" FontWeight="Bold" Foreground="#334155" Padding="2"/>
-                                                <TextBlock Grid.Column="1" Text="Mahsulot" FontSize="10" FontWeight="Bold" Foreground="#334155" Padding="2"/>
-                                                <TextBlock Grid.Column="2" Text="Miqdor" FontSize="10" FontWeight="Bold" Foreground="#334155" HorizontalAlignment="Right" Padding="2"/>
-                                                <TextBlock Grid.Column="3" Text="Narx" FontSize="10" FontWeight="Bold" Foreground="#334155" HorizontalAlignment="Right" Padding="2"/>
-                                                <TextBlock Grid.Column="4" Text="Jami" FontSize="10" FontWeight="Bold" Foreground="#334155" HorizontalAlignment="Right" Padding="2"/>
+                                                <TextBlock Grid.Column="0" Text="#" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource Ink3}" Padding="2"/>
+                                                <TextBlock Grid.Column="1" Text="Mahsulot" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource Ink3}" Padding="2"/>
+                                                <TextBlock Grid.Column="2" Text="Miqdor" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource Ink3}" HorizontalAlignment="Right" Padding="2"/>
+                                                <TextBlock Grid.Column="3" Text="Narx" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource Ink3}" HorizontalAlignment="Right" Padding="2"/>
+                                                <TextBlock Grid.Column="4" Text="Jami" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource Ink3}" HorizontalAlignment="Right" Padding="2"/>
                                             </Grid>
 
                                             <!-- A4 Jadval Qatorlari -->
                                             <ItemsControl ItemsSource="{Binding A4PreviewRows}">
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate>
-                                                        <Border BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="0,3">
+                                                        <Border BorderBrush="{DynamicResource LineStrong}" BorderThickness="0,0,0,1" Padding="0,3">
                                                             <Grid>
                                                                 <Grid.ColumnDefinitions>
                                                                     <ColumnDefinition Width="22"/>
@@ -1175,11 +1189,11 @@
                                                                     <ColumnDefinition Width="65"/>
                                                                     <ColumnDefinition Width="70"/>
                                                                 </Grid.ColumnDefinitions>
-                                                                <TextBlock Grid.Column="0" Text="{Binding IndexDisplay}" FontSize="10" Foreground="#64748B"/>
-                                                                <TextBlock Grid.Column="1" Text="{Binding ProductName}" FontSize="10" Foreground="#0F172A" TextTrimming="CharacterEllipsis"/>
-                                                                <TextBlock Grid.Column="2" Text="{Binding QuantityDisplay}" FontSize="10" Foreground="#0F172A" HorizontalAlignment="Right"/>
-                                                                <TextBlock Grid.Column="3" Text="{Binding PriceDisplay}" FontSize="10" Foreground="#0F172A" HorizontalAlignment="Right"/>
-                                                                <TextBlock Grid.Column="4" Text="{Binding TotalDisplay}" FontSize="10" FontWeight="SemiBold" Foreground="#0F172A" HorizontalAlignment="Right"/>
+                                                                <TextBlock Grid.Column="0" Text="{Binding IndexDisplay}" FontSize="10" Foreground="{DynamicResource Ink3}"/>
+                                                                <TextBlock Grid.Column="1" Text="{Binding ProductName}" FontSize="10" Foreground="{DynamicResource OnAccent}" TextTrimming="CharacterEllipsis"/>
+                                                                <TextBlock Grid.Column="2" Text="{Binding QuantityDisplay}" FontSize="10" Foreground="{DynamicResource OnAccent}" HorizontalAlignment="Right"/>
+                                                                <TextBlock Grid.Column="3" Text="{Binding PriceDisplay}" FontSize="10" Foreground="{DynamicResource OnAccent}" HorizontalAlignment="Right"/>
+                                                                <TextBlock Grid.Column="4" Text="{Binding TotalDisplay}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource OnAccent}" HorizontalAlignment="Right"/>
                                                             </Grid>
                                                         </Border>
                                                     </DataTemplate>
@@ -1189,13 +1203,13 @@
                                             <!-- A4 Jami va Imzo -->
                                             <Grid Margin="0,12,0,0">
                                                 <StackPanel HorizontalAlignment="Left">
-                                                    <TextBlock Text="Tovarni qabul qildi:" FontSize="9" Foreground="#64748B"/>
-                                                    <TextBlock Text="____________________" FontSize="9" Foreground="#94A3B8" Margin="0,6,0,0"/>
+                                                    <TextBlock Text="Tovarni qabul qildi:" FontSize="9" Foreground="{DynamicResource Ink3}"/>
+                                                    <TextBlock Text="____________________" FontSize="9" Foreground="{DynamicResource Ink2}" Margin="0,6,0,0"/>
                                                 </StackPanel>
                                                 <StackPanel HorizontalAlignment="Right">
-                                                    <TextBlock Text="Jami to'lov:" FontSize="10" Foreground="#64748B" HorizontalAlignment="Right"/>
+                                                    <TextBlock Text="Jami to'lov:" FontSize="10" Foreground="{DynamicResource Ink3}" HorizontalAlignment="Right"/>
                                                     <TextBlock Text="{Binding TotalAmount, StringFormat='{}{0:N0} so\'m'}" 
-                                                               FontSize="14" FontWeight="Bold" Foreground="#047857" HorizontalAlignment="Right"/>
+                                                               FontSize="14" FontWeight="Bold" Foreground="{DynamicResource Ok}" HorizontalAlignment="Right"/>
                                                 </StackPanel>
                                             </Grid>
                                         </StackPanel>
@@ -1206,19 +1220,19 @@
 
                         <!-- Pastki eslatma -->
                         <TextBlock Grid.Row="2" Text="💡 Printer tanlovi o'zgartirilganda ushbu oyna darhol yangilanadi" 
-                                   Foreground="#64748B" FontSize="11" HorizontalAlignment="Center" Margin="0,8,0,0"/>
+                                   Foreground="{DynamicResource Ink3}" FontSize="11" HorizontalAlignment="Center" Margin="0,8,0,0"/>
                     </Grid>
                 </Grid>
             </Border>
         </Border>
 
         <!-- TOPILMAGAN MAHSULOT (YANGI QO'SHISH) MODAL OYNASI -->
-        <Border Background="#CC000000" Panel.ZIndex="120"
+        <Border Background="{DynamicResource Scrim}" Panel.ZIndex="120"
                 Visibility="{Binding IsUnrecognizedBarcodeModalOpen, Converter={StaticResource BooleanToVisibilityConverter}}"
                 Focusable="True"
                 IsVisibleChanged="UnrecognizedBarcodeModal_IsVisibleChanged"
                 KeyDown="UnrecognizedBarcodeModal_KeyDown">
-            <Border Background="#1E293B" BorderBrush="#0B6477" BorderThickness="1.5"
+            <Border Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Accent}" BorderThickness="1.5"
                     CornerRadius="16" Padding="28" Width="460"
                     HorizontalAlignment="Center" VerticalAlignment="Center">
                 <Border.Effect>
@@ -1226,28 +1240,28 @@
                 </Border.Effect>
                 <StackPanel HorizontalAlignment="Center">
                     <!-- Icon -->
-                    <Border Background="#134E4A" BorderBrush="#2DD4BF" BorderThickness="1"
+                    <Border Background="{DynamicResource OkSoft}" BorderBrush="{DynamicResource Accent}" BorderThickness="1"
                             Width="56" Height="56" CornerRadius="28" HorizontalAlignment="Center" Margin="0,0,0,16">
                         <TextBlock Text="❓" FontSize="26" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
 
                     <!-- Sarlavha -->
-                    <TextBlock Text="Mahsulot topilmadi" Foreground="#F8FAFC" FontSize="18" FontWeight="Bold" 
+                    <TextBlock Text="Mahsulot topilmadi" Foreground="{DynamicResource Ink}" FontSize="18" FontWeight="Bold" 
                                HorizontalAlignment="Center" Margin="0,0,0,8"/>
 
                     <!-- Shtrix-kod ko'rinishi -->
-                    <Border Background="#0F172A" BorderBrush="#334155" BorderThickness="1" CornerRadius="8" 
+                    <Border Background="{DynamicResource Bg}" BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="8" 
                             Padding="14,8" Margin="0,0,0,14" HorizontalAlignment="Center">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="Shtrix-kod: " Foreground="#94A3B8" FontSize="13" VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding UnrecognizedBarcode}" Foreground="#2DD4BF" FontFamily="Consolas" 
+                            <TextBlock Text="Shtrix-kod: " Foreground="{DynamicResource Ink2}" FontSize="13" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding UnrecognizedBarcode}" Foreground="{DynamicResource AccentInk}" FontFamily="Consolas" 
                                        FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
 
                     <!-- Matn -->
                     <TextBlock Text="Ushbu shtrix-kodli mahsulot omborda mavjud emas. Yangi mahsulot sifatida bazaga qo'shamizmi?" 
-                               Foreground="#94A3B8" FontSize="13" TextWrapping="Wrap" TextAlignment="Center" 
+                               Foreground="{DynamicResource Ink2}" FontSize="13" TextWrapping="Wrap" TextAlignment="Center" 
                                MaxWidth="380" Margin="0,0,0,24" LineHeight="20"/>
 
                     <!-- Tugmalar -->
@@ -1259,10 +1273,10 @@
 
                         <Button Grid.Column="0" Content="Yo'q (Esc)" 
                                 Command="{Binding CloseUnrecognizedBarcodeCommand}"
-                                Background="#334155" Style="{StaticResource ModernButton}" 
+                                Background="{DynamicResource Line}" Style="{StaticResource ModernButton}" 
                                 Margin="0,0,6,0" Padding="0,12" Cursor="Hand"/>
 
-                        <Button x:Name="AddUnrecognizedBarcodeBtn" Grid.Column="1" Content="Ha, qo'shish (Enter)" 
+                        <Button x:Name="AddUnrecognizedBarcodeBtn" Grid.Column="1" Content="Ha, tovar qo'shish" 
                                 Command="{Binding ConfirmAddUnrecognizedBarcodeCommand}"
                                 Style="{StaticResource SuccessButton}" 
                                 Margin="6,0,0,0" Padding="0,12" Cursor="Hand"/>
@@ -1276,10 +1290,10 @@
         <!-- ============================================================= -->
         <!-- BRAK TOVARLARNI HISOBDAN CHIQARISH MODALI (0 SO'M)             -->
         <!-- ============================================================= -->
-        <Border Background="#CC000000" Panel.ZIndex="105"
+        <Border Background="{DynamicResource Scrim}" Panel.ZIndex="105"
                 Visibility="{Binding IsBrakModalOpen, Converter={StaticResource BooleanToVisibilityConverter}}"
                 IsVisibleChanged="BrakModal_IsVisibleChanged">
-            <Border Background="#1E293B" BorderBrush="#334155" BorderThickness="1"
+            <Border Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Line}" BorderThickness="1"
                     CornerRadius="16" Padding="24" Width="420"
                     HorizontalAlignment="Center" VerticalAlignment="Center">
                 <Border.Effect>
@@ -1288,28 +1302,28 @@
                 <StackPanel>
                     <!-- Modal Sarlavhasi -->
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                        <Border Background="#2A171D" BorderBrush="#7F1D1D" BorderThickness="1" CornerRadius="8" Width="32" Height="32" Margin="0,0,10,0">
+                        <Border Background="{DynamicResource BadSoft}" BorderBrush="{DynamicResource BadLine}" BorderThickness="1" CornerRadius="8" Width="32" Height="32" Margin="0,0,10,0">
                             <Path Data="M12 2L1 21h22L12 2zm0 3.5L20.2 19H3.8L12 5.5zM11 10v4h2v-4h-2zm0 6v2h2v-2h-2z" 
-                                  Fill="#F87171" Stretch="Uniform" Width="14" Height="14" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                  Fill="{DynamicResource Bad}" Stretch="Uniform" Width="14" Height="14" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
-                        <TextBlock Text="Brak Tovarlarni Chiqarish (0 so'm)" Foreground="#F8FAFC" FontSize="17" FontWeight="Bold" VerticalAlignment="Center"/>
+                        <TextBlock Text="Brak Tovarlarni Chiqarish (0 so'm)" Foreground="{DynamicResource Ink}" FontSize="17" FontWeight="Bold" VerticalAlignment="Center"/>
                     </StackPanel>
 
                     <!-- Xulosa kartochkasi -->
-                    <Border Background="#0F172A" CornerRadius="10" Padding="16,14" Margin="0,0,0,20" BorderBrush="#334155" BorderThickness="1">
+                    <Border Background="{DynamicResource Bg}" CornerRadius="10" Padding="16,14" Margin="0,0,0,20" BorderBrush="{DynamicResource Line}" BorderThickness="1">
                         <StackPanel>
                             <Grid Margin="0,0,0,8">
-                                <TextBlock Text="Chiqarilayotgan tovarlar:" Foreground="#94A3B8" FontSize="13"/>
-                                <TextBlock Text="{Binding BrakItemsCount, StringFormat='{}{0} xil tovar'}" Foreground="#F8FAFC" FontSize="14" FontWeight="Bold" HorizontalAlignment="Right"/>
+                                <TextBlock Text="Chiqarilayotgan tovarlar:" Foreground="{DynamicResource Ink2}" FontSize="13"/>
+                                <TextBlock Text="{Binding BrakItemsCount, StringFormat='{}{0} xil tovar'}" Foreground="{DynamicResource Ink}" FontSize="14" FontWeight="Bold" HorizontalAlignment="Right"/>
                             </Grid>
                             <Grid Margin="0,0,0,8">
-                                <TextBlock Text="Sotish narxi:" Foreground="#94A3B8" FontSize="13"/>
-                                <TextBlock Text="0 so'm (Bepul)" Foreground="#10B981" FontSize="14" FontWeight="Bold" HorizontalAlignment="Right"/>
+                                <TextBlock Text="Sotish narxi:" Foreground="{DynamicResource Ink2}" FontSize="13"/>
+                                <TextBlock Text="0 so'm (Bepul)" Foreground="{DynamicResource Ok}" FontSize="14" FontWeight="Bold" HorizontalAlignment="Right"/>
                             </Grid>
-                            <Border Height="1" Background="#334155" Margin="0,4,0,8"/>
+                            <Border Height="1" Background="{DynamicResource Line}" Margin="0,4,0,8"/>
                             <Grid>
-                                <TextBlock Text="Yetkazilgan sof zarar (tannarx):" Foreground="#94A3B8" FontSize="13" FontWeight="SemiBold"/>
-                                <TextBlock Text="{Binding BrakTotalCostDisplay, StringFormat='{}-{0}'}" Foreground="#F87171" FontSize="16" FontWeight="Black" HorizontalAlignment="Right"/>
+                                <TextBlock Text="Yetkazilgan sof zarar (tannarx):" Foreground="{DynamicResource Ink2}" FontSize="13" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding BrakTotalCostDisplay, StringFormat='{}-{0}'}" Foreground="{DynamicResource Bad}" FontSize="16" FontWeight="Black" HorizontalAlignment="Right"/>
                             </Grid>
                         </StackPanel>
                     </Border>
@@ -1327,21 +1341,21 @@
                                 x:Name="BrakCancelBtn"
                                 Command="{Binding CloseBrakModalCommand}"
                                 IsCancel="True"
-                                Background="#334155" Foreground="#F8FAFC"
+                                Background="{DynamicResource Line}" Foreground="{DynamicResource Ink}"
                                 Height="44" BorderThickness="0" Cursor="Hand">
                             <Button.Template>
                                 <ControlTemplate TargetType="Button">
                                     <Border x:Name="btnBorder" Background="{TemplateBinding Background}" CornerRadius="10">
                                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                            <TextBlock Text="✕ Yo'q" FontSize="13" FontWeight="SemiBold" Foreground="#F8FAFC" VerticalAlignment="Center"/>
-                                            <Border Background="#1E293B" CornerRadius="4" Padding="6,2" Margin="8,0,0,0" VerticalAlignment="Center">
-                                                <TextBlock Text="Esc" FontSize="11" FontWeight="Bold" Foreground="#94A3B8"/>
+                                            <TextBlock Text="✕ Yo'q" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource Ink}" VerticalAlignment="Center"/>
+                                            <Border Background="{DynamicResource Surface}" CornerRadius="4" Padding="6,2" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                <TextBlock Text="Esc" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource Ink2}"/>
                                             </Border>
                                         </StackPanel>
                                     </Border>
                                     <ControlTemplate.Triggers>
                                         <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="btnBorder" Property="Background" Value="#475569"/>
+                                            <Setter TargetName="btnBorder" Property="Background" Value="{DynamicResource LineStrong}"/>
                                         </Trigger>
                                         <Trigger Property="IsPressed" Value="True">
                                             <Setter TargetName="btnBorder" Property="Opacity" Value="0.7"/>
@@ -1355,22 +1369,18 @@
                         <Button Grid.Column="2"
                                 x:Name="BrakConfirmBtn"
                                 Command="{Binding ConfirmBrakWriteOffCommand}"
-                                IsDefault="True"
-                                Background="#991B1B" Foreground="White"
+                                Background="{DynamicResource BadSolid}" Foreground="White"
                                 Height="44" BorderThickness="0" Cursor="Hand">
                             <Button.Template>
                                 <ControlTemplate TargetType="Button">
-                                    <Border x:Name="btnBorder" Background="{TemplateBinding Background}" BorderBrush="#DC2626" BorderThickness="1" CornerRadius="10">
+                                    <Border x:Name="btnBorder" Background="{TemplateBinding Background}" BorderBrush="{DynamicResource Bad}" BorderThickness="1" CornerRadius="10">
                                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                                             <TextBlock Text="Ha, chiqarish" FontSize="13" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
-                                            <Border Background="#7F1D1D" CornerRadius="4" Padding="6,2" Margin="8,0,0,0" VerticalAlignment="Center">
-                                                <TextBlock Text="Enter ↵" FontSize="11" FontWeight="Bold" Foreground="White"/>
-                                            </Border>
                                         </StackPanel>
                                     </Border>
                                     <ControlTemplate.Triggers>
                                         <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="btnBorder" Property="Background" Value="#B91C1C"/>
+                                            <Setter TargetName="btnBorder" Property="Background" Value="{DynamicResource BadSolid}"/>
                                         </Trigger>
                                         <Trigger Property="IsPressed" Value="True">
                                             <Setter TargetName="btnBorder" Property="Opacity" Value="0.75"/>
@@ -1387,12 +1397,12 @@
         <!-- ============================================================= -->
         <!-- SAVATNI KUTISHGA QO'YISH (HOLD) NOM BERISH MODALI -->
         <!-- ============================================================= -->
-        <Border Background="#CC000000" Panel.ZIndex="110"
+        <Border Background="{DynamicResource Scrim}" Panel.ZIndex="110"
                 Visibility="{Binding IsHoldModalOpen, Converter={StaticResource BooleanToVisibilityConverter}}"
                 Focusable="True"
                 IsVisibleChanged="HoldModal_IsVisibleChanged"
                 KeyDown="HoldModal_KeyDown">
-            <Border Background="#1E293B" BorderBrush="#334155" BorderThickness="1"
+            <Border Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Line}" BorderThickness="1"
                     CornerRadius="16" Padding="28" Width="440"
                     HorizontalAlignment="Center" VerticalAlignment="Center">
                 <Border.Effect>
@@ -1400,32 +1410,32 @@
                 </Border.Effect>
                 <StackPanel HorizontalAlignment="Center">
                     <!-- Icon -->
-                    <Border Background="#0F243A" BorderBrush="#0284C7" BorderThickness="1"
+                    <Border Background="{DynamicResource AccentSoft}" BorderBrush="{DynamicResource Accent}" BorderThickness="1"
                             Width="52" Height="52" CornerRadius="26" HorizontalAlignment="Center" Margin="0,0,0,16">
-                        <Path Data="M6 4h3v14H6zm9 0h3v14h-3z" Fill="#38BDF8" Stretch="Uniform" Width="16" Height="16"
+                        <Path Data="M6 4h3v14H6zm9 0h3v14h-3z" Fill="{DynamicResource Accent}" Stretch="Uniform" Width="16" Height="16"
                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
 
                     <!-- Sarlavha -->
-                    <TextBlock Text="Savatni kutishga qo'yish" Foreground="#F8FAFC" FontSize="18" FontWeight="Bold" 
+                    <TextBlock Text="Savatni kutishga qo'yish" Foreground="{DynamicResource Ink}" FontSize="18" FontWeight="Bold" 
                                HorizontalAlignment="Center" Margin="0,0,0,6"/>
 
                     <TextBlock Text="Kutishga olinayotgan savat uchun mijoz yoki buyurtma nomini kiriting:" 
-                               Foreground="#94A3B8" FontSize="13" TextWrapping="Wrap" TextAlignment="Center" 
+                               Foreground="{DynamicResource Ink2}" FontSize="13" TextWrapping="Wrap" TextAlignment="Center" 
                                MaxWidth="360" Margin="0,0,0,14"/>
 
                     <!-- Savat ma'lumoti chipi -->
-                    <Border Background="#0F172A" BorderBrush="#334155" BorderThickness="1" CornerRadius="8" 
+                    <Border Background="{DynamicResource Bg}" BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="8" 
                             Padding="14,8" Margin="0,0,0,16" HorizontalAlignment="Center">
-                        <TextBlock Text="{Binding HoldCartSummaryText}" Foreground="#38BDF8" FontSize="13" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding HoldCartSummaryText}" Foreground="{DynamicResource AccentInk}" FontSize="13" FontWeight="SemiBold"/>
                     </Border>
 
                     <!-- Kiritish maydoni (TextBox) -->
-                    <Border Background="#0F172A" BorderBrush="#334155" BorderThickness="1" CornerRadius="10" 
+                    <Border Background="{DynamicResource Bg}" BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="10" 
                             Padding="12,4" Width="360" Margin="0,0,0,20">
                         <TextBox x:Name="TxtHoldCartName" 
                                  Text="{Binding HoldCartName, UpdateSourceTrigger=PropertyChanged}"
-                                 Background="Transparent" Foreground="#F8FAFC" BorderThickness="0"
+                                 Background="Transparent" Foreground="{DynamicResource Ink}" BorderThickness="0"
                                  FontSize="15" FontWeight="SemiBold" CaretBrush="White"
                                  VerticalContentAlignment="Center" Height="36"/>
                     </Border>
@@ -1440,7 +1450,7 @@
 
                         <Button Grid.Column="0" Content="Bekor qilish (Esc)" 
                                 Command="{Binding CloseHoldModalCommand}"
-                                Background="#334155" Style="{StaticResource ModernButton}" 
+                                Background="{DynamicResource Line}" Style="{StaticResource ModernButton}" 
                                 Padding="0,12" Cursor="Hand"/>
 
                         <Button x:Name="BtnConfirmHoldCart" Grid.Column="2" Content="Saqlash (Enter)" 
@@ -1455,31 +1465,31 @@
         <!-- ========================================================= -->
         <!-- TEZKOR MIJOZ QO'SHISH MODAL OYNASI (QUICK CUSTOMER MODAL) -->
         <!-- ========================================================= -->
-        <Border Background="#BF000000" Panel.ZIndex="150"
+        <Border Background="{DynamicResource Scrim}" Panel.ZIndex="150"
                 Visibility="{Binding IsQuickCustomerModalOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <Border Background="#1E293B" BorderBrush="#8B5CF6" BorderThickness="1.5"
+            <Border Background="{DynamicResource Surface}" BorderBrush="{DynamicResource AccentInk}" BorderThickness="1.5"
                     CornerRadius="14" Padding="24" Width="440" HorizontalAlignment="Center" VerticalAlignment="Center">
                 <Border.Effect>
                     <DropShadowEffect BlurRadius="30" ShadowDepth="10" Direction="270" Color="#000000" Opacity="0.8"/>
                 </Border.Effect>
                 <StackPanel>
-                    <TextBlock Text="👤 Yangi mijoz qo'shish" FontSize="18" FontWeight="Bold" Foreground="#F8FAFC" Margin="0,0,0,16"/>
+                    <TextBlock Text="👤 Yangi mijoz qo'shish" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource Ink}" Margin="0,0,0,16"/>
 
                     <!-- Xato xabari -->
-                    <Border Background="#450A0A" BorderBrush="#EF4444" BorderThickness="1" CornerRadius="8" Padding="10,6" Margin="0,0,0,12"
+                    <Border Background="{DynamicResource BadSoft}" BorderBrush="{DynamicResource Bad}" BorderThickness="1" CornerRadius="8" Padding="10,6" Margin="0,0,0,12"
                             Visibility="{Binding HasQuickCustomerError, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock Text="{Binding QuickCustomerErrorMessage}" Foreground="#FCA5A5" FontSize="12" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding QuickCustomerErrorMessage}" Foreground="{DynamicResource Bad}" FontSize="12" TextWrapping="Wrap"/>
                     </Border>
 
-                    <TextBlock Text="Mijoz F.I.SH / Ismi *" Foreground="#94A3B8" FontSize="12" Margin="0,0,0,4"/>
+                    <TextBlock Text="Mijoz F.I.SH / Ismi *" Foreground="{DynamicResource Ink2}" FontSize="12" Margin="0,0,0,4"/>
                     <TextBox Style="{StaticResource ModernTextBox}" Text="{Binding QuickCustomerName, UpdateSourceTrigger=PropertyChanged}"
                              FontSize="14" Padding="10,8" Margin="0,0,0,12"/>
 
-                    <TextBlock Text="Telefon raqami" Foreground="#94A3B8" FontSize="12" Margin="0,0,0,4"/>
+                    <TextBlock Text="Telefon raqami" Foreground="{DynamicResource Ink2}" FontSize="12" Margin="0,0,0,4"/>
                     <TextBox Style="{StaticResource ModernTextBox}" Text="{Binding QuickCustomerPhone, UpdateSourceTrigger=PropertyChanged}"
                              FontSize="14" Padding="10,8" Margin="0,0,0,12"/>
 
-                    <TextBlock Text="Izoh / Manzil" Foreground="#94A3B8" FontSize="12" Margin="0,0,0,4"/>
+                    <TextBlock Text="Izoh / Manzil" Foreground="{DynamicResource Ink2}" FontSize="12" Margin="0,0,0,4"/>
                     <TextBox Style="{StaticResource ModernTextBox}" Text="{Binding QuickCustomerNote, UpdateSourceTrigger=PropertyChanged}"
                              FontSize="14" Padding="10,8" Margin="0,0,0,20"/>
 
@@ -1491,9 +1501,9 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <Button Grid.Column="0" Content="Bekor qilish (Esc)" Command="{Binding CloseQuickCustomerModalCommand}"
-                                Background="#334155" Style="{StaticResource ModernButton}" Padding="0,10" Cursor="Hand"/>
+                                Background="{DynamicResource Line}" Style="{StaticResource ModernButton}" Padding="0,10" Cursor="Hand"/>
                         <Button Grid.Column="2" Content="Saqlash (Enter)" Command="{Binding SaveQuickCustomerModalCommand}"
-                                Background="#8B5CF6" Style="{StaticResource ModernButton}" Padding="0,10" Cursor="Hand"/>
+                                Background="{DynamicResource Accent}" Style="{StaticResource ModernButton}" Padding="0,10" Cursor="Hand"/>
                     </Grid>
                 </StackPanel>
             </Border>
@@ -1506,8 +1516,18 @@
                 Panel.ZIndex="200"
                 IsHitTestVisible="True"
                 Visibility="{Binding IsToastVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <Border Background="#0F172A" BorderBrush="#10B981" BorderThickness="1.5"
-                    CornerRadius="12" Padding="16,12" MinWidth="340" MaxWidth="520">
+            <Border Background="{DynamicResource Surface}" BorderThickness="1.5"
+                    CornerRadius="12" Padding="16,12" MinWidth="360" MaxWidth="560">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="BorderBrush" Value="{DynamicResource OkLine}"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding ToastKind}" Value="warn"><Setter Property="BorderBrush" Value="{DynamicResource WarnLine}"/></DataTrigger>
+                                <DataTrigger Binding="{Binding ToastKind}" Value="bad"><Setter Property="BorderBrush" Value="{DynamicResource BadLine}"/></DataTrigger>
+                                <DataTrigger Binding="{Binding ToastKind}" Value="info"><Setter Property="BorderBrush" Value="{DynamicResource LineStrong}"/></DataTrigger>
+                            </Style.Triggers>
+                    </Style>
+                </Border.Style>
                 <Border.Effect>
                     <DropShadowEffect BlurRadius="25" ShadowDepth="6" Direction="270" Color="#000000" Opacity="0.7"/>
                 </Border.Effect>
@@ -1516,25 +1536,54 @@
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- Yashil Check Icon -->
-                    <Border Grid.Column="0" Background="#064E3B" BorderBrush="#10B981" BorderThickness="1"
-                            Width="36" Height="36" CornerRadius="18" Margin="0,0,12,0" VerticalAlignment="Center">
-                        <TextBlock Text="✓" Foreground="#10B981" FontSize="18" FontWeight="Bold" 
-                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <!-- Holat belgisi -->
+                    <Border Grid.Column="0" Width="36" Height="36" CornerRadius="18" Margin="0,0,12,0" VerticalAlignment="Center">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Background" Value="{DynamicResource OkSoft}"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding ToastKind}" Value="warn"><Setter Property="Background" Value="{DynamicResource WarnSoft}"/></DataTrigger>
+                                <DataTrigger Binding="{Binding ToastKind}" Value="bad"><Setter Property="Background" Value="{DynamicResource BadSoft}"/></DataTrigger>
+                                <DataTrigger Binding="{Binding ToastKind}" Value="info"><Setter Property="Background" Value="{DynamicResource AccentSoft}"/></DataTrigger>
+                            </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <TextBlock FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="✓"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource Ok}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ToastKind}" Value="warn"><Setter Property="Text" Value="!"/><Setter Property="Foreground" Value="{DynamicResource Warn}"/></DataTrigger>
+                                        <DataTrigger Binding="{Binding ToastKind}" Value="bad"><Setter Property="Text" Value="✕"/><Setter Property="Foreground" Value="{DynamicResource Bad}"/></DataTrigger>
+                                        <DataTrigger Binding="{Binding ToastKind}" Value="info"><Setter Property="Text" Value="i"/><Setter Property="Foreground" Value="{DynamicResource AccentInk}"/></DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
                     </Border>
 
                     <!-- Matn -->
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                        <TextBlock Text="{Binding ToastTitle}" Foreground="#F8FAFC" FontSize="14" FontWeight="Bold"/>
-                        <TextBlock Text="{Binding ToastMessage}" Foreground="#94A3B8" FontSize="12" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding ToastTitle}" Foreground="{DynamicResource Ink}" FontSize="14" FontWeight="Bold"/>
+                        <TextBlock Text="{Binding ToastMessage}" Foreground="{DynamicResource Ink2}" FontSize="12" Margin="0,2,0,0" TextWrapping="Wrap"/>
                     </StackPanel>
 
+                    <!-- Amal tugmasi (Qaytarish) -->
+                    <Button Grid.Column="2" Style="{StaticResource PaySecondary}" Height="40" Padding="16,0" Margin="12,0,0,0"
+                            MinWidth="110" VerticalAlignment="Center"
+                            Command="{Binding ToastActionCommand}"
+                            Visibility="{Binding HasToastAction, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <TextBlock Text="{Binding ToastActionText}" FontWeight="Bold" FontSize="14" Foreground="{DynamicResource AccentInk}"/>
+                    </Button>
+
                     <!-- Yopish tugmasi ✕ -->
-                    <Button Grid.Column="2" Content="✕" 
+                    <Button Grid.Column="3" Content="✕" 
                             Command="{Binding DismissToastCommand}"
-                            Background="Transparent" Foreground="#64748B" BorderThickness="0"
+                            Background="Transparent" Foreground="{DynamicResource Ink3}" BorderThickness="0"
                             FontSize="12" Padding="6" Cursor="Hand" VerticalAlignment="Top" Margin="8,-4,-4,0">
                         <Button.Template>
                             <ControlTemplate TargetType="Button">

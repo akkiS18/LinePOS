@@ -28,6 +28,22 @@ namespace PosElectro.Desktop
             DataContext = _viewModel;
         }
 
+        // Menyuni ⚙ tugmasining o'ng chetiga tekislaydi (Windows'ning "menyu tekislash" sozlamasidan qat'i nazar)
+        private System.Windows.Controls.Primitives.CustomPopupPlacement[] SettingsPopup_Placement(Size popupSize, Size targetSize, Point offset)
+        {
+            return new[]
+            {
+                new System.Windows.Controls.Primitives.CustomPopupPlacement(
+                    new Point(targetSize.Width - popupSize.Width + 8, targetSize.Height),
+                    System.Windows.Controls.Primitives.PopupPrimaryAxis.None)
+            };
+        }
+
+        private void SettingsMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            SettingsToggle.IsChecked = false;
+        }
+
         private bool _isUpdatingPin;
 
         private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -115,9 +131,10 @@ namespace PosElectro.Desktop
 
         private void Window_PreviewTextInput(object sender, TextCompositionEventArgs e)
         {
-            // Agar foydalanuvchi qidiruv yoki shtrix-kod kiritayotganda ruscha harflar (masalan 'Ф') kelib qolsa,
-            // uni darhol inglizcha klaviatura ekvivalentiga (masalan 'A') almashtirib maydonga joylaymiz.
-            if (Keyboard.FocusedElement is TextBox tb)
+            // Faqat shtrix-kod maydonida: ruscha harf (masalan 'Ф') kelsa inglizcha ekvivalentiga ('A') almashtiramiz.
+            // Qidiruv maydonlari buni SmartSearchHelper orqali o'zi hal qiladi, nom/izoh maydonlarida esa
+            // kirill harflari yozilishi kerak — ilgari ular ham buzilib ketardi.
+            if (Keyboard.FocusedElement is TextBox tb && Services.KeyboardLayoutHelper.GetIsScannerField(tb))
             {
                 var original = e.Text;
                 var converted = Services.KeyboardLayoutHelper.ConvertRuToEn(original);

@@ -5,43 +5,17 @@
              xmlns:vm="clr-namespace:PosElectro.Desktop.ViewModels"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
+      <ResourceDictionary>
+        <ResourceDictionary.MergedDictionaries>
+            <ResourceDictionary Source="Themes/Theme.Dark.xaml"/>
+        </ResourceDictionary.MergedDictionaries>
         <!-- Tizim Konverterlari -->
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
         <vm:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter"/>
 
-        <!-- Ranglar va Resurslar -->
-        <SolidColorBrush x:Key="BgDark" Color="#0F172A"/>
-        <SolidColorBrush x:Key="CardDark" Color="#1E293B"/>
-        <SolidColorBrush x:Key="BorderDark" Color="#334155"/>
-        <SolidColorBrush x:Key="TextPrimary" Color="#F8FAFC"/>
-        <SolidColorBrush x:Key="TextSecondary" Color="#94A3B8"/>
-        
-        <SolidColorBrush x:Key="AccentBlue" Color="#0B6477"/>
-        <SolidColorBrush x:Key="AccentBlueHover" Color="#074F61"/>
-        <SolidColorBrush x:Key="AccentTeal" Color="#0B6477"/>
-        <SolidColorBrush x:Key="AccentTealHover" Color="#074F61"/>
-        <SolidColorBrush x:Key="AccentTealLight" Color="#2DD4BF"/>
-        <SolidColorBrush x:Key="SuccessGreen" Color="#16A34A"/>
-        <SolidColorBrush x:Key="WarningOrange" Color="#F59E0B"/>
-        <SolidColorBrush x:Key="DangerRed" Color="#EF4444"/>
-
-        <!-- Line Kassa Brend Gradientlari -->
-        <LinearGradientBrush x:Key="PrimaryGradient" StartPoint="0,0" EndPoint="1,1">
-            <GradientStop Color="#0B6477" Offset="0.0"/>
-            <GradientStop Color="#16A34A" Offset="1.0"/>
-        </LinearGradientBrush>
-        <LinearGradientBrush x:Key="PrimaryGradientHover" StartPoint="0,0" EndPoint="1,1">
-            <GradientStop Color="#074F61" Offset="0.0"/>
-            <GradientStop Color="#15803D" Offset="1.0"/>
-        </LinearGradientBrush>
-        <LinearGradientBrush x:Key="SuccessGradient" StartPoint="0,0" EndPoint="1,1">
-            <GradientStop Color="#16A34A" Offset="0.0"/>
-            <GradientStop Color="#15803D" Offset="1.0"/>
-        </LinearGradientBrush>
-
         <!-- Standart Tugma Stili (Line Kassa Gradientli) -->
         <Style x:Key="ModernButton" TargetType="Button">
-            <Setter Property="Background" Value="{StaticResource PrimaryGradient}"/>
+            <Setter Property="Background" Value="{DynamicResource Accent}"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="FontSize" Value="14"/>
@@ -75,18 +49,18 @@
 
         <!-- Yashil Tugma Stili -->
         <Style x:Key="SuccessButton" TargetType="Button" BasedOn="{StaticResource ModernButton}">
-            <Setter Property="Background" Value="{StaticResource SuccessGradient}"/>
+            <Setter Property="Background" Value="{DynamicResource OkSolid}"/>
         </Style>
 
         <!-- Qizil Tugma Stili -->
         <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource ModernButton}">
-            <Setter Property="Background" Value="{StaticResource DangerRed}"/>
+            <Setter Property="Background" Value="{DynamicResource BadSolid}"/>
         </Style>
 
         <!-- Zamonaviy Yirik Valyuta Tanlash Radio Tugmasi Stili -->
         <Style x:Key="CurrencySegmentRadio" TargetType="RadioButton">
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#94A3B8"/>
+            <Setter Property="Foreground" Value="{DynamicResource Ink2}"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="Padding" Value="14,7"/>
@@ -99,7 +73,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="pillBorder" Property="Background" Value="#0B6477"/>
+                                <Setter TargetName="pillBorder" Property="Background" Value="{DynamicResource Accent}"/>
                                 <Setter Property="Foreground" Value="White"/>
                             </Trigger>
                             <MultiTrigger>
@@ -107,7 +81,7 @@
                                     <Condition Property="IsChecked" Value="True"/>
                                     <Condition Property="Content" Value="💵 USD ($)"/>
                                 </MultiTrigger.Conditions>
-                                <Setter TargetName="pillBorder" Property="Background" Value="#16A34A"/>
+                                <Setter TargetName="pillBorder" Property="Background" Value="{DynamicResource OkSolid}"/>
                                 <Setter Property="Foreground" Value="White"/>
                             </MultiTrigger>
                         </ControlTemplate.Triggers>
@@ -118,10 +92,10 @@
 
         <!-- Matn kiritish (TextBox) Stili -->
         <Style x:Key="ModernTextBox" TargetType="TextBox">
-            <Setter Property="Background" Value="#0F172A"/>
-            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
-            <Setter Property="CaretBrush" Value="#2DD4BF"/>
-            <Setter Property="BorderBrush" Value="{StaticResource BorderDark}"/>
+            <Setter Property="Background" Value="{DynamicResource Bg}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Ink}"/>
+            <Setter Property="CaretBrush" Value="{DynamicResource AccentInk}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Line}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="12,0"/>
             <Setter Property="FontSize" Value="14"/>
@@ -151,7 +125,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsFocused" Value="True">
-                                <Setter TargetName="border" Property="BorderBrush" Value="#0B6477"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource Accent}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -161,10 +135,10 @@
 
         <!-- Parol kiritish (PasswordBox) Stili -->
         <Style x:Key="ModernPasswordBox" TargetType="PasswordBox">
-            <Setter Property="Background" Value="#0F172A"/>
-            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
-            <Setter Property="CaretBrush" Value="#2DD4BF"/>
-            <Setter Property="BorderBrush" Value="{StaticResource BorderDark}"/>
+            <Setter Property="Background" Value="{DynamicResource Bg}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Ink}"/>
+            <Setter Property="CaretBrush" Value="{DynamicResource AccentInk}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Line}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="12,0"/>
             <Setter Property="FontSize" Value="14"/>
@@ -190,7 +164,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsFocused" Value="True">
-                                <Setter TargetName="border" Property="BorderBrush" Value="#0B6477"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource Accent}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -205,13 +179,13 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type Thumb}">
-                        <Border x:Name="thumbBorder" Background="#475569" CornerRadius="3"/>
+                        <Border x:Name="thumbBorder" Background="{DynamicResource LineStrong}" CornerRadius="3"/>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="thumbBorder" Property="Background" Value="#64748B"/>
+                                <Setter TargetName="thumbBorder" Property="Background" Value="{DynamicResource LineStrong}"/>
                             </Trigger>
                             <Trigger Property="IsDragging" Value="True">
-                                <Setter TargetName="thumbBorder" Property="Background" Value="#94A3B8"/>
+                                <Setter TargetName="thumbBorder" Property="Background" Value="{DynamicResource Ink2}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -268,7 +242,7 @@
             <Setter Property="SnapsToDevicePixels" Value="True"/>
             <Setter Property="OverridesDefaultStyle" Value="True"/>
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#F8FAFC"/>
+            <Setter Property="Foreground" Value="{DynamicResource Ink}"/>
             <Setter Property="Padding" Value="12,8"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
@@ -279,11 +253,11 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsHighlighted" Value="True">
-                                <Setter TargetName="itemBorder" Property="Background" Value="#0B6477"/>
+                                <Setter TargetName="itemBorder" Property="Background" Value="{DynamicResource Accent}"/>
                                 <Setter Property="Foreground" Value="White"/>
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="itemBorder" Property="Background" Value="#074F61"/>
+                                <Setter TargetName="itemBorder" Property="Background" Value="{DynamicResource AccentHover}"/>
                                 <Setter Property="Foreground" Value="White"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -299,15 +273,15 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="32"/>
                 </Grid.ColumnDefinitions>
-                <Border x:Name="border" Grid.ColumnSpan="2" Background="#1E293B" BorderBrush="#334155" BorderThickness="1" CornerRadius="8"/>
-                <Path Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Data="M 0 0 L 4 4 L 8 0 Z" Fill="#94A3B8"/>
+                <Border x:Name="border" Grid.ColumnSpan="2" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="8"/>
+                <Path Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Data="M 0 0 L 4 4 L 8 0 Z" Fill="{DynamicResource Ink2}"/>
             </Grid>
             <ControlTemplate.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter TargetName="border" Property="BorderBrush" Value="#475569"/>
+                    <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource LineStrong}"/>
                 </Trigger>
                 <Trigger Property="IsChecked" Value="True">
-                    <Setter TargetName="border" Property="BorderBrush" Value="#0B6477"/>
+                    <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource Accent}"/>
                 </Trigger>
             </ControlTemplate.Triggers>
         </ControlTemplate>
@@ -316,7 +290,7 @@
         <Style TargetType="{x:Type ComboBox}">
             <Setter Property="SnapsToDevicePixels" Value="True"/>
             <Setter Property="OverridesDefaultStyle" Value="True"/>
-            <Setter Property="Foreground" Value="#F8FAFC"/>
+            <Setter Property="Foreground" Value="{DynamicResource Ink}"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="MinHeight" Value="38"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -341,7 +315,7 @@
                             <!-- Tahrirlash rejimi (IsEditable=True) - matn kiritish maydoni -->
                             <TextBox x:Name="PART_EditableTextBox"
                                      Background="Transparent"
-                                     Foreground="#F8FAFC"
+                                     Foreground="{DynamicResource Ink}"
                                      CaretBrush="White"
                                      BorderThickness="0"
                                      Margin="10,0,32,0"
@@ -360,8 +334,8 @@
                                       SnapsToDevicePixels="True" 
                                       MinWidth="{TemplateBinding ActualWidth}" 
                                       MaxHeight="{TemplateBinding MaxDropDownHeight}">
-                                    <Border Background="#1E293B" 
-                                            BorderBrush="#334155" 
+                                    <Border Background="{DynamicResource Surface}" 
+                                            BorderBrush="{DynamicResource Line}" 
                                             BorderThickness="1" 
                                             CornerRadius="8" 
                                             Padding="4" 
@@ -391,8 +365,8 @@
         <!-- Zamonaviy Qora DatePickerTextBox Stili (Oq quticha va ko'rinmas matnni tuzatish) -->
         <Style TargetType="{x:Type primitives:DatePickerTextBox}">
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#F8FAFC"/>
-            <Setter Property="CaretBrush" Value="#38BDF8"/>
+            <Setter Property="Foreground" Value="{DynamicResource Ink}"/>
+            <Setter Property="CaretBrush" Value="{DynamicResource AccentInk}"/>
             <Setter Property="SelectionBrush" Value="#0284C7"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
@@ -407,14 +381,14 @@
                                           HorizontalScrollBarVisibility="Hidden"
                                           VerticalScrollBarVisibility="Hidden"
                                           VerticalAlignment="Center"
-                                          TextElement.Foreground="#F8FAFC"/>
+                                          TextElement.Foreground="{DynamicResource Ink}"/>
                             <ContentControl x:Name="PART_Watermark"
                                             Focusable="False"
                                             IsHitTestVisible="False"
                                             Opacity="0.5"
                                             VerticalAlignment="Center"
                                             Content="Sana tanlang..."
-                                            Foreground="#94A3B8"
+                                            Foreground="{DynamicResource Ink2}"
                                             Margin="6,0,0,0"
                                             Visibility="Collapsed"/>
                         </Grid>
@@ -430,9 +404,9 @@
 
         <!-- Zamonaviy Qora DatePicker Stili -->
         <Style TargetType="{x:Type DatePicker}">
-            <Setter Property="Foreground" Value="#F8FAFC"/>
-            <Setter Property="Background" Value="#0F172A"/>
-            <Setter Property="BorderBrush" Value="#334155"/>
+            <Setter Property="Foreground" Value="{DynamicResource Ink}"/>
+            <Setter Property="Background" Value="{DynamicResource Bg}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Line}"/>
             <Setter Property="BorderThickness" Value="1.5"/>
             <Setter Property="Height" Value="38"/>
             <Setter Property="FontSize" Value="13"/>
@@ -453,7 +427,7 @@
                                 </Grid.ColumnDefinitions>
                                 <primitives:DatePickerTextBox x:Name="PART_TextBox"
                                                              Grid.Column="0"
-                                                             Foreground="#F8FAFC"
+                                                             Foreground="{DynamicResource Ink}"
                                                              HorizontalContentAlignment="Stretch"
                                                              VerticalContentAlignment="Center"
                                                              Focusable="{TemplateBinding Focusable}"/>
@@ -466,16 +440,16 @@
                                         Padding="2,0,4,0">
                                     <Button.Template>
                                         <ControlTemplate TargetType="Button">
-                                            <Border x:Name="btnBorder" Background="#1E293B" CornerRadius="6" Padding="6,5" BorderBrush="#334155" BorderThickness="1">
+                                            <Border x:Name="btnBorder" Background="{DynamicResource Surface}" CornerRadius="6" Padding="6,5" BorderBrush="{DynamicResource Line}" BorderThickness="1">
                                                 <Path Stretch="Uniform" Width="14" Height="14"
                                                       Data="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                                      Stroke="#38BDF8" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                                      Stroke="{DynamicResource AccentInk}" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
                                                       VerticalAlignment="Center" HorizontalAlignment="Center"/>
                                             </Border>
                                             <ControlTemplate.Triggers>
                                                 <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter TargetName="btnBorder" Property="Background" Value="#2A3B52"/>
-                                                    <Setter TargetName="btnBorder" Property="BorderBrush" Value="#38BDF8"/>
+                                                    <Setter TargetName="btnBorder" Property="Background" Value="{DynamicResource Surface2}"/>
+                                                    <Setter TargetName="btnBorder" Property="BorderBrush" Value="{DynamicResource Accent}"/>
                                                 </Trigger>
                                             </ControlTemplate.Triggers>
                                         </ControlTemplate>
@@ -490,7 +464,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="BorderBrush" Value="#475569"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource LineStrong}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -498,5 +472,67 @@
             </Setter>
         </Style>
 
+        <!-- Jadval katakchasi: vertikal markazlash, bir xil chekka, tanlanganda yumshoq teal -->
+        <Style TargetType="DataGridCell">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="10,0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="DataGridCell">
+                        <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
+                            <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Left"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AccentSoft}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource Ink}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- CheckBox: dark temaga mos, 22px katta belgi -->
+        <Style TargetType="CheckBox">
+            <Setter Property="Foreground" Value="{DynamicResource Ink}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <Grid Background="Transparent" SnapsToDevicePixels="True">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border x:Name="box" Width="22" Height="22" CornerRadius="6" BorderThickness="1.5"
+                                    Background="{DynamicResource Surface2}" BorderBrush="{DynamicResource LineStrong}" VerticalAlignment="Center">
+                                <Path x:Name="tick" Data="M5 11.5l4 4 8-9" Stroke="{DynamicResource OnAccent}" StrokeThickness="2.2"
+                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                      Stretch="Uniform" Margin="4" Visibility="Collapsed"/>
+                            </Border>
+                            <ContentPresenter Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center" RecognizesAccessKey="True"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="box" Property="Background" Value="{DynamicResource Accent}"/>
+                                <Setter TargetName="box" Property="BorderBrush" Value="{DynamicResource Accent}"/>
+                                <Setter TargetName="tick" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="box" Property="BorderBrush" Value="{DynamicResource Accent}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+      </ResourceDictionary>
     </Application.Resources>
 </Application>

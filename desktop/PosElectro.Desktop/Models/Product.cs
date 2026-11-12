@@ -91,6 +91,7 @@ namespace PosElectro.Desktop.Models
         public string SellingPrice2Display => HasSellingPrice2 ? $"{SellingPrice2!.Value:N0} so'm" : "—";
         public bool IsLowStock => StockQuantity <= MinStockAlert;
         public bool IsNegativeStock => StockQuantity < 0;
+        public bool IsOutOfStock => StockQuantity <= 0;
         public string StockDisplay => IsNegativeStock ? $"⚠️ {StockQuantity}" : StockQuantity.ToString();
         public string CostPriceDisplay => CostCurrency == "USD" ? $"${CostPrice:N2}" : $"{CostPrice:N0} so'm";
         public string UnitDisplay => UnitType switch

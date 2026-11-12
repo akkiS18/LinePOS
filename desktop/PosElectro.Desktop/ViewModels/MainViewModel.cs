@@ -33,6 +33,8 @@ namespace PosElectro.Desktop.ViewModels
         public ICommand NavigateSyncCommand { get; }
         public ICommand BackupDatabaseCommand { get; }
         public ICommand RestoreDatabaseCommand { get; }
+        public ICommand OpenAdminPinSettingsCommand { get; }
+        public ICommand LockAdminCommand { get; }
         public ICommand ExportWarehouseCostReportCommand { get; }
         public ICommand CloseImagePreviewCommand { get; }
 
@@ -89,6 +91,7 @@ namespace PosElectro.Desktop.ViewModels
         {
             Instance = this;
             Database = new DatabaseContext();
+            Services.AdminGate.Current.Initialize(Database);
             ProductService = new ProductService(Database);
             CurrencyService = new CurrencyService(Database);
             ScannerService = new BarcodeScannerService();
@@ -174,8 +177,18 @@ namespace PosElectro.Desktop.ViewModels
             });
             NavigateSyncCommand = new RelayCommand(() => CurrentView = SyncVM);
             BackupDatabaseCommand = new RelayCommand(PerformDatabaseBackup);
-            RestoreDatabaseCommand = new RelayCommand(PerformDatabaseRestore);
-            ExportWarehouseCostReportCommand = new RelayCommand(() => ExcelExportService.ExportWarehouseCostReport(Database, CurrencyService));
+            RestoreDatabaseCommand = new RelayCommand(() =>
+            {
+                if (Services.AdminGate.Current.EnsureUnlocked("Bazani tiklash uchun Admin PIN kerak.")) PerformDatabaseRestore();
+            });
+            ExportWarehouseCostReportCommand = new RelayCommand(() =>
+            {
+                if (Services.AdminGate.Current.EnsureUnlocked("Tan narx hisobotini ochish uchun Admin PIN kerak."))
+                    ExcelExportService.ExportWarehouseCostReport(Database, CurrencyService);
+            });
+            OpenAdminPinSettingsCommand = new RelayCommand(() =>
+                new Views.AdminPinSettingsDialog { Owner = Application.Current?.MainWindow }.ShowDialog());
+            LockAdminCommand = new RelayCommand(() => Services.AdminGate.Current.Lock());
             CloseImagePreviewCommand = new RelayCommand(CloseImage);
 
             OpenPinModalCommand = new RelayCommand(() =>
@@ -259,6 +272,7 @@ namespace PosElectro.Desktop.ViewModels
 
             OpenCardTaxModalCommand = new RelayCommand(() =>
             {
+                if (!Services.AdminGate.Current.EnsureUnlocked("Karta foizini o'zgartirish uchun Admin PIN kerak.")) return;
                 CardTaxRateInput = Database.GetCardTaxRate().ToString("0.##");
                 CardTaxErrorMessage = string.Empty;
                 IsCardTaxModalOpen = true;
@@ -410,15 +424,12 @@ namespace PosElectro.Desktop.ViewModels
 
                 if (ofd.ShowDialog() == true)
                 {
-                    var confirm = MessageBox.Show(
-                        "DIQQAT: Zaxira fayldan tiklash amaldagi ma'lumotlarni o'sha zaxira holatiga qaytaradi.\n\n" +
-                        "Tiklashdan oldin hozirgi bazangizning xavfsiz avtomatik nusxasi olinadi.\n\n" +
-                        "Tiklashni davom ettirasizmi?",
-                        "Bazani tiklashni tasdiqlash",
-                        MessageBoxButton.YesNo,
-                        MessageBoxImage.Warning);
-
-                    if (confirm != MessageBoxResult.Yes) return;
+                    var (backupLastSale, lostSales, lostAmount) = Database.PreviewRestoreLoss(ofd.FileName);
+                    var dlg = new Views.RestoreConfirmDialog(ofd.FileName, backupLastSale, lostSales, lostAmount)
+                    {
+                        Owner = Application.Current?.MainWindow
+                    };
+                    if (dlg.ShowDialog() != true) return;
 
                     var wasRunning=SyncServer.IsRunning;
                     try {
@@ -426,6 +437,7 @@ namespace PosElectro.Desktop.ViewModels
                         Database.RestoreDatabase(ofd.FileName);
                         CashierVM.ReloadDebtDatabase();
                         DebtsVM.ReloadDebtDatabase();
+                        Services.AdminGate.Current.Reload();
                     } finally { if(wasRunning)SyncServer.Start(); }
 
                     // Re-initialize view models

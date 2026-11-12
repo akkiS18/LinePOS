@@ -4,7 +4,7 @@
         Title="Chek Tafsilotlari" Height="560" Width="550"
         WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
         PreviewKeyDown="Window_PreviewKeyDown"
-        Background="#0F172A">
+        Background="{DynamicResource Bg}">
     <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -18,22 +18,22 @@
 
         <!-- Sarlavha -->
         <TextBlock x:Name="TxtTitle" Grid.Row="0" Text="Chek #0 Tafsilotlari" 
-                   Foreground="#2563EB" FontSize="18" FontWeight="Bold"/>
+                   Foreground="{DynamicResource AccentInk}" FontSize="18" FontWeight="Bold"/>
 
         <TextBlock x:Name="TxtDate" Grid.Row="1" Text="10.09.2026 20:46" 
-                   Foreground="#94A3B8" FontSize="12" Margin="0,4,0,12"/>
+                   Foreground="{DynamicResource Ink2}" FontSize="12" Margin="0,4,0,12"/>
 
         <!-- Mahsulotlar ro'yxati -->
-        <Border Grid.Row="2" Background="#1E293B" CornerRadius="10" BorderBrush="#334155" BorderThickness="1" Padding="6" Margin="0,0,0,14">
+        <Border Grid.Row="2" Background="{DynamicResource Surface}" CornerRadius="10" BorderBrush="{DynamicResource Line}" BorderThickness="1" Padding="6" Margin="0,0,0,14">
             <DataGrid x:Name="GridItems" AutoGenerateColumns="False" CanUserAddRows="False"
                       IsReadOnly="True"
-                      Background="Transparent" RowBackground="#1E293B" AlternatingRowBackground="#0F172A"
-                      Foreground="#F8FAFC" BorderThickness="0" GridLinesVisibility="Horizontal"
-                      HorizontalGridLinesBrush="#334155" HeadersVisibility="Column">
+                      Background="Transparent" RowBackground="{DynamicResource Surface}" AlternatingRowBackground="{DynamicResource Bg}"
+                      Foreground="{DynamicResource Ink}" BorderThickness="0" GridLinesVisibility="Horizontal"
+                      HorizontalGridLinesBrush="{DynamicResource Line}" HeadersVisibility="Column">
                 <DataGrid.ColumnHeaderStyle>
                     <Style TargetType="DataGridColumnHeader">
-                        <Setter Property="Background" Value="#0F172A"/>
-                        <Setter Property="Foreground" Value="#94A3B8"/>
+                        <Setter Property="Background" Value="{DynamicResource Bg}"/>
+                        <Setter Property="Foreground" Value="{DynamicResource Ink2}"/>
                         <Setter Property="FontWeight" Value="SemiBold"/>
                         <Setter Property="Padding" Value="8,8"/>
                     </Style>
@@ -49,21 +49,21 @@
         </Border>
 
         <!-- Jami va Foyda xulosasi -->
-        <Border Grid.Row="3" Background="#1E293B" CornerRadius="10" Padding="14" Margin="0,0,0,14" BorderBrush="#334155" BorderThickness="1">
+        <Border Grid.Row="3" Background="{DynamicResource Surface}" CornerRadius="10" Padding="14" Margin="0,0,0,14" BorderBrush="{DynamicResource Line}" BorderThickness="1">
             <StackPanel>
                 <Grid Margin="0,0,0,6">
-                    <TextBlock Text="JAMI SUMMA:" Foreground="#94A3B8" FontWeight="Bold" FontSize="14"/>
-                    <TextBlock x:Name="TxtTotalAmount" Text="0 so'm" HorizontalAlignment="Right" Foreground="#F8FAFC" FontWeight="ExtraBold" FontSize="16"/>
+                    <TextBlock Text="JAMI SUMMA:" Foreground="{DynamicResource Ink2}" FontWeight="Bold" FontSize="14"/>
+                    <TextBlock x:Name="TxtTotalAmount" Text="0 so'm" HorizontalAlignment="Right" Foreground="{DynamicResource Ink}" FontWeight="ExtraBold" FontSize="16"/>
                 </Grid>
                 <Grid>
-                    <TextBlock x:Name="TxtProfitLabel" TextWrapping="Wrap" MaxWidth="150" Text="SOF FOYDA:" Foreground="#10B981" FontWeight="Bold" FontSize="14"/>
-                    <TextBlock x:Name="TxtTotalProfit" Text="+0 so'm" HorizontalAlignment="Right" Foreground="#10B981" FontWeight="Bold" FontSize="16"/>
+                    <TextBlock x:Name="TxtProfitLabel" TextWrapping="Wrap" MaxWidth="150" Text="SOF FOYDA:" Foreground="{DynamicResource Ok}" FontWeight="Bold" FontSize="14"/>
+                    <TextBlock x:Name="TxtTotalProfit" Text="+0 so'm" HorizontalAlignment="Right" Foreground="{DynamicResource Ok}" FontWeight="Bold" FontSize="16"/>
                 </Grid>
             </StackPanel>
         </Border>
 
         <!-- Printer formati tanlash va Ko'rish (Preview) -->
-        <Border Grid.Row="4" Background="#1E293B" CornerRadius="10" Padding="12,10" Margin="0,0,0,10" BorderBrush="#334155" BorderThickness="1">
+        <Border Grid.Row="4" Background="{DynamicResource Surface}" CornerRadius="10" Padding="12,10" Margin="0,0,0,10" BorderBrush="{DynamicResource Line}" BorderThickness="1">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -71,7 +71,7 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <TextBlock Grid.Column="0" Text="Chop etish:" Foreground="#94A3B8" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                <TextBlock Grid.Column="0" Text="Chop etish:" Foreground="{DynamicResource Ink2}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,10,0"/>
 
                 <ComboBox Grid.Column="1" x:Name="CmbPrinterFormat" SelectedIndex="0" Height="36" VerticalContentAlignment="Center" Margin="0,0,10,0">
                     <ComboBoxItem Content="🧾 Xprinter 58mm (Kassa cheki)"/>
@@ -86,7 +86,7 @@
 
         <!-- Xabar / Status -->
         <ScrollViewer Grid.Row="5" MaxHeight="90" VerticalScrollBarVisibility="Auto">
-        <TextBlock x:Name="TxtStatus" TextWrapping="Wrap" Text="" Foreground="#10B981"
+        <TextBlock x:Name="TxtStatus" TextWrapping="Wrap" Text="" Foreground="{DynamicResource Ok}"
                    FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,8" Visibility="Collapsed"/>
         </ScrollViewer>
 

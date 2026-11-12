@@ -442,6 +442,25 @@ namespace PosElectro.Desktop.ViewModels
             set => SetProperty(ref _toastMessage, value);
         }
 
+        // Toast turi: "ok" (yashil), "warn" (sariq), "bad" (qizil), "info" (teal)
+        private string _toastKind = "ok";
+        public string ToastKind
+        {
+            get => _toastKind;
+            set => SetProperty(ref _toastKind, value);
+        }
+
+        // Ixtiyoriy amal tugmasi (masalan, "Qaytarish")
+        private string _toastActionText = string.Empty;
+        private Action? _toastAction;
+        public string ToastActionText
+        {
+            get => _toastActionText;
+            set { if (SetProperty(ref _toastActionText, value)) OnPropertyChanged(nameof(HasToastAction)); }
+        }
+        public bool HasToastAction => !string.IsNullOrEmpty(_toastActionText);
+        public ICommand ToastActionCommand { get; }
+
         public ICommand DismissToastCommand { get; }
         public ICommand ToggleCartPriceCommand { get; }
         public ICommand ToggleAllCartPricesCommand { get; }
@@ -750,12 +769,12 @@ namespace PosElectro.Desktop.ViewModels
                     MainViewModel.ShowImage(p.ImagePath, p.Name);
                 }
             });
-            RemoveFromCartCommand = new RelayCommand<CartItemModel>(c => { if (c != null) RemoveFromCart(c); });
+            RemoveFromCartCommand = new RelayCommand<CartItemModel>(c => { if (c != null) RemoveFromCartWithUndo(c); });
             IncreaseQuantityCommand = new RelayCommand<CartItemModel>(c => { if (c != null) ChangeQuantity(c, 1.0); });
             DecreaseQuantityCommand = new RelayCommand<CartItemModel>(c => { if (c != null) ChangeQuantity(c, -1.0); });
             ToggleCartPriceCommand = new RelayCommand<CartItemModel>(c => { if (c != null) ToggleCartPrice(c); });
             ToggleAllCartPricesCommand = new RelayCommand(ToggleAllCartPrices);
-            ClearCartCommand = new RelayCommand(ClearCart);
+            ClearCartCommand = new RelayCommand(ClearCartWithUndo);
             CompleteSaleCommand = new RelayCommand(_ => OpenPaymentModal(0));
             OpenCashSaleCommand = new RelayCommand(_ => OpenPaymentModal(0));
             OpenCardSaleCommand = new RelayCommand(_ => OpenPaymentModal(1));
@@ -790,6 +809,7 @@ namespace PosElectro.Desktop.ViewModels
             SaveEditModalCommand = new RelayCommand(SaveEditModal);
             CancelEditModalCommand = new RelayCommand(CancelEditModal);
             DismissToastCommand = new RelayCommand(DismissToast);
+            ToastActionCommand = new RelayCommand(RunToastAction);
 
             CloseUnrecognizedBarcodeCommand = new RelayCommand(CloseUnrecognizedBarcode);
             ConfirmAddUnrecognizedBarcodeCommand = new RelayCommand(ConfirmAddUnrecognizedBarcode);
@@ -832,7 +852,14 @@ namespace PosElectro.Desktop.ViewModels
         public string StatusMessage
         {
             get => _statusMessage;
-            set => SetProperty(ref _statusMessage, value);
+            set
+            {
+                SetProperty(ref _statusMessage, value);
+                // Ogohlantirishlar ilgari hech qayerda ko'rinmasdi — endi sariq toast bo'lib chiqadi.
+                // Oddiy "savatga qo'shildi" kabi xabarlar har skanerda chiqib bezovta qilmasligi uchun ko'rsatilmaydi.
+                if (!string.IsNullOrEmpty(value) && value.StartsWith("⚠️"))
+                    ShowToast("Diqqat", value.Substring(2).Trim(), "warn");
+            }
         }
 
         public double TotalAmount => SaleAccounting.Money(CartItems.Sum(i => i.TotalPrice));
@@ -975,9 +1002,12 @@ namespace PosElectro.Desktop.ViewModels
             }
 
             // 4. Mahsulot omborda topilmadi: "Yangi mahsulot qo'shamizmi?" dialogini ko'rsatish
-            UnrecognizedBarcode = q;
+            // Skaner rus klaviaturasida ishlagan bo'lsa (raqam + kirill harf), formaga lotincha shaklini beramiz
+            var looksLikeScannedCode = q.Any(char.IsDigit) && qEn.All(c => c < 128);
+            var code = looksLikeScannedCode ? qEn : q;
+            UnrecognizedBarcode = code;
             IsUnrecognizedBarcodeModalOpen = true;
-            StatusMessage = $"⚠️ Shtrix-kod yoki tovar topilmadi: {q}";
+            StatusMessage = $"⚠️ Shtrix-kod yoki tovar topilmadi: {code}";
         }
 
         public void CloseUnrecognizedBarcode()
@@ -1063,6 +1093,40 @@ namespace PosElectro.Desktop.ViewModels
             CartItems.Clear();
             NotifyTotals();
             StatusMessage = "Savatcha tozalandi";
+        }
+
+        // Kassir tugma bilan tozalaganda: bitta bosish bilan qaytarish imkoni (10 soniya)
+        public void ClearCartWithUndo()
+        {
+            if (CartItems.Count == 0) return;
+            var snapshot = CartItems.ToList();
+            ClearCart();
+            ShowToast("Savat tozalandi", $"{snapshot.Count} xil tovar olib tashlandi", "info", 10,
+                "Qaytarish", () =>
+                {
+                    foreach (var it in snapshot) CartItems.Add(it);
+                    NotifyTotals();
+                });
+        }
+
+        public void RemoveFromCartWithUndo(CartItemModel item)
+        {
+            var index = CartItems.IndexOf(item);
+            if (index < 0) return;
+            RemoveFromCart(item);
+            ShowToast("Savatdan olib tashlandi", item.Product.Name, "info", 10,
+                "Qaytarish", () =>
+                {
+                    CartItems.Insert(Math.Min(index, CartItems.Count), item);
+                    NotifyTotals();
+                });
+        }
+
+        private void RunToastAction()
+        {
+            var action = _toastAction;
+            DismissToast();
+            action?.Invoke();
         }
 
         public void ToggleCartPrice(CartItemModel item)
@@ -1658,16 +1722,23 @@ namespace PosElectro.Desktop.ViewModels
             ShowToast("⚠️ Brak tovarlar chiqarildi!", $"Jami zarar: -{totalCost:N0} so'm (0 so'mga hisobdan chiqarildi)");
         }
 
-        public void ShowToast(string title, string message)
+        public void ShowToast(string title, string message) =>
+            ShowToast(title, message, title.StartsWith("⚠️") ? "warn" : "ok");
+
+        public void ShowToast(string title, string message, string kind, double seconds = 3.5,
+                              string? actionText = null, Action? action = null)
         {
             ToastTitle = title;
             ToastMessage = message;
+            ToastKind = kind;
+            _toastAction = action;
+            ToastActionText = actionText ?? string.Empty;
             IsToastVisible = true;
 
             _toastTimer?.Stop();
             _toastTimer = new System.Windows.Threading.DispatcherTimer
             {
-                Interval = TimeSpan.FromSeconds(3.5)
+                Interval = TimeSpan.FromSeconds(seconds)
             };
             _toastTimer.Tick += (s, e) =>
             {
@@ -1773,6 +1844,8 @@ namespace PosElectro.Desktop.ViewModels
         {
             _toastTimer?.Stop();
             IsToastVisible = false;
+            _toastAction = null;
+            ToastActionText = string.Empty;
         }
 
         public void RefreshCategories()

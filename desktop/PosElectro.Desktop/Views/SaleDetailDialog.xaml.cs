@@ -24,6 +24,13 @@ namespace PosElectro.Desktop.Views
             TxtTotalAmount.Text = $"{sale.TotalAmount:N0} SO'M";
             TxtProfitLabel.Text = sale.PaymentType is PaymentType.RETURN or PaymentType.RETURN_REVERSAL ? "FOYDAGA\nTA’SIRI:" : "SOF FOYDA:";
             TxtTotalProfit.Text = $"{(sale.Profit > 0 ? "+" : "")}{sale.Profit:N0} SO'M";
+            if (PosElectro.Desktop.Services.AdminGate.Current.IsLocked)
+            {
+                // Admin PIN qulfi yopiq: foyda va tan narx kassirga ko'rinmaydi
+                TxtTotalProfit.Text = "••••••";
+                foreach (var col in GridItems.Columns)
+                    if (Equals(col.Header, "Tan narx")) col.Visibility = Visibility.Collapsed;
+            }
 
             GridItems.ItemsSource = sale.Items;
             if (database != null) {

@@ -112,8 +112,7 @@ namespace PosElectro.Desktop.Views
         {
             if (sender is Border border && border.Visibility == Visibility.Visible)
             {
-                border.Focus();
-                AddUnrecognizedBarcodeBtn?.Focus();
+                border.Focus(); // "Qo'shish" tugmasiga fokus bermaymiz: skaner Enter'i uni bosib yuborardi
             }
         }
 
@@ -200,7 +199,7 @@ namespace PosElectro.Desktop.Views
                 {
                     Dispatcher.BeginInvoke(new Action(() =>
                     {
-                        BrakConfirmBtn?.Focus();
+                        border.Focus(); // tasdiqlash tugmasiga fokus bermaymiz (tasodifiy Enter/Space)
                     }), System.Windows.Threading.DispatcherPriority.Input);
                 }
                 else
@@ -265,6 +264,23 @@ namespace PosElectro.Desktop.Views
         {
             if (DataContext is CashierViewModel vm)
             {
+                // 0. Shtrix-kod topilmadi oynasi: skanerning Enter/Space'i kassani tovar formasiga olib ketmasin.
+                //    Faqat Esc yopadi, "Qo'shish" esa sichqoncha bilan bosiladi.
+                if (vm.IsUnrecognizedBarcodeModalOpen)
+                {
+                    if (e.Key == Key.Enter || e.Key == Key.Space)
+                    {
+                        e.Handled = true;
+                        return;
+                    }
+                    if (e.Key == Key.Escape)
+                    {
+                        vm.CloseUnrecognizedBarcode();
+                        e.Handled = true;
+                        return;
+                    }
+                }
+
                 // 1. Agar Tezkor mijoz qo'shish modali ochiq bo'lsa (To'lov ustida turgan bo'lsa ham eng birinchi bajariladi!):
                 if (vm.IsQuickCustomerModalOpen)
                 {
@@ -319,9 +335,10 @@ namespace PosElectro.Desktop.Views
                 // 4. Agar Brak tasdiqlash modali ochiq bo'lsa:
                 if (vm.IsBrakModalOpen)
                 {
-                    if (e.Key == Key.Enter || e.Key == Key.Y)
+                    // Brak faqat tugmani sichqoncha bilan bosib tasdiqlanadi: skaner har skanerdan keyin
+                    // Enter yuboradi va tasodifan tovarlar 0 so'mga hisobdan chiqib ketishi mumkin edi.
+                    if (e.Key == Key.Enter || e.Key == Key.Y || e.Key == Key.Space)
                     {
-                        vm.ConfirmBrakWriteOff();
                         e.Handled = true;
                         return;
                     }
@@ -403,15 +420,7 @@ namespace PosElectro.Desktop.Views
                     }
                 }
 
-                // 5. Agar foydalanuvchi matn maydonida yozmayotgan bo'lsa va Backspace bosilsa:
-                if (e.Key == Key.Back && !(e.OriginalSource is TextBox) && !(e.OriginalSource is PasswordBox))
-                {
-                    if (!vm.IsPaymentModalOpen && !vm.IsEditModalOpen && !vm.IsUnrecognizedBarcodeModalOpen && !vm.IsHoldModalOpen)
-                    {
-                        vm.OpenBrakModal();
-                        e.Handled = true;
-                    }
-                }
+                // Brak oynasi endi faqat savat sarlavhasidagi tugma orqali ochiladi (Backspace yorlig'i olib tashlandi).
             }
         }
     }

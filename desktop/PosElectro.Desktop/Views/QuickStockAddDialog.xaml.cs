@@ -50,9 +50,7 @@ namespace PosElectro.Desktop.Views
 
             var currStock = _product.StockQuantity;
             TxtCurrentStock.Text = $"{currStock:0.##} {_unitLabel}";
-            TxtCurrentStock.Foreground = currStock > 0 
-                ? new SolidColorBrush(Color.FromRgb(0x4A, 0xDE, 0x80)) 
-                : new SolidColorBrush(Color.FromRgb(0xF8, 0x71, 0x71));
+            TxtCurrentStock.SetResourceReference(TextBlock.ForegroundProperty, currStock > 0 ? "Ok" : "Bad");
 
             UpdatePreview(0);
         }
@@ -80,7 +78,7 @@ namespace PosElectro.Desktop.Views
             else
             {
                 TxtCalculationPreview.Text = "Raqamni to'g'ri kiriting";
-                TxtCalculationPreview.Foreground = new SolidColorBrush(Color.FromRgb(0xF8, 0x71, 0x71));
+                TxtCalculationPreview.SetResourceReference(TextBlock.ForegroundProperty, "Bad");
             }
         }
 
@@ -89,7 +87,7 @@ namespace PosElectro.Desktop.Views
             var current = _product.StockQuantity;
             var total = current + addedQty;
             TxtCalculationPreview.Text = $"{current:0.##} + {addedQty:0.##} = {total:0.##} {_unitLabel}";
-            TxtCalculationPreview.Foreground = new SolidColorBrush(Color.FromRgb(0x2D, 0xD4, 0xBF));
+            TxtCalculationPreview.SetResourceReference(TextBlock.ForegroundProperty, "AccentInk");
         }
 
         private void TxtQuantity_KeyDown(object sender, KeyEventArgs e)
