@@ -71,7 +71,7 @@ Ranglar ustuni: A+B bosqichidan keyin hammasi tokenda, lekin yorug' temada ekran
 | 1.12 | Tovar rasmini kattalashtirish | `MainWindow.xaml` (PreviewImage) | ✅ | Qayta qurildi, rasm olinib solishtirildi: 640px karta, 440px rasm maydoni, nomi/qoldiq/shtrix-kod, narx, "Savatga +1" (kassadan ochilganda; mavjud savatga qo'shish buyrug'i). Oldingi/keyingi strelkalar va "1 / 3" yo'q — tovarda bitta rasm bor. Ombordan ochilganda faqat nomi |
 | 2.1 | Omborlar va kategoriyalar | `Views/InventoryView.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan. Omborlar va tanlangan omborning kategoriyalari bitta sahifada (eski "omborlar → kategoriyalar" alohida ekranlari birlashdi, logika o'zgarmadi: ombor tanlanmasa "Barcha omborlar" kategoriyalari). "Kam qolganlar N" — asboblar panelidagi tugma. Kategoriya ikonkasi nomiga qarab tanlanadi. Asosiy bo'lmagan omborda ★ (asosiy qilish) va o'chirish ikonkalari |
 | 2.2 | Tovarlar jadvali | `InventoryView.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan: yo'l (Omborlar › ombor › kategoriya), Hammasi/Kam qolgan/Tugagan filtri (yangi, standart "Hammasi"), qatorda ⋯ menyu (kirim, rasm, o'chirish). Maketdan farq: "Excel" tugmasi, ko'p tanlovdagi "Stiker chop etish"/"Boshqa omborga" yo'q — dasturda bunday amal yo'q. Belgilash faqat "Kam qolgan tovarlar"da (buyurtma ro'yxati uchun, avvalgidek). Eski "kategoriya bo'yicha filtr" ochiluvchi ro'yxati olib tashlandi: ViewModel'da unga mos xususiyat yo'q edi (ishlamas edi) |
-| 2.3 | Yangi tovar qo'shish | `Views/AddEditProductDialog.xaml` | ⬜ | |
+| 2.3 | Yangi tovar qo'shish | `InventoryView.xaml` (2-qism) | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan: ikki karta (Asosiy ma'lumotlar / Narx va qoldiq), pastki panel. Haqiqiy forma `InventoryView` ichida; `AddEditProductDialog.xaml` hech qayerdan ochilmaydi (eski, tegilmadi). Qo'shildi: "Ustama +N%" (faqat ko'rsatish), Ctrl+S = Saqlash (Enter ham ishlaydi). Kategoriyani tahrirlash (✎) tugmasi saqlandi. Maketdan farq: "Saqlash va yana qo'shish" yo'q — dasturda bunday amal yo'q |
 | 2.4 | Tovarni o'chirish (tasdiq) | `InventoryView.xaml` | ⬜ | |
 | 2.5 | Qoldiq qo'shish (kirim) | `Views/QuickStockAddDialog.xaml` | ⬜ | |
 | 2.6 | Stiker chop etish sozlamalari | `Views/BarcodePrintDialog.xaml` | ⬜ | |
@@ -125,7 +125,12 @@ Ranglar ustuni: A+B bosqichidan keyin hammasi tokenda, lekin yorug' temada ekran
 - Umumiy uslublar yangi faylda: `Themes/SmartControls.xaml` (tugma, maydon, chip, ikonka...). `CashierView` hozircha o'z nusxasini saqlaydi — keyin shu faylga o'tkazish kerak.
 - ViewModel'ga faqat ko'rsatish uchun: `GridCategoryCards`, `LowStockCard`, `CategoryCardModel.LowCount/OutCount/IconData/BadgeText`, qidiruv yozuvlari; yangi kichik filtr `StockFilter` (kategoriya ichida, standart 0 = avvalgidek hammasi).
 - Yangi: `Views/SameValueMultiConverter.cs` (tanlangan ombor kartasi).
-- **Keyingi qadam:** 2.3 Yangi tovar formasi (`InventoryView.xaml` 2-qismi), so'ng 2.4–2.13 oynalar.
+
+**2026-11-13 (Claude Code), 5-qadam — Tovar formasi (2.3):**
+- `InventoryView.xaml` 2-qismi maket tuzilishida qayta yozildi (yorug' tema). Barcha bog'lanishlar, skaner maydoni, Admin PIN qulfi, USD hisoblash avvalgidek.
+- ViewModel: sarlavhalar "Yangi tovar" / "Tahrirlash: nom"; `FormMarkupText` (ustama foizi, faqat ko'rsatish).
+- Tuzatish: `FieldBox` (SmartControls va CashierView nusxasi) ichki chekkani ikki marta qo'yardi — matn maydon ichida ~30px surilib turardi. Endi bir marta; kassadagi maydonlar ham maketdagidek.
+- **Keyingi qadam:** 2.4–2.13 Ombor oynalari (o'chirish tasdig'i, kirim, stiker, buyurtma ro'yxati, ko'chirish, yangi ombor, kategoriya).
 
 **2026-11-13 (Claude Code), 2-qadam — Kassa ekrani qayta qurildi:**
 - Egasi fikri: yorug' rang eski joylashuv ustiga tortilgani noto'g'ri, maket **tuzilishi** ko'chirilishi kerak (qoida 5).

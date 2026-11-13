@@ -395,12 +395,12 @@
                     <Setter.Value>
                         <ControlTemplate TargetType="TextBox">
                             <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                                    BorderThickness="1.5" CornerRadius="10" Padding="{TemplateBinding Padding}">
+                                    BorderThickness="1.5" CornerRadius="10">
                                 <Grid>
-                                    <ScrollViewer x:Name="PART_ContentHost" Focusable="False" VerticalAlignment="Center"
-                                                  HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled"/>
+                                    <ScrollViewer x:Name="PART_ContentHost" Focusable="False" VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                  HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="{TemplateBinding VerticalScrollBarVisibility}"/>
                                     <!-- O'ngdagi birlik ("so'm") yoki maslahat: Tag -->
-                                    <TextBlock Text="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                    <TextBlock Text="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0"
                                                FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource Ink2}" IsHitTestVisible="False"/>
                                 </Grid>
                             </Border>

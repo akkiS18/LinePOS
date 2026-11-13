@@ -86,7 +86,7 @@ namespace PosElectro.Desktop.ViewModels
         private Product? _editingProduct;
 
         // Form Maydonlari (To'liq Sahifa uchun)
-        private string _formTitle = "Yangi Mahsulot Qo'shish";
+        private string _formTitle = "Yangi tovar";
         private string _formName = string.Empty;
         private string _formBarcode = string.Empty;
         private string _formCategory = "Barchasi";
@@ -1054,8 +1054,25 @@ namespace PosElectro.Desktop.ViewModels
         public string FormSellingPrice
         {
             get => _formSellingPrice;
-            set => SetProperty(ref _formSellingPrice, value);
+            set { if (SetProperty(ref _formSellingPrice, value)) { OnPropertyChanged(nameof(FormMarkupText)); OnPropertyChanged(nameof(IsFormMarkupNegative)); } }
         }
+
+        /// <summary>Maket 2.3: "Ustama +29,7%" — faqat ko'rsatish uchun (tan narxi yashirin bo'lsa bo'sh).</summary>
+        public string FormMarkupText
+        {
+            get
+            {
+                if (IsFormCostMasked) return string.Empty;
+                if (!double.TryParse(CleanNumberInput(FormCostPrice ?? ""), NumberStyles.Any, CultureInfo.InvariantCulture, out var cost) || cost <= 0) return string.Empty;
+                if (!double.TryParse(CleanNumberInput(FormSellingPrice ?? ""), NumberStyles.Any, CultureInfo.InvariantCulture, out var sell) || sell <= 0) return string.Empty;
+                if (FormIsUsd) cost *= _currencyService.GetCachedUsdRate();
+                if (cost <= 0) return string.Empty;
+                var pct = (sell - cost) / cost * 100.0;
+                var txt = Math.Abs(pct).ToString("0.0", CultureInfo.InvariantCulture).Replace('.', ',');
+                return $"Ustama {(pct >= 0 ? "+" : "−")}{txt}%";
+            }
+        }
+        public bool IsFormMarkupNegative => FormMarkupText.Contains('−');
 
         public string FormSellingPrice2
         {
@@ -1143,7 +1160,7 @@ namespace PosElectro.Desktop.ViewModels
             OnPropertyChanged(nameof(IsFormCostMasked));
             _previousViewState = CurrentViewState;
 
-            FormTitle = "Yangi Mahsulot Qo'shish";
+            FormTitle = "Yangi tovar";
             FormName = string.Empty;
             FormBarcode = barcode ?? string.Empty;
             var defaultCat = SelectedCategory != ProductService.CATEGORY_ALL && SelectedCategory != ProductService.CATEGORY_LOW_STOCK
@@ -1171,7 +1188,7 @@ namespace PosElectro.Desktop.ViewModels
             OnPropertyChanged(nameof(IsFormCostMasked));
             _previousViewState = CurrentViewState;
 
-            FormTitle = $"Mahsulotni Tahrirlash: {p.Name}";
+            FormTitle = $"Tahrirlash: {p.Name}";
             FormName = p.Name;
             FormBarcode = p.Barcode ?? string.Empty;
             FormCategory = p.Category;
@@ -1243,6 +1260,8 @@ namespace PosElectro.Desktop.ViewModels
 
         private void UpdateCostConversion()
         {
+            OnPropertyChanged(nameof(FormMarkupText));
+            OnPropertyChanged(nameof(IsFormMarkupNegative));
             if (!FormIsUsd)
             {
                 FormUsdConversion = string.Empty;
