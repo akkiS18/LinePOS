@@ -36,6 +36,10 @@
     <SolidColorBrush x:Key="ToastFg"     Color="#0F1B21"/>
     <SolidColorBrush x:Key="ToastBtnBg"  Color="#0F1B21"/>
     <SolidColorBrush x:Key="ToastBtnFg"  Color="#FFFFFF"/>
+    <!-- Fondagi jarayon vidjeti (stiker chop etish): yo'lak, to'ldirish, tugma chizig'i -->
+    <SolidColorBrush x:Key="ToastTrack"  Color="#2E0F1B21"/>
+    <SolidColorBrush x:Key="ToastFill"   Color="#0B6477"/>
+    <SolidColorBrush x:Key="ToastLine"   Color="#4D0F1B21"/>
     <SolidColorBrush x:Key="ModalShadow" Color="#000000"/>
 
     <!-- Holat ranglari (faqat holat uchun) -->

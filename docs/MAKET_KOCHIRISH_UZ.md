@@ -76,8 +76,8 @@ Ranglar ustuni: A+B bosqichidan keyin hammasi tokenda, lekin yorug' temada ekran
 | 2.5 | Qoldiq qo'shish (kirim) | `Views/QuickStockAddDialog.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan. "Hozir + Qo'shiladi = Yangi qoldiq", +10/+50/+100 tugmalari (maydondagi songa qo'shadi). Oyna asosiy oynani qoplaydi (fon xiralashadi). Kirim amali o'sha. Maketdan farq: "Yangi tan narx", "Yetkazib beruvchi / izoh", "Kirgandan keyin stiker chop etish" va "Bir o'ram (100)" yo'q — kirim amali faqat sonni qabul qiladi |
 | 2.6 | Stiker chop etish sozlamalari | `Views/BarcodePrintDialog.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan: 900×640 karta, chapda sozlamalar, o'ngda jonli ko'rinish (printer chiqishi bilan bir xil render), sarlavhada printer holati. Chop etish, sinov, sozlamalarni saqlash avvalgidek. Maketdan farq: bir vaqtda bitta tovar (ko'p tovarli ro'yxat dasturda yo'q), shuning uchun "Hammasiga" o'rniga "Tez tanlash" |
 | 2.7 | Stiker · printer va kalibrovka | `BarcodePrintDialog.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan: ochiluvchi bo'lim — printer, stiker o'lchami, nomni surish, umumiy surish (0,5 mm qadam). Yopiq holatda qisqa yozuv (o'lcham · nom · umumiy) |
-| 2.8 | Stiker chop etilmoqda (oyna) | `MainWindow.xaml` | ⬜ | |
-| 2.9 | Stiker fonda davom etyapti (vidjet) | `MainWindow.xaml` | ⬜ | |
+| 2.8 | Stiker chop etilmoqda (oyna) | `MainWindow.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan: 440px karta — tovar nomi, `27 / 61`, jarayon chizig'i, "To'xtatish" / "Fonda davom etsin". Tugagan, to'xtatilgan va xato holatlari shu kartada. Maketdagi "Taxminan 40 soniya qoldi · printer nomi" yo'q (xizmatda bunday hisob yo'q) — o'rnida foiz |
+| 2.9 | Stiker fonda davom etyapti (vidjet) | `MainWindow.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan: o'ng pastda 320px to'q vidjet (`ToastBg`), "Stiker: 27 / 61", "To'xtatish", yopish (✕) tugmasi saqlandi. Yangi tokenlar: `ToastTrack`, `ToastFill`, `ToastLine` (Light va Dark) |
 | 2.10 | Buyurtma ro'yxati (kam qolganlar) | `Views/ReorderListDialog.xaml` | ⬜ | |
 | 2.11 | Omborlararo ko'chirish | `InventoryView.xaml` | ⬜ | |
 | 2.12 | Yangi ombor | `InventoryView.xaml` | ⬜ | |
@@ -133,7 +133,9 @@ Ranglar ustuni: A+B bosqichidan keyin hammasi tokenda, lekin yorug' temada ekran
 - 2.4 o'chirish tasdig'i: MessageBox o'rniga maketdagi oyna (`IsDeleteConfirmOpen`, `ConfirmDeleteProductCommand`).
 - 2.5 kirim oynasi: `QuickStockAddDialog` maket tuzilishida (yorug' tema, chegarasiz oyna).
 - 2.6/2.7 stiker oynasi: `BarcodePrintDialog` maket tuzilishida. `FieldCombo` uslubi `DisplayMemberPath`ni hisobga olmasdi (sinf nomi chiqardi) — tuzatildi.
-- **Keyingi qadam:** 2.8/2.9 stiker jarayoni va fon vidjeti (`MainWindow`), so'ng 2.10–2.13 (buyurtma ro'yxati, ko'chirish, yangi ombor, kategoriya).
+- 2.8/2.9 stiker jarayoni: `MainWindow`dagi oyna va vidjet maket tuzilishida; `LabelPrintService` o'zgarmadi.
+- Test eslatmasi: `ReportsViewModelSearchTests.Search_lists_newest_first...` yarim tundan keyingi 3 soat ichida yiqiladi ("bugun, 3 soat oldin" kechagi kunga tushadi) — dizaynga aloqasi yo'q, testning o'zidagi kamchilik.
+- **Keyingi qadam:** 2.10–2.13 (buyurtma ro'yxati, ko'chirish, yangi ombor, kategoriya).
 
 **2026-11-13 (Claude Code), 2-qadam — Kassa ekrani qayta qurildi:**
 - Egasi fikri: yorug' rang eski joylashuv ustiga tortilgani noto'g'ri, maket **tuzilishi** ko'chirilishi kerak (qoida 5).
