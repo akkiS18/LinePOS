@@ -55,6 +55,9 @@ public sealed record DebtCustomerItemDto(
 {
     public string CustomerGuid => Guid;
     public string FullName => Name;
+    // Kassadagi nasiya kartasi uchun bosh harflar (maket 1.6: "JK")
+    public string Initials => string.Concat((Name ?? string.Empty)
+        .Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(w => char.ToUpperInvariant(w[0])));
     public bool IsArchived => Archived;
     public double BalanceUz => BalanceMinor / 100.0;
     public string BalanceDisplay => BalanceMinor > 0

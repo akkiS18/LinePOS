@@ -28,6 +28,15 @@
     <SolidColorBrush x:Key="AccentRing"  Color="#240B6477"/>
     <SolidColorBrush x:Key="OnAccentChip" Color="#2EFFFFFF"/>
     <SolidColorBrush x:Key="IllusBg"     Color="#F1F5F6"/>
+    <!-- Chek qog'ozi: ikkala temada ham oq qog'oz, qora matn -->
+    <SolidColorBrush x:Key="PaperBg"     Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="PaperInk"    Color="#111111"/>
+    <SolidColorBrush x:Key="PaperRule"   Color="#999999"/>
+    <SolidColorBrush x:Key="ToastBg"     Color="#0F1B21"/>
+    <SolidColorBrush x:Key="ToastFg"     Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="ToastBtnBg"  Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="ToastBtnFg"  Color="#0F1B21"/>
+    <SolidColorBrush x:Key="ModalShadow" Color="#0F1B21"/>
 
     <!-- Holat ranglari (faqat holat uchun) -->
     <SolidColorBrush x:Key="Ok"          Color="#157A3B"/>

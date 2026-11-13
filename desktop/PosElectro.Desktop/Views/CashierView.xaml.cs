@@ -140,6 +140,13 @@ namespace PosElectro.Desktop.Views
             }
         }
 
+        // Maket 1.8: "Boshqa…" chegirma — narx maydoniga o'tib, matnni belgilaydi (faqat fokus)
+        private void EditOtherDiscount_Click(object sender, RoutedEventArgs e)
+        {
+            EditPriceBox?.Focus();
+            EditPriceBox?.SelectAll();
+        }
+
         private void EditModal_KeyDown(object sender, KeyEventArgs e)
         {
             if (DataContext is CashierViewModel vm && vm.IsEditModalOpen)

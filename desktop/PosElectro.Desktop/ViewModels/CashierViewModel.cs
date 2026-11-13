@@ -296,8 +296,85 @@ namespace PosElectro.Desktop.ViewModels
             _ => "Naqd pul"
         };
 
+        // ---- To'lov oynasi (maket 1.2): faqat ko'rsatish uchun, savdo logikasiga ta'sir qilmaydi ----
+        public class QuickCashOption : ViewModelBase
+        {
+            public string Label { get; init; } = string.Empty;
+            public double Value { get; init; }
+            private bool _isSelected;
+            public bool IsSelected { get => _isSelected; set => SetProperty(ref _isSelected, value); }
+        }
+
+        public ObservableCollection<QuickCashOption> QuickCashOptions { get; } = new();
+
+        private string _cashGivenInput = string.Empty;
+        /// <summary>"Mijoz berdi" maydoni (ixtiyoriy). Faqat qaytimni ko'rsatish uchun.</summary>
+        public string CashGivenInput
+        {
+            get => _cashGivenInput;
+            set
+            {
+                if (SetProperty(ref _cashGivenInput, value))
+                {
+                    OnPropertyChanged(nameof(CashGivenAmount));
+                    OnPropertyChanged(nameof(ChangeAmount));
+                    foreach (var o in QuickCashOptions)
+                        o.IsSelected = CashGivenAmount > 0 && Math.Abs(o.Value - CashGivenAmount) < 0.5;
+                }
+            }
+        }
+
+        public double CashGivenAmount
+        {
+            get
+            {
+                double.TryParse(CleanNumber(CashGivenInput), NumberStyles.Any, CultureInfo.InvariantCulture, out var v);
+                return Math.Max(0, v);
+            }
+        }
+
+        public double ChangeAmount => CashGivenAmount > 0 ? Math.Max(0, CashGivenAmount - TotalAmount) : 0;
+
+        public ICommand SetCashGivenCommand => _setCashGivenCommand ??= new RelayCommand<QuickCashOption>(o =>
+        {
+            if (o != null) CashGivenInput = o.Value.ToString("0", CultureInfo.InvariantCulture);
+        });
+        private ICommand? _setCashGivenCommand;
+
+        private void ResetCashGiven()
+        {
+            QuickCashOptions.Clear();
+            var total = TotalAmount;
+            QuickCashOptions.Add(new QuickCashOption { Label = "Aniq summa", Value = total });
+            foreach (var step in new[] { 100000.0, 500000.0, 1000000.0 })
+            {
+                var v = Math.Ceiling(total / step) * step;
+                if (v > total && !QuickCashOptions.Any(o => Math.Abs(o.Value - v) < 0.5))
+                    QuickCashOptions.Add(new QuickCashOption { Label = v.ToString("N0"), Value = v });
+            }
+            _cashGivenInput = string.Empty;
+            OnPropertyChanged(nameof(CashGivenInput));
+            OnPropertyChanged(nameof(CashGivenAmount));
+            OnPropertyChanged(nameof(ChangeAmount));
+        }
+
+        public ICommand SelectReceiptOptionCommand => _selectReceiptOptionCommand ??= new RelayCommand(p =>
+        {
+            if (int.TryParse(p?.ToString(), out var opt)) SelectedReceiptPrintOption = opt;
+        });
+        private ICommand? _selectReceiptOptionCommand;
+
+        // Printer holati: emoji'siz matn + holat (yashil nuqta / qizil nuqta)
+        public string PrinterStatusLabel => (PrinterStatusText ?? string.Empty).Replace("🟢", "").Replace("🔴", "").Trim();
+        public bool IsPrinterStatusOk => (PrinterStatusText ?? string.Empty).StartsWith("🟢");
+
+        public string ConfirmSaleLabel => IsDebtSale ? "Nasiyaga yozish" : "Savdoni yakunlash";
+
         public void NotifyPreviewProperties()
         {
+            OnPropertyChanged(nameof(PrinterStatusLabel));
+            OnPropertyChanged(nameof(IsPrinterStatusOk));
+            OnPropertyChanged(nameof(ConfirmSaleLabel));
             OnPropertyChanged(nameof(IsNoReceiptPreview));
             OnPropertyChanged(nameof(Is58mmPreview));
             OnPropertyChanged(nameof(IsA4Preview));
@@ -945,14 +1022,114 @@ namespace PosElectro.Desktop.ViewModels
         public string EditPriceText
         {
             get => _editPriceText;
-            set => SetProperty(ref _editPriceText, value);
+            set { if (SetProperty(ref _editPriceText, value)) NotifyEditPreview(); }
         }
 
         public string EditQuantityText
         {
             get => _editQuantityText;
-            set => SetProperty(ref _editQuantityText, value);
+            set { if (SetProperty(ref _editQuantityText, value)) NotifyEditPreview(); }
         }
+
+        // ---- Narx/miqdor oynasi (maket 1.8): faqat ko'rsatish va maydonlarni to'ldirish uchun.
+        //      Saqlash avvalgidek SaveEditModal() orqali, o'zgarmagan. ----
+        private void NotifyEditPreview()
+        {
+            OnPropertyChanged(nameof(EditLineTotal));
+            OnPropertyChanged(nameof(EditLineFormulaText));
+            OnPropertyChanged(nameof(EditDiscountInfoText));
+            OnPropertyChanged(nameof(EditActiveDiscount));
+        }
+
+        private double EditPriceValue => double.TryParse(EditPriceText, out var v) ? v : 0;
+        private double EditQuantityValue => double.TryParse(EditQuantityText, out var v) ? v : 0;
+        public double EditLineTotal => SaleAccounting.Money(EditPriceValue * EditQuantityValue);
+        public string EditLineFormulaText => $"Qator jami · {EditQuantityValue:0.##} × {EditPriceValue:N0}";
+
+        public string EditMetaText
+        {
+            get
+            {
+                var p = _editingCartItem?.Product;
+                if (p == null) return string.Empty;
+                var parts = new List<string>();
+                if (!string.IsNullOrWhiteSpace(p.Barcode)) parts.Add(p.Barcode!);
+                parts.Add($"Qoldiq {p.StockQuantity:0.##} {p.UnitDisplay}");
+                parts.Add($"Asl narx {EditOriginalPrice:N0}");
+                if (!string.IsNullOrWhiteSpace(EditWarehouseName)) parts.Add(EditWarehouseName);
+                return string.Join(" · ", parts);
+            }
+        }
+
+        public string EditDiscountInfoText
+        {
+            get
+            {
+                var diff = EditOriginalPrice - EditPriceValue;
+                if (EditPriceValue <= 0 || Math.Abs(diff) < 0.5) return "Asl narxda sotiladi. Narx erkin — istalgancha tushirish mumkin.";
+                return diff > 0
+                    ? $"Asl narxdan {diff:N0} so'm chegirma. Narx erkin — istalgancha tushirish mumkin."
+                    : $"Asl narxdan {Math.Abs(diff):N0} so'm qimmat.";
+            }
+        }
+
+        /// <summary>Qaysi chegirma tugmasi hozirgi narxga mos: "none", "p3", "m5000", "p10" yoki "".</summary>
+        public string EditActiveDiscount
+        {
+            get
+            {
+                var o = EditOriginalPrice; var v = EditPriceValue;
+                bool eq(double a) => Math.Abs(a - v) < 0.5;
+                if (eq(o)) return "none";
+                if (eq(Math.Round(o * 0.97))) return "p3";
+                if (eq(o - 5000)) return "m5000";
+                if (eq(Math.Round(o * 0.90))) return "p10";
+                return "";
+            }
+        }
+
+        public ICommand EditApplyDiscountCommand => _editApplyDiscountCommand ??= new RelayCommand(p =>
+        {
+            var o = EditOriginalPrice;
+            double price = (p?.ToString()) switch
+            {
+                "p3" => Math.Round(o * 0.97),
+                "m5000" => Math.Max(0, o - 5000),
+                "p10" => Math.Round(o * 0.90),
+                _ => o
+            };
+            EditPriceText = price.ToString("0.##");
+        });
+        private ICommand? _editApplyDiscountCommand;
+
+        public ICommand EditStepQuantityCommand => _editStepQuantityCommand ??= new RelayCommand(p =>
+        {
+            if (!double.TryParse(p?.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var d)) return;
+            var q = Math.Max(1, EditQuantityValue + d);
+            if (EditQuantityValue + d < 1 && EditQuantityValue > 0 && EditQuantityValue < 1) q = EditQuantityValue;
+            EditQuantityText = q.ToString("0.##");
+        });
+        private ICommand? _editStepQuantityCommand;
+
+        /// <summary>"Savatdan olish": mavjud o'chirish (bekor qilish imkoni bilan) + oynani yopish.</summary>
+        public ICommand EditRemoveItemCommand => _editRemoveItemCommand ??= new RelayCommand(_ =>
+        {
+            var item = _editingCartItem;
+            CancelEditModal();
+            if (item != null) RemoveFromCartWithUndo(item);
+        });
+        private ICommand? _editRemoveItemCommand;
+
+        // Kutishga qo'yish oynasi (maket 1.11): tezkor nom tugmalari nom maydonini to'ldiradi
+        public ICommand SetHoldNameCommand => _setHoldNameCommand ??= new RelayCommand(p =>
+        {
+            var t = p?.ToString();
+            if (string.IsNullOrWhiteSpace(t)) return;
+            HoldCartName = string.IsNullOrWhiteSpace(HoldCartName) || HoldCartName.StartsWith("Mijoz #")
+                ? t
+                : $"{HoldCartName} — {t}";
+        });
+        private ICommand? _setHoldNameCommand;
 
         public string EditUnitDisplay
         {
@@ -1365,6 +1542,8 @@ namespace PosElectro.Desktop.ViewModels
             EditQuantityText = item.Quantity.ToString("0.##");
             EditUnitDisplay = item.UnitDisplay;
             EditErrorMessage = string.Empty;
+            OnPropertyChanged(nameof(EditMetaText));
+            NotifyEditPreview();
             IsEditModalOpen = true;
         }
 
@@ -1482,6 +1661,7 @@ namespace PosElectro.Desktop.ViewModels
 
             NotifyPreviewProperties();
             OnPropertyChanged(nameof(SelectedPaymentTypeTitle));
+            ResetCashGiven();
             IsPaymentModalOpen = true;
         }
 
