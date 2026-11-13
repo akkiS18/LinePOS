@@ -1392,20 +1392,45 @@ namespace PosElectro.Desktop.ViewModels
             }
         }
 
-        public void DeleteProduct(Product p)
+        // ---- Maket 2.4: o'chirishni tasdiqlash oynasi ----
+        private Product? _pendingDeleteProduct;
+        public bool IsDeleteConfirmOpen => _pendingDeleteProduct != null;
+        public string DeleteConfirmName => _pendingDeleteProduct?.Name ?? string.Empty;
+        public string DeleteConfirmNote
         {
-            var res = MessageBox.Show(
-                $"Haqiqatan ham '{p.Name}' mahsulotini o'chirmoqchimisiz?",
-                "O'chirishni tasdiqlash",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Warning);
-
-            if (res == MessageBoxResult.Yes)
+            get
+            {
+                var p = _pendingDeleteProduct;
+                if (p == null) return string.Empty;
+                var tail = "Eski cheklar va hisobotlarda tovar nomi saqlanib qoladi.";
+                return p.StockQuantity > 0
+                    ? $"Ombordagi qoldig'i bor: {p.StockQuantity:#,0.##} {p.UnitDisplay}. {tail}"
+                    : tail;
+            }
+        }
+        public ICommand ConfirmDeleteProductCommand => _confirmDeleteProductCommand ??= new RelayCommand(() =>
+        {
+            var p = _pendingDeleteProduct;
+            SetPendingDelete(null);
+            if (p != null)
             {
                 _productService.DeleteProduct(p.Id);
                 Refresh();
             }
+        });
+        private ICommand? _confirmDeleteProductCommand;
+        public ICommand CancelDeleteProductCommand => _cancelDeleteProductCommand ??= new RelayCommand(() => SetPendingDelete(null));
+        private ICommand? _cancelDeleteProductCommand;
+
+        private void SetPendingDelete(Product? p)
+        {
+            _pendingDeleteProduct = p;
+            OnPropertyChanged(nameof(IsDeleteConfirmOpen));
+            OnPropertyChanged(nameof(DeleteConfirmName));
+            OnPropertyChanged(nameof(DeleteConfirmNote));
         }
+
+        public void DeleteProduct(Product p) => SetPendingDelete(p);
 
         public void Refresh()
         {

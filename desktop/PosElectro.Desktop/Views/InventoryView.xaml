@@ -1646,5 +1646,54 @@
             </Border>
         </Grid>
 
+        <!-- ========================================================= -->
+        <!-- 2.4 TOVARNI O'CHIRISH TASDIG'I (maket, yorug' tema)       -->
+        <!-- ========================================================= -->
+        <Grid Panel.ZIndex="200" Visibility="{Binding IsDeleteConfirmOpen, Converter={StaticResource BooleanToVisibilityConverter}}"
+              TextElement.Foreground="{DynamicResource Ink}">
+            <Grid.Resources>
+                <ResourceDictionary>
+                    <ResourceDictionary.MergedDictionaries>
+                        <ResourceDictionary Source="/PosElectro.Desktop;component/Themes/Theme.Light.xaml"/>
+                        <ResourceDictionary Source="/PosElectro.Desktop;component/Themes/SmartControls.xaml"/>
+                    </ResourceDictionary.MergedDictionaries>
+                </ResourceDictionary>
+            </Grid.Resources>
+            <Border Background="{DynamicResource Scrim}">
+                <Border Style="{StaticResource ModalCard}" Width="460" Padding="24">
+                    <StackPanel>
+                        <DockPanel>
+                            <Border Width="44" Height="44" CornerRadius="12" Background="{DynamicResource BadSoft}" VerticalAlignment="Top" Margin="0,0,14,0">
+                                <Viewbox Width="22" Height="22">
+                                    <Path Style="{StaticResource Ic}" Stroke="{DynamicResource Bad}" Data="M4 7h16 M9 7V4h6v3 M6 7l1 13h10l1-13 M10 11v6 M14 11v6"/>
+                                </Viewbox>
+                            </Border>
+                            <StackPanel>
+                                <TextBlock Text="Tovarni o'chirasizmi?" FontSize="18" FontWeight="Bold" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding DeleteConfirmName}" FontSize="14" Foreground="{DynamicResource Ink2}" Margin="0,4,0,0" TextWrapping="Wrap" LineHeight="20"/>
+                            </StackPanel>
+                        </DockPanel>
+                        <Border Background="{DynamicResource WarnSoft}" BorderBrush="{DynamicResource WarnLine}" BorderThickness="1" CornerRadius="10" Padding="12,10" Margin="0,14,0,0">
+                            <TextBlock Text="{Binding DeleteConfirmNote}" FontSize="13" Foreground="{DynamicResource Warn}" TextWrapping="Wrap" LineHeight="19"/>
+                        </Border>
+                        <Grid Margin="0,18,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="10"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Button Command="{Binding CancelDeleteProductCommand}" Style="{StaticResource BtnSecondary}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Bekor" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Esc" Style="{StaticResource Kbd}"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Grid.Column="2" Command="{Binding ConfirmDeleteProductCommand}" Style="{StaticResource BtnDanger}" Content="Ha, o'chirish"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </Border>
+        </Grid>
+
     </Grid>
 </UserControl>

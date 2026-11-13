@@ -25,6 +25,21 @@ namespace PosElectro.Desktop.Views
         {
             if (DataContext is not InventoryViewModel vm) return;
 
+            // 0. Tovarni o'chirish tasdig'i (maket 2.4)
+            if (vm.IsDeleteConfirmOpen)
+            {
+                if (e.Key == System.Windows.Input.Key.Escape)
+                {
+                    vm.CancelDeleteProductCommand.Execute(null);
+                    e.Handled = true;
+                }
+                else if (e.Key == System.Windows.Input.Key.Enter && !(e.OriginalSource is System.Windows.Controls.Button))
+                {
+                    e.Handled = true;
+                }
+                return;
+            }
+
             // 1. Yangi ombor qo'shish modali
             if (vm.IsAddWarehouseModalOpen)
             {
