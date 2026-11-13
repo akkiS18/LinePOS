@@ -879,7 +879,10 @@ namespace PosElectro.Desktop.ViewModels
             {
                 if (p != null && p.HasImage)
                 {
-                    MainViewModel.ShowImage(p.ImagePath, p.Name);
+                    var meta = $"Qoldiq {p.StockQuantity:0.##} {p.UnitDisplay}"
+                               + (string.IsNullOrWhiteSpace(p.Barcode) ? "" : $" · {p.Barcode}");
+                    MainViewModel.ShowImage(p.ImagePath, p.Name, meta, $"{p.SellingPrice:N0}",
+                                            () => AddToCartCommand.Execute(p));
                 }
             });
             RemoveFromCartCommand = new RelayCommand<CartItemModel>(c => { if (c != null) RemoveFromCartWithUndo(c); });

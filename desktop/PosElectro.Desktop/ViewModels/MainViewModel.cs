@@ -579,8 +579,35 @@ namespace PosElectro.Desktop.ViewModels
             if (Instance == null) return;
             Instance.PreviewImagePath = imagePath;
             Instance.PreviewImageTitle = string.IsNullOrWhiteSpace(title) ? "Mahsulot rasmi" : title;
+            Instance.PreviewImageMeta = string.Empty;
+            Instance.PreviewImagePrice = string.Empty;
+            Instance._previewAddToCart = null;
+            Instance.OnPropertyChanged(nameof(HasPreviewAddToCart));
             Instance.IsImagePreviewOpen = true;
         }
+
+        /// <summary>Kassadan ochilganda (maket 1.12): qoldiq/shtrix-kod, narx va "Savatga +1" (mavjud savatga qo'shish).</summary>
+        public static void ShowImage(string? imagePath, string title, string meta, string priceText, Action? addToCart)
+        {
+            if (string.IsNullOrWhiteSpace(imagePath) || !System.IO.File.Exists(imagePath)) return;
+            if (Instance == null) return;
+            ShowImage(imagePath, title);
+            Instance.PreviewImageMeta = meta ?? string.Empty;
+            Instance.PreviewImagePrice = priceText ?? string.Empty;
+            Instance._previewAddToCart = addToCart;
+            Instance.OnPropertyChanged(nameof(HasPreviewAddToCart));
+        }
+
+        private Action? _previewAddToCart;
+        public bool HasPreviewAddToCart => _previewAddToCart != null;
+        public ICommand PreviewAddToCartCommand => _previewAddToCartCommand ??= new RelayCommand(() => _previewAddToCart?.Invoke());
+        private ICommand? _previewAddToCartCommand;
+
+        private string _previewImageMeta = string.Empty;
+        public string PreviewImageMeta { get => _previewImageMeta; set => SetProperty(ref _previewImageMeta, value); }
+
+        private string _previewImagePrice = string.Empty;
+        public string PreviewImagePrice { get => _previewImagePrice; set => SetProperty(ref _previewImagePrice, value); }
 
         public static void CloseImage()
         {

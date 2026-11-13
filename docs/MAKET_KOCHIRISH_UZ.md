@@ -53,7 +53,7 @@ Ranglar ustuni: A+B bosqichidan keyin hammasi tokenda, lekin yorug' temada ekran
 | TopBar | Yuqori panel | `MainWindow.xaml` | 🟡 | Qayta qurildi: "S" logotip, chiziqli ikonkalar, Wi-Fi soni (yashil, faqat ulanishda), admin belgisi, soat, ⚙. Rasm olinib maket bilan solishtirildi; egasi ekranda ko'rmagan. "Kassa 1" nomi yo'q (dasturda kassa raqami tushunchasi yo'q) — faqat soat |
 | 1.1 | Kassa (asosiy) | `Views/CashierView.xaml` | 🟡 | Qayta qurildi: qidiruv (48px, halqa, "Enter — savatga"), plitka/ro'yxat tugmalari, kategoriya chiplari (soni bilan, endi filtrlaydi), plitkalar 176px/212px, savat sarlavhasi + 4 asbob, kutishdagi savat chiplari, savat qatori (2 qator, stepper 40px), bo'sh savat, to'lov paneli (xil·birlik, chegirma, Jami 30px, Naqd 56px, Karta/Aralash). Rasm olinib solishtirildi; egasi ekranda ko'rmagan |
 | 1.2 | To'lov · Naqd (qaytim) | `CashierView.xaml` (to'lov oynasi) | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan: 920×712, chapda to'lov, o'ngda 340px chek. "Mijoz berdi" + tezkor summalar + Qaytim — faqat ko'rsatish (savdoga yozilmaydi). Chek matni endi oq qog'ozda qora (avval oq ustida oq edi) |
-| 1.3 | Ro'yxat rejimi, ⚙ menyu, bo'sh savat | `CashierView.xaml`, `MainWindow.xaml` | 🟡 | Ro'yxat rejimi va bo'sh savat qurildi. ⚙ menyu: faqat o'lcham (312px), joyi va soya; qatorlar ichi (ikonkalar) hali eski |
+| 1.3 | Ro'yxat rejimi, ⚙ menyu, bo'sh savat | `CashierView.xaml`, `MainWindow.xaml` | 🟡 | Hammasi qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan. ⚙ menyu: maketdagi nomlar va chiziqli ikonkalar, karta solig'i foizi qatorda, "Admin bo'limi · PIN" sarlavhasi. Maketdagi "Mavzu (Yorug'/Qorong'i)" va "Tugma belgilari" qatorlari qo'yilmadi — dasturda bunday sozlama yo'q (soxta tugma bo'lib qolardi) |
 | 1.4 | To'lov · Karta | `CashierView.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan |
 | 1.5 | To'lov · Aralash | `CashierView.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan |
 | 1.6 | To'lov · Nasiyaga yozish | `CashierView.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan: almashtirgich, mijoz kartasi (bosh harflar, qarzi), muddati o'tgan ogohlantirish, 3 ustun, "Nasiyaga qoladi". Sana tanlagich matni ("Select a date") hali inglizcha |
@@ -62,7 +62,7 @@ Ranglar ustuni: A+B bosqichidan keyin hammasi tokenda, lekin yorug' temada ekran
 | 1.9 | Shtrix-kod topilmadi | `CashierView.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan. Maketdan farq: Enter avvalgidek tovar qo'shadi (logika o'zgartirilmadi); "Nomi bo'yicha qidirish" oynani yopib qidiruvga qaytaradi |
 | 1.10 | Brak sifatida chiqarish | `CashierView.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan |
 | 1.11 | Savatni kutishga qo'yish | `CashierView.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan: tezkor nom tugmalari nom maydonini to'ldiradi |
-| 1.12 | Tovar rasmini kattalashtirish | `MainWindow.xaml` (PreviewImage) | ⬜ | Yopish tugmasi tokenga o'tkazildi |
+| 1.12 | Tovar rasmini kattalashtirish | `MainWindow.xaml` (PreviewImage) | 🟡 | Qayta qurildi, rasm olinib solishtirildi: 640px karta, 440px rasm maydoni, nomi/qoldiq/shtrix-kod, narx, "Savatga +1" (kassadan ochilganda; mavjud savatga qo'shish buyrug'i). Oldingi/keyingi strelkalar va "1 / 3" yo'q — tovarda bitta rasm bor. Ombordan ochilganda faqat nomi |
 | 2.1 | Omborlar va kategoriyalar | `Views/InventoryView.xaml` | ⬜ | |
 | 2.2 | Tovarlar jadvali | `InventoryView.xaml` | ⬜ | |
 | 2.3 | Yangi tovar qo'shish | `Views/AddEditProductDialog.xaml` | ⬜ | |
@@ -111,7 +111,8 @@ Ranglar ustuni: A+B bosqichidan keyin hammasi tokenda, lekin yorug' temada ekran
 - Logika o'zgarmadi: barcha buyruqlar, nomlar (`PaymentConfirmBtn`, `TxtHoldCartName` va h.k.), klaviatura ishlovchilari, Esc/Enter avvalgidek. ViewModel'ga faqat ko'rsatish uchun yordamchilar qo'shildi (`QuickCashOptions`, `ChangeAmount`, `EditLineTotal`, `EditActiveDiscount`, `SetHoldNameCommand`, `ConfirmSaleLabel`, `DebtCustomerItemDto.Initials`). Chegirma/miqdor tugmalari faqat maydonlarni to'ldiradi.
 - Yangi: `Views/EqualsConverter.cs`; tokenlar `PaperBg/PaperInk/PaperRule`, `ToastBg/ToastFg/ToastBtnBg/ToastBtnFg`.
 - Build o'tdi, 37 test o'tdi. Har bir oyna test bazasi nusxasida rasmga olinib maket bilan solishtirildi.
-- **Keyingi qadam:** 1.12 rasmni kattalashtirish va ⚙ menyu qatorlari (`MainWindow.xaml`), so'ng 2.x Ombor.
+- Keyin: 1.12 tovar rasmi oynasi va ⚙ menyu qatorlari (`MainWindow.xaml`) maketga keltirildi. `MainViewModel.ShowImage` ga qo'shimcha variant (meta, narx, "Savatga +1"); eski chaqiruv o'zgarmagan.
+- **Keyingi qadam:** 2.x Ombor (`InventoryView.xaml`).
 
 **2026-11-13 (Claude Code), 2-qadam — Kassa ekrani qayta qurildi:**
 - Egasi fikri: yorug' rang eski joylashuv ustiga tortilgani noto'g'ri, maket **tuzilishi** ko'chirilishi kerak (qoida 5).

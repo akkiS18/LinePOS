@@ -96,7 +96,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border Background="{TemplateBinding Background}" CornerRadius="8" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                            <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
                         </Border>
                     </ControlTemplate>
                 </Setter.Value>
@@ -251,44 +251,96 @@
                                 <DropShadowEffect BlurRadius="40" ShadowDepth="16" Direction="270" Opacity="0.18" Color="#0F1B21"/>
                             </Border.Effect>
                             <StackPanel>
-                                <TextBlock Text="SOZLAMALAR" Foreground="{DynamicResource Ink3}" FontSize="11" FontWeight="Bold" Margin="10,6,10,2"/>
-                                <Button Style="{StaticResource MenuRowButton}" Command="{Binding OpenCardTaxModalCommand}" Click="SettingsMenuItem_Click">
-                                    <StackPanel Orientation="Horizontal">
-                                        <Path Data="M7.5 4C5.57 4 4 5.57 4 7.5S5.57 11 7.5 11 11 9.43 11 7.5 9.43 4 7.5 4zm0 5c-.83 0-1.5-.67-1.5-1.5S6.67 6 7.5 6s1.5.67 1.5 1.5S8.33 9 7.5 9zm9 6c-1.93 0-3.5 1.57-3.5 3.5s1.57 3.5 3.5 3.5 3.5-1.57 3.5-3.5-1.57-3.5-3.5-3.5zm0 5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm3.21-15.71a.996.996 0 0 0-1.41 0L4.29 18.29a.996.996 0 1 0 1.41 1.41L19.71 5.7a.996.996 0 0 0 0-1.41z" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Width="17" Height="17" Stretch="Uniform" Margin="0,0,12,0" VerticalAlignment="Center"/>
-                                        <TextBlock Text="Karta solig'i foizi" VerticalAlignment="Center"/>
-                                    </StackPanel>
-                                </Button>
                                 <Button Style="{StaticResource MenuRowButton}" Command="{Binding ExportWarehouseCostReportCommand}" Click="SettingsMenuItem_Click">
-                                    <StackPanel Orientation="Horizontal">
-                                        <Path Data="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 2v3H5V5h14zm-8 5v4H5v-4h6zm2 0h6v4h-6v-4zm-2 6v4H5v-4h6zm2 0h6v4h-6v-4z" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Width="17" Height="17" Stretch="Uniform" Margin="0,0,12,0" VerticalAlignment="Center"/>
-                                        <TextBlock Text="Ombor tan narxi hisoboti (Excel)" VerticalAlignment="Center"/>
-                                    </StackPanel>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Viewbox Width="18" Height="18" VerticalAlignment="Center">
+                                            <Path Style="{StaticResource NavIc}" Stroke="{DynamicResource Ink2}" Data="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z M3 9h18M3 15h18M9 3v18"/>
+                                        </Viewbox>
+                                        <TextBlock Grid.Column="1" Text="Ombor hisoboti (Excel)" Margin="12,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                    </Grid>
+                                </Button>
+                                <Button Style="{StaticResource MenuRowButton}" Command="{Binding OpenCardTaxModalCommand}" Click="SettingsMenuItem_Click">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Viewbox Width="18" Height="18" VerticalAlignment="Center">
+                                            <Path Style="{StaticResource NavIc}" Stroke="{DynamicResource Ink2}" Data="M19 5L5 19 M4 6.5a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0 M15 17.5a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0"/>
+                                        </Viewbox>
+                                        <TextBlock Grid.Column="1" Text="Karta solig'i" Margin="12,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding CashierVM.CurrentCardTaxRate, StringFormat='{}{0:0.##}%'}" FontSize="13" Foreground="{DynamicResource Ink2}" VerticalAlignment="Center"/>
+                                            <Viewbox Width="14" Height="14" Margin="8,0,0,0" VerticalAlignment="Center" ToolTip="Admin PIN bilan himoyalangan">
+                                                <Path Style="{StaticResource NavIc}" Stroke="{DynamicResource Ink3}" Data="M6 11h12a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2z M8 11V7a4 4 0 0 1 8 0v4"/>
+                                            </Viewbox>
+                                        </StackPanel>
+                                    </Grid>
                                 </Button>
                                 <Button Style="{StaticResource MenuRowButton}" Command="{Binding BackupDatabaseCommand}" Click="SettingsMenuItem_Click">
-                                    <StackPanel Orientation="Horizontal">
-                                        <Path Data="M12 3C7.58 3 4 4.79 4 7v10c0 2.21 3.58 4 8 4s8-1.79 8-4V7c0-2.21-3.58-4-8-4zm0 2c3.87 0 6 1.5 6 2s-2.13 2-6 2-6-1.5-6-2 2.13-2 6-2zm6 12c0 .5-2.13 2-6 2s-6-1.5-6-2v-2.23c1.61.78 3.73 1.23 6 1.23s4.39-.45 6-1.23V17zm0-5c0 .5-2.13 2-6 2s-6-1.5-6-2v-2.23c1.61.78 3.73 1.23 6 1.23s4.39-.45 6-1.23V12z" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Width="17" Height="17" Stretch="Uniform" Margin="0,0,12,0" VerticalAlignment="Center"/>
-                                        <TextBlock Text="Zaxira nusxa saqlash" VerticalAlignment="Center"/>
-                                    </StackPanel>
-                                </Button>
-                                <Button Style="{StaticResource MenuRowButton}" Command="{Binding OpenAdminPinSettingsCommand}" Click="SettingsMenuItem_Click">
-                                    <StackPanel Orientation="Horizontal">
-                                        <Path Data="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM9 8V6c0-1.66 1.34-3 3-3s3 1.34 3 3v2H9z" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Width="17" Height="17" Stretch="Uniform" Margin="0,0,12,0" VerticalAlignment="Center"/>
-                                        <TextBlock Text="Admin PIN · yashirin ma'lumotlar" VerticalAlignment="Center"/>
-                                    </StackPanel>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Viewbox Width="18" Height="18" VerticalAlignment="Center">
+                                            <Path Style="{StaticResource NavIc}" Stroke="{DynamicResource Ink2}" Data="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                                        </Viewbox>
+                                        <TextBlock Grid.Column="1" Text="Zaxira nusxa olish" Margin="12,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                    </Grid>
                                 </Button>
                                 <Button Style="{StaticResource MenuRowButton}" Command="{Binding OpenContactModalCommand}" Click="SettingsMenuItem_Click">
-                                    <StackPanel Orientation="Horizontal">
-                                        <Path Data="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 0 0-1.01.24l-2.2 2.2a15.053 15.053 0 0 1-6.59-6.59l2.2-2.21a.96.96 0 0 0 .25-1.01A11.36 11.36 0 0 1 8.57 3.99c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1C3 13.93 11.07 22 21 22c.55 0 1-.45 1-1v-3.62c0-.55-.45-1-.99-1z" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Width="17" Height="17" Stretch="Uniform" Margin="0,0,12,0" VerticalAlignment="Center"/>
-                                        <TextBlock Text="Dasturchi bilan bog'lanish" VerticalAlignment="Center"/>
-                                    </StackPanel>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Viewbox Width="18" Height="18" VerticalAlignment="Center">
+                                            <Path Style="{StaticResource NavIc}" Stroke="{DynamicResource Ink2}" Data="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/>
+                                        </Viewbox>
+                                        <TextBlock Grid.Column="1" Text="Yordam va aloqa" Margin="12,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                    </Grid>
                                 </Button>
                                 <Border Height="1" Background="{DynamicResource Line}" Margin="4,6"/>
-                                <TextBlock Text="XAVFLI AMALLAR" Foreground="{DynamicResource Ink3}" FontSize="11" FontWeight="Bold" Margin="10,4,10,2"/>
+                                <StackPanel Orientation="Horizontal" Margin="10,6,10,2">
+                                    <Viewbox Width="12" Height="12" VerticalAlignment="Center">
+                                        <Path Style="{StaticResource NavIc}" Stroke="{DynamicResource Ink3}" StrokeThickness="2.4" Data="M6 11h12a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2z M8 11V7a4 4 0 0 1 8 0v4"/>
+                                    </Viewbox>
+                                    <TextBlock Text="ADMIN BO'LIMI · PIN" Foreground="{DynamicResource Ink3}" FontSize="11" FontWeight="Bold" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <Button Style="{StaticResource MenuRowButton}" Command="{Binding OpenAdminPinSettingsCommand}" Click="SettingsMenuItem_Click">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Viewbox Width="18" Height="18" VerticalAlignment="Center">
+                                            <Path Style="{StaticResource NavIc}" Stroke="{DynamicResource Ink2}" Data="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z M9 12l2 2 4-4"/>
+                                        </Viewbox>
+                                        <TextBlock Grid.Column="1" Text="Admin PIN · yashirin ma'lumotlar" Margin="12,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                    </Grid>
+                                </Button>
                                 <Button Style="{StaticResource MenuRowDanger}" Command="{Binding RestoreDatabaseCommand}" Click="SettingsMenuItem_Click">
-                                    <StackPanel Orientation="Horizontal">
-                                        <Path Data="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Width="17" Height="17" Stretch="Uniform" Margin="0,0,12,0" VerticalAlignment="Center"/>
-                                        <TextBlock Text="Bazani zaxiradan tiklash…" VerticalAlignment="Center"/>
-                                    </StackPanel>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Viewbox Width="18" Height="18" VerticalAlignment="Center">
+                                            <Path Style="{StaticResource NavIc}" Data="M3 12a9 9 0 1 0 3-6.7L3 8 M3 3v5h5"/>
+                                        </Viewbox>
+                                        <TextBlock Grid.Column="1" Text="Bazani zaxiradan tiklash…" Margin="12,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                    </Grid>
                                 </Button>
                             </StackPanel>
                         </Border>
@@ -1042,64 +1094,104 @@
         <!-- ============================================================== -->
         <Grid Grid.RowSpan="2" Panel.ZIndex="1000"
               Visibility="{Binding IsImagePreviewOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <!-- To'q yarim-shaffof fon (fonni bosganda yopiladi) -->
-            <Border Background="{DynamicResource Scrim}">
+            <Grid.Resources>
+                <ResourceDictionary>
+                    <ResourceDictionary.MergedDictionaries>
+                        <ResourceDictionary Source="/PosElectro.Desktop;component/Themes/Theme.Light.xaml"/>
+                    </ResourceDictionary.MergedDictionaries>
+                </ResourceDictionary>
+            </Grid.Resources>
+            <!-- To'q fon (maket: rgba(15,27,33,0.82)); bosilganda yopiladi -->
+            <Border Background="#D10F1B21">
                 <Border.InputBindings>
                     <MouseBinding Gesture="LeftClick" Command="{Binding CloseImagePreviewCommand}"/>
                 </Border.InputBindings>
             </Border>
 
-            <!-- Markaziy Rasm Konteyneri -->
-            <Border HorizontalAlignment="Center" VerticalAlignment="Center"
-                    Background="{DynamicResource Bg}" BorderBrush="{DynamicResource Line}" BorderThickness="1.5"
-                    CornerRadius="16" MaxWidth="1100" MaxHeight="780" Margin="40">
+            <!-- 1.12 Tovar rasmi: 640px karta, 440px rasm maydoni, pastda nomi/narxi -->
+            <Border Width="640" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="24"
+                    Background="{DynamicResource Surface}" CornerRadius="16">
                 <Border.Effect>
-                    <DropShadowEffect BlurRadius="40" Color="#000000" Opacity="0.8" ShadowDepth="10"/>
+                    <DropShadowEffect BlurRadius="40" ShadowDepth="16" Direction="270" Opacity="0.3" Color="#000000"/>
                 </Border.Effect>
-
                 <Grid>
                     <Grid.RowDefinitions>
+                        <RowDefinition Height="440"/>
                         <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <!-- Yuqori qator: Tovar nomi va X yopish tugmasi -->
-                    <Border Grid.Row="0" Background="{DynamicResource Surface}" CornerRadius="16,16,0,0" Padding="20,14" BorderBrush="{DynamicResource Line}" BorderThickness="0,0,0,1">
+                    <Border Background="{DynamicResource IllusBg}" CornerRadius="16,16,0,0">
                         <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-
-                            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                                <Path Data="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" 
-                                      Stroke="{DynamicResource AccentInk}" StrokeThickness="1.5" Width="18" Height="18" Stretch="Uniform" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                <TextBlock Text="{Binding PreviewImageTitle}" Foreground="{DynamicResource Ink}" FontSize="16" FontWeight="Bold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="850"/>
-                            </StackPanel>
-
-                            <!-- X Yopish tugmasi -->
-                            <Button Grid.Column="1" Command="{Binding CloseImagePreviewCommand}"
-                                    ToolTip="Yopish (ESC)"
-                                    Width="36" Height="36" Padding="0" Cursor="Hand"
-                                    Background="{DynamicResource Surface2}" BorderBrush="{DynamicResource Line}" BorderThickness="1" Foreground="{DynamicResource Ink}">
-                                <Button.Resources>
-                                    <Style TargetType="Border">
-                                        <Setter Property="CornerRadius" Value="10"/>
-                                    </Style>
-                                </Button.Resources>
-                                <Path Data="M6 18L18 6M6 6l12 12" Stroke="{DynamicResource Ink}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="14" Height="14" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Image Source="{Binding PreviewImagePath}" Stretch="Uniform" Margin="20"
+                                   RenderOptions.BitmapScalingMode="HighQuality"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Button HorizontalAlignment="Right" VerticalAlignment="Top" Margin="12" Width="40" Height="40" Cursor="Hand"
+                                    Command="{Binding CloseImagePreviewCommand}" ToolTip="Yopish (Esc)" AutomationProperties.Name="Yopish">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border x:Name="bd" Background="#FFFFFF" CornerRadius="10">
+                                            <Viewbox Width="18" Height="18">
+                                                <Path Data="M6 6l12 12M18 6L6 18" Stroke="#0F1B21" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                                      Width="24" Height="24" Stretch="None"/>
+                                            </Viewbox>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource Surface2}"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Button.Template>
                             </Button>
                         </Grid>
                     </Border>
 
-                    <!-- Asosiy rasm maydoni -->
-                    <Border Grid.Row="1" Background="{DynamicResource Bg}" CornerRadius="0,0,16,16" Padding="16" HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <Image Source="{Binding PreviewImagePath}"
-                               Stretch="Uniform"
-                               MaxWidth="1040" MaxHeight="680"
-                               RenderOptions.BitmapScalingMode="HighQuality"
-                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Border>
+                    <Grid Grid.Row="1" Margin="20,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{Binding PreviewImageTitle}" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource Ink}" TextTrimming="CharacterEllipsis"/>
+                            <TextBlock Text="{Binding PreviewImageMeta}" FontSize="13" Foreground="{DynamicResource Ink3}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding PreviewImageMeta}" Value=""><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                        <TextBlock Grid.Column="1" Margin="16,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource Ink}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding PreviewImagePrice}" Value=""><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                            <Run Text="{Binding PreviewImagePrice, Mode=OneWay}" FontSize="22" FontWeight="ExtraBold"/>
+                            <Run Text="so'm" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource Ink3}"/>
+                        </TextBlock>
+                        <Button Grid.Column="2" Margin="16,0,0,0" Height="48" Padding="18,0" Cursor="Hand"
+                                Command="{Binding PreviewAddToCartCommand}"
+                                Visibility="{Binding HasPreviewAddToCart, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="bd" Background="{DynamicResource Accent}" CornerRadius="10" Padding="{TemplateBinding Padding}">
+                                        <TextBlock Text="Savatga +1" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource OnAccent}" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="bd" Property="Opacity" Value="0.92"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+                    </Grid>
                 </Grid>
             </Border>
         </Grid>
