@@ -1,114 +1,125 @@
 <Window x:Class="PosElectro.Desktop.Views.QuickStockAddDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Qoldiqni oshirish (Kirim)" Height="430" Width="470"
-        WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
-        PreviewKeyDown="Window_PreviewKeyDown"
-        Background="{DynamicResource Bg}" WindowStyle="SingleBorderWindow">
-    <Grid Margin="20">
-        <Grid.RowDefinitions>
-            <!-- Sarlavha -->
-            <RowDefinition Height="Auto"/>
-            <!-- Tovar ma'lumotlari -->
-            <RowDefinition Height="Auto"/>
-            <!-- Kiritish maydoni -->
-            <RowDefinition Height="Auto"/>
-            <!-- Hisob-kitob ko'rinishi -->
-            <RowDefinition Height="*"/>
-            <!-- Tugmalar -->
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+        Title="Qoldiq qo'shish (kirim)" SizeToContent="WidthAndHeight"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize" ShowInTaskbar="False"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        PreviewKeyDown="Window_PreviewKeyDown">
+    <!-- Maket 2.5: qoldiq qo'shish (kirim). Oyna egasi ustini qoplaydi (Scrim), markazda 500px karta. -->
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/PosElectro.Desktop;component/Themes/Theme.Light.xaml"/>
+                <ResourceDictionary Source="/PosElectro.Desktop;component/Themes/SmartControls.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            <Style x:Key="StatLabel" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="12"/>
+                <Setter Property="Foreground" Value="{DynamicResource Ink3}"/>
+                <Setter Property="HorizontalAlignment" Value="Center"/>
+                <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+            </Style>
+            <Style x:Key="StatValue" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="22"/>
+                <Setter Property="FontWeight" Value="Bold"/>
+                <Setter Property="Foreground" Value="{DynamicResource Ink}"/>
+                <Setter Property="HorizontalAlignment" Value="Center"/>
+                <Setter Property="Margin" Value="0,2,0,0"/>
+            </Style>
+            <Style x:Key="Op" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="20"/>
+                <Setter Property="Foreground" Value="{DynamicResource Ink3}"/>
+                <Setter Property="HorizontalAlignment" Value="Center"/>
+                <Setter Property="VerticalAlignment" Value="Center"/>
+            </Style>
+        </ResourceDictionary>
+    </Window.Resources>
 
-        <!-- 1. SARLAVHA -->
-        <Grid Grid.Row="0" Margin="0,0,0,16">
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <Border Background="{DynamicResource OkSoft}" CornerRadius="8" Padding="8" Margin="0,0,12,0">
-                    <TextBlock Text="📦" FontSize="20" VerticalAlignment="Center"/>
-                </Border>
-                <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="Qoldiqni Oshirish (Kirim)" Foreground="{DynamicResource Ink}" FontSize="17" FontWeight="Bold"/>
-                    <TextBlock x:Name="TxtWarehouseName" Text="Ombor: Asosiy ombor" Foreground="{DynamicResource Ink2}" FontSize="12" Margin="0,2,0,0"/>
-                </StackPanel>
-            </StackPanel>
-        </Grid>
-
-        <!-- 2. TOVAR KARTASI -->
-        <Border Grid.Row="1" Background="{DynamicResource Surface}" CornerRadius="10" BorderBrush="{DynamicResource Line}" BorderThickness="1" Padding="14,10" Margin="0,0,0,16">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-
-                <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                    <TextBlock x:Name="TxtProductName" Text="Mahsulot nomi" Foreground="{DynamicResource Ink}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap"/>
-                    <TextBlock x:Name="TxtBarcode" Text="Shtrix-kod: 12345678" Foreground="{DynamicResource AccentInk}" FontSize="11" Margin="0,4,0,0"/>
-                </StackPanel>
-
-                <!-- Joriy Qoldiq -->
-                <Border Grid.Column="1" Background="{DynamicResource Bg}" CornerRadius="8" Padding="12,6" VerticalAlignment="Center" BorderBrush="{DynamicResource Line}" BorderThickness="1">
-                    <StackPanel HorizontalAlignment="Center">
-                        <TextBlock Text="Joriy qoldiq" Foreground="{DynamicResource Ink2}" FontSize="10" HorizontalAlignment="Center"/>
-                        <TextBlock x:Name="TxtCurrentStock" Text="10 dona" Foreground="{DynamicResource Ok}" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+    <Grid x:Name="RootLayer" Background="{DynamicResource Scrim}" TextElement.Foreground="{DynamicResource Ink}">
+        <Border Style="{StaticResource ModalCard}" Width="500" Margin="24">
+            <StackPanel>
+                <!-- Sarlavha -->
+                <Border Padding="24,20,24,14" BorderBrush="{DynamicResource Line}" BorderThickness="0,0,0,1">
+                    <StackPanel>
+                        <TextBlock Text="Qoldiq qo'shish (kirim)" FontSize="18" FontWeight="Bold"/>
+                        <TextBlock x:Name="TxtProductName" Text="Tovar · birlik · ombor" FontSize="13" Foreground="{DynamicResource Ink3}"
+                                   Margin="0,3,0,0" TextWrapping="Wrap"/>
                     </StackPanel>
                 </Border>
-            </Grid>
-        </Border>
 
-        <!-- 3. KIRITISH MAYDONI -->
-        <StackPanel Grid.Row="2" Margin="0,0,0,14">
-            <TextBlock Text="Yangi kelgan tovar sonini kiriting:" Foreground="{DynamicResource Ink}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8"/>
-            <Grid>
-                <TextBox x:Name="TxtQuantity" 
-                         Background="{DynamicResource Surface}" Foreground="{DynamicResource Ink}" BorderBrush="{DynamicResource Accent}" BorderThickness="1.5"
-                         FontSize="18" FontWeight="Bold" Padding="12,8"
-                         VerticalContentAlignment="Center"
-                         TextChanged="TxtQuantity_TextChanged"
-                         KeyDown="TxtQuantity_KeyDown">
-                    <TextBox.Resources>
-                        <Style TargetType="Border">
-                            <Setter Property="CornerRadius" Value="8"/>
-                        </Style>
-                    </TextBox.Resources>
-                </TextBox>
-                <TextBlock x:Name="TxtUnitSuffix" Text="dona" Foreground="{DynamicResource Ink3}" FontSize="13" FontWeight="SemiBold"
-                           HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,14,0" IsHitTestVisible="False"/>
-            </Grid>
-            <TextBlock x:Name="TxtError" Text="" Foreground="{DynamicResource Bad}" FontSize="12" Margin="0,4,0,0" Visibility="Collapsed"/>
-        </StackPanel>
+                <StackPanel Margin="24,18,24,18">
+                    <!-- Hozir + Qo'shiladi = Yangi qoldiq -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="30"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="30"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Background="{DynamicResource Surface2}" CornerRadius="12" Padding="10,12">
+                            <StackPanel>
+                                <TextBlock Text="Hozir" Style="{StaticResource StatLabel}"/>
+                                <TextBlock x:Name="TxtCurrentStock" Text="0" Style="{StaticResource StatValue}"/>
+                            </StackPanel>
+                        </Border>
+                        <TextBlock Grid.Column="1" Text="+" Style="{StaticResource Op}"/>
+                        <!-- Kiritish maydoni (fokusda) -->
+                        <Border Grid.Column="2" CornerRadius="12" BorderThickness="1.5" BorderBrush="{DynamicResource Accent}" Background="{DynamicResource Surface}" Padding="8,10,8,8">
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="6" ShadowDepth="0" Opacity="0.25" Color="#0B6477"/>
+                            </Border.Effect>
+                            <StackPanel>
+                                <TextBlock Text="Qo'shiladi" Style="{StaticResource StatLabel}" Foreground="{DynamicResource AccentInk}" FontWeight="SemiBold"/>
+                                <Grid>
+                                    <TextBox x:Name="TxtQuantity" FontSize="22" FontWeight="ExtraBold" Foreground="{DynamicResource Ink}" CaretBrush="{DynamicResource AccentInk}"
+                                             Background="Transparent" BorderThickness="0" Padding="0" HorizontalContentAlignment="Center"
+                                             TextChanged="TxtQuantity_TextChanged" KeyDown="TxtQuantity_KeyDown"/>
+                                    <TextBlock x:Name="TxtQtyPlaceholder" Text="0" FontSize="22" FontWeight="ExtraBold" Foreground="{DynamicResource Ink3}"
+                                               HorizontalAlignment="Center" IsHitTestVisible="False"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                        <TextBlock Grid.Column="3" Text="=" Style="{StaticResource Op}"/>
+                        <Border Grid.Column="4" Background="{DynamicResource OkSoft}" CornerRadius="12" Padding="10,12">
+                            <StackPanel>
+                                <TextBlock Text="Yangi qoldiq" Style="{StaticResource StatLabel}" Foreground="{DynamicResource Ok}"/>
+                                <TextBlock x:Name="TxtCalculationPreview" Text="0" Style="{StaticResource StatValue}" Foreground="{DynamicResource Ok}"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
 
-        <!-- 4. HISOBLASH PREVIEW BLOKI -->
-        <Border Grid.Row="3" Background="{DynamicResource AccentSoft}" BorderBrush="{DynamicResource Accent}" BorderThickness="1" CornerRadius="8" Padding="14,10" VerticalAlignment="Center" Margin="0,0,0,16">
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                <TextBlock Text="Yangi jami qoldiq: " Foreground="{DynamicResource Ink2}" FontSize="13" VerticalAlignment="Center"/>
-                <TextBlock x:Name="TxtCalculationPreview" Text="10 + 0 = 10 dona" Foreground="{DynamicResource AccentInk}" FontSize="15" FontWeight="Bold" VerticalAlignment="Center" Margin="4,0,0,0"/>
+                    <!-- Tez qo'shish -->
+                    <UniformGrid Rows="1" Margin="0,16,0,0">
+                        <Button Content="+10" Tag="10" Click="QuickAdd_Click" Style="{StaticResource BtnSecondary}" Height="40" Margin="0,0,4,0" Focusable="False"/>
+                        <Button Content="+50" Tag="50" Click="QuickAdd_Click" Style="{StaticResource BtnSecondary}" Height="40" Margin="4,0,4,0" Focusable="False"/>
+                        <Button Content="+100" Tag="100" Click="QuickAdd_Click" Style="{StaticResource BtnSecondary}" Height="40" Margin="4,0,0,0" Focusable="False"/>
+                    </UniformGrid>
+
+                    <TextBlock x:Name="TxtError" Text="" Foreground="{DynamicResource Bad}" FontSize="13" FontWeight="SemiBold" Margin="0,12,0,0"
+                               TextWrapping="Wrap" Visibility="Collapsed"/>
+                </StackPanel>
+
+                <!-- Tugmalar -->
+                <Grid Margin="24,0,24,20">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="10"/>
+                        <ColumnDefinition Width="2*"/>
+                    </Grid.ColumnDefinitions>
+                    <Button Click="BtnCancel_Click" IsCancel="True" Style="{StaticResource BtnSecondary}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Bekor" VerticalAlignment="Center"/>
+                            <TextBlock Text="Esc" Style="{StaticResource Kbd}"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Grid.Column="2" Click="BtnConfirm_Click" IsDefault="True" Style="{StaticResource BtnPrimary}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Kirim qilish" VerticalAlignment="Center"/>
+                            <TextBlock Text="Enter" Style="{StaticResource Kbd}"/>
+                        </StackPanel>
+                    </Button>
+                </Grid>
             </StackPanel>
         </Border>
-
-        <!-- 5. TUGMALAR -->
-        <Grid Grid.Row="4">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-
-            <Button Grid.Column="0" Content="Bekor qilish (Esc)" Click="BtnCancel_Click"
-                    IsCancel="True"
-                    Background="{DynamicResource Line}" Foreground="{DynamicResource Ink2}" BorderThickness="0"
-                    Padding="0,10" Margin="0,0,8,0" Cursor="Hand" FontWeight="SemiBold" FontSize="13">
-                <Button.Resources>
-                    <Style TargetType="Border"><Setter Property="CornerRadius" Value="8"/></Style>
-                </Button.Resources>
-            </Button>
-
-            <Button Grid.Column="1" Content="✓ Qo'shish (Enter)" Click="BtnConfirm_Click"
-                    IsDefault="True"
-                    Background="{DynamicResource Accent}" Foreground="White" BorderBrush="{DynamicResource Accent}" BorderThickness="1"
-                    Padding="0,10" Margin="8,0,0,0" Cursor="Hand" FontWeight="Bold" FontSize="13">
-                <Button.Resources>
-                    <Style TargetType="Border"><Setter Property="CornerRadius" Value="8"/></Style>
-                </Button.Resources>
-            </Button>
-        </Grid>
     </Grid>
 </Window>

@@ -34,35 +34,52 @@ namespace PosElectro.Desktop.Views
 
         private void InitializeData(string warehouseName)
         {
-            TxtProductName.Text = _product.Name;
-            if (!string.IsNullOrWhiteSpace(_product.Barcode))
-            {
-                TxtBarcode.Text = $"Shtrix-kod: {_product.Barcode}";
-                TxtBarcode.Visibility = Visibility.Visible;
-            }
-            else
-            {
-                TxtBarcode.Visibility = Visibility.Collapsed;
-            }
-
-            TxtWarehouseName.Text = $"Ombor: {warehouseName}";
-            TxtUnitSuffix.Text = _unitLabel;
+            // Maket 2.5: "Tovar · birlik · ombor"
+            TxtProductName.Text = $"{_product.Name} · {_unitLabel} · {warehouseName}";
 
             var currStock = _product.StockQuantity;
-            TxtCurrentStock.Text = $"{currStock:0.##} {_unitLabel}";
-            TxtCurrentStock.SetResourceReference(TextBlock.ForegroundProperty, currStock > 0 ? "Ok" : "Bad");
+            TxtCurrentStock.Text = $"{currStock:0.##}";
+            TxtCurrentStock.SetResourceReference(TextBlock.ForegroundProperty, currStock > 0 ? "Ink" : "Bad");
 
             UpdatePreview(0);
         }
 
         private void QuickStockAddDialog_Loaded(object sender, RoutedEventArgs e)
         {
+            // Oyna egasini to'liq qoplaydi (orqa fon xiralashadi, karta markazda)
+            if (Owner != null)
+            {
+                SizeToContent = SizeToContent.Manual;
+                if (Owner.WindowState == WindowState.Maximized)
+                {
+                    Left = Owner.Left; Top = Owner.Top;
+                    WindowState = WindowState.Maximized;
+                }
+                else if (Owner.ActualWidth > ActualWidth && Owner.ActualHeight > ActualHeight)
+                {
+                    Left = Owner.Left; Top = Owner.Top;
+                    Width = Owner.ActualWidth; Height = Owner.ActualHeight;
+                }
+            }
+            TxtQuantity.Focus();
+        }
+
+        /// <summary>+10 / +50 / +100: maydondagi songa qo'shadi (faqat kiritishni tezlashtiradi).</summary>
+        private void QuickAdd_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button b || !double.TryParse(b.Tag?.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var add)) return;
+            var text = TxtQuantity.Text.Trim().Replace(',', '.');
+            double.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, out var cur);
+            if (cur < 0) cur = 0;
+            TxtQuantity.Text = (cur + add).ToString("0.##", CultureInfo.InvariantCulture);
+            TxtQuantity.CaretIndex = TxtQuantity.Text.Length;
             TxtQuantity.Focus();
         }
 
         private void TxtQuantity_TextChanged(object sender, TextChangedEventArgs e)
         {
             TxtError.Visibility = Visibility.Collapsed;
+            TxtQtyPlaceholder.Visibility = string.IsNullOrEmpty(TxtQuantity.Text) ? Visibility.Visible : Visibility.Collapsed;
             var text = TxtQuantity.Text.Trim().Replace(',', '.');
 
             if (string.IsNullOrWhiteSpace(text))
@@ -77,8 +94,10 @@ namespace PosElectro.Desktop.Views
             }
             else
             {
-                TxtCalculationPreview.Text = "Raqamni to'g'ri kiriting";
+                TxtCalculationPreview.Text = "—";
                 TxtCalculationPreview.SetResourceReference(TextBlock.ForegroundProperty, "Bad");
+                TxtError.Text = "Raqamni to'g'ri kiriting";
+                TxtError.Visibility = Visibility.Visible;
             }
         }
 
@@ -86,8 +105,8 @@ namespace PosElectro.Desktop.Views
         {
             var current = _product.StockQuantity;
             var total = current + addedQty;
-            TxtCalculationPreview.Text = $"{current:0.##} + {addedQty:0.##} = {total:0.##} {_unitLabel}";
-            TxtCalculationPreview.SetResourceReference(TextBlock.ForegroundProperty, "AccentInk");
+            TxtCalculationPreview.Text = $"{total:0.##}";
+            TxtCalculationPreview.SetResourceReference(TextBlock.ForegroundProperty, "Ok");
         }
 
         private void TxtQuantity_KeyDown(object sender, KeyEventArgs e)
