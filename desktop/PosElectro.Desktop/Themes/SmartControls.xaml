@@ -480,7 +480,8 @@
                         </ToggleButton>
                         <ContentPresenter IsHitTestVisible="False" Margin="12,0,36,0" VerticalAlignment="Center" HorizontalAlignment="Stretch"
                                           Content="{TemplateBinding SelectionBoxItem}"
-                                          ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"/>
+                                          ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                          ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"/>
                         <TextBlock x:Name="ph" Text="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}" Margin="14,0,36,0" VerticalAlignment="Center"
                                    Foreground="{DynamicResource Ink3}" IsHitTestVisible="False" Visibility="Collapsed"/>
                         <Popup IsOpen="{TemplateBinding IsDropDownOpen}" Placement="Bottom" AllowsTransparency="True" Focusable="False" PopupAnimation="Fade">

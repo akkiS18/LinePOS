@@ -74,8 +74,8 @@ Ranglar ustuni: A+B bosqichidan keyin hammasi tokenda, lekin yorug' temada ekran
 | 2.3 | Yangi tovar qo'shish | `InventoryView.xaml` (2-qism) | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan: ikki karta (Asosiy ma'lumotlar / Narx va qoldiq), pastki panel. Haqiqiy forma `InventoryView` ichida; `AddEditProductDialog.xaml` hech qayerdan ochilmaydi (eski, tegilmadi). Qo'shildi: "Ustama +N%" (faqat ko'rsatish), Ctrl+S = Saqlash (Enter ham ishlaydi). Kategoriyani tahrirlash (✎) tugmasi saqlandi. Maketdan farq: "Saqlash va yana qo'shish" yo'q — dasturda bunday amal yo'q |
 | 2.4 | Tovarni o'chirish (tasdiq) | `InventoryView.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan. Windows MessageBox o'rniga ichki oyna; o'chirish amali o'sha (yumshoq o'chirish). Qoldiq bo'lsa ogohlantiradi. Esc = bekor; Enter o'chirmaydi (xavfli amal). Maketdan farq: bir vaqtda bitta tovar (ko'p tanlab o'chirish dasturda yo'q), "10 soniya Qaytarish" yo'q — bunday amal yo'q |
 | 2.5 | Qoldiq qo'shish (kirim) | `Views/QuickStockAddDialog.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan. "Hozir + Qo'shiladi = Yangi qoldiq", +10/+50/+100 tugmalari (maydondagi songa qo'shadi). Oyna asosiy oynani qoplaydi (fon xiralashadi). Kirim amali o'sha. Maketdan farq: "Yangi tan narx", "Yetkazib beruvchi / izoh", "Kirgandan keyin stiker chop etish" va "Bir o'ram (100)" yo'q — kirim amali faqat sonni qabul qiladi |
-| 2.6 | Stiker chop etish sozlamalari | `Views/BarcodePrintDialog.xaml` | ⬜ | |
-| 2.7 | Stiker · printer va kalibrovka | `BarcodePrintDialog.xaml` | ⬜ | |
+| 2.6 | Stiker chop etish sozlamalari | `Views/BarcodePrintDialog.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan: 900×640 karta, chapda sozlamalar, o'ngda jonli ko'rinish (printer chiqishi bilan bir xil render), sarlavhada printer holati. Chop etish, sinov, sozlamalarni saqlash avvalgidek. Maketdan farq: bir vaqtda bitta tovar (ko'p tovarli ro'yxat dasturda yo'q), shuning uchun "Hammasiga" o'rniga "Tez tanlash" |
+| 2.7 | Stiker · printer va kalibrovka | `BarcodePrintDialog.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan: ochiluvchi bo'lim — printer, stiker o'lchami, nomni surish, umumiy surish (0,5 mm qadam). Yopiq holatda qisqa yozuv (o'lcham · nom · umumiy) |
 | 2.8 | Stiker chop etilmoqda (oyna) | `MainWindow.xaml` | ⬜ | |
 | 2.9 | Stiker fonda davom etyapti (vidjet) | `MainWindow.xaml` | ⬜ | |
 | 2.10 | Buyurtma ro'yxati (kam qolganlar) | `Views/ReorderListDialog.xaml` | ⬜ | |
@@ -132,7 +132,8 @@ Ranglar ustuni: A+B bosqichidan keyin hammasi tokenda, lekin yorug' temada ekran
 - Tuzatish: `FieldBox` (SmartControls va CashierView nusxasi) ichki chekkani ikki marta qo'yardi — matn maydon ichida ~30px surilib turardi. Endi bir marta; kassadagi maydonlar ham maketdagidek.
 - 2.4 o'chirish tasdig'i: MessageBox o'rniga maketdagi oyna (`IsDeleteConfirmOpen`, `ConfirmDeleteProductCommand`).
 - 2.5 kirim oynasi: `QuickStockAddDialog` maket tuzilishida (yorug' tema, chegarasiz oyna).
-- **Keyingi qadam:** 2.6–2.13 Ombor oynalari (stiker, buyurtma ro'yxati, ko'chirish, yangi ombor, kategoriya).
+- 2.6/2.7 stiker oynasi: `BarcodePrintDialog` maket tuzilishida. `FieldCombo` uslubi `DisplayMemberPath`ni hisobga olmasdi (sinf nomi chiqardi) — tuzatildi.
+- **Keyingi qadam:** 2.8/2.9 stiker jarayoni va fon vidjeti (`MainWindow`), so'ng 2.10–2.13 (buyurtma ro'yxati, ko'chirish, yangi ombor, kategoriya).
 
 **2026-11-13 (Claude Code), 2-qadam — Kassa ekrani qayta qurildi:**
 - Egasi fikri: yorug' rang eski joylashuv ustiga tortilgani noto'g'ri, maket **tuzilishi** ko'chirilishi kerak (qoida 5).

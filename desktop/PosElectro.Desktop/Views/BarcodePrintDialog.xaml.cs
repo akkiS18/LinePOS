@@ -45,8 +45,10 @@ namespace PosElectro.Desktop.Views
         {
             // Qoldiq miqdori tugmasi
             int stockInt = (int)Math.Max(1, Math.Floor(_stockQuantity));
-            BtnStockQty.Content = $"📦 Qoldiqcha ({stockInt})";
+            BtnStockQty.Content = $"Qoldiq soni ({stockInt})";
             BtnStockQty.Tag = stockInt;
+            TxtProductName.Text = _productName;
+            TxtStockInfo.Text = $"qoldiq {_stockQuantity:0.##}";
 
             // Printerlar ro'yxatini to'ldirish
             var printers = PrinterService.GetInstalledPrinters();
@@ -57,20 +59,17 @@ namespace PosElectro.Desktop.Views
             if (!string.IsNullOrWhiteSpace(_detectedPrinter) && printers.Contains(_detectedPrinter))
             {
                 CmbPrinters.SelectedItem = _detectedPrinter;
-                TxtPrinterStatus.Text = $"🟢 Ulangan: {_detectedPrinter}";
-                TxtPrinterStatus.Foreground = System.Windows.Media.Brushes.MediumSpringGreen;
+                SetPrinterStatus($"{_detectedPrinter} · tayyor", "Ok");
             }
             else if (printers.Count > 0)
             {
                 CmbPrinters.SelectedIndex = 0;
                 _detectedPrinter = printers[0];
-                TxtPrinterStatus.Text = $"ℹ️ Tanlangan: {_detectedPrinter}";
-                TxtPrinterStatus.Foreground = System.Windows.Media.Brushes.SkyBlue;
+                SetPrinterStatus($"{_detectedPrinter} · tanlangan", "Accent");
             }
             else
             {
-                TxtPrinterStatus.Text = "⚠️ Kompyuterda hech qanday printer o'rnatilmagan";
-                TxtPrinterStatus.Foreground = System.Windows.Media.Brushes.Gold;
+                SetPrinterStatus("Printer o'rnatilmagan", "Warn");
             }
 
             // Stiker o'lchamlari ro'yxati
@@ -99,13 +98,49 @@ namespace PosElectro.Desktop.Views
 
         private void SetButtonActive(Button btn, bool isActive)
         {
-            // Theme tokens by reference (not copied brushes), so a theme switch repaints these buttons too.
-            btn.SetResourceReference(Control.BackgroundProperty, isActive ? "AccentSoft" : "Surface2");
-            if (isActive) btn.SetResourceReference(Control.BorderBrushProperty, "AccentInk");
-            else btn.BorderBrush = Brushes.Transparent;
-            btn.BorderThickness = new Thickness(isActive ? 1.5 : 1);
-            btn.SetResourceReference(Control.ForegroundProperty, isActive ? "AccentInk" : "Ink2");
-            btn.FontWeight = isActive ? FontWeights.Bold : FontWeights.Normal;
+            // Ko'rinish uslubda (SegTab): Tag=True — tanlangan. Ranglar tokenlardan.
+            btn.Tag = isActive;
+        }
+
+        /// <summary>Sarlavhadagi printer belgisi: kind = "Ok" | "Accent" | "Warn".</summary>
+        private void SetPrinterStatus(string text, string kind)
+        {
+            TxtPrinterStatus.Text = text;
+            var ink = kind == "Accent" ? "AccentInk" : kind;
+            TxtPrinterStatus.SetResourceReference(TextBlock.ForegroundProperty, ink);
+            PrinterDot.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, ink);
+            PrinterPill.SetResourceReference(Border.BackgroundProperty, kind + "Soft");
+        }
+
+        /// <summary>Sarlavha osti va "Printer va kalibrovka" qisqa yozuvi (faqat ko'rsatish).</summary>
+        private void UpdateSummaries()
+        {
+            if (TxtSubtitle == null || TxtCalibSummary == null) return;
+            int copies = GetCurrentCopies();
+            TxtSubtitle.Text = $"{_productName} · jami {copies} stiker";
+            var size = (CmbLabelSize.SelectedItem as LabelSizeConfig)?.DisplayName ?? "";
+            TxtCalibSummary.Text = $"{size} · nom {_currentNameOffsetMm:+0.0;-0.0;0.0} · umumiy {_currentOffsetMm:+0.0;-0.0;0.0}";
+        }
+
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            // Oyna egasini to'liq qoplaydi (orqa fon xiralashadi, karta markazda)
+            if (Owner != null)
+            {
+                SizeToContent = SizeToContent.Manual;
+                if (Owner.WindowState == WindowState.Maximized)
+                {
+                    Left = Owner.Left; Top = Owner.Top;
+                    WindowState = WindowState.Maximized;
+                }
+                else if (Owner.ActualWidth > ActualWidth && Owner.ActualHeight > ActualHeight)
+                {
+                    Left = Owner.Left; Top = Owner.Top;
+                    Width = Owner.ActualWidth; Height = Owner.ActualHeight;
+                }
+            }
+            TxtCopies.Focus();
+            TxtCopies.SelectAll();
         }
 
         private void UpdateNameAlignDisplay()
@@ -124,11 +159,13 @@ namespace PosElectro.Desktop.Views
         private void UpdateOffsetDisplay()
         {
             TxtOffset.Text = Math.Abs(_currentOffsetMm) < 0.01 ? "0.0 mm" : $"{_currentOffsetMm:+#0.0;-#0.0;0.0} mm";
+            UpdateSummaries();
         }
 
         private void UpdateNameOffsetDisplay()
         {
             TxtNameOffset.Text = Math.Abs(_currentNameOffsetMm) < 0.01 ? "0.0 mm" : $"{_currentNameOffsetMm:+#0.0;-#0.0;0.0} mm";
+            UpdateSummaries();
         }
 
         /// <summary>
@@ -162,10 +199,11 @@ namespace PosElectro.Desktop.Views
             ImgPreview.Source = rtb;
 
             // Stiker kartochkasi o'lchamini ekranda qulay ko'rinishga moslash
-            double displayScale = 1.4;
+            double displayScale = Math.Min(1.6, Math.Min(290.0 / config.VisualWidth, 300.0 / config.VisualHeight));
             StickerCard.Width = config.VisualWidth * displayScale;
             StickerCard.Height = config.VisualHeight * displayScale;
-            TxtLabelSizeCaption.Text = config.DisplayName;
+            TxtLabelSizeCaption.Text = $"JONLI KO'RINISH · {config.DisplayName}";
+            UpdateSummaries();
         }
 
         // ================= MAHSULOT NOMI SOZLAMALARI =================
@@ -299,8 +337,7 @@ namespace PosElectro.Desktop.Views
             if (CmbPrinters.SelectedItem is string selectedPrinter)
             {
                 _detectedPrinter = selectedPrinter;
-                TxtPrinterStatus.Text = $"🟢 Tanlangan: {selectedPrinter}";
-                TxtPrinterStatus.Foreground = System.Windows.Media.Brushes.MediumSpringGreen;
+                SetPrinterStatus($"{selectedPrinter} · tanlangan", "Ok");
                 _printerService.SaveLabelPrinterSetting(selectedPrinter);
             }
         }
@@ -348,7 +385,8 @@ namespace PosElectro.Desktop.Views
         {
             if (!IsLoaded) return;
             int copies = GetCurrentCopies();
-            BtnPrint.Content = $"🖨️ Chop etish ({copies} ta)";
+            BtnPrint.Content = $"{copies} ta chop etish";
+            UpdateSummaries();
         }
 
         private int GetCurrentCopies()
@@ -364,7 +402,8 @@ namespace PosElectro.Desktop.Views
         {
             if (copies < 1) copies = 1;
             TxtCopies.Text = copies.ToString();
-            BtnPrint.Content = $"🖨️ Chop etish ({copies} ta)";
+            BtnPrint.Content = $"{copies} ta chop etish";
+            UpdateSummaries();
         }
 
         // ================= CHOP ETISH =================
@@ -407,11 +446,11 @@ namespace PosElectro.Desktop.Views
 
                 if (ok)
                 {
-                    ShowStatus("✅ 1 dona sinov stikeri printerga yuborildi!", isError: false);
+                    ShowStatus("1 dona sinov stikeri printerga yuborildi", isError: false);
                 }
                 else
                 {
-                    ShowStatus("❌ Printerga yuborishda xatolik! Printer ulanganligini tekshiring.", isError: true);
+                    ShowStatus("Printerga yuborib bo'lmadi. Printer ulanganini tekshiring.", isError: true);
                 }
                 return;
             }
@@ -419,7 +458,7 @@ namespace PosElectro.Desktop.Views
             // Asosiy stikerlarni chop etish (Fonda asinxron ishlaydi)
             if (LabelPrintService.Instance.IsPrinting)
             {
-                ShowStatus("⚠️ Hozirda boshqa stiker chop etilmoqda! Iltimos, u yakunlanishini kuting.", isError: true);
+                ShowStatus("Hozir boshqa stiker chop etilmoqda. Tugashini kuting.", isError: true);
                 return;
             }
 
@@ -445,16 +484,14 @@ namespace PosElectro.Desktop.Views
             }
             else
             {
-                ShowStatus("❌ Printerga yuborishda xatolik yuz berdi!", isError: true);
+                ShowStatus("Printerga yuborib bo'lmadi.", isError: true);
             }
         }
 
         private void ShowStatus(string message, bool isError)
         {
             TxtStatus.Text = message;
-            TxtStatus.Foreground = isError 
-                ? System.Windows.Media.Brushes.Tomato 
-                : System.Windows.Media.Brushes.MediumSpringGreen;
+            TxtStatus.SetResourceReference(TextBlock.ForegroundProperty, isError ? "Bad" : "Ok");
             TxtStatus.Visibility = Visibility.Visible;
         }
 
@@ -471,7 +508,7 @@ namespace PosElectro.Desktop.Views
                 BtnCancel_Click(this, null!);
                 e.Handled = true;
             }
-            else if (e.Key == System.Windows.Input.Key.Enter)
+            else if (e.Key == System.Windows.Input.Key.Enter && !CmbPrinters.IsDropDownOpen && !CmbLabelSize.IsDropDownOpen)
             {
                 BtnPrint_Click(this, null!);
                 e.Handled = true;
