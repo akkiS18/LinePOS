@@ -24,6 +24,31 @@ namespace PosElectro.Desktop.ViewModels
         public string Icon { get; set; } = "📁";
         public string CountText => $"{Count} ta tovar";
         public bool CanEdit => !IsAll && !IsLowStock;
+
+        // ---- Maket 2.1: faqat ko'rsatish uchun ----
+        public int LowCount { get; set; }
+        public int OutCount { get; set; }
+        public bool HasBadge => !IsLowStock && (LowCount > 0 || OutCount > 0);
+        public bool IsOutBadge => OutCount > 0;
+        public string BadgeText => OutCount > 0 ? $"{OutCount} tugagan" : $"{LowCount} ta kam";
+        public string DisplayName => IsAll ? "Barcha tovarlar" : Name;
+
+        /// <summary>Kategoriya nomiga qarab maketdagi chiziqli ikonka (24×24).</summary>
+        public string IconData
+        {
+            get
+            {
+                if (IsAll) return "M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z";
+                var n = (Name ?? string.Empty).ToLowerInvariant();
+                if (n.Contains("kabel") || n.Contains("sim") || n.Contains("провод") || n.Contains("кабел")) return "M4 20c4 0 4-16 8-16s4 16 8 16";
+                if (n.Contains("avtomat") || n.Contains("автомат")) return "M7 3h10v18H7z M10 9h4v5h-4z";
+                if (n.Contains("rozetka") || n.Contains("kalit") || n.Contains("розет") || n.Contains("выкл")) return "M5 5h14v14H5z M9.5 12h.01 M14.5 12h.01";
+                if (n.Contains("yorit") || n.Contains("lamp") || n.Contains("chiroq") || n.Contains("led") || n.Contains("ламп") || n.Contains("свет")) return "M9 18h6 M10 21h4 M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z";
+                if (n.Contains("asbob") || n.Contains("инструм")) return "M15 12L6 21l-3-3l9-9 M14 4l6 6l-3 3l-6-6z";
+                if (n.Contains("aksessuar") || n.Contains("аксесс")) return "M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5l-2.4-.6l-.6-2.4z";
+                return "M4 4h16v16H4z M9 9h6";
+            }
+        }
     }
 
     public enum InventoryViewState
@@ -107,6 +132,7 @@ namespace PosElectro.Desktop.ViewModels
                     OnPropertyChanged(nameof(CanGoBackToWarehouses));
                     OnPropertyChanged(nameof(CanAddProduct));
                     OnPropertyChanged(nameof(SelectedWarehouseNameDisplay));
+                    OnPropertyChanged(nameof(OverviewSearchPlaceholder));
                     OnPropertyChanged(nameof(BackButtonText));
                 }
             }
@@ -888,10 +914,13 @@ namespace PosElectro.Desktop.ViewModels
             {
                 if (SetProperty(ref _selectedCategory, value))
                 {
+                    _stockFilter = 0;
+                    OnPropertyChanged(nameof(StockFilter));
                     _isOnlySelectedFilterActive = false;
                     OnPropertyChanged(nameof(IsOnlySelectedFilterActive));
                     OnPropertyChanged(nameof(IsLowStockCategorySelected));
                     OnPropertyChanged(nameof(CurrentCategoryTitle));
+                    OnPropertyChanged(nameof(ProductSearchPlaceholder));
                     ApplyFilter();
                 }
             }
@@ -915,6 +944,33 @@ namespace PosElectro.Desktop.ViewModels
         public int TotalLowStockCount => _cachedDisplayProducts.Count(p => p.IsLowStock);
         public bool HasSelectedLowStock => SelectedLowStockCount > 0;
         public string ReorderButtonText => SelectedLowStockCount > 0 ? $"🛒 Buyurtma ro'yxati ({SelectedLowStockCount} ta)" : "🛒 Buyurtma ro'yxati";
+
+        // ---- Maket 2.1 / 2.2: ko'rsatish yordamchilari ----
+        /// <summary>Kategoriya kartalari ("Kam qolgan" kartasisiz — u asboblar panelida tugma).</summary>
+        public IEnumerable<CategoryCardModel> GridCategoryCards => CategoryCards.Where(c => !c.IsLowStock).ToList();
+        public CategoryCardModel? LowStockCard => CategoryCards.FirstOrDefault(c => c.IsLowStock);
+
+        private int _stockFilter;
+        /// <summary>0 = hammasi, 1 = kam qolgan, 2 = tugagan.</summary>
+        public int StockFilter
+        {
+            get => _stockFilter;
+            set { if (SetProperty(ref _stockFilter, value)) ApplyFilter(); }
+        }
+        public ICommand SetStockFilterCommand => _setStockFilterCommand ??= new RelayCommand<object>(p =>
+        {
+            if (int.TryParse(p?.ToString(), out var v)) StockFilter = v;
+        });
+        private ICommand? _setStockFilterCommand;
+
+        public string OverviewSearchPlaceholder => SelectedWarehouse != null
+            ? $"{SelectedWarehouse.Name} ichidan tovar nomi yoki shtrix-kod bo'yicha qidirish…"
+            : "Barcha omborlardan tovar nomi yoki shtrix-kod bo'yicha qidirish…";
+        public string ProductSearchPlaceholder => $"{CurrentCategoryTitle} ichidan qidirish…";
+
+        public int CategoryAllCount { get; private set; }
+        public int CategoryLowCount { get; private set; }
+        public int CategoryOutCount { get; private set; }
 
         public string CurrentCategoryTitle => SelectedCategory == ProductService.CATEGORY_ALL ? "Barcha tovarlar" : SelectedCategory;
         public string ProductsCountHeader => $"({Products.Count} ta tovar)";
@@ -1380,7 +1436,9 @@ namespace PosElectro.Desktop.ViewModels
                 Name = ProductService.CATEGORY_ALL,
                 Count = _cachedDisplayProducts.Count,
                 IsAll = true,
-                Icon = "📦"
+                Icon = "📦",
+                LowCount = _cachedDisplayProducts.Count(p => p.IsLowStock && !p.IsOutOfStock),
+                OutCount = _cachedDisplayProducts.Count(p => p.IsOutOfStock)
             });
 
             // 2. Kam qolgan tovarlar
@@ -1402,15 +1460,19 @@ namespace PosElectro.Desktop.ViewModels
 
             foreach (var cat in distinctCategories)
             {
-                var count = _cachedDisplayProducts.Count(p => string.Equals(p.Category, cat, StringComparison.OrdinalIgnoreCase));
+                var inCat = _cachedDisplayProducts.Where(p => string.Equals(p.Category, cat, StringComparison.OrdinalIgnoreCase)).ToList();
                 CategoryCards.Add(new CategoryCardModel
                 {
                     Name = cat,
-                    Count = count,
-                    Icon = "📁"
+                    Count = inCat.Count,
+                    Icon = "📁",
+                    LowCount = inCat.Count(p => p.IsLowStock && !p.IsOutOfStock),
+                    OutCount = inCat.Count(p => p.IsOutOfStock)
                 });
             }
 
+            OnPropertyChanged(nameof(GridCategoryCards));
+            OnPropertyChanged(nameof(LowStockCard));
             ApplyFilter();
         }
 
@@ -1430,6 +1492,13 @@ namespace PosElectro.Desktop.ViewModels
             {
                 list = list.Where(p => string.Equals(p.Category, SelectedCategory, StringComparison.OrdinalIgnoreCase)).ToList();
             }
+
+            // Maket 2.2: kategoriya ichidagi qoldiq filtri (0 = hammasi — avvalgidek)
+            CategoryAllCount = list.Count;
+            CategoryLowCount = list.Count(p => p.IsLowStock && !p.IsOutOfStock);
+            CategoryOutCount = list.Count(p => p.IsOutOfStock);
+            if (_stockFilter == 1) list = list.Where(p => p.IsLowStock && !p.IsOutOfStock).ToList();
+            else if (_stockFilter == 2) list = list.Where(p => p.IsOutOfStock).ToList();
 
             if (!string.IsNullOrWhiteSpace(SearchQuery))
             {
@@ -1453,6 +1522,9 @@ namespace PosElectro.Desktop.ViewModels
             Products = new ObservableCollection<Product>(list);
 
             OnPropertyChanged(nameof(ProductsCountHeader));
+            OnPropertyChanged(nameof(CategoryAllCount));
+            OnPropertyChanged(nameof(CategoryLowCount));
+            OnPropertyChanged(nameof(CategoryOutCount));
             OnPropertyChanged(nameof(HasSearchQuery));
             OnPropertyChanged(nameof(IsEmptySearchResult));
             OnPropertyChanged(nameof(IsLowStockCategorySelected));

@@ -175,6 +175,59 @@ namespace PosElectro.Desktop.Views
             }
         }
 
+        // ---- Maket 2.1 / 2.2 (faqat ko'rinish) ----
+
+        // Umumiy ko'rinishdagi qidiruvga yozilsa, ekran tovarlar jadvaliga o'tadi: fokus jadval qidiruviga ko'chadi
+        private bool _moveFocusToProductSearch;
+        private void OverviewSearch_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (sender is TextBox tb && tb.IsKeyboardFocused && !string.IsNullOrEmpty(tb.Text))
+                _moveFocusToProductSearch = true;
+        }
+
+        private void ProductSearchBox_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            if (e.NewValue is true && _moveFocusToProductSearch)
+            {
+                _moveFocusToProductSearch = false;
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    ProductSearchBox.Focus();
+                    ProductSearchBox.CaretIndex = ProductSearchBox.Text.Length;
+                }), System.Windows.Threading.DispatcherPriority.Input);
+            }
+        }
+
+        // Jadval sarlavhasi aylantirish chizig'i kengligiga moslashadi (ustunlar bir tekis turadi)
+        private void ProductRows_ScrollChanged(object sender, ScrollChangedEventArgs e)
+        {
+            if (e.OriginalSource is ScrollViewer sv)
+            {
+                double extra = sv.ComputedVerticalScrollBarVisibility == Visibility.Visible ? SystemParameters.VerticalScrollBarWidth : 0;
+                ProductTableHeader.Padding = new Thickness(12, 0, 12 + extra, 0);
+            }
+        }
+
+        // Qatorni 2 marta bosish — tahrirlash (avvalgidek)
+        private void ProductRow_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (e.ClickCount == 2 && sender is FrameworkElement fe && fe.DataContext is PosElectro.Desktop.Models.Product product
+                && DataContext is InventoryViewModel vm)
+            {
+                vm.OpenEditProductCommand.Execute(product);
+                e.Handled = true;
+            }
+        }
+
+        // "Boshqa amallar" menyusidan tanlanganda menyu yopiladi
+        private void RowMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            DependencyObject? d = sender as DependencyObject;
+            while (d != null && d is not System.Windows.Controls.Primitives.Popup)
+                d = System.Windows.LogicalTreeHelper.GetParent(d) ?? System.Windows.Media.VisualTreeHelper.GetParent(d);
+            if (d is System.Windows.Controls.Primitives.Popup popup) popup.IsOpen = false;
+        }
+
         private void DataGridRow_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
             if (sender is DataGridRow row && row.Item is PosElectro.Desktop.Models.Product product && DataContext is InventoryViewModel vm)
