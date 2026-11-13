@@ -78,10 +78,10 @@ Ranglar ustuni: A+B bosqichidan keyin hammasi tokenda, lekin yorug' temada ekran
 | 2.7 | Stiker · printer va kalibrovka | `BarcodePrintDialog.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan: ochiluvchi bo'lim — printer, stiker o'lchami, nomni surish, umumiy surish (0,5 mm qadam). Yopiq holatda qisqa yozuv (o'lcham · nom · umumiy) |
 | 2.8 | Stiker chop etilmoqda (oyna) | `MainWindow.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan: 440px karta — tovar nomi, `27 / 61`, jarayon chizig'i, "To'xtatish" / "Fonda davom etsin". Tugagan, to'xtatilgan va xato holatlari shu kartada. Maketdagi "Taxminan 40 soniya qoldi · printer nomi" yo'q (xizmatda bunday hisob yo'q) — o'rnida foiz |
 | 2.9 | Stiker fonda davom etyapti (vidjet) | `MainWindow.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan: o'ng pastda 320px to'q vidjet (`ToastBg`), "Stiker: 27 / 61", "To'xtatish", yopish (✕) tugmasi saqlandi. Yangi tokenlar: `ToastTrack`, `ToastFill`, `ToastLine` (Light va Dark) |
-| 2.10 | Buyurtma ro'yxati (kam qolganlar) | `Views/ReorderListDialog.xaml` | ⬜ | |
-| 2.11 | Omborlararo ko'chirish | `InventoryView.xaml` | ⬜ | |
-| 2.12 | Yangi ombor | `InventoryView.xaml` | ⬜ | |
-| 2.13 | Kategoriya qo'shish / tahrirlash | `InventoryView.xaml` | ⬜ | |
+| 2.10 | Buyurtma ro'yxati (kam qolganlar) | `Views/ReorderListDialog.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan: 900×620 karta, jadval (rasm, tovar, shtrix-kod, qoldiq belgisi, tan narx — admin bo'lmasa `••••`), qatorda ✕ (olib tashlash), "Ro'yxatni tozalash", "Chek printerga", "Excel'ga eksport". Maketdagi chegara va kategoriya filtrlari hamda tahrirlanadigan "Buyurtma" soni yo'q — dasturda bunday logika yo'q (ro'yxat Omborda belgilangan tovarlardan tuziladi) |
+| 2.11 | Omborlararo ko'chirish | `InventoryView.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan: 560px karta, Qayerdan ⇄ Qayerga qutilari, tovar, miqdor, "140 → 100" natija qatorlari, tugmada miqdor. VM'ga faqat ko'rsatish xossalari va almashtirish (⇄) buyrug'i qo'shildi; ko'chirish logikasi o'zgarmadi. Maketdagi tovar qidiruvi o'rnida ochiluvchi ro'yxat (avvalgidek) |
+| 2.12 | Yangi ombor | `InventoryView.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan: 440px karta, nom maydoni, "Asosiy ombor qilish" kartasi (hozirgi asosiy ombor nomi bilan) |
+| 2.13 | Kategoriya qo'shish / tahrirlash | `InventoryView.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan: 480px karta, nom maydoni, tahrirlashda "N ta tovar". Maketdagi kategoriya rasmi tanlash va "O'chirish" yo'q — dasturda kategoriya rasmi ham, kategoriyani o'chirish ham mavjud emas |
 | 3.1 | Mijozlar va nasiya cheklari | `Views/DebtsView.xaml` | ⬜ | |
 | 3.2 | Qarz to'lovini qabul qilish | `DebtsView.xaml` | ⬜ | |
 | 3.3 | To'lovlar tarixi | `DebtsView.xaml` | ⬜ | |
@@ -135,7 +135,8 @@ Ranglar ustuni: A+B bosqichidan keyin hammasi tokenda, lekin yorug' temada ekran
 - 2.6/2.7 stiker oynasi: `BarcodePrintDialog` maket tuzilishida. `FieldCombo` uslubi `DisplayMemberPath`ni hisobga olmasdi (sinf nomi chiqardi) — tuzatildi.
 - 2.8/2.9 stiker jarayoni: `MainWindow`dagi oyna va vidjet maket tuzilishida; `LabelPrintService` o'zgarmadi.
 - Test eslatmasi: `ReportsViewModelSearchTests.Search_lists_newest_first...` yarim tundan keyingi 3 soat ichida yiqiladi ("bugun, 3 soat oldin" kechagi kunga tushadi) — dizaynga aloqasi yo'q, testning o'zidagi kamchilik.
-- **Keyingi qadam:** 2.10–2.13 (buyurtma ro'yxati, ko'chirish, yangi ombor, kategoriya).
+- 2.10–2.13: buyurtma ro'yxati oynasi va Ombordagi uchta modal (ko'chirish, yangi ombor, kategoriya) maket tuzilishida. Ombor bo'limi (2.x) to'liq ko'chirildi.
+- **Keyingi qadam:** Qarzlar (3.x).
 
 **2026-11-13 (Claude Code), 2-qadam — Kassa ekrani qayta qurildi:**
 - Egasi fikri: yorug' rang eski joylashuv ustiga tortilgani noto'g'ri, maket **tuzilishi** ko'chirilishi kerak (qoida 5).

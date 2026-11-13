@@ -1360,289 +1360,350 @@
             </Border>
         </Grid>
 
-        <!-- YANGI KATEGORIYA QO'SHISH MODAL OYNASI -->
-        <Grid Visibility="{Binding IsAddCategoryModalOpen, Converter={StaticResource BooleanToVisibilityConverter}}"
-              Background="{DynamicResource Scrim}" Panel.ZIndex="2000">
-            <Border Background="{DynamicResource Surface}" CornerRadius="16" BorderBrush="{DynamicResource Accent}" BorderThickness="1.5"
-                    Width="420" VerticalAlignment="Center" HorizontalAlignment="Center" Padding="24">
-                <Border.Effect>
-                    <DropShadowEffect BlurRadius="30" ShadowDepth="0" Opacity="0.8" Color="#000000"/>
-                </Border.Effect>
+        <!-- ========================================================= -->
+        <!-- 2.11–2.13 MODALLAR (maket, yorug' tema): kategoriya,      -->
+        <!-- yangi ombor, omborlararo ko'chirish                       -->
+        <!-- ========================================================= -->
+        <Grid Panel.ZIndex="2000" TextElement.Foreground="{DynamicResource Ink}">
+            <Grid.Resources>
+                <ResourceDictionary>
+                    <ResourceDictionary.MergedDictionaries>
+                        <ResourceDictionary Source="/PosElectro.Desktop;component/Themes/Theme.Light.xaml"/>
+                        <ResourceDictionary Source="/PosElectro.Desktop;component/Themes/SmartControls.xaml"/>
+                    </ResourceDictionary.MergedDictionaries>
+                    <Style x:Key="ModalTitle" TargetType="TextBlock">
+                        <Setter Property="FontSize" Value="18"/>
+                        <Setter Property="FontWeight" Value="Bold"/>
+                        <Setter Property="TextWrapping" Value="Wrap"/>
+                    </Style>
+                    <Style x:Key="ModalError" TargetType="TextBlock">
+                        <Setter Property="FontSize" Value="13"/>
+                        <Setter Property="FontWeight" Value="SemiBold"/>
+                        <Setter Property="Foreground" Value="{DynamicResource Bad}"/>
+                        <Setter Property="TextWrapping" Value="Wrap"/>
+                        <Setter Property="Margin" Value="0,10,0,0"/>
+                        <Style.Triggers>
+                            <Trigger Property="Text" Value="">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                    <Style x:Key="NameBox" TargetType="TextBox" BasedOn="{StaticResource FieldBox}">
+                        <Setter Property="Height" Value="48"/>
+                        <Setter Property="FontSize" Value="16"/>
+                    </Style>
+                    <!-- Ombor tanlash qutisi: ichida kichik sarlavha (ustidan qo'yiladi), radius 12 -->
+                    <Style x:Key="BoxCombo" TargetType="ComboBox" BasedOn="{StaticResource FieldCombo}">
+                        <Setter Property="Height" Value="62"/>
+                        <Setter Property="FontWeight" Value="Bold"/>
+                        <Setter Property="Background" Value="{DynamicResource Surface}"/>
+                        <Setter Property="BorderBrush" Value="{DynamicResource LineStrong}"/>
+                        <Setter Property="BorderThickness" Value="1"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ComboBox">
+                                    <Grid>
+                                        <ToggleButton Focusable="False" ClickMode="Press" Cursor="Hand"
+                                                      Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                                                      IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                                            <ToggleButton.Template>
+                                                <ControlTemplate TargetType="ToggleButton">
+                                                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                                            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="12">
+                                                        <Viewbox Width="14" Height="14" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,14,14">
+                                                            <Path Style="{StaticResource Ic}" Stroke="{DynamicResource Ink3}" Data="M6 9l6 6l6-6"/>
+                                                        </Viewbox>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </ToggleButton.Template>
+                                        </ToggleButton>
+                                        <ContentPresenter IsHitTestVisible="False" Margin="14,30,36,0" VerticalAlignment="Top" HorizontalAlignment="Stretch"
+                                                          Content="{TemplateBinding SelectionBoxItem}"
+                                                          ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                                          ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"/>
+                                        <Popup IsOpen="{TemplateBinding IsDropDownOpen}" Placement="Bottom" AllowsTransparency="True" Focusable="False" PopupAnimation="Fade">
+                                            <Border MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"
+                                                    MaxHeight="{TemplateBinding MaxDropDownHeight}" Margin="0,4,8,12" Padding="4"
+                                                    Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="10"
+                                                    TextElement.FontWeight="Normal">
+                                                <Border.Effect>
+                                                    <DropShadowEffect BlurRadius="16" ShadowDepth="4" Direction="270" Opacity="0.14" Color="#0F1B21"/>
+                                                </Border.Effect>
+                                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                                    <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"/>
+                                                </ScrollViewer>
+                                            </Border>
+                                        </Popup>
+                                    </Grid>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                    <Style x:Key="BoxLabel" TargetType="TextBlock">
+                        <Setter Property="FontSize" Value="12"/>
+                        <Setter Property="Foreground" Value="{DynamicResource Ink3}"/>
+                        <Setter Property="Margin" Value="14,11,14,0"/>
+                        <Setter Property="VerticalAlignment" Value="Top"/>
+                        <Setter Property="IsHitTestVisible" Value="False"/>
+                        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                    </Style>
+                </ResourceDictionary>
+            </Grid.Resources>
 
-                <StackPanel>
-                    <!-- Modal Sarlavhasi -->
-                    <Grid Margin="0,0,0,16">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Border Background="{DynamicResource AccentSoft}" CornerRadius="10" Width="40" Height="40" Margin="0,0,12,0" BorderBrush="{DynamicResource Accent}" BorderThickness="1.5">
-                                <Path Stretch="Uniform" Data="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-                                      Stroke="{DynamicResource AccentInk}" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            </Border>
-                            <TextBlock Text="Yangi Kategoriya Qo'shish" Foreground="{DynamicResource Ink}" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
-                        </StackPanel>
-                        <Button Command="{Binding CloseAddCategoryModalCommand}" HorizontalAlignment="Right" VerticalAlignment="Center"
-                                ToolTip="Yopish"
-                                Background="{DynamicResource Bg}" BorderBrush="{DynamicResource Line}" BorderThickness="1"
-                                Width="32" Height="32" Cursor="Hand" Padding="0">
-                            <Button.Resources>
-                                <Style TargetType="Border">
-                                    <Setter Property="CornerRadius" Value="16"/>
-                                </Style>
-                            </Button.Resources>
-                            <Path Stretch="Uniform" Data="M6 18L18 6M6 6l12 12" Stroke="{DynamicResource Ink2}" StrokeThickness="2" StrokeStartLineCap="Round" Width="12" Height="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Button>
-                    </Grid>
-
-                    <Separator Background="{DynamicResource Line}" Margin="0,0,0,16"/>
-
-                    <TextBlock Text="Kategoriya nomini kiriting:" Foreground="{DynamicResource Ink2}" FontSize="13" Margin="0,0,0,8"/>
-
-                    <!-- Kategoriya nomi inputi (Aniq oq matn, ko'k hoshiya va kontrast fon) -->
-                    <TextBox Text="{Binding NewCategoryInput, UpdateSourceTrigger=PropertyChanged}"
-                             Style="{StaticResource ModernTextBox}"
-                             Background="{DynamicResource Bg}"
-                             Foreground="{DynamicResource OnAccent}"
-                             CaretBrush="{DynamicResource AccentInk}"
-                             BorderBrush="{DynamicResource Accent}"
-                             BorderThickness="1.5"
-                             FontSize="15" FontWeight="SemiBold"
-                             Height="46" Padding="14,0" Margin="0,0,0,0"/>
-
-                    <!-- Xatolik xabari -->
-                    <TextBlock Text="{Binding NewCategoryErrorMessage}" Foreground="{DynamicResource Bad}" FontSize="13" FontWeight="SemiBold"
-                               Margin="0,6,0,16" TextWrapping="Wrap"/>
-
-                    <!-- Tugmalar -->
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="12"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <Button Grid.Column="0" Content="Bekor qilish (Esc)"
-                                Command="{Binding CloseAddCategoryModalCommand}"
-                                Background="{DynamicResource Line}" Foreground="{DynamicResource Ink2}"
-                                Height="42" FontSize="14" FontWeight="SemiBold" Cursor="Hand">
-                            <Button.Resources>
-                                <Style TargetType="Border">
-                                    <Setter Property="CornerRadius" Value="8"/>
-                                </Style>
-                            </Button.Resources>
-                        </Button>
-
-                        <Button Grid.Column="2" Content="Qo'shish (Enter)"
-                                Command="{Binding SaveNewCategoryCommand}"
-                                IsDefault="True"
-                                Style="{StaticResource ModernButton}"
-                                Height="42" FontSize="14" FontWeight="Bold"/>
-                    </Grid>
-                </StackPanel>
+            <!-- ============ 2.13 YANGI KATEGORIYA ============ -->
+            <Border Background="{DynamicResource Scrim}"
+                    Visibility="{Binding IsAddCategoryModalOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <Border Style="{StaticResource ModalCard}" Width="480" Padding="24,22,24,20">
+                    <StackPanel>
+                        <TextBlock Text="Yangi kategoriya" Style="{StaticResource ModalTitle}"/>
+                        <TextBlock Margin="0,16,0,6" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource Ink2}">
+                            <Run Text="Nomi"/> <Run Text="*" Foreground="{DynamicResource Bad}"/>
+                        </TextBlock>
+                        <TextBox Text="{Binding NewCategoryInput, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource NameBox}"
+                                 IsVisibleChanged="FocusWhenShown"/>
+                        <TextBlock Text="{Binding NewCategoryErrorMessage}" Style="{StaticResource ModalError}"/>
+                        <Grid Margin="0,18,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="10"/>
+                                <ColumnDefinition Width="2*"/>
+                            </Grid.ColumnDefinitions>
+                            <Button Command="{Binding CloseAddCategoryModalCommand}" Style="{StaticResource BtnSecondary}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Bekor" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Esc" Style="{StaticResource Kbd}"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Grid.Column="2" Command="{Binding SaveNewCategoryCommand}" Style="{StaticResource BtnPrimary}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Qo'shish" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Enter" Style="{StaticResource Kbd}"/>
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                    </StackPanel>
+                </Border>
             </Border>
-        </Grid>
 
-        <!-- ========================================================= -->
-        <!-- 2.1 KATEGORIYANI TAHRIRLASH MODAL DIALOGI                 -->
-        <!-- ========================================================= -->
-        <Grid Visibility="{Binding IsEditCategoryModalOpen, Converter={StaticResource BooleanToVisibilityConverter}}"
-              Background="{DynamicResource Scrim}">
-            <Border Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Accent}" BorderThickness="1.5"
-                    CornerRadius="16" Width="420" HorizontalAlignment="Center" VerticalAlignment="Center"
-                    Padding="24">
-                <StackPanel>
-                    <!-- Sarlavha va Yopish tugmasi -->
-                    <Grid Margin="0,0,0,12">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                            <Path Stretch="Uniform" Data="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"
-                                                  Stroke="{DynamicResource AccentInk}" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="12" Height="12" Margin="0,0,5,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="Kategoriya Nomini Tahrirlash" Foreground="{DynamicResource Ink}" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
-                        </StackPanel>
-                        <Button Command="{Binding CloseEditCategoryModalCommand}" HorizontalAlignment="Right"
-                                Background="{DynamicResource Bg}" BorderBrush="{DynamicResource Line}" BorderThickness="1"
-                                Width="32" Height="32" Cursor="Hand" Padding="0">
-                            <Button.Resources>
-                                <Style TargetType="Border">
-                                    <Setter Property="CornerRadius" Value="16"/>
-                                </Style>
-                            </Button.Resources>
-                            <Path Stretch="Uniform" Data="M6 18L18 6M6 6l12 12" Stroke="{DynamicResource Ink2}" StrokeThickness="2" StrokeStartLineCap="Round" Width="12" Height="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Button>
-                    </Grid>
-
-                    <Separator Background="{DynamicResource Line}" Margin="0,0,0,16"/>
-
-                    <TextBlock Text="Yangi nomni kiriting:" Foreground="{DynamicResource Ink2}" FontSize="13" Margin="0,0,0,8"/>
-
-                    <!-- Kategoriya nomi inputi -->
-                    <TextBox Text="{Binding EditCategoryInput, UpdateSourceTrigger=PropertyChanged}"
-                             Style="{StaticResource ModernTextBox}"
-                             Background="{DynamicResource Bg}"
-                             Foreground="{DynamicResource OnAccent}"
-                             CaretBrush="{DynamicResource AccentInk}"
-                             BorderBrush="{DynamicResource Accent}"
-                             BorderThickness="1.5"
-                             FontSize="15" FontWeight="SemiBold"
-                             Height="46" Padding="14,0" Margin="0,0,0,0"/>
-
-                    <!-- Xatolik xabari -->
-                    <TextBlock Text="{Binding EditCategoryErrorMessage}" Foreground="{DynamicResource Bad}" FontSize="13" FontWeight="SemiBold"
-                               Margin="0,6,0,16" TextWrapping="Wrap"/>
-
-                    <!-- Tugmalar -->
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="12"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <Button Grid.Column="0" Content="Bekor qilish (Esc)"
-                                Command="{Binding CloseEditCategoryModalCommand}"
-                                Background="{DynamicResource Line}" Foreground="{DynamicResource Ink2}"
-                                Height="42" FontSize="14" FontWeight="SemiBold" Cursor="Hand">
-                            <Button.Resources>
-                                <Style TargetType="Border">
-                                    <Setter Property="CornerRadius" Value="8"/>
-                                </Style>
-                            </Button.Resources>
-                        </Button>
-
-                        <Button Grid.Column="2" Content="Saqlash (Enter)"
-                                Command="{Binding SaveEditCategoryCommand}"
-                                IsDefault="True"
-                                Style="{StaticResource ModernButton}"
-                                Height="42" FontSize="14" FontWeight="Bold"/>
-                    </Grid>
-                </StackPanel>
+            <!-- ============ 2.13 KATEGORIYANI TAHRIRLASH ============ -->
+            <Border Background="{DynamicResource Scrim}"
+                    Visibility="{Binding IsEditCategoryModalOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <Border Style="{StaticResource ModalCard}" Width="480" Padding="24,22,24,20">
+                    <StackPanel>
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Right" Text="{Binding EditCategoryCountText}" FontSize="12" Foreground="{DynamicResource Ink3}"
+                                       VerticalAlignment="Center" Margin="12,0,0,0"/>
+                            <TextBlock Text="Kategoriyani tahrirlash" Style="{StaticResource ModalTitle}"/>
+                        </DockPanel>
+                        <TextBlock Margin="0,16,0,6" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource Ink2}">
+                            <Run Text="Nomi"/> <Run Text="*" Foreground="{DynamicResource Bad}"/>
+                        </TextBlock>
+                        <TextBox Text="{Binding EditCategoryInput, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource NameBox}"
+                                 IsVisibleChanged="FocusWhenShown"/>
+                        <TextBlock Text="{Binding EditCategoryErrorMessage}" Style="{StaticResource ModalError}"/>
+                        <Grid Margin="0,18,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="10"/>
+                                <ColumnDefinition Width="2*"/>
+                            </Grid.ColumnDefinitions>
+                            <Button Command="{Binding CloseEditCategoryModalCommand}" Style="{StaticResource BtnSecondary}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Bekor" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Esc" Style="{StaticResource Kbd}"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Grid.Column="2" Command="{Binding SaveEditCategoryCommand}" Style="{StaticResource BtnPrimary}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Saqlash" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Enter" Style="{StaticResource Kbd}"/>
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                    </StackPanel>
+                </Border>
             </Border>
-        </Grid>
 
-        <!-- ========================================================= -->
-        <!-- 3. YANGI OMBOR QO'SHISH MODAL DIALOGI                     -->
-        <!-- ========================================================= -->
-        <Grid Visibility="{Binding IsAddWarehouseModalOpen, Converter={StaticResource BooleanToVisibilityConverter}}"
-              Background="{DynamicResource Scrim}">
-            <Border Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Accent}" BorderThickness="1.5"
-                    CornerRadius="16" Width="440" HorizontalAlignment="Center" VerticalAlignment="Center"
-                    Padding="24">
-                <StackPanel>
-                    <Grid Margin="0,0,0,12">
-                        <TextBlock Text="Yangi Ombor Yaratish" Foreground="{DynamicResource Ink}" FontSize="18" FontWeight="Bold"/>
-                        <Button Command="{Binding CloseAddWarehouseModalCommand}" HorizontalAlignment="Right"
-                                Background="{DynamicResource Bg}" BorderBrush="{DynamicResource Line}" BorderThickness="1"
-                                Width="32" Height="32" Cursor="Hand">
-                            <Button.Resources>
-                                <Style TargetType="Border">
-                                    <Setter Property="CornerRadius" Value="16"/>
-                                </Style>
-                            </Button.Resources>
-                            <Path Stretch="Uniform" Data="M6 18L18 6M6 6l12 12" Stroke="{DynamicResource Ink2}" StrokeThickness="2" StrokeStartLineCap="Round" Width="12" Height="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Button>
-                    </Grid>
-                    <Separator Background="{DynamicResource Line}" Margin="0,0,0,16"/>
-
-                    <TextBlock Text="Ombor nomi (masalan: Uydagi ombor, Garaj):" Foreground="{DynamicResource Ink2}" FontSize="13" Margin="0,0,0,8"/>
-                    <TextBox Text="{Binding NewWarehouseName, UpdateSourceTrigger=PropertyChanged}"
-                             Style="{StaticResource ModernTextBox}" Background="{DynamicResource Bg}" Foreground="{DynamicResource Ink}"
-                             FontSize="15" Height="44" Padding="12,8" Margin="0,0,0,12"/>
-
-                    <CheckBox IsChecked="{Binding NewWarehouseIsPrimary}" Margin="0,0,0,12" VerticalAlignment="Center">
-                        <TextBlock Text="Asosiy ombor qilib belgilash (savatda birinchi yechiladi)" Foreground="{DynamicResource Ink}" FontSize="13"/>
-                    </CheckBox>
-
-                    <TextBlock Text="{Binding NewWarehouseErrorMessage}" Foreground="{DynamicResource Bad}" FontSize="13"
-                               Margin="0,0,0,12" TextWrapping="Wrap"/>
-
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="12"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Button Grid.Column="0" Content="Bekor qilish (Esc)" Command="{Binding CloseAddWarehouseModalCommand}"
-                                Background="{DynamicResource Line}" Foreground="{DynamicResource Ink2}" Height="40" FontSize="14" Cursor="Hand">
-                            <Button.Resources>
-                                <Style TargetType="Border"><Setter Property="CornerRadius" Value="8"/></Style>
-                            </Button.Resources>
-                        </Button>
-                        <Button Grid.Column="2" Content="Saqlash (Enter)" Command="{Binding SaveNewWarehouseCommand}"
-                                IsDefault="True" Style="{StaticResource SuccessButton}" Height="40" FontSize="14" FontWeight="Bold"/>
-                    </Grid>
-                </StackPanel>
+            <!-- ============ 2.12 YANGI OMBOR ============ -->
+            <Border Background="{DynamicResource Scrim}"
+                    Visibility="{Binding IsAddWarehouseModalOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <Border Style="{StaticResource ModalCard}" Width="440" Padding="24,22,24,20">
+                    <StackPanel>
+                        <TextBlock Text="Yangi ombor" Style="{StaticResource ModalTitle}"/>
+                        <TextBlock Margin="0,16,0,6" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource Ink2}">
+                            <Run Text="Nomi"/> <Run Text="*" Foreground="{DynamicResource Bad}"/>
+                        </TextBlock>
+                        <TextBox Text="{Binding NewWarehouseName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource NameBox}"
+                                 IsVisibleChanged="FocusWhenShown"/>
+                        <!-- Asosiy ombor qilish -->
+                        <CheckBox IsChecked="{Binding NewWarehouseIsPrimary}" Margin="0,16,0,0" Cursor="Hand" HorizontalContentAlignment="Stretch">
+                            <CheckBox.Template>
+                                <ControlTemplate TargetType="CheckBox">
+                                    <Border x:Name="card" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Line}" BorderThickness="1"
+                                            CornerRadius="12" Padding="14,12">
+                                        <DockPanel>
+                                            <Border x:Name="box" DockPanel.Dock="Left" Width="20" Height="20" CornerRadius="5" Margin="0,1,12,0" VerticalAlignment="Top"
+                                                    Background="{DynamicResource Surface}" BorderBrush="{DynamicResource LineStrong}" BorderThickness="1.5">
+                                                <Viewbox x:Name="tick" Width="14" Height="14" Visibility="Collapsed">
+                                                    <Path Data="M5 12l5 5l9-10" Width="24" Height="24" Stretch="None" Stroke="{DynamicResource OnAccent}"
+                                                          StrokeThickness="3" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
+                                                </Viewbox>
+                                            </Border>
+                                            <StackPanel>
+                                                <TextBlock Text="Asosiy ombor qilish" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource Ink}" TextWrapping="Wrap"/>
+                                                <TextBlock FontSize="13" Foreground="{DynamicResource Ink3}" Margin="0,2,0,0" TextWrapping="Wrap" LineHeight="19">
+                                                    <Run Text="Kassa sotuvlari avval shu ombordan ayiriladi. Hozirgi asosiy:"/>
+                                                    <Run Text="{Binding CurrentPrimaryWarehouseName, Mode=OneWay}" FontWeight="Bold" Foreground="{DynamicResource Ink2}"/>
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </DockPanel>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsChecked" Value="True">
+                                            <Setter TargetName="box" Property="Background" Value="{DynamicResource Accent}"/>
+                                            <Setter TargetName="box" Property="BorderThickness" Value="0"/>
+                                            <Setter TargetName="tick" Property="Visibility" Value="Visible"/>
+                                            <Setter TargetName="card" Property="BorderBrush" Value="{DynamicResource Accent}"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </CheckBox.Template>
+                        </CheckBox>
+                        <TextBlock Text="{Binding NewWarehouseErrorMessage}" Style="{StaticResource ModalError}"/>
+                        <Grid Margin="0,18,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="10"/>
+                                <ColumnDefinition Width="2*"/>
+                            </Grid.ColumnDefinitions>
+                            <Button Command="{Binding CloseAddWarehouseModalCommand}" Style="{StaticResource BtnSecondary}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Bekor" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Esc" Style="{StaticResource Kbd}"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Grid.Column="2" Command="{Binding SaveNewWarehouseCommand}" Style="{StaticResource BtnPrimary}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Yaratish" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Enter" Style="{StaticResource Kbd}"/>
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                    </StackPanel>
+                </Border>
             </Border>
-        </Grid>
 
-        <!-- ========================================================= -->
-        <!-- 4. OMBORLARARO KO'CHIRISH (TRANSFER) MODAL DIALOGI         -->
-        <!-- ========================================================= -->
-        <Grid Visibility="{Binding IsTransferModalOpen, Converter={StaticResource BooleanToVisibilityConverter}}"
-              Background="{DynamicResource Scrim}">
-            <Border Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Accent}" BorderThickness="1.5"
-                    CornerRadius="16" Width="500" HorizontalAlignment="Center" VerticalAlignment="Center"
-                    Padding="24">
-                <StackPanel>
-                    <Grid Margin="0,0,0,12">
-                        <TextBlock Text="Omborlararo Ko'chirish (Transfer)" Foreground="{DynamicResource Ink}" FontSize="18" FontWeight="Bold"/>
-                        <Button Command="{Binding CloseTransferModalCommand}" HorizontalAlignment="Right"
-                                Background="{DynamicResource Bg}" BorderBrush="{DynamicResource Line}" BorderThickness="1"
-                                Width="32" Height="32" Cursor="Hand">
-                            <Button.Resources>
-                                <Style TargetType="Border">
-                                    <Setter Property="CornerRadius" Value="16"/>
-                                </Style>
-                            </Button.Resources>
-                            <Path Stretch="Uniform" Data="M6 18L18 6M6 6l12 12" Stroke="{DynamicResource Ink2}" StrokeThickness="2" StrokeStartLineCap="Round" Width="12" Height="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Button>
-                    </Grid>
-                    <Separator Background="{DynamicResource Line}" Margin="0,0,0,16"/>
+            <!-- ============ 2.11 OMBORLARARO KO'CHIRISH ============ -->
+            <Border Background="{DynamicResource Scrim}"
+                    Visibility="{Binding IsTransferModalOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <Border Style="{StaticResource ModalCard}" Width="560">
+                    <StackPanel>
+                        <Border Padding="24,20,24,14" BorderBrush="{DynamicResource Line}" BorderThickness="0,0,0,1">
+                            <TextBlock Text="Omborlararo ko'chirish" Style="{StaticResource ModalTitle}"/>
+                        </Border>
+                        <StackPanel Margin="24,18,24,18">
+                            <!-- Qayerdan ⇄ Qayerga -->
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid>
+                                    <ComboBox ItemsSource="{Binding Warehouses}" SelectedItem="{Binding TransferFromWarehouse}"
+                                              DisplayMemberPath="Name" Style="{StaticResource BoxCombo}"/>
+                                    <TextBlock Text="Qayerdan" Style="{StaticResource BoxLabel}"/>
+                                </Grid>
+                                <Button Grid.Column="1" Command="{Binding SwapTransferWarehousesCommand}" ToolTip="Almashtirish"
+                                        Width="40" Height="40" Margin="12,0" Cursor="Hand" Focusable="False">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border x:Name="bd" CornerRadius="20" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource LineStrong}" BorderThickness="1">
+                                                <Viewbox Width="18" Height="18">
+                                                    <Path Style="{StaticResource Ic}" Stroke="{DynamicResource AccentInk}" Data="M4 9h14l-4-4 M20 15H6l4 4"/>
+                                                </Viewbox>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="bd" Property="Background" Value="{DynamicResource Surface2}"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+                                <Grid Grid.Column="2">
+                                    <ComboBox ItemsSource="{Binding Warehouses}" SelectedItem="{Binding TransferToWarehouse}"
+                                              DisplayMemberPath="Name" Style="{StaticResource BoxCombo}"
+                                              Background="{DynamicResource AccentSoft}" BorderBrush="{DynamicResource Accent}" BorderThickness="1.5"/>
+                                    <TextBlock Text="Qayerga" Style="{StaticResource BoxLabel}" Foreground="{DynamicResource AccentInk}"/>
+                                </Grid>
+                            </Grid>
 
-                    <Grid Margin="0,0,0,14">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="30"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0">
-                            <TextBlock Text="Chiqish ombori:" Foreground="{DynamicResource Ink2}" FontSize="12" Margin="0,0,0,4"/>
-                            <ComboBox ItemsSource="{Binding Warehouses}" SelectedItem="{Binding TransferFromWarehouse}"
-                                      DisplayMemberPath="Name" Height="38"/>
+                            <!-- Tovar -->
+                            <DockPanel Margin="0,16,0,6">
+                                <TextBlock DockPanel.Dock="Right" Text="{Binding TransferAvailableText}" FontSize="12" Foreground="{DynamicResource Ink3}" VerticalAlignment="Center"/>
+                                <TextBlock Text="Tovar" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource Ink2}"/>
+                            </DockPanel>
+                            <ComboBox ItemsSource="{Binding Products}" SelectedItem="{Binding TransferProduct}" DisplayMemberPath="Name"
+                                      Style="{StaticResource FieldCombo}" Height="48" FontWeight="SemiBold" Tag="Tovarni tanlang"/>
+
+                            <!-- Miqdor va natija -->
+                            <Grid Margin="0,16,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="180"/>
+                                    <ColumnDefinition Width="14"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="Miqdor" Style="{StaticResource FieldLabel}"/>
+                                    <TextBox Text="{Binding TransferQuantity, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldBox}"
+                                             Height="48" FontSize="18" FontWeight="Bold" Tag="{Binding TransferProduct.UnitDisplay}"
+                                             IsVisibleChanged="FocusWhenShown"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" VerticalAlignment="Bottom" Margin="0,0,0,4"
+                                            Visibility="{Binding HasTransferPreview, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <TextBlock FontSize="13" Foreground="{DynamicResource Ink2}" TextWrapping="Wrap" LineHeight="21">
+                                        <Run Text="{Binding TransferFromLine, Mode=OneWay}"/><Run Text="{Binding TransferFromAfter, Mode=OneWay}" FontWeight="Bold">
+                                            <Run.Style>
+                                                <Style TargetType="Run">
+                                                    <Setter Property="Foreground" Value="{DynamicResource Ink}"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsTransferOverStock}" Value="True">
+                                                            <Setter Property="Foreground" Value="{DynamicResource Bad}"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Run.Style>
+                                        </Run>
+                                    </TextBlock>
+                                    <TextBlock FontSize="13" Foreground="{DynamicResource Ink2}" TextWrapping="Wrap" LineHeight="21">
+                                        <Run Text="{Binding TransferToLine, Mode=OneWay}"/><Run Text="{Binding TransferToAfter, Mode=OneWay}" FontWeight="Bold" Foreground="{DynamicResource Ok}"/>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Grid>
+                            <TextBlock Text="{Binding TransferErrorMessage}" Style="{StaticResource ModalError}"/>
                         </StackPanel>
-                        <Path Stretch="Uniform" Grid.Column="1" Data="M14 5l7 7m0 0l-7 7m7-7H3"
-                              Stroke="{DynamicResource AccentInk}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="16" Height="16" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,14,0,0"/>
-                        <StackPanel Grid.Column="2">
-                            <TextBlock Text="Qabul qiluvchi ombor:" Foreground="{DynamicResource Ink2}" FontSize="12" Margin="0,0,0,4"/>
-                            <ComboBox ItemsSource="{Binding Warehouses}" SelectedItem="{Binding TransferToWarehouse}"
-                                      DisplayMemberPath="Name" Height="38"/>
-                        </StackPanel>
-                    </Grid>
-
-                    <TextBlock Text="Ko'chiriladigan mahsulot:" Foreground="{DynamicResource Ink2}" FontSize="12" Margin="0,0,0,4"/>
-                    <ComboBox ItemsSource="{Binding Products}" SelectedItem="{Binding TransferProduct}"
-                              DisplayMemberPath="Name" Height="38" Margin="0,0,0,14"/>
-
-                    <TextBlock Text="Ko'chirish miqdori:" Foreground="{DynamicResource Ink2}" FontSize="12" Margin="0,0,0,4"/>
-                    <TextBox Text="{Binding TransferQuantity, UpdateSourceTrigger=PropertyChanged}"
-                             Style="{StaticResource ModernTextBox}" Background="{DynamicResource Bg}" Foreground="{DynamicResource Ink}"
-                             FontSize="15" Height="42" Padding="10,6" Margin="0,0,0,12"/>
-
-                    <TextBlock Text="{Binding TransferErrorMessage}" Foreground="{DynamicResource Bad}" FontSize="13"
-                               Margin="0,0,0,14" TextWrapping="Wrap"/>
-
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="12"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Button Grid.Column="0" Content="Bekor qilish (Esc)" Command="{Binding CloseTransferModalCommand}"
-                                Background="{DynamicResource Line}" Foreground="{DynamicResource Ink2}" Height="40" FontSize="14" Cursor="Hand">
-                            <Button.Resources>
-                                <Style TargetType="Border"><Setter Property="CornerRadius" Value="8"/></Style>
-                            </Button.Resources>
-                        </Button>
-                        <Button Grid.Column="2" Content="Ko'chirish (Enter)" Command="{Binding ExecuteTransferCommand}"
-                                IsDefault="True" Style="{StaticResource ModernButton}" Height="40" FontSize="14" FontWeight="Bold"/>
-                    </Grid>
-                </StackPanel>
+                        <Grid Margin="24,0,24,20">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="10"/>
+                                <ColumnDefinition Width="2*"/>
+                            </Grid.ColumnDefinitions>
+                            <Button Command="{Binding CloseTransferModalCommand}" Style="{StaticResource BtnSecondary}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Bekor" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Esc" Style="{StaticResource Kbd}"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Grid.Column="2" Command="{Binding ExecuteTransferCommand}" Style="{StaticResource BtnPrimary}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding TransferButtonText}" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Enter" Style="{StaticResource Kbd}"/>
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                    </StackPanel>
+                </Border>
             </Border>
         </Grid>
 

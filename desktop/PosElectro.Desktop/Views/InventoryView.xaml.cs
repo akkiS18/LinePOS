@@ -21,6 +21,13 @@ namespace PosElectro.Desktop.Views
             InitializeComponent();
         }
 
+        /// <summary>Modal ochilganda birinchi maydonga fokus (faqat qulaylik).</summary>
+        private void FocusWhenShown(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            if (sender is TextBox tb && tb.IsVisible)
+                Dispatcher.BeginInvoke(new Action(() => { tb.Focus(); tb.SelectAll(); }), System.Windows.Threading.DispatcherPriority.Input);
+        }
+
         private void InventoryView_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
             if (DataContext is not InventoryViewModel vm) return;

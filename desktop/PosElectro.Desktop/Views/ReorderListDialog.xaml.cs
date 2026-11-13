@@ -28,7 +28,6 @@ namespace PosElectro.Desktop.Views
             string warehouseName = "Barcha omborlar")
         {
             InitializeComponent();
-            WindowStyleHelper.ApplyDarkTheme(this);
             _db = db ?? new DatabaseContext();
             _items = new ObservableCollection<Product>(items);
             _onRemoveItem = onRemoveItem;
@@ -42,10 +41,29 @@ namespace PosElectro.Desktop.Views
 
         private void UpdateSummary()
         {
-            TxtTotalCount.Text = $"Jami: {_items.Count} ta tovar";
-            TxtSummary.Text = _items.Count > 0 
-                ? $"Ro'yxatda {_items.Count} ta mahsulot mavjud. Adashib qo'shilganlarini o'chirishingiz yoki chek/Excelga chiqarishingiz mumkin."
-                : "Buyurtma uchun hech qanday tovar qolmadi.";
+            // Maket 2.10: sarlavha osti va pastki yozuv (faqat ko'rsatish)
+            TxtTotalCount.Text = $"{_items.Count} ta tovar · keraksizini ✕ bilan olib tashlang";
+            TxtSummary.Text = $"Buyurtma uchun tanlangan tovarlar · {_items.Count} ta · {_warehouseName}";
+            TxtEmpty.Visibility = _items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            // Oyna egasini to'liq qoplaydi (orqa fon xiralashadi, karta markazda)
+            if (Owner != null)
+            {
+                SizeToContent = SizeToContent.Manual;
+                if (Owner.WindowState == WindowState.Maximized)
+                {
+                    Left = Owner.Left; Top = Owner.Top;
+                    WindowState = WindowState.Maximized;
+                }
+                else if (Owner.ActualWidth > ActualWidth && Owner.ActualHeight > ActualHeight)
+                {
+                    Left = Owner.Left; Top = Owner.Top;
+                    Width = Owner.ActualWidth; Height = Owner.ActualHeight;
+                }
+            }
         }
 
         private void BtnChangeImage_Click(object sender, RoutedEventArgs e)

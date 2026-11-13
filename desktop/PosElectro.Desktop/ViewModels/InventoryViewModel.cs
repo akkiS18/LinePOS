@@ -178,8 +178,11 @@ namespace PosElectro.Desktop.ViewModels
         public string EditCategoryOldName
         {
             get => _editCategoryOldName;
-            set => SetProperty(ref _editCategoryOldName, value);
+            set { if (SetProperty(ref _editCategoryOldName, value)) OnPropertyChanged(nameof(EditCategoryCountText)); }
         }
+        /// <summary>Maket 2.13: "86 ta tovar" (faqat ko'rsatish).</summary>
+        public string EditCategoryCountText => string.IsNullOrWhiteSpace(EditCategoryOldName) ? string.Empty
+            : $"{_productService.GetProductsByCategory(EditCategoryOldName).Count} ta tovar";
 
         private string _editCategoryInput = string.Empty;
         public string EditCategoryInput
@@ -200,8 +203,10 @@ namespace PosElectro.Desktop.ViewModels
         public bool IsAddWarehouseModalOpen
         {
             get => _isAddWarehouseModalOpen;
-            set => SetProperty(ref _isAddWarehouseModalOpen, value);
+            set { if (SetProperty(ref _isAddWarehouseModalOpen, value)) OnPropertyChanged(nameof(CurrentPrimaryWarehouseName)); }
         }
+        /// <summary>Maket 2.12: "Hozirgi asosiy: ..." (faqat ko'rsatish).</summary>
+        public string CurrentPrimaryWarehouseName => Warehouses.FirstOrDefault(w => w.IsPrimary)?.Name ?? "—";
 
         private string _newWarehouseName = string.Empty;
         public string NewWarehouseName
@@ -229,35 +234,73 @@ namespace PosElectro.Desktop.ViewModels
         public bool IsTransferModalOpen
         {
             get => _isTransferModalOpen;
-            set => SetProperty(ref _isTransferModalOpen, value);
+            set { if (SetProperty(ref _isTransferModalOpen, value)) NotifyTransferPreview(); }
         }
+
+        // ---- Maket 2.11: ko'chirish oynasidagi ko'rsatkichlar (faqat ko'rsatish; ko'chirish logikasi o'zgarmagan) ----
+        private void NotifyTransferPreview()
+        {
+            OnPropertyChanged(nameof(HasTransferPreview));
+            OnPropertyChanged(nameof(TransferAvailableText));
+            OnPropertyChanged(nameof(TransferFromLine));
+            OnPropertyChanged(nameof(TransferFromAfter));
+            OnPropertyChanged(nameof(TransferToLine));
+            OnPropertyChanged(nameof(TransferToAfter));
+            OnPropertyChanged(nameof(IsTransferOverStock));
+            OnPropertyChanged(nameof(TransferButtonText));
+        }
+        private bool TryGetTransferQty(out double qty) =>
+            double.TryParse(TransferQuantity, NumberStyles.Any, CultureInfo.InvariantCulture, out qty) && qty > 0;
+        private double TransferStockIn(Warehouse? w) =>
+            (!IsTransferModalOpen || TransferProduct == null || w == null) ? 0 : _db.GetProductStockInWarehouse(TransferProduct.Guid, w.Guid);
+
+        public bool HasTransferPreview => IsTransferModalOpen && TransferProduct != null && TransferFromWarehouse != null
+            && TransferToWarehouse != null && TransferFromWarehouse.Guid != TransferToWarehouse.Guid;
+        public string TransferAvailableText => (TransferProduct == null || TransferFromWarehouse == null) ? string.Empty
+            : $"mavjud: {TransferStockIn(TransferFromWarehouse):0.##} {TransferProduct.UnitDisplay}";
+        public string TransferFromLine => HasTransferPreview ? $"{TransferFromWarehouse!.Name}: {TransferStockIn(TransferFromWarehouse):0.##} → " : string.Empty;
+        public string TransferFromAfter => !HasTransferPreview ? string.Empty
+            : TryGetTransferQty(out var q) ? $"{TransferStockIn(TransferFromWarehouse) - q:0.##}" : "—";
+        public string TransferToLine => HasTransferPreview ? $"{TransferToWarehouse!.Name}: {TransferStockIn(TransferToWarehouse):0.##} → " : string.Empty;
+        public string TransferToAfter => !HasTransferPreview ? string.Empty
+            : TryGetTransferQty(out var q) ? $"{TransferStockIn(TransferToWarehouse) + q:0.##}" : "—";
+        public bool IsTransferOverStock => HasTransferPreview && TryGetTransferQty(out var q) && q > TransferStockIn(TransferFromWarehouse);
+        public string TransferButtonText => TransferProduct != null && TryGetTransferQty(out var q)
+            ? $"{q:0.##} {TransferProduct.UnitDisplay} ko'chirish" : "Ko'chirish";
+        /// <summary>Qayerdan / Qayerga omborlarini almashtiradi (faqat tanlovni).</summary>
+        public ICommand SwapTransferWarehousesCommand => new RelayCommand(() =>
+        {
+            var from = TransferFromWarehouse;
+            TransferFromWarehouse = TransferToWarehouse;
+            TransferToWarehouse = from;
+        });
 
         private Warehouse? _transferFromWarehouse;
         public Warehouse? TransferFromWarehouse
         {
             get => _transferFromWarehouse;
-            set => SetProperty(ref _transferFromWarehouse, value);
+            set { if (SetProperty(ref _transferFromWarehouse, value)) NotifyTransferPreview(); }
         }
 
         private Warehouse? _transferToWarehouse;
         public Warehouse? TransferToWarehouse
         {
             get => _transferToWarehouse;
-            set => SetProperty(ref _transferToWarehouse, value);
+            set { if (SetProperty(ref _transferToWarehouse, value)) NotifyTransferPreview(); }
         }
 
         private Product? _transferProduct;
         public Product? TransferProduct
         {
             get => _transferProduct;
-            set => SetProperty(ref _transferProduct, value);
+            set { if (SetProperty(ref _transferProduct, value)) NotifyTransferPreview(); }
         }
 
         private string _transferQuantity = "1";
         public string TransferQuantity
         {
             get => _transferQuantity;
-            set => SetProperty(ref _transferQuantity, value);
+            set { if (SetProperty(ref _transferQuantity, value)) NotifyTransferPreview(); }
         }
 
         private string? _formImagePath;
