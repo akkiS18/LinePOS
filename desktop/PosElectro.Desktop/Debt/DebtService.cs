@@ -91,6 +91,8 @@ public sealed record DebtAccountItemDto(
     public double OriginalDebtUz => OriginalDebtMinor / 100.0;
     public double BalanceUz => BalanceMinor / 100.0;
     public string BalanceDisplay => $"{BalanceUz:N0} so'm";
+    // Maket 3.1: "To'langan" ustuni (faqat ko'rsatish)
+    public double PaidUz => (OriginalDebtMinor - BalanceMinor) / 100.0;
     public string CreatedAtDisplay => DateTimeOffset.FromUnixTimeMilliseconds(CreatedAt).LocalDateTime.ToString("dd.MM.yyyy HH:mm");
     public string DueDateDisplay => string.IsNullOrWhiteSpace(DueDate) ? "Muddatsiz" : DueDate;
     public string StatusText => BalanceMinor <= 0
@@ -125,6 +127,10 @@ public sealed record DebtEventItemDto(
         _ => Kind
     };
     public bool CanReverse => Kind == "payment" && !IsReversed;
+    // Maket 3.3: "Usul" ustuni (faqat ko'rsatish)
+    public string MethodDisplay => CashMinor != 0 && CardMinor != 0
+        ? $"Naqd {CashMinor / 100.0:N0} + Karta {CardMinor / 100.0:N0}"
+        : CashMinor != 0 ? "Naqd" : CardMinor != 0 ? "Karta" : "—";
     public double TotalPaymentUz => (CashMinor + CardMinor) / 100.0;
     public double CashUz => CashMinor / 100.0;
     public double CardUz => CardMinor / 100.0;

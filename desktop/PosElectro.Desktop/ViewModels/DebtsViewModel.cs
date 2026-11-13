@@ -571,28 +571,37 @@ public class DebtsViewModel : ViewModelBase
         }
     }
 
+    // Maket 3.7: tasdiq endi ekran ichidagi oynada (avval MessageBox edi). Bloklash amali o'zgarmagan.
+    private bool _isBlockConfirmOpen;
+    public bool IsBlockConfirmOpen { get => _isBlockConfirmOpen; set => SetProperty(ref _isBlockConfirmOpen, value); }
+    public string BlockConfirmTitle => SelectedCustomer?.Archived == true ? "Mijozni blokdan chiqarasizmi?" : "Mijozni bloklaysizmi?";
+    public string BlockConfirmButtonText => SelectedCustomer?.Archived == true ? "Ha, blokdan chiqarish" : "Ha, bloklash";
+    private ICommand? _confirmToggleArchiveCommand;
+    public ICommand ConfirmToggleArchiveCommand => _confirmToggleArchiveCommand ??= new RelayCommand(ConfirmToggleArchive);
+    private ICommand? _cancelToggleArchiveCommand;
+    public ICommand CancelToggleArchiveCommand => _cancelToggleArchiveCommand ??= new RelayCommand(() => IsBlockConfirmOpen = false);
+
     private void ToggleArchiveCustomer()
     {
         if (SelectedCustomer == null) return;
-        var actionText = SelectedCustomer.Archived ? "blokdan chiqarishni" : "bloklashni";
-        var res = MessageBox.Show(
-            $"Haqiqatan ham '{SelectedCustomer.Name}' mijozini {actionText} istaysizmi?\n\nEslatma: Bloklangan mijozning mavjud qarzlari saqlanib qoladi va ularga to'lov qabul qilish mumkin, biroq yangi nasiya ochib bo'lmaydi.",
-            "Tasdiqlash",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
+        OnPropertyChanged(nameof(BlockConfirmTitle));
+        OnPropertyChanged(nameof(BlockConfirmButtonText));
+        IsBlockConfirmOpen = true;
+    }
 
-        if (res == MessageBoxResult.Yes)
+    private void ConfirmToggleArchive()
+    {
+        IsBlockConfirmOpen = false;
+        if (SelectedCustomer == null) return;
+        try
         {
-            try
-            {
-                _debtService.ArchiveCustomer(SelectedCustomer.Guid, !SelectedCustomer.Archived);
-                RefreshAll();
-                OnPropertyChanged(nameof(BlockButtonText));
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Xatolik: {ex.Message}", "Xatolik", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+            _debtService.ArchiveCustomer(SelectedCustomer.Guid, !SelectedCustomer.Archived);
+            RefreshAll();
+            OnPropertyChanged(nameof(BlockButtonText));
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Xatolik: {ex.Message}", "Xatolik", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 

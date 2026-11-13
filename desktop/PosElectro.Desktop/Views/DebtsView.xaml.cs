@@ -11,10 +11,35 @@ public partial class DebtsView : UserControl
         InitializeComponent();
     }
 
+    /// <summary>Modal ochilganda birinchi maydonga fokus (faqat qulaylik).</summary>
+    private void FocusWhenShown(object sender, System.Windows.DependencyPropertyChangedEventArgs e)
+    {
+        if (sender is TextBox tb && tb.IsVisible)
+            Dispatcher.BeginInvoke(new System.Action(() => { tb.Focus(); tb.SelectAll(); }), System.Windows.Threading.DispatcherPriority.Input);
+    }
+
+    /// <summary>"Boshqa amallar" menyusidan band tanlangach menyu yopiladi.</summary>
+    private void MoreMenuItem_Click(object sender, System.Windows.RoutedEventArgs e) => MoreToggle.IsChecked = false;
+
     private void DebtsView_PreviewKeyDown(object sender, KeyEventArgs e)
     {
         if (DataContext is DebtsViewModel vm)
         {
+            // 0. Bloklash tasdig'i (maket 3.7)
+            if (vm.IsBlockConfirmOpen)
+            {
+                if (e.Key == Key.Escape)
+                {
+                    vm.CancelToggleArchiveCommand.Execute(null);
+                    e.Handled = true;
+                }
+                else if (e.Key == Key.Enter && !(e.OriginalSource is Button))
+                {
+                    e.Handled = true;
+                }
+                return;
+            }
+
             // 1. Mijoz haqida batafsil ma'lumot modali
             if (vm.IsCustomerInfoModalOpen)
             {

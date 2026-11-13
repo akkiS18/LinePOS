@@ -1,1164 +1,1116 @@
 <UserControl x:Class="PosElectro.Desktop.Views.DebtsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:vm="clr-namespace:PosElectro.Desktop.ViewModels"
-             mc:Ignorable="d" 
-             d:DesignHeight="750" d:DesignWidth="1100"
-             PreviewKeyDown="DebtsView_PreviewKeyDown"
-             Background="{DynamicResource Bg}">
-
+             mc:Ignorable="d"
+             d:DesignHeight="712" d:DesignWidth="1366"
+             PreviewKeyDown="DebtsView_PreviewKeyDown">
+    <!-- Maket 3.x: Qarzlar (yorug' tema). Ranglar faqat tokenlardan — keyin dark rejim uchun. -->
     <UserControl.Resources>
-        <!-- Filter Chip Button Stili -->
-        <Style x:Key="FilterChipButton" TargetType="Button">
-            <Setter Property="Background" Value="{DynamicResource Surface}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource Line}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Foreground" Value="{DynamicResource Ink2}"/>
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Padding" Value="12,6"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="16" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/PosElectro.Desktop;component/Themes/Theme.Light.xaml"/>
+                <ResourceDictionary Source="/PosElectro.Desktop;component/Themes/SmartControls.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
 
-        <!-- Sub-tab Button Stili -->
-        <Style x:Key="SubTabButton" TargetType="Button">
-            <Setter Property="Background" Value="{DynamicResource Surface}"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Foreground" Value="{DynamicResource Ink2}"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Padding" Value="14,8"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" CornerRadius="8" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+            <vm:MinorToUzConverter x:Key="MinorToUzConverter"/>
+            <vm:GreaterThanZeroConverter x:Key="GreaterThanZeroConverter"/>
+            <vm:LessThanZeroConverter x:Key="LessThanZeroConverter"/>
+            <vm:EmptyStringToVisibilityConverter x:Key="EmptyStringToVisibilityConverter"/>
+            <vm:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
 
-        <!-- Payment Type Selector Button Stili -->
-        <Style x:Key="PaymentTypeSelectorButton" TargetType="Button">
-            <Setter Property="Background" Value="{DynamicResource Bg}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource Line}"/>
-            <Setter Property="BorderThickness" Value="1.5"/>
-            <Setter Property="Foreground" Value="{DynamicResource Ink2}"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+            <Style x:Key="Card" TargetType="Border">
+                <Setter Property="Background" Value="{DynamicResource Surface}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource Line}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="CornerRadius" Value="12"/>
+            </Style>
+            <Style x:Key="KpiLabel" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="13"/>
+                <Setter Property="FontWeight" Value="Medium"/>
+                <Setter Property="Foreground" Value="{DynamicResource Ink2}"/>
+                <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                <Setter Property="VerticalAlignment" Value="Center"/>
+            </Style>
+            <Style x:Key="KpiValue" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="22"/>
+                <Setter Property="FontWeight" Value="ExtraBold"/>
+                <Setter Property="Foreground" Value="{DynamicResource Ink}"/>
+                <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+            </Style>
+            <Style x:Key="ColHead" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="12"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="Foreground" Value="{DynamicResource Ink3}"/>
+                <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                <Setter Property="VerticalAlignment" Value="Center"/>
+                <Setter Property="Margin" Value="0,0,12,0"/>
+            </Style>
+            <Style x:Key="Cell" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="14"/>
+                <Setter Property="Foreground" Value="{DynamicResource Ink2}"/>
+                <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                <Setter Property="VerticalAlignment" Value="Center"/>
+                <Setter Property="Margin" Value="0,0,12,0"/>
+            </Style>
+            <Style x:Key="StatLabel" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="12"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="Foreground" Value="{DynamicResource Ink2}"/>
+                <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+            </Style>
+            <Style x:Key="StatValue" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="20"/>
+                <Setter Property="FontWeight" Value="Bold"/>
+                <Setter Property="Foreground" Value="{DynamicResource Ink}"/>
+                <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+            </Style>
+            <Style x:Key="ModalError" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="13"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="Foreground" Value="{DynamicResource Bad}"/>
+                <Setter Property="TextWrapping" Value="Wrap"/>
+                <Setter Property="Margin" Value="0,12,0,0"/>
+            </Style>
+            <!-- Ko'p qatorli maydon -->
+            <Style x:Key="FieldArea" TargetType="TextBox" BasedOn="{StaticResource FieldBox}">
+                <Setter Property="Height" Value="72"/>
+                <Setter Property="Padding" Value="12,10"/>
+                <Setter Property="AcceptsReturn" Value="True"/>
+                <Setter Property="TextWrapping" Value="Wrap"/>
+                <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+                <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+            </Style>
 
-        <!-- Rounded Action Button Stili -->
-        <Style x:Key="RoundedActionButton" TargetType="Button">
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="Padding" Value="12,8"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+            <!-- Filtr belgisi (pill): Tag=True — tanlangan -->
+            <Style x:Key="FilterPill" TargetType="Button">
+                <Setter Property="Height" Value="32"/>
+                <Setter Property="Padding" Value="10,0"/>
+                <Setter Property="Margin" Value="0,0,6,6"/>
+                <Setter Property="FontSize" Value="12"/>
+                <Setter Property="FontWeight" Value="Medium"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="Background" Value="{DynamicResource Surface}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource Line}"/>
+                <Setter Property="Foreground" Value="{DynamicResource Ink}"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1"
+                                    CornerRadius="16" Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+                    </Trigger>
+                    <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="True">
+                        <Setter Property="Background" Value="{DynamicResource Accent}"/>
+                        <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+                        <Setter Property="Foreground" Value="{DynamicResource OnAccent}"/>
+                        <Setter Property="FontWeight" Value="SemiBold"/>
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
 
-        <vm:MinorToUzConverter x:Key="MinorToUzConverter"/>
-        <vm:GreaterThanZeroConverter x:Key="GreaterThanZeroConverter"/>
-        <vm:LessThanZeroConverter x:Key="LessThanZeroConverter"/>
-        <vm:EmptyStringToVisibilityConverter x:Key="EmptyStringToVisibilityConverter"/>
-        <vm:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
+            <!-- 44×44 ikonka tugmasi (chegarali) -->
+            <Style x:Key="IconBtn" TargetType="ButtonBase">
+                <Setter Property="Width" Value="44"/>
+                <Setter Property="Height" Value="44"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="Background" Value="{DynamicResource Surface}"/>
+                <Setter Property="Foreground" Value="{DynamicResource Ink2}"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ButtonBase">
+                            <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="10">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="bd" Property="Background" Value="{DynamicResource Surface2}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- Tab (tagida chiziq): Tag=True — tanlangan -->
+            <Style x:Key="LineTab" TargetType="Button">
+                <Setter Property="Height" Value="46"/>
+                <Setter Property="Padding" Value="12,0"/>
+                <Setter Property="Margin" Value="0,0,4,0"/>
+                <Setter Property="FontSize" Value="14"/>
+                <Setter Property="FontWeight" Value="Medium"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="Foreground" Value="{DynamicResource Ink2}"/>
+                <Setter Property="BorderBrush" Value="Transparent"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="Transparent" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="0,0,0,2" Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="True">
+                        <Setter Property="Foreground" Value="{DynamicResource AccentInk}"/>
+                        <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+                        <Setter Property="FontWeight" Value="Bold"/>
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+
+            <!-- "Boshqa amallar" menyusi qatori -->
+            <Style x:Key="MenuRow" TargetType="Button">
+                <Setter Property="Height" Value="40"/>
+                <Setter Property="Padding" Value="12,0"/>
+                <Setter Property="FontSize" Value="14"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="Foreground" Value="{DynamicResource Ink}"/>
+                <Setter Property="HorizontalContentAlignment" Value="Left"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="bd" Background="Transparent" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="bd" Property="Background" Value="{DynamicResource Surface2}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+        </ResourceDictionary>
     </UserControl.Resources>
 
-    <Grid Margin="20">
-        <Grid.RowDefinitions>
-            <!-- 0: KPI Summary Kartalari -->
-            <RowDefinition Height="Auto"/>
-            <!-- 1: Qidiruv va Filtrlar paneli -->
-            <RowDefinition Height="Auto"/>
-            <!-- 2: Asosiy Maydon (Chapda mijozlar, o'ngda tafsilotlar) -->
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
+    <Grid Background="{DynamicResource Bg}" TextElement.Foreground="{DynamicResource Ink}">
+        <Grid Margin="16">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
 
-        <!-- 0: KPI SUMMARY KARTALARI -->
-        <Grid Grid.Row="0" Margin="0,0,0,16">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
+            <!-- ============ KPI ============ -->
+            <UniformGrid Rows="1" Margin="-6,0,-6,12">
+                <Border Style="{StaticResource Card}" Height="84" Padding="16,0" Margin="6,0">
+                    <StackPanel VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Width="8" Height="8" Fill="{DynamicResource Bad}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="Jami qarz" Style="{StaticResource KpiLabel}"/>
+                        </StackPanel>
+                        <TextBlock Text="{Binding TotalActiveDebtText}" Style="{StaticResource KpiValue}" Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Card}" Height="84" Padding="16,0" Margin="6,0">
+                    <StackPanel VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Width="8" Height="8" Fill="{DynamicResource Accent}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="Qarzdorlar" Style="{StaticResource KpiLabel}"/>
+                        </StackPanel>
+                        <TextBlock Text="{Binding DebtorsCountText}" Style="{StaticResource KpiValue}" Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Card}" Height="84" Padding="16,0" Margin="6,0">
+                    <StackPanel VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Width="8" Height="8" Fill="{DynamicResource Bad}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="Muddati o'tgan" Style="{StaticResource KpiLabel}"/>
+                        </StackPanel>
+                        <DockPanel Margin="0,4,0,0">
+                            <TextBlock DockPanel.Dock="Right" Text="{Binding OverdueDebtorsCountText}" FontSize="13" Foreground="{DynamicResource Ink3}"
+                                       VerticalAlignment="Bottom" Margin="8,0,0,3"/>
+                            <TextBlock Text="{Binding OverdueDebtText}" Style="{StaticResource KpiValue}" Foreground="{DynamicResource Bad}"/>
+                        </DockPanel>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Card}" Height="84" Padding="16,0" Margin="6,0">
+                    <StackPanel VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Width="8" Height="8" Fill="{DynamicResource Ok}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="Ortiqcha to'lov (haqdorlik)" Style="{StaticResource KpiLabel}"/>
+                        </StackPanel>
+                        <TextBlock Text="{Binding TotalCreditText}" Style="{StaticResource KpiValue}" Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Border>
+            </UniformGrid>
 
-            <!-- Jami qarz -->
-            <Border Grid.Column="0" Background="{DynamicResource Surface}" CornerRadius="12" Padding="16,14" Margin="0,0,8,0" BorderBrush="{DynamicResource Line}" BorderThickness="1">
-                <StackPanel>
-                    <Grid>
-                        <TextBlock Text="JAMI FAOL QARZ" Foreground="{DynamicResource Ink2}" FontSize="11" FontWeight="Bold"/>
-                        <Path Stretch="Uniform"
-                              Data="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                              Stroke="{DynamicResource Bad}" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                              Width="16" Height="16" HorizontalAlignment="Right" VerticalAlignment="Center"/>
-                    </Grid>
-                    <TextBlock Text="{Binding TotalActiveDebtText}" Foreground="{DynamicResource Bad}" FontSize="20" FontWeight="Bold" Margin="0,6,0,0"/>
-                </StackPanel>
-            </Border>
-
-            <!-- Qarzdorlar soni -->
-            <Border Grid.Column="1" Background="{DynamicResource Surface}" CornerRadius="12" Padding="16,14" Margin="4,0,4,0" BorderBrush="{DynamicResource Line}" BorderThickness="1">
-                <StackPanel>
-                    <Grid>
-                        <TextBlock Text="QARZDORLAR SONI" Foreground="{DynamicResource Ink2}" FontSize="11" FontWeight="Bold"/>
-                        <Path Stretch="Uniform"
-                              Data="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                              Stroke="{DynamicResource AccentInk}" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                              Width="16" Height="16" HorizontalAlignment="Right" VerticalAlignment="Center"/>
-                    </Grid>
-                    <TextBlock Text="{Binding DebtorsCountText}" Foreground="{DynamicResource AccentInk}" FontSize="20" FontWeight="Bold" Margin="0,6,0,0"/>
-                </StackPanel>
-            </Border>
-
-            <!-- Muddati o'tgan qarz -->
-            <Border Grid.Column="2" Background="{DynamicResource Surface}" CornerRadius="12" Padding="16,14" Margin="4,0,4,0" BorderBrush="{DynamicResource Line}" BorderThickness="1">
-                <StackPanel>
-                    <Grid>
-                        <TextBlock Text="MUDDATI O'TGAN QARZ" Foreground="{DynamicResource Ink2}" FontSize="11" FontWeight="Bold"/>
-                        <Path Stretch="Uniform"
-                              Data="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                              Stroke="{DynamicResource Warn}" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                              Width="16" Height="16" HorizontalAlignment="Right" VerticalAlignment="Center"/>
-                    </Grid>
-                    <TextBlock Text="{Binding OverdueDebtText}" Foreground="{DynamicResource Warn}" FontSize="20" FontWeight="Bold" Margin="0,6,0,0"/>
-                </StackPanel>
-            </Border>
-
-            <!-- Ortiqcha to'lov / Kredit -->
-            <Border Grid.Column="3" Background="{DynamicResource Surface}" CornerRadius="12" Padding="16,14" Margin="8,0,0,0" BorderBrush="{DynamicResource Line}" BorderThickness="1">
-                <StackPanel>
-                    <Grid>
-                        <TextBlock Text="ORTIQCHA TO'LOV (KREDIT)" Foreground="{DynamicResource Ink2}" FontSize="11" FontWeight="Bold"/>
-                        <Path Stretch="Uniform"
-                              Data="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                              Stroke="{DynamicResource Ok}" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                              Width="16" Height="16" HorizontalAlignment="Right" VerticalAlignment="Center"/>
-                    </Grid>
-                    <TextBlock Text="{Binding TotalCreditText}" Foreground="{DynamicResource Ok}" FontSize="20" FontWeight="Bold" Margin="0,6,0,0"/>
-                </StackPanel>
-            </Border>
-        </Grid>
-
-        <!-- 1: QIDIRUV VA FILTRLAR PANELI -->
-        <Border Grid.Row="1" Background="{DynamicResource Surface}" CornerRadius="12" Padding="14,10" Margin="0,0,0,16" BorderBrush="{DynamicResource Line}" BorderThickness="1">
-            <Grid>
+            <Grid Grid.Row="1">
                 <Grid.ColumnDefinitions>
-                    <!-- Qidiruv input -->
-                    <ColumnDefinition Width="320"/>
-                    <!-- Filtr dropdown -->
+                    <ColumnDefinition Width="380"/>
+                    <ColumnDefinition Width="12"/>
                     <ColumnDefinition Width="*"/>
-                    <!-- Yangi mijoz qo'shish va Refresh -->
-                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Qidiruv Maydoni (Vektor ikonka va X tozalash tugmasi bilan) -->
-                <Grid Grid.Column="0">
-                    <TextBox x:Name="CustomerSearchBox"
-                             Style="{StaticResource ModernTextBox}"
-                             Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"
-                             FontSize="13" Height="40" Padding="36,0,36,0" VerticalContentAlignment="Center"/>
-
-                    <!-- Qidiruv Vektor Belgisi -->
-                    <Path Stretch="Uniform" Data="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                          Stroke="{DynamicResource Ink3}" StrokeThickness="2" StrokeStartLineCap="Round"
-                          Width="15" Height="15"
-                          HorizontalAlignment="Left" VerticalAlignment="Center" Margin="12,0,0,0"
-                          IsHitTestVisible="False"/>
-
-                    <!-- Placeholder / Suv belgisi -->
-                    <TextBlock Text="Mijoz ismi yoki telefon raqami..."
-                               Foreground="{DynamicResource Ink3}" FontSize="13" VerticalAlignment="Center" Margin="38,0,0,0"
-                               IsHitTestVisible="False"
-                               Visibility="{Binding HasSearchQuery, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
-
-                    <!-- Tozalash tugmasi (Matn yozilganda ko'rinadi) -->
-                    <Button Command="{Binding ClearSearchCommand}"
-                            Visibility="{Binding HasSearchQuery, Converter={StaticResource BooleanToVisibilityConverter}}"
-                            Background="Transparent" BorderThickness="0" Foreground="{DynamicResource Ink2}"
-                            HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,8,0"
-                            Cursor="Hand" Width="26" Height="26" ToolTip="Qidiruvni tozalash">
-                        <Path Stretch="Uniform" Data="M6 18L18 6M6 6l12 12"
-                              Stroke="{DynamicResource Ink2}" StrokeThickness="2" StrokeStartLineCap="Round"
-                              Width="12" Height="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Button>
-                </Grid>
-
-                <!-- Filtr Dropdown (ComboBox) -->
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
-                    <TextBlock Text="Filtr:" Foreground="{DynamicResource Ink2}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <ComboBox ItemsSource="{Binding FilterOptions}"
-                              SelectedItem="{Binding SelectedFilterOption}"
-                              DisplayMemberPath="DisplayName"
-                              Width="210" Height="40"
-                              VerticalContentAlignment="Center"/>
-                </StackPanel>
-
-                <!-- Yangi mijoz va Yangilash tugmalari -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                    <!-- Yangilash tugmasi (Faqat vektor ikonka va animatsiya) -->
-                    <Button Command="{Binding RefreshCommand}"
-                            ToolTip="Ro'yxatni yangilash"
-                            Style="{StaticResource ModernButton}"
-                            Background="{DynamicResource Line}"
-                            Width="40" Height="40" Padding="0" Margin="0,0,10,0">
-                        <Button.Triggers>
-                            <EventTrigger RoutedEvent="Button.Click">
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetName="DebtsRefreshIcon"
-                                                         Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
-                                                         From="0" To="360" Duration="0:0:0.6"/>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </EventTrigger>
-                        </Button.Triggers>
-                        <Path Stretch="Uniform" x:Name="DebtsRefreshIcon"
-                              Data="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                              Stroke="{DynamicResource Ink}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                              Width="15" Height="15" RenderTransformOrigin="0.5,0.5" HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <Path.RenderTransform>
-                                <RotateTransform Angle="0"/>
-                            </Path.RenderTransform>
-                        </Path>
-                    </Button>
-
-                    <!-- Yangi mijoz tugmasi -->
-                    <Button Command="{Binding OpenCreateCustomerModalCommand}"
-                            Style="{StaticResource RoundedActionButton}" Background="{DynamicResource OkSolid}" Foreground="White"
-                            Height="40" Padding="14,0">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Path Stretch="Uniform" Data="M12 4v16m8-8H4"
-                                  Stroke="White" StrokeThickness="2" StrokeStartLineCap="Round"
-                                  Width="13" Height="13" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="Yangi mijoz" FontWeight="Bold" FontSize="13" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
-                </StackPanel>
-            </Grid>
-        </Border>
-
-        <!-- 2: ASOSIY ISH MAYDONI: CHAPDA MIJOZLAR, O'NGDA TAFSILOTLAR -->
-        <Grid Grid.Row="2">
-            <Grid.ColumnDefinitions>
-                <!-- Chap ustun: Mijozlar ro'yxati -->
-                <ColumnDefinition Width="290"/>
-                <!-- Vertikal ajratgich -->
-                <ColumnDefinition Width="16"/>
-                <!-- O'ng ustun: Mijoz profili va tafsilotlari -->
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-
-            <!-- MIJOZLAR RO'YXATI -->
-            <Border Grid.Column="0" Background="{DynamicResource Surface}" CornerRadius="14" Padding="12" BorderBrush="{DynamicResource Line}" BorderThickness="1">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-
-                    <TextBlock Grid.Row="0" Text="{Binding Customers.Count, StringFormat='Mijozlar ({0} ta)'}"
-                               Foreground="{DynamicResource Ink2}" FontSize="13" FontWeight="SemiBold" Margin="4,0,0,8"/>
-
-                    <ListBox Grid.Row="1" ItemsSource="{Binding Customers}" SelectedItem="{Binding SelectedCustomer}"
-                             Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                        <ListBox.ItemContainerStyle>
-                            <Style TargetType="ListBoxItem">
-                                <Setter Property="Padding" Value="0"/>
-                                <Setter Property="Margin" Value="0,0,0,8"/>
-                                <Setter Property="Background" Value="Transparent"/>
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="ListBoxItem">
-                                            <Border x:Name="itemBorder" Background="{DynamicResource Bg}" CornerRadius="10" Padding="12,10"
-                                                    BorderBrush="{DynamicResource Line}" BorderThickness="1" Cursor="Hand">
-                                                <ContentPresenter/>
-                                            </Border>
-                                            <ControlTemplate.Triggers>
-                                                <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter TargetName="itemBorder" Property="Background" Value="{DynamicResource Surface}"/>
-                                                    <Setter TargetName="itemBorder" Property="BorderBrush" Value="{DynamicResource Accent}"/>
-                                                </Trigger>
-                                                <Trigger Property="IsSelected" Value="True">
-                                                    <Setter TargetName="itemBorder" Property="Background" Value="{DynamicResource OkSoft}"/>
-                                                    <Setter TargetName="itemBorder" Property="BorderBrush" Value="{DynamicResource Ok}"/>
-                                                    <Setter TargetName="itemBorder" Property="BorderThickness" Value="1.5"/>
-                                                </Trigger>
-                                            </ControlTemplate.Triggers>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                            </Style>
-                        </ListBox.ItemContainerStyle>
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                    </Grid.RowDefinitions>
-
-                                    <!-- Nomi va Status Badge -->
-                                    <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding Name}" Foreground="{DynamicResource Ink}" FontSize="14" FontWeight="Bold" Margin="0,0,6,0"/>
-                                        <Border CornerRadius="4" Padding="4,1" Margin="0,0,0,0" Background="{DynamicResource Surface2}">
-                                            <TextBlock Text="{Binding StatusBadge}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource Ink2}"/>
-                                        </Border>
-                                    </StackPanel>
-
-                                    <!-- Telefon -->
-                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding PhoneDisplay}" Foreground="{DynamicResource Ink2}" FontSize="12" Margin="0,4,0,0"/>
-
-                                    <!-- Balans -->
-                                    <TextBlock Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Text="{Binding BalanceDisplay}"
-                                               FontSize="14" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Right">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Foreground" Value="{DynamicResource Ink}"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding BalanceMinor, Converter={StaticResource GreaterThanZeroConverter}}" Value="True">
-                                                        <Setter Property="Foreground" Value="{DynamicResource Bad}"/>
-                                                    </DataTrigger>
-                                                    <DataTrigger Binding="{Binding BalanceMinor, Converter={StaticResource LessThanZeroConverter}}" Value="True">
-                                                        <Setter Property="Foreground" Value="{DynamicResource Ok}"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
-                                </Grid>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                </Grid>
-            </Border>
-
-            <!-- O'NG USTUN: MIJOZ PROFILI VA TAFSILOTLARI -->
-            <Border Grid.Column="2" Background="{DynamicResource Surface}" CornerRadius="14" Padding="20" BorderBrush="{DynamicResource Line}" BorderThickness="1">
-                <Grid>
-                    <!-- Tanlanmagan holat placeholder -->
-                    <Grid Visibility="{Binding IsCustomerSelected, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
-                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                            <Path Stretch="Uniform" Data="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                                  Stroke="{DynamicResource Ink3}" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                  Width="48" Height="48" HorizontalAlignment="Center" Margin="0,0,0,12"/>
-                            <TextBlock Text="Mijoz tanlanmagan" Foreground="{DynamicResource Ink}" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-                            <TextBlock Text="Qarz yoki to'lov tarixini ko'rish uchun chapdagi ro'yxatdan mijozni tanlang"
-                                       Foreground="{DynamicResource Ink3}" FontSize="13" HorizontalAlignment="Center" Margin="0,6,0,0"/>
-                        </StackPanel>
-                    </Grid>
-
-                    <!-- Tanlangan mijoz tafsilotlari -->
-                    <Grid Visibility="{Binding IsCustomerSelected, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <!-- ============ 3.1 MIJOZLAR RO'YXATI ============ -->
+                <Border Style="{StaticResource Card}" ClipToBounds="True">
+                    <Grid>
                         <Grid.RowDefinitions>
-                            <!-- Mijoz Header Card (Ismi, Telefon, Balans, Tugmalar) -->
                             <RowDefinition Height="Auto"/>
-                            <!-- Sub-tabs: Cheklar / Tarix -->
-                            <RowDefinition Height="Auto"/>
-                            <!-- Sub-tab tarkibi -->
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
-
-                        <!-- Header Card -->
-                        <Border Grid.Row="0" Background="{DynamicResource Bg}" CornerRadius="12" Padding="18,14" Margin="0,0,0,16" BorderBrush="{DynamicResource Line}" BorderThickness="1">
-                            <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
-
-                                <!-- 1-qator: Chapda mijoz ma'lumotlari, o'ngda to'lov olish va boshqa amallar -->
-                                <Grid Grid.Row="0">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-
-                                    <!-- Chap qism: Mijoz ma'lumotlari (Ismi va telefoni - bosganda batafsil ochiladi) -->
-                                    <Button Command="{Binding OpenCustomerInfoModalCommand}"
-                                            Background="Transparent" BorderThickness="0" Padding="0" Margin="0" Cursor="Hand"
-                                            HorizontalAlignment="Left" VerticalAlignment="Center"
-                                            ToolTip="Batafsil ma'lumot (ism, tel, izoh) ko'rish uchun bosing">
-                                        <Button.Template>
-                                            <ControlTemplate TargetType="Button">
-                                                <StackPanel VerticalAlignment="Center">
-                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                        <TextBlock Text="{Binding DataContext.SelectedCustomer.Name, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                                                                   Foreground="{DynamicResource Ink}" FontSize="20" FontWeight="Bold" Margin="0,0,10,0"/>
-                                                        <Border CornerRadius="6" Padding="8,3" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Line}" BorderThickness="1">
-                                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                                <Ellipse Width="6" Height="6" Margin="0,0,6,0" VerticalAlignment="Center">
-                                                                    <Ellipse.Style>
-                                                                        <Style TargetType="Ellipse">
-                                                                            <Setter Property="Fill" Value="{DynamicResource Accent}"/>
-                                                                            <Style.Triggers>
-                                                                                <DataTrigger Binding="{Binding DataContext.SelectedCustomer.Archived, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="True">
-                                                                                    <Setter Property="Fill" Value="{DynamicResource Ink2}"/>
-                                                                                </DataTrigger>
-                                                                                <DataTrigger Binding="{Binding DataContext.SelectedCustomer.HasOverdue, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="True">
-                                                                                    <Setter Property="Fill" Value="{DynamicResource WarnSolid}"/>
-                                                                                </DataTrigger>
-                                                                                <DataTrigger Binding="{Binding DataContext.SelectedCustomer.BalanceMinor, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource GreaterThanZeroConverter}}" Value="True">
-                                                                                    <Setter Property="Fill" Value="{DynamicResource BadSolid}"/>
-                                                                                </DataTrigger>
-                                                                                <DataTrigger Binding="{Binding DataContext.SelectedCustomer.BalanceMinor, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource LessThanZeroConverter}}" Value="True">
-                                                                                    <Setter Property="Fill" Value="{DynamicResource OkSolid}"/>
-                                                                                </DataTrigger>
-                                                                            </Style.Triggers>
-                                                                        </Style>
-                                                                    </Ellipse.Style>
-                                                                </Ellipse>
-                                                                <TextBlock Text="{Binding DataContext.SelectedCustomer.StatusBadge, RelativeSource={RelativeSource AncestorType=UserControl}}" FontSize="11" FontWeight="Bold">
-                                                                    <TextBlock.Style>
-                                                                        <Style TargetType="TextBlock">
-                                                                            <Setter Property="Foreground" Value="{DynamicResource AccentInk}"/>
-                                                                            <Style.Triggers>
-                                                                                <DataTrigger Binding="{Binding DataContext.SelectedCustomer.Archived, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="True">
-                                                                                    <Setter Property="Foreground" Value="{DynamicResource Ink2}"/>
-                                                                                </DataTrigger>
-                                                                                <DataTrigger Binding="{Binding DataContext.SelectedCustomer.HasOverdue, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="True">
-                                                                                    <Setter Property="Foreground" Value="{DynamicResource Warn}"/>
-                                                                                </DataTrigger>
-                                                                                <DataTrigger Binding="{Binding DataContext.SelectedCustomer.BalanceMinor, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource GreaterThanZeroConverter}}" Value="True">
-                                                                                    <Setter Property="Foreground" Value="{DynamicResource Bad}"/>
-                                                                                </DataTrigger>
-                                                                                <DataTrigger Binding="{Binding DataContext.SelectedCustomer.BalanceMinor, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource LessThanZeroConverter}}" Value="True">
-                                                                                    <Setter Property="Foreground" Value="{DynamicResource Ok}"/>
-                                                                                </DataTrigger>
-                                                                            </Style.Triggers>
-                                                                        </Style>
-                                                                    </TextBlock.Style>
-                                                                </TextBlock>
-                                                            </StackPanel>
-                                                        </Border>
-                                                    </StackPanel>
-
-                                                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0" VerticalAlignment="Center">
-                                                        <Path Stretch="Uniform" Data="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                                                              Stroke="{DynamicResource AccentInk}" StrokeThickness="1.6" Width="13" Height="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                                        <TextBlock Text="{Binding DataContext.SelectedCustomer.PhoneDisplay, RelativeSource={RelativeSource AncestorType=UserControl}}" Foreground="{DynamicResource AccentInk}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                                                        <Border Background="{DynamicResource Surface}" CornerRadius="4" Padding="6,1" Margin="8,0,0,0" BorderBrush="{DynamicResource Line}" BorderThickness="1">
-                                                            <TextBlock Text="ℹ️ Batafsil" Foreground="{DynamicResource Ink2}" FontSize="10" FontWeight="SemiBold"/>
-                                                        </Border>
-                                                    </StackPanel>
-                                                </StackPanel>
-                                            </ControlTemplate>
-                                        </Button.Template>
+                        <Border Padding="12,12,12,6" BorderBrush="{DynamicResource Line}" BorderThickness="0,0,0,1">
+                            <StackPanel>
+                                <DockPanel>
+                                    <Button DockPanel.Dock="Right" Command="{Binding OpenCreateCustomerModalCommand}" Style="{StaticResource BtnPrimary}"
+                                            Height="44" Padding="12,0" Margin="8,0,0,0">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Viewbox Width="16" Height="16" Margin="0,0,6,0">
+                                                <Path Style="{StaticResource Ic}" StrokeThickness="2.4" Data="M12 5v14 M5 12h14"/>
+                                            </Viewbox>
+                                            <TextBlock Text="Mijoz" VerticalAlignment="Center"/>
+                                        </StackPanel>
                                     </Button>
+                                    <Button DockPanel.Dock="Right" Command="{Binding RefreshCommand}" Style="{StaticResource IconBtn}" Margin="8,0,0,0" ToolTip="Ro'yxatni yangilash">
+                                        <Viewbox Width="17" Height="17">
+                                            <Path Style="{StaticResource Ic}" Data="M20 11a8 8 0 0 0-14.5-4.5L4 8 M4 4v4h4 M4 13a8 8 0 0 0 14.5 4.5L20 16 M20 20v-4h-4"/>
+                                        </Viewbox>
+                                    </Button>
+                                    <!-- Qidiruv -->
+                                    <Border Height="44" CornerRadius="10" Background="{DynamicResource Surface2}" BorderBrush="{DynamicResource Line}" BorderThickness="1">
+                                        <Grid>
+                                            <Viewbox Width="17" Height="17" HorizontalAlignment="Left" Margin="12,0,0,0">
+                                                <Path Style="{StaticResource Ic}" Stroke="{DynamicResource Ink3}" Data="M11 4a7 7 0 1 0 0.01 0 M20 20l-3.5-3.5"/>
+                                            </Viewbox>
+                                            <TextBlock Text="Ism yoki telefon" Foreground="{DynamicResource Ink3}" FontSize="14" VerticalAlignment="Center" Margin="37,0,34,0"
+                                                       IsHitTestVisible="False" TextTrimming="CharacterEllipsis"
+                                                       Visibility="{Binding HasSearchQuery, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                                            <TextBox x:Name="CustomerSearchBox" Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"
+                                                     Background="Transparent" BorderThickness="0" FontSize="14" Foreground="{DynamicResource Ink}"
+                                                     CaretBrush="{DynamicResource AccentInk}" VerticalContentAlignment="Center" Padding="35,0,34,0"/>
+                                            <Button Command="{Binding ClearSearchCommand}" Style="{StaticResource MenuRow}" Width="28" Height="28" Padding="0"
+                                                    HorizontalAlignment="Right" Margin="0,0,6,0" ToolTip="Qidiruvni tozalash" HorizontalContentAlignment="Center"
+                                                    Visibility="{Binding HasSearchQuery, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                <Viewbox Width="13" Height="13" Margin="7,0,0,0">
+                                                    <Path Style="{StaticResource Ic}" Stroke="{DynamicResource Ink2}" Data="M6 6l12 12 M18 6L6 18"/>
+                                                </Viewbox>
+                                            </Button>
+                                        </Grid>
+                                    </Border>
+                                </DockPanel>
+                                <!-- Filtrlar -->
+                                <WrapPanel Margin="0,8,0,0">
+                                    <Button Content="Hammasi" Command="{Binding SetFilterCommand}" CommandParameter="All" Tag="{Binding IsFilterAll}" Style="{StaticResource FilterPill}"/>
+                                    <Button Content="Qarzdor" Command="{Binding SetFilterCommand}" CommandParameter="ActiveDebt" Tag="{Binding IsFilterActiveDebt}" Style="{StaticResource FilterPill}"/>
+                                    <Button Content="Muddati o'tgan" Command="{Binding SetFilterCommand}" CommandParameter="Overdue" Tag="{Binding IsFilterOverdue}" Style="{StaticResource FilterPill}"/>
+                                    <Button Content="Yopilgan" Command="{Binding SetFilterCommand}" CommandParameter="Settled" Tag="{Binding IsFilterSettled}" Style="{StaticResource FilterPill}"/>
+                                    <Button Content="Haqdor" Command="{Binding SetFilterCommand}" CommandParameter="Credit" Tag="{Binding IsFilterCredit}" Style="{StaticResource FilterPill}"/>
+                                </WrapPanel>
+                            </StackPanel>
+                        </Border>
 
-                                    <!-- O'ng qism: Amallar tugmalari (To'lov olish guruhi o'ng tomonda) -->
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Button Command="{Binding OpenPaymentModalCommand}"
-                                                Visibility="{Binding HasActiveDebt, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                                Style="{StaticResource RoundedActionButton}" Background="{DynamicResource OkSolid}" Foreground="White" FontWeight="Bold"
-                                                Height="40" Padding="14,0" Margin="0,0,8,0">
-                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                <Path Stretch="Uniform" Data="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
-                                                      Stroke="White" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                                      Width="14" Height="14" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                                <TextBlock Text="To'lov olish" FontWeight="Bold" VerticalAlignment="Center"/>
-                                            </StackPanel>
-                                        </Button>
-
-                                        <Button Command="{Binding OpenRefundCreditModalCommand}"
-                                                Visibility="{Binding HasCredit, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                                Style="{StaticResource RoundedActionButton}" Background="{DynamicResource WarnSolid}" Foreground="White" FontWeight="Bold"
-                                                Height="40" Padding="14,0" Margin="0,0,8,0">
-                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                <Path Stretch="Uniform" Data="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
-                                                      Stroke="White" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                                      Width="14" Height="14" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                                <TextBlock Text="Pulni qaytarish" FontWeight="Bold" VerticalAlignment="Center"/>
-                                            </StackPanel>
-                                        </Button>
-
-                                        <Button Command="{Binding TransferCreditCommand}"
-                                                Visibility="{Binding CanTransferCredit, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                                Style="{StaticResource RoundedActionButton}" Background="{DynamicResource Accent}" Foreground="White" FontWeight="Bold"
-                                                Height="40" Padding="14,0" Margin="0,0,8,0">
-                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                <Path Stretch="Uniform" Data="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
-                                                      Stroke="White" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                                      Width="14" Height="14" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                                <TextBlock Text="Qarzga o'tkazish" FontWeight="Bold" VerticalAlignment="Center"/>
-                                            </StackPanel>
-                                        </Button>
-
-                                        <!-- Ko'chirma (Faqat vektor ikonka) -->
-                                        <Button Command="{Binding PrintStatementCommand}"
-                                                ToolTip="Hisob ko'chirmasi (sverka) chop etish yoki xotiraga nusxalash"
-                                                Style="{StaticResource RoundedActionButton}" Background="{DynamicResource LineStrong}" Foreground="{DynamicResource Ink}"
-                                                Width="40" Height="40" Padding="0" Margin="0,0,8,0">
-                                            <Path Stretch="Uniform" Data="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
-                                                  Stroke="{DynamicResource Ink}" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                                  Width="16" Height="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                        </Button>
-
-                                        <!-- Tahrirlash (Faqat vektor ikonka) -->
-                                        <Button Command="{Binding OpenEditCustomerModalCommand}"
-                                                ToolTip="Mijoz ma'lumotlarini tahrirlash"
-                                                Style="{StaticResource RoundedActionButton}" Background="{DynamicResource Line}" Foreground="{DynamicResource Ink}"
-                                                Width="40" Height="40" Padding="0" Margin="0,0,8,0">
-                                            <Path Stretch="Uniform" Data="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                                                  Stroke="{DynamicResource Ink}" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                                  Width="16" Height="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                        </Button>
-
-                                        <!-- Bloklash (Vektor ikonka va matn) -->
-                                        <Button Command="{Binding ToggleArchiveCustomerCommand}"
-                                                Style="{StaticResource RoundedActionButton}" Background="{DynamicResource Surface}" Foreground="{DynamicResource Ink2}" BorderBrush="{DynamicResource Line}" BorderThickness="1"
-                                                Height="40" Padding="12,0">
-                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                <Path Stretch="Uniform" Data="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                                                      Stroke="{DynamicResource Ink2}" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                                      Width="14" Height="14" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                                <TextBlock Text="{Binding BlockButtonText}" VerticalAlignment="Center"/>
-                                            </StackPanel>
-                                        </Button>
-                                    </StackPanel>
-                                </Grid>
-
-                                <!-- 2-qator: Row bo'yicha ko'rsatkichlar (Joriy holat, Jami savdo, To'langan) -->
-                                <StackPanel Grid.Row="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,14,0,0">
-                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,20,0">
-                                        <TextBlock Text="Joriy holat: " Foreground="{DynamicResource Ink2}" FontSize="13" VerticalAlignment="Center"/>
-                                        <TextBlock Text="{Binding SelectedCustomer.BalanceDisplay}" FontSize="15" FontWeight="Bold" VerticalAlignment="Center">
+                        <ListBox Grid.Row="1" ItemsSource="{Binding Customers}" SelectedItem="{Binding SelectedCustomer}"
+                                 Background="Transparent" BorderThickness="0" Padding="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                 HorizontalContentAlignment="Stretch">
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem">
+                                    <Setter Property="Padding" Value="0"/>
+                                    <Setter Property="Margin" Value="0"/>
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="ListBoxItem">
+                                                <Border x:Name="row" Background="Transparent" BorderBrush="{DynamicResource LineSoft}" BorderThickness="0,0,0,1" Cursor="Hand">
+                                                    <Grid>
+                                                        <Border x:Name="bar" Width="3" HorizontalAlignment="Left" Background="{DynamicResource Accent}" Visibility="Collapsed"/>
+                                                        <ContentPresenter/>
+                                                    </Grid>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="row" Property="Background" Value="{DynamicResource Surface2}"/>
+                                                    </Trigger>
+                                                    <Trigger Property="IsSelected" Value="True">
+                                                        <Setter TargetName="row" Property="Background" Value="{DynamicResource AccentSoft}"/>
+                                                        <Setter TargetName="bar" Property="Visibility" Value="Visible"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Height="62" Margin="12,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <!-- Bosh harflar -->
+                                        <Border Width="38" Height="38" CornerRadius="19" Margin="0,0,12,0" VerticalAlignment="Center">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Background" Value="{DynamicResource IllusBg}"/>
+                                                    <Setter Property="TextElement.Foreground" Value="{DynamicResource AccentInk}"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding HasOverdue}" Value="True">
+                                                            <Setter Property="Background" Value="{DynamicResource BadSoft}"/>
+                                                            <Setter Property="TextElement.Foreground" Value="{DynamicResource Bad}"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <TextBlock Text="{Binding Initials}" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <DockPanel LastChildFill="False">
+                                                <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource Ink}" TextTrimming="CharacterEllipsis"
+                                                           MaxWidth="150" ToolTip="{Binding Name}"/>
+                                                <Border CornerRadius="5" Padding="6,1" Margin="6,0,0,0" Background="{DynamicResource BadSoft}" VerticalAlignment="Center"
+                                                        Visibility="{Binding HasOverdue, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                    <TextBlock Text="Muddati o'tgan" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource Bad}"/>
+                                                </Border>
+                                                <Border CornerRadius="5" Padding="6,1" Margin="6,0,0,0" Background="{DynamicResource Surface2}" VerticalAlignment="Center"
+                                                        Visibility="{Binding Archived, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                    <TextBlock Text="Bloklangan" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource Ink2}"/>
+                                                </Border>
+                                            </DockPanel>
+                                            <TextBlock Text="{Binding PhoneDisplay}" FontSize="12" Foreground="{DynamicResource Ink3}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="2" Text="{Binding BalanceUz, StringFormat={}{0:N0}}" FontSize="14" FontWeight="Bold"
+                                                   VerticalAlignment="Center" Margin="8,0,0,0">
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
                                                     <Setter Property="Foreground" Value="{DynamicResource Ink}"/>
                                                     <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding SelectedCustomer.BalanceMinor, Converter={StaticResource GreaterThanZeroConverter}}" Value="True">
-                                                            <Setter Property="Foreground" Value="{DynamicResource Bad}"/>
-                                                        </DataTrigger>
-                                                        <DataTrigger Binding="{Binding SelectedCustomer.BalanceMinor, Converter={StaticResource LessThanZeroConverter}}" Value="True">
+                                                        <DataTrigger Binding="{Binding BalanceMinor, Converter={StaticResource LessThanZeroConverter}}" Value="True">
                                                             <Setter Property="Foreground" Value="{DynamicResource Ok}"/>
                                                         </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
                                             </TextBlock.Style>
                                         </TextBlock>
-                                    </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <TextBlock Grid.Row="1" Text="Mijoz topilmadi" FontSize="14" Foreground="{DynamicResource Ink3}" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Customers.Count}" Value="0">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
+                </Border>
 
-                                    <TextBlock Text="•" Foreground="{DynamicResource Ink3}" FontSize="14" Margin="0,0,20,0" VerticalAlignment="Center"/>
+                <!-- ============ TAFSILOT: tanlanmagan holat ============ -->
+                <Border Grid.Column="2" Style="{StaticResource Card}"
+                        Visibility="{Binding IsCustomerSelected, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="420">
+                        <Border Width="64" Height="64" CornerRadius="18" Background="{DynamicResource Surface2}" HorizontalAlignment="Center">
+                            <Viewbox Width="28" Height="28">
+                                <Path Style="{StaticResource Ic}" Stroke="{DynamicResource Ink3}" Data="M12 4a4 4 0 1 0 0.01 0 M5 21a7 7 0 0 1 14 0"/>
+                            </Viewbox>
+                        </Border>
+                        <TextBlock Text="Mijoz tanlanmagan" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,14,0,0"/>
+                        <TextBlock Text="Qarz va to'lovlar tarixini ko'rish uchun chapdagi ro'yxatdan mijozni tanlang"
+                                   FontSize="14" Foreground="{DynamicResource Ink3}" TextAlignment="Center" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                    </StackPanel>
+                </Border>
 
-                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,20,0">
-                                        <TextBlock Text="Jami savdo: " Foreground="{DynamicResource Ink2}" FontSize="13" VerticalAlignment="Center"/>
-                                        <TextBlock Text="{Binding SelectedCustomer.OriginalDebtMinor, StringFormat='{}{0:N0} so\'m', Converter={StaticResource MinorToUzConverter}}"
-                                                   Foreground="{DynamicResource Ink}" FontSize="13" FontWeight="Bold" VerticalAlignment="Center"/>
-                                    </StackPanel>
+                <!-- ============ TAFSILOT: tanlangan mijoz ============ -->
+                <Grid Grid.Column="2" Visibility="{Binding IsCustomerSelected, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
 
-                                    <TextBlock Text="•" Foreground="{DynamicResource Ink3}" FontSize="14" Margin="0,0,20,0" VerticalAlignment="Center"/>
-
-                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                        <TextBlock Text="To'langan: " Foreground="{DynamicResource Ink2}" FontSize="13" VerticalAlignment="Center"/>
-                                        <TextBlock Text="{Binding SelectedCustomer.TotalPaidMinor, StringFormat='{}{0:N0} so\'m', Converter={StaticResource MinorToUzConverter}}"
-                                                   Foreground="{DynamicResource Ok}" FontSize="13" FontWeight="Bold" VerticalAlignment="Center"/>
-                                    </StackPanel>
+                    <!-- Sarlavha kartasi -->
+                    <Border Style="{StaticResource Card}" Padding="16" Margin="0,0,0,12">
+                        <StackPanel>
+                            <DockPanel>
+                                <!-- Amallar (o'ngda) -->
+                                <WrapPanel DockPanel.Dock="Right" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="12,0,0,0">
+                                    <Button Command="{Binding PrintStatementCommand}" Style="{StaticResource IconBtn}" Margin="0,0,8,0" ToolTip="Ko'chirma chop etish">
+                                        <Viewbox Width="18" Height="18">
+                                            <Path Style="{StaticResource Ic}" Data="M6 9V3h12v6 M5 9h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2z M7 14h10v7H7z"/>
+                                        </Viewbox>
+                                    </Button>
+                                    <Button Command="{Binding OpenEditCustomerModalCommand}" Style="{StaticResource IconBtn}" Margin="0,0,8,0" ToolTip="Tahrirlash">
+                                        <Viewbox Width="18" Height="18">
+                                            <Path Style="{StaticResource Ic}" Data="M12 20h9 M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1l1-4z"/>
+                                        </Viewbox>
+                                    </Button>
+                                    <!-- Boshqa amallar -->
+                                    <Grid Margin="0,0,8,0">
+                                        <ToggleButton x:Name="MoreToggle" Style="{StaticResource IconBtn}" ToolTip="Boshqa amallar">
+                                            <Viewbox Width="18" Height="18">
+                                                <Path Width="24" Height="24" Stretch="None" Fill="{DynamicResource Ink2}"
+                                                      Data="M5 10.2a1.8 1.8 0 1 0 0.01 0z M12 10.2a1.8 1.8 0 1 0 0.01 0z M19 10.2a1.8 1.8 0 1 0 0.01 0z"/>
+                                            </Viewbox>
+                                        </ToggleButton>
+                                        <Popup IsOpen="{Binding IsChecked, ElementName=MoreToggle, Mode=TwoWay}" StaysOpen="False"
+                                               PlacementTarget="{Binding ElementName=MoreToggle}" Placement="Bottom" HorizontalOffset="-176"
+                                               AllowsTransparency="True" PopupAnimation="Fade">
+                                            <Border Width="228" Margin="0,4,8,12" Padding="4" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Line}"
+                                                    BorderThickness="1" CornerRadius="10">
+                                                <Border.Effect>
+                                                    <DropShadowEffect BlurRadius="16" ShadowDepth="4" Direction="270" Opacity="0.14" Color="#0F1B21"/>
+                                                </Border.Effect>
+                                                <StackPanel>
+                                                    <Button Content="Mijoz haqida" Command="{Binding OpenCustomerInfoModalCommand}" Click="MoreMenuItem_Click" Style="{StaticResource MenuRow}"/>
+                                                    <Button Content="{Binding BlockButtonText}" Command="{Binding ToggleArchiveCustomerCommand}" Click="MoreMenuItem_Click"
+                                                            Style="{StaticResource MenuRow}" Foreground="{DynamicResource Bad}"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </Popup>
+                                    </Grid>
+                                    <Button Command="{Binding TransferCreditCommand}" Style="{StaticResource BtnSecondary}" Height="44" Margin="0,0,8,0" Content="Qarzga o'tkazish"
+                                            Visibility="{Binding CanTransferCredit, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                    <Button Command="{Binding OpenRefundCreditModalCommand}" Style="{StaticResource BtnSecondary}" Height="44" Content="Pulni qaytarish"
+                                            Visibility="{Binding HasCredit, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                    <Button Command="{Binding OpenPaymentModalCommand}" Style="{StaticResource BtnPrimary}" Height="44" Padding="18,0"
+                                            Visibility="{Binding HasActiveDebt, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Viewbox Width="18" Height="18" Margin="0,0,8,0">
+                                                <Path Style="{StaticResource Ic}" Data="M4 6h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z M12 9.5a2.5 2.5 0 1 0 0.01 0"/>
+                                            </Viewbox>
+                                            <TextBlock Text="To'lov olish" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
+                                </WrapPanel>
+                                <!-- Bosh harflar -->
+                                <Border Width="48" Height="48" CornerRadius="24" Margin="0,0,14,0" VerticalAlignment="Center">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="{DynamicResource IllusBg}"/>
+                                            <Setter Property="TextElement.Foreground" Value="{DynamicResource AccentInk}"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding SelectedCustomer.HasOverdue}" Value="True">
+                                                    <Setter Property="Background" Value="{DynamicResource BadSoft}"/>
+                                                    <Setter Property="TextElement.Foreground" Value="{DynamicResource Bad}"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <TextBlock Text="{Binding SelectedCustomer.Initials}" FontSize="16" FontWeight="ExtraBold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock TextTrimming="CharacterEllipsis">
+                                        <Run Text="{Binding SelectedCustomer.Name, Mode=OneWay}" FontSize="18" FontWeight="Bold"/>
+                                        <Run Text="·" FontSize="13" Foreground="{DynamicResource Ink3}"/>
+                                        <Run Text="{Binding SelectedCustomer.StatusBadge, Mode=OneWay}" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource Ink3}"/>
+                                    </TextBlock>
+                                    <TextBlock Text="{Binding SelectedCustomer.PhoneDisplay}" FontSize="13" Foreground="{DynamicResource Ink2}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
                                 </StackPanel>
-                            </Grid>
-                        </Border>
+                            </DockPanel>
 
-                        <!-- Sub-tabs: Cheklar / Tarix -->
-                        <Border Grid.Row="1" Margin="0,0,0,12">
-                            <StackPanel Orientation="Horizontal">
-                                <Button Command="{Binding SelectDetailTabCommand}" CommandParameter="0" Margin="0,0,8,0">
-                                    <Button.Style>
-                                        <Style TargetType="Button" BasedOn="{StaticResource SubTabButton}">
+                            <!-- Ko'rsatkichlar -->
+                            <UniformGrid Rows="1" Margin="-5,14,-5,0">
+                                <Border CornerRadius="10" Padding="14,10" Margin="5,0">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="{DynamicResource Surface2}"/>
+                                            <Setter Property="TextElement.Foreground" Value="{DynamicResource Ink}"/>
                                             <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsAccountsTabSelected}" Value="True">
-                                                    <Setter Property="Background" Value="{DynamicResource Accent}"/>
-                                                    <Setter Property="Foreground" Value="White"/>
-                                                    <Setter Property="FontWeight" Value="Bold"/>
+                                                <DataTrigger Binding="{Binding HasActiveDebt}" Value="True">
+                                                    <Setter Property="Background" Value="{DynamicResource BadSoft}"/>
+                                                    <Setter Property="TextElement.Foreground" Value="{DynamicResource Bad}"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding HasCredit}" Value="True">
+                                                    <Setter Property="Background" Value="{DynamicResource OkSoft}"/>
+                                                    <Setter Property="TextElement.Foreground" Value="{DynamicResource Ok}"/>
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
-                                    </Button.Style>
-                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Path Stretch="Uniform" Data="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                                              Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                              Width="14" Height="14" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                        <TextBlock Text="Nasiyalar (Cheklar)" VerticalAlignment="Center"/>
+                                    </Border.Style>
+                                    <StackPanel>
+                                        <TextBlock Text="Joriy holat" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding SelectedCustomer.BalanceDisplay}" FontSize="20" FontWeight="ExtraBold" TextTrimming="CharacterEllipsis"
+                                                   ToolTip="{Binding SelectedCustomer.BalanceDisplay}"/>
                                     </StackPanel>
-                                </Button>
-
-                                <Button Command="{Binding SelectDetailTabCommand}" CommandParameter="1">
-                                    <Button.Style>
-                                        <Style TargetType="Button" BasedOn="{StaticResource SubTabButton}">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsHistoryTabSelected}" Value="True">
-                                                    <Setter Property="Background" Value="{DynamicResource Accent}"/>
-                                                    <Setter Property="Foreground" Value="White"/>
-                                                    <Setter Property="FontWeight" Value="Bold"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Button.Style>
-                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Path Stretch="Uniform" Data="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                                              Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                              Width="14" Height="14" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                        <TextBlock Text="To'lovlar va Tarix" VerticalAlignment="Center"/>
+                                </Border>
+                                <Border CornerRadius="10" Padding="14,10" Margin="5,0" Background="{DynamicResource Surface2}">
+                                    <StackPanel>
+                                        <TextBlock Text="Jami savdo" Style="{StaticResource StatLabel}"/>
+                                        <TextBlock Text="{Binding SelectedCustomer.OriginalDebtMinor, Converter={StaticResource MinorToUzConverter}, StringFormat={}{0:N0}}" Style="{StaticResource StatValue}"/>
                                     </StackPanel>
-                                </Button>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- TAB 0: NASIYALAR / CHEKLAR JADVALI -->
-                        <DataGrid Grid.Row="2" ItemsSource="{Binding SelectedCustomerAccounts}" AutoGenerateColumns="False"
-                                  Visibility="{Binding IsAccountsTabSelected, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                  Background="{DynamicResource Bg}" BorderBrush="{DynamicResource Line}" BorderThickness="1"
-                                  RowBackground="{DynamicResource Bg}" AlternatingRowBackground="{DynamicResource Surface2}"
-                                  Foreground="{DynamicResource Ink}" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="{DynamicResource Line}"
-                                  HeadersVisibility="Column" CanUserAddRows="False" IsReadOnly="True"
-                                  ScrollViewer.HorizontalScrollBarVisibility="Auto" CanUserResizeColumns="True"
-                                  FontSize="13" MinRowHeight="38">
-                            <DataGrid.ColumnHeaderStyle>
-                                <Style TargetType="DataGridColumnHeader">
-                                    <Setter Property="Background" Value="{DynamicResource Surface}"/>
-                                    <Setter Property="Foreground" Value="{DynamicResource Ink2}"/>
-                                    <Setter Property="FontWeight" Value="SemiBold"/>
-                                    <Setter Property="Padding" Value="10,8"/>
-                                    <Setter Property="BorderThickness" Value="0,0,0,1"/>
-                                    <Setter Property="BorderBrush" Value="{DynamicResource Line}"/>
-                                </Style>
-                            </DataGrid.ColumnHeaderStyle>
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="Chek raqami" Binding="{Binding ReceiptNumber}" Width="150" MinWidth="130">
-                                    <DataGridTextColumn.ElementStyle>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="TextWrapping" Value="NoWrap"/>
-                                            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-                                            <Setter Property="VerticalAlignment" Value="Center"/>
-                                            <Setter Property="Padding" Value="2,4"/>
-                                            <Setter Property="ToolTip" Value="{Binding ReceiptNumber}"/>
-                                        </Style>
-                                    </DataGridTextColumn.ElementStyle>
-                                </DataGridTextColumn>
-                                <DataGridTextColumn Header="Sana" Binding="{Binding CreatedAtDisplay}" Width="130" MinWidth="110"/>
-                                <DataGridTextColumn Header="Boshlang'ich qarz" Binding="{Binding OriginalDebtUz, StringFormat='{}{0:N0} so\'m'}" Width="130" MinWidth="110"/>
-                                <DataGridTextColumn Header="Qoldiq" Binding="{Binding BalanceDisplay}" Width="130" MinWidth="110">
-                                    <DataGridTextColumn.ElementStyle>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="FontWeight" Value="Bold"/>
-                                            <Setter Property="Foreground" Value="{DynamicResource Bad}"/>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding BalanceMinor}" Value="0">
-                                                    <Setter Property="Foreground" Value="{DynamicResource Ink2}"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </DataGridTextColumn.ElementStyle>
-                                </DataGridTextColumn>
-                                <DataGridTextColumn Header="Muddati" Binding="{Binding DueDateDisplay}" Width="110" MinWidth="90"/>
-                                <DataGridTemplateColumn Header="Holati" Width="*" MinWidth="130">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <Grid VerticalAlignment="Center" Margin="0,3"><Grid.ColumnDefinitions><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                                <Ellipse Width="6" Height="6" Margin="0,0,6,0" VerticalAlignment="Center">
-                                                    <Ellipse.Style>
-                                                        <Style TargetType="Ellipse">
-                                                            <Setter Property="Fill" Value="{DynamicResource BadSolid}"/>
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding BalanceMinor}" Value="0">
-                                                                    <Setter Property="Fill" Value="{DynamicResource OkSolid}"/>
-                                                                </DataTrigger>
-                                                                <DataTrigger Binding="{Binding IsOverdue}" Value="True">
-                                                                    <Setter Property="Fill" Value="{DynamicResource WarnSolid}"/>
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </Ellipse.Style>
-                                                </Ellipse>
-                                                <TextBlock Grid.Column="1" Text="{Binding StatusText}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip="{Binding StatusText}">
-                                                    <TextBlock.Style>
-                                                        <Style TargetType="TextBlock">
+                                </Border>
+                                <Border CornerRadius="10" Padding="14,10" Margin="5,0" Background="{DynamicResource Surface2}">
+                                    <StackPanel>
+                                        <TextBlock Text="To'langan" Style="{StaticResource StatLabel}"/>
+                                        <TextBlock Text="{Binding SelectedCustomer.TotalPaidMinor, Converter={StaticResource MinorToUzConverter}, StringFormat={}{0:N0}}" Style="{StaticResource StatValue}"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border CornerRadius="10" Padding="14,10" Margin="5,0" Background="{DynamicResource Surface2}">
+                                    <StackPanel>
+                                        <TextBlock Text="Eng yaqin muddat" Style="{StaticResource StatLabel}"/>
+                                        <TextBlock Text="{Binding SelectedCustomer.EarliestDueDate, TargetNullValue=—, FallbackValue=—}">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock" BasedOn="{StaticResource StatValue}">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding SelectedCustomer.HasOverdue}" Value="True">
                                                             <Setter Property="Foreground" Value="{DynamicResource Bad}"/>
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding BalanceMinor}" Value="0">
-                                                                    <Setter Property="Foreground" Value="{DynamicResource Ink2}"/>
-                                                                </DataTrigger>
-                                                                <DataTrigger Binding="{Binding IsOverdue}" Value="True">
-                                                                    <Setter Property="Foreground" Value="{DynamicResource Warn}"/>
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </TextBlock.Style>
-                                                </TextBlock>
-                                            </Grid>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                            </DataGrid.Columns>
-                        </DataGrid>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </Border>
+                            </UniformGrid>
+                        </StackPanel>
+                    </Border>
 
-                        <!-- TAB 1: TO'LOVLAR VA TARIX JADVALI -->
-                        <DataGrid Grid.Row="2" ItemsSource="{Binding SelectedCustomerEvents}" AutoGenerateColumns="False"
-                                  Visibility="{Binding IsHistoryTabSelected, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                  Background="{DynamicResource Bg}" BorderBrush="{DynamicResource Line}" BorderThickness="1"
-                                  RowBackground="{DynamicResource Bg}" AlternatingRowBackground="{DynamicResource Surface2}"
-                                  Foreground="{DynamicResource Ink}" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="{DynamicResource Line}"
-                                  HeadersVisibility="Column" CanUserAddRows="False" IsReadOnly="True"
-                                  ScrollViewer.HorizontalScrollBarVisibility="Auto" CanUserResizeColumns="True"
-                                  FontSize="13" MinRowHeight="38">
-                            <DataGrid.ColumnHeaderStyle>
-                                <Style TargetType="DataGridColumnHeader">
-                                    <Setter Property="Background" Value="{DynamicResource Surface}"/>
-                                    <Setter Property="Foreground" Value="{DynamicResource Ink2}"/>
-                                    <Setter Property="FontWeight" Value="SemiBold"/>
-                                    <Setter Property="Padding" Value="10,8"/>
-                                    <Setter Property="BorderThickness" Value="0,0,0,1"/>
-                                    <Setter Property="BorderBrush" Value="{DynamicResource Line}"/>
-                                </Style>
-                            </DataGrid.ColumnHeaderStyle>
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="Vaqt" Binding="{Binding OccurredAtDisplay}" Width="130" MinWidth="110"/>
-                                <DataGridTemplateColumn Header="Amal turi" Width="170" MinWidth="150">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                <Path Stretch="Uniform" Width="13" Height="13" Margin="0,0,6,0" VerticalAlignment="Center" StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round">
-                                                    <Path.Style>
-                                                        <Style TargetType="Path">
-                                                            <Setter Property="Data" Value="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                                            <Setter Property="Stroke" Value="{DynamicResource Ink2}"/>
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding Kind}" Value="sale_open">
-                                                                    <Setter Property="Data" Value="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
-                                                                    <Setter Property="Stroke" Value="{DynamicResource AccentInk}"/>
-                                                                </DataTrigger>
-                                                                <DataTrigger Binding="{Binding Kind}" Value="payment">
-                                                                    <Setter Property="Data" Value="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
-                                                                    <Setter Property="Stroke" Value="{DynamicResource Ok}"/>
-                                                                </DataTrigger>
-                                                                <DataTrigger Binding="{Binding IsReversed}" Value="True">
-                                                                    <Setter Property="Data" Value="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
-                                                                    <Setter Property="Stroke" Value="{DynamicResource Bad}"/>
-                                                                </DataTrigger>
-                                                                <DataTrigger Binding="{Binding Kind}" Value="payment_reversal">
-                                                                    <Setter Property="Data" Value="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
-                                                                    <Setter Property="Stroke" Value="{DynamicResource Bad}"/>
-                                                                </DataTrigger>
-                                                                <DataTrigger Binding="{Binding Kind}" Value="credit_refund">
-                                                                    <Setter Property="Data" Value="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
-                                                                    <Setter Property="Stroke" Value="{DynamicResource Warn}"/>
-                                                                </DataTrigger>
-                                                                <DataTrigger Binding="{Binding Kind}" Value="credit_transfer">
-                                                                    <Setter Property="Data" Value="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
-                                                                    <Setter Property="Stroke" Value="{DynamicResource AccentInk}"/>
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </Path.Style>
-                                                </Path>
-                                                <TextBlock Text="{Binding KindDisplay}" Foreground="{DynamicResource Ink}" VerticalAlignment="Center"/>
-                                            </StackPanel>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                                <DataGridTextColumn Header="Summa" Binding="{Binding AmountDisplay}" Width="130" MinWidth="110">
-                                    <DataGridTextColumn.ElementStyle>
+                    <!-- Tablar va jadvallar -->
+                    <Border Grid.Row="1" Style="{StaticResource Card}" ClipToBounds="True">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Border Padding="12,0" BorderBrush="{DynamicResource Line}" BorderThickness="0,0,0,1">
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Command="{Binding SelectDetailTabCommand}" CommandParameter="0" Tag="{Binding IsAccountsTabSelected}" Style="{StaticResource LineTab}">
+                                        <TextBlock>
+                                            <Run Text="Nasiya cheklari"/>
+                                            <Run Text="{Binding SelectedCustomerAccounts.Count, Mode=OneWay}"/>
+                                        </TextBlock>
+                                    </Button>
+                                    <Button Command="{Binding SelectDetailTabCommand}" CommandParameter="1" Tag="{Binding IsHistoryTabSelected}" Style="{StaticResource LineTab}">
+                                        <TextBlock>
+                                            <Run Text="To'lovlar tarixi"/>
+                                            <Run Text="{Binding SelectedCustomerEvents.Count, Mode=OneWay}"/>
+                                        </TextBlock>
+                                    </Button>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- ===== 3.1 Nasiya cheklari ===== -->
+                            <Grid Grid.Row="1" Visibility="{Binding IsAccountsTabSelected, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="38"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                <Border Background="{DynamicResource Surface2}" Padding="16,0">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="1.2*" MinWidth="100"/>
+                                            <ColumnDefinition Width="140"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="110"/>
+                                            <ColumnDefinition Width="140"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="CHEK №" Style="{StaticResource ColHead}"/>
+                                        <TextBlock Grid.Column="1" Text="SANA" Style="{StaticResource ColHead}"/>
+                                        <TextBlock Grid.Column="2" Text="SUMMA" Style="{StaticResource ColHead}" HorizontalAlignment="Right"/>
+                                        <TextBlock Grid.Column="3" Text="QOPLANGAN" Style="{StaticResource ColHead}" HorizontalAlignment="Right" ToolTip="To&apos;lov va qaytarishlar hisobidan yopilgan qism"/>
+                                        <TextBlock Grid.Column="4" Text="QOLDIQ" Style="{StaticResource ColHead}" HorizontalAlignment="Right"/>
+                                        <TextBlock Grid.Column="5" Text="MUDDATI" Style="{StaticResource ColHead}"/>
+                                        <TextBlock Grid.Column="6" Text="HOLATI" Style="{StaticResource ColHead}" Margin="0"/>
+                                    </Grid>
+                                </Border>
+                                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                    <ItemsControl ItemsSource="{Binding SelectedCustomerAccounts}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border MinHeight="46" Padding="16,0" BorderBrush="{DynamicResource LineSoft}" BorderThickness="0,0,0,1">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="1.2*" MinWidth="100"/>
+                                                            <ColumnDefinition Width="140"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="110"/>
+                                                            <ColumnDefinition Width="140"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Text="{Binding ReceiptNumber}" Style="{StaticResource Cell}" FontWeight="SemiBold" Foreground="{DynamicResource AccentInk}"
+                                                                   ToolTip="{Binding ReceiptNumber}"/>
+                                                        <TextBlock Grid.Column="1" Text="{Binding CreatedAtDisplay}" Style="{StaticResource Cell}"/>
+                                                        <TextBlock Grid.Column="2" Text="{Binding OriginalDebtUz, StringFormat={}{0:N0}}" Style="{StaticResource Cell}"
+                                                                   Foreground="{DynamicResource Ink}" HorizontalAlignment="Right"/>
+                                                        <TextBlock Grid.Column="3" Text="{Binding PaidUz, StringFormat={}{0:N0}}" Style="{StaticResource Cell}" HorizontalAlignment="Right"/>
+                                                        <TextBlock Grid.Column="4" Text="{Binding BalanceUz, StringFormat={}{0:N0}}" Style="{StaticResource Cell}"
+                                                                   Foreground="{DynamicResource Ink}" FontWeight="Bold" HorizontalAlignment="Right"/>
+                                                        <TextBlock Grid.Column="5" Text="{Binding DueDateDisplay}">
+                                                            <TextBlock.Style>
+                                                                <Style TargetType="TextBlock" BasedOn="{StaticResource Cell}">
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsOverdue}" Value="True">
+                                                                            <Setter Property="Foreground" Value="{DynamicResource Bad}"/>
+                                                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBlock.Style>
+                                                        </TextBlock>
+                                                        <Border Grid.Column="6" CornerRadius="6" Padding="8,3" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                                            <Border.Style>
+                                                                <Style TargetType="Border">
+                                                                    <Setter Property="Background" Value="{DynamicResource AccentSoft}"/>
+                                                                    <Setter Property="TextElement.Foreground" Value="{DynamicResource AccentInk}"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsOverdue}" Value="True">
+                                                                            <Setter Property="Background" Value="{DynamicResource BadSoft}"/>
+                                                                            <Setter Property="TextElement.Foreground" Value="{DynamicResource Bad}"/>
+                                                                        </DataTrigger>
+                                                                        <DataTrigger Binding="{Binding BalanceMinor, Converter={StaticResource GreaterThanZeroConverter}}" Value="False">
+                                                                            <Setter Property="Background" Value="{DynamicResource OkSoft}"/>
+                                                                            <Setter Property="TextElement.Foreground" Value="{DynamicResource Ok}"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </Border.Style>
+                                                            <TextBlock Text="{Binding StatusText}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                                        </Border>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                                <TextBlock Grid.Row="1" Text="Nasiya cheklari yo'q" FontSize="14" Foreground="{DynamicResource Ink3}" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <TextBlock.Style>
                                         <Style TargetType="TextBlock">
-                                            <Setter Property="FontWeight" Value="Bold"/>
-                                            <Setter Property="Foreground" Value="{DynamicResource Ok}"/>
+                                            <Setter Property="Visibility" Value="Collapsed"/>
                                             <Style.Triggers>
-                                                <DataTrigger Binding="{Binding Kind}" Value="return_offset">
-                                                    <Setter Property="Foreground" Value="{DynamicResource AccentInk}"/>
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding Kind}" Value="payment_reversal">
-                                                    <Setter Property="Foreground" Value="{DynamicResource Bad}"/>
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding Kind}" Value="return_reversal">
-                                                    <Setter Property="Foreground" Value="{DynamicResource Bad}"/>
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding Kind}" Value="credit_refund">
-                                                    <Setter Property="Foreground" Value="{DynamicResource Warn}"/>
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding Kind}" Value="credit_transfer">
-                                                    <Setter Property="Foreground" Value="{DynamicResource AccentInk}"/>
+                                                <DataTrigger Binding="{Binding SelectedCustomerAccounts.Count}" Value="0">
+                                                    <Setter Property="Visibility" Value="Visible"/>
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
-                                    </DataGridTextColumn.ElementStyle>
-                                </DataGridTextColumn>
-                                <DataGridTextColumn Header="Naqd" Binding="{Binding CashMinor, StringFormat='{}{0:N0} so\'m', Converter={StaticResource MinorToUzConverter}}" Width="110" MinWidth="95"/>
-                                <DataGridTextColumn Header="Karta" Binding="{Binding CardMinor, StringFormat='{}{0:N0} so\'m', Converter={StaticResource MinorToUzConverter}}" Width="110" MinWidth="95"/>
-                                <DataGridTextColumn Header="Tafsilot" Binding="{Binding DetailsDisplay}" MinWidth="140" Width="*"/>
-                                <DataGridTemplateColumn Header="Amallar" Width="65" MinWidth="65">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <Button Command="{Binding DataContext.ReversePaymentCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                                    CommandParameter="{Binding}"
-                                                    Visibility="{Binding CanReverse, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                                    ToolTip="To'lovni bekor qilish"
-                                                    Background="{DynamicResource BadSoft}" BorderBrush="{DynamicResource Bad}" BorderThickness="1"
-                                                    Width="30" Height="28" Padding="0" Cursor="Hand"
-                                                    HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                <Button.Resources>
-                                                    <Style TargetType="Border">
-                                                        <Setter Property="CornerRadius" Value="6"/>
-                                                    </Style>
-                                                </Button.Resources>
-                                                <Path Stretch="Uniform" Data="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
-                                                      Stroke="{DynamicResource Bad}" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                                      Width="13" Height="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                            </Button>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                            </DataGrid.Columns>
-                        </DataGrid>
-                    </Grid>
-                </Grid>
-            </Border>
-        </Grid>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Grid>
 
-        <!-- ================= MODAL: YANGI MIJOZ / TAHRIRLASH ================= -->
-        <Border Grid.Row="0" Grid.RowSpan="3" Background="{DynamicResource Scrim}" Panel.ZIndex="200"
-                Visibility="{Binding IsCustomerModalOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <Border Background="{DynamicResource Surface}" CornerRadius="16" BorderBrush="{DynamicResource Accent}" BorderThickness="1.5"
-                    Width="440" Padding="24" HorizontalAlignment="Center" VerticalAlignment="Center">
-                <StackPanel>
-                    <Grid Margin="0,0,0,16">
-                        <TextBlock Text="{Binding CustomerModalTitle}" Foreground="{DynamicResource Ink}" FontSize="18" FontWeight="Bold"/>
-                        <Button Command="{Binding CloseCustomerModalCommand}" HorizontalAlignment="Right"
-                                Background="Transparent" Foreground="{DynamicResource Ink2}" BorderThickness="0" Cursor="Hand" Padding="4">
-                            <Path Stretch="Uniform" Data="M6 18L18 6M6 6l12 12"
-                                  Stroke="{DynamicResource Ink2}" StrokeThickness="2" StrokeStartLineCap="Round"
-                                  Width="13" Height="13"/>
-                        </Button>
-                    </Grid>
-
-                    <TextBlock Text="Mijoz ismi va familiyasi *" Foreground="{DynamicResource Ink2}" FontSize="12" Margin="0,0,0,4"/>
-                    <TextBox Text="{Binding ModalCustomerName, UpdateSourceTrigger=PropertyChanged}"
-                             Background="{DynamicResource Bg}" Foreground="{DynamicResource Ink}" BorderBrush="{DynamicResource Line}" Padding="10,8" FontSize="13" Margin="0,0,0,12"/>
-
-                    <TextBlock Text="Telefon raqami" Foreground="{DynamicResource Ink2}" FontSize="12" Margin="0,0,0,4"/>
-                    <TextBox Text="{Binding ModalCustomerPhone, UpdateSourceTrigger=PropertyChanged}"
-                             Background="{DynamicResource Bg}" Foreground="{DynamicResource Ink}" BorderBrush="{DynamicResource Line}" Padding="10,8" FontSize="13" Margin="0,0,0,12"/>
-
-                    <TextBlock Text="Izoh (manzil yoki qo'shimcha ma'lumot)" Foreground="{DynamicResource Ink2}" FontSize="12" Margin="0,0,0,4"/>
-                    <TextBox Text="{Binding ModalCustomerNote, UpdateSourceTrigger=PropertyChanged}"
-                             Background="{DynamicResource Bg}" Foreground="{DynamicResource Ink}" BorderBrush="{DynamicResource Line}" Padding="10,8" FontSize="13" Height="60" TextWrapping="Wrap" Margin="0,0,0,16"/>
-
-                    <TextBlock Text="{Binding ModalCustomerErrorMessage}" Foreground="{DynamicResource Bad}" FontSize="12" Margin="0,0,0,12"
-                               Visibility="{Binding ModalCustomerErrorMessage, Converter={StaticResource EmptyStringToVisibilityConverter}}"/>
-
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Button Grid.Column="0" Content="Bekor qilish (Esc)" Command="{Binding CloseCustomerModalCommand}"
-                                Style="{StaticResource RoundedActionButton}" Background="{DynamicResource Line}" Foreground="{DynamicResource Ink}" Padding="12,10" Margin="0,0,6,0"/>
-                        <Button Grid.Column="1" Content="Saqlash (Enter)" Command="{Binding SaveCustomerModalCommand}"
-                                Style="{StaticResource RoundedActionButton}" Background="{DynamicResource OkSolid}" Foreground="White" FontWeight="Bold" Padding="12,10" Margin="6,0,0,0"/>
-                    </Grid>
-                </StackPanel>
-            </Border>
-        </Border>
-
-        <!-- ================= MODAL: QARZ TO'LOVI QABUL QILISH ================= -->
-        <Border Grid.Row="0" Grid.RowSpan="3" Background="{DynamicResource Scrim}" Panel.ZIndex="210"
-                Visibility="{Binding IsPaymentModalOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <Border Background="{DynamicResource Surface}" CornerRadius="16" BorderBrush="{DynamicResource Ok}" BorderThickness="1.5"
-                    Width="520" Padding="24" HorizontalAlignment="Center" VerticalAlignment="Center">
-                <StackPanel>
-                    <Grid Margin="0,0,0,14">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Path Stretch="Uniform" Data="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
-                                  Stroke="{DynamicResource Ok}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                  Width="18" Height="18" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="Qarz to'lovini qabul qilish" Foreground="{DynamicResource Ink}" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
-                        </StackPanel>
-                        <Button Command="{Binding ClosePaymentModalCommand}" HorizontalAlignment="Right"
-                                Background="Transparent" Foreground="{DynamicResource Ink2}" BorderThickness="0" Cursor="Hand" Padding="4">
-                            <Path Stretch="Uniform" Data="M6 18L18 6M6 6l12 12"
-                                  Stroke="{DynamicResource Ink2}" StrokeThickness="2" StrokeStartLineCap="Round"
-                                  Width="13" Height="13"/>
-                        </Button>
-                    </Grid>
-
-                    <!-- Mijoz va Mavjud Qarz qutisi -->
-                    <Border Background="{DynamicResource Bg}" CornerRadius="10" Padding="14,10" Margin="0,0,0,14" BorderBrush="{DynamicResource Line}" BorderThickness="1">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0">
-                                <TextBlock Text="{Binding SelectedCustomer.Name}" Foreground="{DynamicResource Ink}" FontSize="15" FontWeight="Bold"/>
-                                <TextBlock Text="{Binding SelectedCustomer.PhoneDisplay}" Foreground="{DynamicResource Ink2}" FontSize="12" Margin="0,2,0,0"/>
-                            </StackPanel>
-                            <StackPanel Grid.Column="1" HorizontalAlignment="Right">
-                                <TextBlock Text="Mavjud qarz:" Foreground="{DynamicResource Ink2}" FontSize="11" HorizontalAlignment="Right"/>
-                                <TextBlock Text="{Binding SelectedCustomer.BalanceDisplay}" Foreground="{DynamicResource Bad}" FontSize="16" FontWeight="Bold" HorizontalAlignment="Right"/>
-                            </StackPanel>
+                            <!-- ===== 3.3 To'lovlar tarixi ===== -->
+                            <Grid Grid.Row="1" Visibility="{Binding IsHistoryTabSelected, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="38"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                <Border Background="{DynamicResource Surface2}" Padding="16,0">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="140"/>
+                                            <ColumnDefinition Width="1.3*" MinWidth="150"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="1.3*"/>
+                                            <ColumnDefinition Width="1.3*"/>
+                                            <ColumnDefinition Width="44"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="SANA, VAQT" Style="{StaticResource ColHead}"/>
+                                        <TextBlock Grid.Column="1" Text="TURI" Style="{StaticResource ColHead}"/>
+                                        <TextBlock Grid.Column="2" Text="SUMMA" Style="{StaticResource ColHead}" HorizontalAlignment="Right"/>
+                                        <TextBlock Grid.Column="3" Text="USUL" Style="{StaticResource ColHead}"/>
+                                        <TextBlock Grid.Column="4" Text="TAFSILOT" Style="{StaticResource ColHead}"/>
+                                    </Grid>
+                                </Border>
+                                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                    <ItemsControl ItemsSource="{Binding SelectedCustomerEvents}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border MinHeight="46" Padding="16,0" BorderBrush="{DynamicResource LineSoft}" BorderThickness="0,0,0,1">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="140"/>
+                                                            <ColumnDefinition Width="1.3*" MinWidth="150"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="1.3*"/>
+                                                            <ColumnDefinition Width="1.3*"/>
+                                                            <ColumnDefinition Width="44"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Text="{Binding OccurredAtDisplay}" Style="{StaticResource Cell}"/>
+                                                        <Border Grid.Column="1" CornerRadius="6" Padding="8,3" Margin="0,0,12,0" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                                            <Border.Style>
+                                                                <Style TargetType="Border">
+                                                                    <Setter Property="Background" Value="{DynamicResource WarnSoft}"/>
+                                                                    <Setter Property="TextElement.Foreground" Value="{DynamicResource Warn}"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding Kind}" Value="payment">
+                                                                            <Setter Property="Background" Value="{DynamicResource OkSoft}"/>
+                                                                            <Setter Property="TextElement.Foreground" Value="{DynamicResource Ok}"/>
+                                                                        </DataTrigger>
+                                                                        <DataTrigger Binding="{Binding Kind}" Value="sale_open">
+                                                                            <Setter Property="Background" Value="{DynamicResource AccentSoft}"/>
+                                                                            <Setter Property="TextElement.Foreground" Value="{DynamicResource AccentInk}"/>
+                                                                        </DataTrigger>
+                                                                        <DataTrigger Binding="{Binding Kind}" Value="payment_reversal">
+                                                                            <Setter Property="Background" Value="{DynamicResource BadSoft}"/>
+                                                                            <Setter Property="TextElement.Foreground" Value="{DynamicResource Bad}"/>
+                                                                        </DataTrigger>
+                                                                        <DataTrigger Binding="{Binding Kind}" Value="return_reversal">
+                                                                            <Setter Property="Background" Value="{DynamicResource BadSoft}"/>
+                                                                            <Setter Property="TextElement.Foreground" Value="{DynamicResource Bad}"/>
+                                                                        </DataTrigger>
+                                                                        <DataTrigger Binding="{Binding IsReversed}" Value="True">
+                                                                            <Setter Property="Background" Value="{DynamicResource Surface2}"/>
+                                                                            <Setter Property="TextElement.Foreground" Value="{DynamicResource Ink3}"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </Border.Style>
+                                                            <TextBlock Text="{Binding KindDisplay}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip="{Binding KindDisplay}"/>
+                                                        </Border>
+                                                        <TextBlock Grid.Column="2" Text="{Binding AmountDisplay}" HorizontalAlignment="Right">
+                                                            <TextBlock.Style>
+                                                                <Style TargetType="TextBlock" BasedOn="{StaticResource Cell}">
+                                                                    <Setter Property="FontWeight" Value="Bold"/>
+                                                                    <Setter Property="Foreground" Value="{DynamicResource Ink}"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding Kind}" Value="payment">
+                                                                            <Setter Property="Foreground" Value="{DynamicResource Ok}"/>
+                                                                        </DataTrigger>
+                                                                        <DataTrigger Binding="{Binding IsReversed}" Value="True">
+                                                                            <Setter Property="Foreground" Value="{DynamicResource Ink3}"/>
+                                                                            <Setter Property="TextDecorations" Value="Strikethrough"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBlock.Style>
+                                                        </TextBlock>
+                                                        <TextBlock Grid.Column="3" Text="{Binding MethodDisplay}" Style="{StaticResource Cell}" ToolTip="{Binding MethodDisplay}"/>
+                                                        <TextBlock Grid.Column="4" Text="{Binding DetailsDisplay}" Style="{StaticResource Cell}" ToolTip="{Binding DetailsDisplay}"/>
+                                                        <Button Grid.Column="5" Width="36" Height="36" HorizontalAlignment="Right" ToolTip="To'lovni bekor qilish"
+                                                                Command="{Binding DataContext.ReversePaymentCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                CommandParameter="{Binding}" Style="{StaticResource MenuRow}" Padding="0" Foreground="{DynamicResource Bad}"
+                                                                Visibility="{Binding CanReverse, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                            <Viewbox Width="16" Height="16" Margin="10,0,0,0">
+                                                                <Path Style="{StaticResource Ic}" Stroke="{DynamicResource Bad}" Data="M9 14L4 9l5-5 M4 9h10a6 6 0 0 1 0 12h-3"/>
+                                                            </Viewbox>
+                                                        </Button>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                                <TextBlock Grid.Row="1" Text="Hali amal yo'q" FontSize="14" Foreground="{DynamicResource Ink3}" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding SelectedCustomerEvents.Count}" Value="0">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Grid>
                         </Grid>
                     </Border>
+                </Grid>
+            </Grid>
+        </Grid>
 
-                    <!-- To'lov turi tanlash (Naqd, Karta, Aralash) -->
-                    <TextBlock Text="To'lov turi:" Foreground="{DynamicResource Ink2}" FontSize="12" Margin="0,0,0,6"/>
-                    <Grid Margin="0,0,0,14">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <Button Grid.Column="0" Content="Naqd" Command="{Binding SelectPaymentTypeCommand}" CommandParameter="0" Margin="0,0,4,0" Padding="0,8" Cursor="Hand">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource PaymentTypeSelectorButton}">
+        <!-- ================= 3.4 YANGI MIJOZ / TAHRIRLASH ================= -->
+        <Border Background="{DynamicResource Scrim}" Panel.ZIndex="100"
+                Visibility="{Binding IsCustomerModalOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Border Style="{StaticResource ModalCard}" Width="440" Padding="24,22">
+                <StackPanel>
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Right" Text="Nasiya uchun" FontSize="12" Foreground="{DynamicResource Ink3}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                        <TextBlock FontSize="18" FontWeight="Bold" TextWrapping="Wrap">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="Yangi mijoz"/>
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsPaymentCash}" Value="True">
-                                            <Setter Property="Background" Value="{DynamicResource OkSoft}"/>
-                                            <Setter Property="BorderBrush" Value="{DynamicResource Ok}"/>
-                                            <Setter Property="Foreground" Value="{DynamicResource Ok}"/>
+                                        <DataTrigger Binding="{Binding IsEditingCustomer}" Value="True">
+                                            <Setter Property="Text" Value="Mijozni tahrirlash"/>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
-                            </Button.Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </DockPanel>
+                    <TextBlock Margin="0,14,0,6" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource Ink2}">
+                        <Run Text="Ism familiya"/> <Run Text="*" Foreground="{DynamicResource Bad}"/>
+                    </TextBlock>
+                    <TextBox Text="{Binding ModalCustomerName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldBox}" IsVisibleChanged="FocusWhenShown"/>
+                    <TextBlock Text="Telefon" Style="{StaticResource FieldLabel}" Margin="0,14,0,6"/>
+                    <TextBox Text="{Binding ModalCustomerPhone, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldBox}"/>
+                    <TextBlock Margin="0,14,0,6" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource Ink2}" TextWrapping="Wrap">
+                        <Run Text="Izoh"/> <Run Text="— manzil, kim tavsiya qilgan (ixtiyoriy)" FontWeight="Normal" Foreground="{DynamicResource Ink3}"/>
+                    </TextBlock>
+                    <TextBox Text="{Binding ModalCustomerNote, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldArea}"/>
+                    <TextBlock Text="{Binding ModalCustomerErrorMessage}" Style="{StaticResource ModalError}"
+                               Visibility="{Binding ModalCustomerErrorMessage, Converter={StaticResource EmptyStringToVisibilityConverter}}"/>
+                    <DockPanel Margin="0,18,0,0">
+                        <Button DockPanel.Dock="Left" Command="{Binding CloseCustomerModalCommand}" Style="{StaticResource BtnSecondary}" Margin="0,0,10,0">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Bekor qilish" VerticalAlignment="Center"/>
+                                <TextBlock Text="Esc" Style="{StaticResource Kbd}"/>
+                            </StackPanel>
                         </Button>
-
-                        <Button Grid.Column="1" Content="Karta" Command="{Binding SelectPaymentTypeCommand}" CommandParameter="1" Margin="4,0,4,0" Padding="0,8" Cursor="Hand">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource PaymentTypeSelectorButton}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsPaymentCard}" Value="True">
-                                            <Setter Property="Background" Value="{DynamicResource AccentSoft}"/>
-                                            <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
-                                            <Setter Property="Foreground" Value="{DynamicResource AccentInk}"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
+                        <Button Command="{Binding SaveCustomerModalCommand}" Style="{StaticResource BtnPrimary}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Saqlash" VerticalAlignment="Center"/>
+                                <TextBlock Text="Enter" Style="{StaticResource Kbd}"/>
+                            </StackPanel>
                         </Button>
-
-                        <Button Grid.Column="2" Content="Aralash" Command="{Binding SelectPaymentTypeCommand}" CommandParameter="2" Margin="4,0,0,0" Padding="0,8" Cursor="Hand">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource PaymentTypeSelectorButton}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsPaymentSplit}" Value="True">
-                                            <Setter Property="Background" Value="{DynamicResource AccentSoft}"/>
-                                            <Setter Property="BorderBrush" Value="{DynamicResource AccentInk}"/>
-                                            <Setter Property="Foreground" Value="{DynamicResource AccentInk}"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                        </Button>
-                    </Grid>
-
-                    <!-- To'lov summasi kiritish -->
-                    <Grid Margin="0,0,0,12" Visibility="{Binding IsPaymentSplit, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
-                        <StackPanel>
-                            <TextBlock Text="To'lov summasi (so'm) *" Foreground="{DynamicResource Ink2}" FontSize="12" Margin="0,0,0,4"/>
-                            <TextBox Text="{Binding PaymentAmountInput, UpdateSourceTrigger=PropertyChanged}"
-                                     Background="{DynamicResource Bg}" Foreground="{DynamicResource Ink}" BorderBrush="{DynamicResource Line}" Padding="12,10" FontSize="16" FontWeight="Bold"/>
-                        </StackPanel>
-                    </Grid>
-
-                    <!-- Aralash bo'lsa Naqd va Karta alohida -->
-                    <Grid Margin="0,0,0,12" Visibility="{Binding IsPaymentSplit, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0" Margin="0,0,6,0">
-                            <TextBlock Text="Naqd qismi (so'm) *" Foreground="{DynamicResource Ink2}" FontSize="12" Margin="0,0,0,4"/>
-                            <TextBox Text="{Binding PaymentCashInput, UpdateSourceTrigger=PropertyChanged}"
-                                     Background="{DynamicResource Bg}" Foreground="{DynamicResource Ink}" BorderBrush="{DynamicResource Line}" Padding="10,8" FontSize="14" FontWeight="Bold"/>
-                        </StackPanel>
-                        <StackPanel Grid.Column="1" Margin="6,0,0,0">
-                            <TextBlock Text="Karta qismi (so'm) *" Foreground="{DynamicResource Ink2}" FontSize="12" Margin="0,0,0,4"/>
-                            <TextBox Text="{Binding PaymentCardInput, UpdateSourceTrigger=PropertyChanged}"
-                                     Background="{DynamicResource Bg}" Foreground="{DynamicResource Ink}" BorderBrush="{DynamicResource Line}" Padding="10,8" FontSize="14" FontWeight="Bold"/>
-                        </StackPanel>
-                    </Grid>
-
-                    <!-- Jonli Taqsimot Preview qutisi -->
-                    <Border Background="{DynamicResource Bg}" CornerRadius="10" Padding="12" Margin="0,0,0,14" BorderBrush="{DynamicResource Line}" BorderThickness="1">
-                        <StackPanel>
-                            <TextBlock Text="Jonli taqsimot ko'rinishi:" Foreground="{DynamicResource Ink3}" FontSize="11" Margin="0,0,0,6"/>
-                            <ItemsControl ItemsSource="{Binding AllocationPreviewLines}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Grid Margin="0,2">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-                                            <TextBlock Grid.Column="0" Text="{Binding ReceiptNumber}" Foreground="{DynamicResource Ink2}" FontSize="12"/>
-                                            <TextBlock Grid.Column="1" Text="{Binding PaidMinor, StringFormat='-{0:N0} so\'m', Converter={StaticResource MinorToUzConverter}}"
-                                                       Foreground="{DynamicResource Ok}" FontSize="12" FontWeight="Bold"/>
-                                        </Grid>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                            <TextBlock Text="{Binding PreviewRemainingDebtText}" Foreground="{DynamicResource Warn}" FontSize="12" FontWeight="Bold" Margin="0,6,0,0"
-                                       Visibility="{Binding PreviewRemainingDebtText, Converter={StaticResource EmptyStringToVisibilityConverter}}"/>
-                        </StackPanel>
-                    </Border>
-
-                    <TextBlock Text="{Binding PaymentErrorMessage}" Foreground="{DynamicResource Bad}" FontSize="12" Margin="0,0,0,12"
-                               Visibility="{Binding PaymentErrorMessage, Converter={StaticResource EmptyStringToVisibilityConverter}}"/>
-
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Button Grid.Column="0" Content="Bekor qilish (Esc)" Command="{Binding ClosePaymentModalCommand}"
-                                Style="{StaticResource RoundedActionButton}" Background="{DynamicResource Line}" Foreground="{DynamicResource Ink}" Padding="12,10" Margin="0,0,6,0"/>
-                        <Button Grid.Column="1" Content="Tasdiqlash va qabul qilish (Enter)" Command="{Binding ConfirmPaymentCommand}"
-                                Style="{StaticResource RoundedActionButton}" Background="{DynamicResource OkSolid}" Foreground="White" FontWeight="Bold" Padding="12,10" Margin="6,0,0,0"
-                                IsEnabled="{Binding IsSubmittingPayment, Converter={StaticResource InverseBooleanConverter}}"/>
-                    </Grid>
+                    </DockPanel>
                 </StackPanel>
             </Border>
         </Border>
 
-        <!-- ================= MODAL: PULNI QAYTARISH (KREDIT / HAQDORLIK) ================= -->
-        <Border Grid.Row="0" Grid.RowSpan="3" Background="{DynamicResource Scrim}" Panel.ZIndex="200"
+        <!-- ================= 3.2 QARZ TO'LOVINI QABUL QILISH ================= -->
+        <Border Background="{DynamicResource Scrim}" Panel.ZIndex="100"
+                Visibility="{Binding IsPaymentModalOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Border Style="{StaticResource ModalCard}" Width="520">
+                <StackPanel>
+                    <DockPanel Margin="24,18,16,8">
+                        <Button DockPanel.Dock="Right" Command="{Binding ClosePaymentModalCommand}" Style="{StaticResource CloseBtn}" ToolTip="Yopish" VerticalAlignment="Top">
+                            <Viewbox Width="18" Height="18">
+                                <Path Style="{StaticResource Ic}" Data="M6 6l12 12 M18 6L6 18"/>
+                            </Viewbox>
+                        </Button>
+                        <StackPanel>
+                            <TextBlock Text="To'lov qabul qilish" FontSize="20" FontWeight="Bold"/>
+                            <TextBlock FontSize="13" Foreground="{DynamicResource Ink2}" TextTrimming="CharacterEllipsis">
+                                <Run Text="{Binding SelectedCustomer.Name, Mode=OneWay}"/> <Run Text="·"/> <Run Text="{Binding SelectedCustomer.PhoneDisplay, Mode=OneWay}"/>
+                            </TextBlock>
+                        </StackPanel>
+                    </DockPanel>
+                    <StackPanel Margin="24,8,24,0">
+                        <!-- Joriy qarz -->
+                        <Border CornerRadius="10" Padding="14,12" Background="{DynamicResource BadSoft}">
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Right" Text="{Binding SelectedCustomer.BalanceDisplay}" FontSize="22" FontWeight="ExtraBold" Foreground="{DynamicResource Bad}"/>
+                                <TextBlock Text="Joriy qarz" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource Bad}" VerticalAlignment="Center"/>
+                            </DockPanel>
+                        </Border>
+                        <!-- To'lov turi -->
+                        <Border Margin="0,16,0,0" Padding="4" CornerRadius="10" Background="{DynamicResource Surface2}" BorderBrush="{DynamicResource Line}" BorderThickness="1">
+                            <UniformGrid Rows="1">
+                                <Button Content="Naqd" Command="{Binding SelectPaymentTypeCommand}" CommandParameter="0" Tag="{Binding IsPaymentCash}" Style="{StaticResource SegTab}"/>
+                                <Button Content="Karta" Command="{Binding SelectPaymentTypeCommand}" CommandParameter="1" Tag="{Binding IsPaymentCard}" Style="{StaticResource SegTab}"/>
+                                <Button Content="Aralash" Command="{Binding SelectPaymentTypeCommand}" CommandParameter="2" Tag="{Binding IsPaymentSplit}" Style="{StaticResource SegTab}"/>
+                            </UniformGrid>
+                        </Border>
+                        <!-- Summa -->
+                        <StackPanel Margin="0,16,0,0" Visibility="{Binding IsPaymentSplit, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                            <TextBlock Text="To'lov summasi" Style="{StaticResource FieldLabel}" Margin="0,0,0,8"/>
+                            <TextBox Text="{Binding PaymentAmountInput, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldBoxBig}" Tag="so'm"
+                                     IsVisibleChanged="FocusWhenShown"/>
+                        </StackPanel>
+                        <Grid Margin="0,16,0,0" Visibility="{Binding IsPaymentSplit, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="Naqd qismi" Style="{StaticResource FieldLabel}" Margin="0,0,0,8"/>
+                                <TextBox Text="{Binding PaymentCashInput, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldBoxBig}" Tag="so'm"
+                                         IsVisibleChanged="FocusWhenShown"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="Karta qismi" Style="{StaticResource FieldLabel}" Margin="0,0,0,8"/>
+                                <TextBox Text="{Binding PaymentCardInput, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldBoxBig}" Tag="so'm"/>
+                            </StackPanel>
+                        </Grid>
+                        <!-- Taqsimot -->
+                        <Border Margin="0,16,0,0" CornerRadius="10" Padding="14,12" BorderBrush="{DynamicResource Line}" BorderThickness="1">
+                            <StackPanel>
+                                <TextBlock Text="Taqsimot (eng eski chekdan boshlab)" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource Ink2}" TextWrapping="Wrap"/>
+                                <ScrollViewer MaxHeight="110" VerticalScrollBarVisibility="Auto" Margin="0,6,0,0">
+                                    <ItemsControl ItemsSource="{Binding AllocationPreviewLines}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <DockPanel Margin="0,0,0,6">
+                                                    <TextBlock DockPanel.Dock="Right" FontSize="13" FontWeight="SemiBold" Margin="12,0,0,0">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Foreground" Value="{DynamicResource Ink}"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding NewBalanceMinor, Converter={StaticResource GreaterThanZeroConverter}}" Value="False">
+                                                                        <Setter Property="Foreground" Value="{DynamicResource Ok}"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                        <Run Text="{Binding PaidMinor, Converter={StaticResource MinorToUzConverter}, StringFormat={}{0:N0}, Mode=OneWay}"/>
+                                                        <Run Text="— qoldiq"/>
+                                                        <Run Text="{Binding NewBalanceMinor, Converter={StaticResource MinorToUzConverter}, StringFormat={}{0:N0}, Mode=OneWay}"/>
+                                                    </TextBlock>
+                                                    <TextBlock Text="{Binding ReceiptNumber}" FontSize="13" Foreground="{DynamicResource Ink}" TextTrimming="CharacterEllipsis"/>
+                                                </DockPanel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                                <Border BorderBrush="{DynamicResource LineSoft}" BorderThickness="0,1,0,0" Padding="0,6,0,0"
+                                        Visibility="{Binding PreviewRemainingDebtText, Converter={StaticResource EmptyStringToVisibilityConverter}}">
+                                    <TextBlock Text="{Binding PreviewRemainingDebtText}" FontSize="13" FontWeight="Bold" TextWrapping="Wrap"/>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+                        <TextBlock Text="{Binding PaymentErrorMessage}" Style="{StaticResource ModalError}"
+                                   Visibility="{Binding PaymentErrorMessage, Converter={StaticResource EmptyStringToVisibilityConverter}}"/>
+                    </StackPanel>
+                    <DockPanel Margin="24,18,24,20">
+                        <Button DockPanel.Dock="Left" Command="{Binding ClosePaymentModalCommand}" Style="{StaticResource BtnSecondary}" Height="52" Padding="18,0" Margin="0,0,10,0">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Bekor qilish" VerticalAlignment="Center"/>
+                                <TextBlock Text="Esc" Style="{StaticResource Kbd}"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Command="{Binding ConfirmPaymentCommand}" Style="{StaticResource BtnPrimary}" Height="52" FontSize="16"
+                                IsEnabled="{Binding IsSubmittingPayment, Converter={StaticResource InverseBooleanConverter}}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="To'lovni qabul qilish" VerticalAlignment="Center"/>
+                                <TextBlock Text="Enter" Style="{StaticResource Kbd}"/>
+                            </StackPanel>
+                        </Button>
+                    </DockPanel>
+                </StackPanel>
+            </Border>
+        </Border>
+
+        <!-- ================= 3.5 ORTIQCHA PULNI QAYTARISH ================= -->
+        <Border Background="{DynamicResource Scrim}" Panel.ZIndex="100"
                 Visibility="{Binding IsRefundCreditModalOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <Border Background="{DynamicResource Surface}" CornerRadius="16" BorderBrush="{DynamicResource Warn}" BorderThickness="1.5"
-                    Width="440" Padding="24" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Border Style="{StaticResource ModalCard}" Width="480">
                 <StackPanel>
-                    <Grid Margin="0,0,0,14">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Path Stretch="Uniform" Data="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
-                                  Stroke="{DynamicResource Warn}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                  Width="18" Height="18" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="Ortiqcha pulni mijozga qaytarish" Foreground="{DynamicResource Ink}" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
-                        </StackPanel>
-                        <Button Command="{Binding CloseRefundCreditModalCommand}" HorizontalAlignment="Right"
-                                Background="Transparent" Foreground="{DynamicResource Ink2}" BorderThickness="0" Cursor="Hand" Padding="4">
-                            <Path Stretch="Uniform" Data="M6 18L18 6M6 6l12 12"
-                                  Stroke="{DynamicResource Ink2}" StrokeThickness="2" StrokeStartLineCap="Round"
-                                  Width="13" Height="13"/>
+                    <DockPanel Margin="24,18,16,8">
+                        <Button DockPanel.Dock="Right" Command="{Binding CloseRefundCreditModalCommand}" Style="{StaticResource CloseBtn}" ToolTip="Yopish" VerticalAlignment="Top">
+                            <Viewbox Width="18" Height="18">
+                                <Path Style="{StaticResource Ic}" Data="M6 6l12 12 M18 6L6 18"/>
+                            </Viewbox>
                         </Button>
-                    </Grid>
-
-                    <Border Background="{DynamicResource Bg}" CornerRadius="10" Padding="14,10" Margin="0,0,0,14" BorderBrush="{DynamicResource Line}" BorderThickness="1">
                         <StackPanel>
-                            <TextBlock Text="{Binding SelectedCustomer.Name}" Foreground="{DynamicResource Ink}" FontSize="15" FontWeight="Bold"/>
-                            <TextBlock Text="{Binding RefundCreditMaxAmountText}" Foreground="{DynamicResource Ok}" FontSize="13" FontWeight="SemiBold" Margin="0,4,0,0"/>
+                            <TextBlock Text="Ortiqcha pulni qaytarish" FontSize="20" FontWeight="Bold" TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding SelectedCustomer.Name}" FontSize="13" Foreground="{DynamicResource Ink2}" TextTrimming="CharacterEllipsis"/>
                         </StackPanel>
-                    </Border>
-
-                    <TextBlock Text="Naqd qaytariladigan summa (so'm):" Foreground="{DynamicResource Ink2}" FontSize="12" Margin="0,0,0,4"/>
-                    <TextBox Text="{Binding RefundCreditCashInput, UpdateSourceTrigger=PropertyChanged}"
-                             Background="{DynamicResource Bg}" Foreground="{DynamicResource Ink}" BorderBrush="{DynamicResource Line}" Padding="10,8" FontSize="14" FontWeight="Bold" Margin="0,0,0,12"/>
-
-                    <TextBlock Text="Karta orqali qaytariladigan summa (so'm):" Foreground="{DynamicResource Ink2}" FontSize="12" Margin="0,0,0,4"/>
-                    <TextBox Text="{Binding RefundCreditCardInput, UpdateSourceTrigger=PropertyChanged}"
-                             Background="{DynamicResource Bg}" Foreground="{DynamicResource Ink}" BorderBrush="{DynamicResource Line}" Padding="10,8" FontSize="14" FontWeight="Bold" Margin="0,0,0,12"/>
-
-                    <TextBlock Text="{Binding RefundCreditErrorMessage}" Foreground="{DynamicResource Bad}" FontSize="12" Margin="0,0,0,12"
-                               Visibility="{Binding RefundCreditErrorMessage, Converter={StaticResource EmptyStringToVisibilityConverter}}"/>
-
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Button Grid.Column="0" Content="Bekor qilish (Esc)" Command="{Binding CloseRefundCreditModalCommand}"
-                                Style="{StaticResource RoundedActionButton}" Background="{DynamicResource Line}" Foreground="{DynamicResource Ink}" Padding="12,10" Margin="0,0,6,0"/>
-                        <Button Grid.Column="1" Content="Tasdiqlash (Enter)" Command="{Binding ConfirmRefundCreditCommand}"
-                                Style="{StaticResource RoundedActionButton}" Background="{DynamicResource WarnSolid}" Foreground="White" FontWeight="Bold" Padding="12,10" Margin="6,0,0,0"
-                                IsEnabled="{Binding IsSubmittingRefundCredit, Converter={StaticResource InverseBooleanConverter}}"/>
-                    </Grid>
+                    </DockPanel>
+                    <StackPanel Margin="24,8,24,0">
+                        <Border CornerRadius="10" Padding="14,12" Background="{DynamicResource OkSoft}">
+                            <TextBlock Text="{Binding RefundCreditMaxAmountText}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource Ok}" TextWrapping="Wrap"/>
+                        </Border>
+                        <Grid Margin="0,16,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="Naqd qaytariladi" Style="{StaticResource FieldLabel}" Margin="0,0,0,8"/>
+                                <TextBox Text="{Binding RefundCreditCashInput, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldBoxBig}" Tag="so'm"
+                                         IsVisibleChanged="FocusWhenShown"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="Kartaga qaytariladi" Style="{StaticResource FieldLabel}" Margin="0,0,0,8"/>
+                                <TextBox Text="{Binding RefundCreditCardInput, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldBoxBig}" Tag="so'm"/>
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock Text="{Binding RefundCreditErrorMessage}" Style="{StaticResource ModalError}"
+                                   Visibility="{Binding RefundCreditErrorMessage, Converter={StaticResource EmptyStringToVisibilityConverter}}"/>
+                    </StackPanel>
+                    <DockPanel Margin="24,18,24,20">
+                        <Button DockPanel.Dock="Left" Command="{Binding CloseRefundCreditModalCommand}" Style="{StaticResource BtnSecondary}" Height="52" Padding="18,0" Margin="0,0,10,0">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Bekor qilish" VerticalAlignment="Center"/>
+                                <TextBlock Text="Esc" Style="{StaticResource Kbd}"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Command="{Binding ConfirmRefundCreditCommand}" Style="{StaticResource BtnPrimary}" Height="52" FontSize="16"
+                                IsEnabled="{Binding IsSubmittingRefundCredit, Converter={StaticResource InverseBooleanConverter}}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Pulni qaytarish" VerticalAlignment="Center"/>
+                                <TextBlock Text="Enter" Style="{StaticResource Kbd}"/>
+                            </StackPanel>
+                        </Button>
+                    </DockPanel>
                 </StackPanel>
             </Border>
         </Border>
 
-        <!-- ================= MODAL: MIJOZ BATAFSIL MA'LUMOTLARI (IZOH VA ALOQA) ================= -->
-        <Border Grid.Row="0" Grid.RowSpan="3" Background="{DynamicResource Scrim}" Panel.ZIndex="250"
+        <!-- ================= 3.6 MIJOZ HAQIDA MA'LUMOT ================= -->
+        <Border Background="{DynamicResource Scrim}" Panel.ZIndex="100"
                 Visibility="{Binding IsCustomerInfoModalOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <Border Background="{DynamicResource Surface}" CornerRadius="16" BorderBrush="{DynamicResource Accent}" BorderThickness="1.5"
-                    Width="460" Padding="24" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Border Style="{StaticResource ModalCard}" Width="440" Padding="24,22">
                 <StackPanel>
-                    <Grid Margin="0,0,0,16">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Path Stretch="Uniform" Data="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                  Stroke="{DynamicResource AccentInk}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                  Width="20" Height="20" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="Mijoz haqida ma'lumot" Foreground="{DynamicResource Ink}" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
+                    <DockPanel>
+                        <Border Width="48" Height="48" CornerRadius="24" Margin="0,0,14,0" Background="{DynamicResource IllusBg}">
+                            <TextBlock Text="{Binding SelectedCustomer.Initials}" FontSize="16" FontWeight="ExtraBold" Foreground="{DynamicResource AccentInk}"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{Binding SelectedCustomer.Name}" FontSize="18" FontWeight="Bold" TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding SelectedCustomer.StatusBadge}" FontSize="13" Foreground="{DynamicResource Ink3}" Margin="0,2,0,0"/>
                         </StackPanel>
-                        <Button Command="{Binding CloseCustomerInfoModalCommand}" HorizontalAlignment="Right"
-                                Background="Transparent" Foreground="{DynamicResource Ink2}" BorderThickness="0" Cursor="Hand" Padding="4">
-                            <Path Stretch="Uniform" Data="M6 18L18 6M6 6l12 12"
-                                  Stroke="{DynamicResource Ink2}" StrokeThickness="2" StrokeStartLineCap="Round"
-                                  Width="13" Height="13"/>
-                        </Button>
-                    </Grid>
-
-                    <!-- Mijoz ismi -->
-                    <Border Background="{DynamicResource Bg}" CornerRadius="10" Padding="14,12" Margin="0,0,0,10" BorderBrush="{DynamicResource Line}" BorderThickness="1">
+                    </DockPanel>
+                    <Border Margin="0,16,0,0" CornerRadius="10" Padding="14,12" Background="{DynamicResource Surface2}">
                         <StackPanel>
-                            <TextBlock Text="F.I.SH / Mijoz nomi" Foreground="{DynamicResource Ink3}" FontSize="11" FontWeight="SemiBold"/>
-                            <TextBlock Text="{Binding SelectedCustomer.Name}" Foreground="{DynamicResource Ink}" FontSize="16" FontWeight="Bold" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                            <TextBlock Text="Telefon" Style="{StaticResource StatLabel}"/>
+                            <TextBlock Text="{Binding SelectedCustomer.PhoneDisplay}" FontSize="16" FontWeight="SemiBold" Margin="0,2,0,0" TextWrapping="Wrap"/>
                         </StackPanel>
                     </Border>
-
-                    <!-- Telefon raqami -->
-                    <Border Background="{DynamicResource Bg}" CornerRadius="10" Padding="14,12" Margin="0,0,0,10" BorderBrush="{DynamicResource Line}" BorderThickness="1">
+                    <Border Margin="0,10,0,0" CornerRadius="10" Padding="14,12" Background="{DynamicResource Surface2}">
                         <StackPanel>
-                            <TextBlock Text="Telefon raqami" Foreground="{DynamicResource Ink3}" FontSize="11" FontWeight="SemiBold"/>
-                            <TextBlock Text="{Binding SelectedCustomer.PhoneDisplay}" Foreground="{DynamicResource AccentInk}" FontSize="15" FontWeight="SemiBold" Margin="0,4,0,0"/>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- Izoh / Manzil -->
-                    <Border Background="{DynamicResource Bg}" CornerRadius="10" Padding="14,12" Margin="0,0,0,16" BorderBrush="{DynamicResource Line}" BorderThickness="1">
-                        <StackPanel>
-                            <TextBlock Text="Izoh (manzil yoki qo'shimcha ma'lumot)" Foreground="{DynamicResource Ink3}" FontSize="11" FontWeight="SemiBold"/>
-                            <ScrollViewer MaxHeight="180" VerticalScrollBarVisibility="Auto" Margin="0,6,0,0">
-                                <TextBlock Text="{Binding SelectedCustomerNoteOrEmpty}" Foreground="{DynamicResource Ink}" FontSize="13" TextWrapping="Wrap" LineHeight="20"/>
+                            <TextBlock Text="Izoh" Style="{StaticResource StatLabel}"/>
+                            <ScrollViewer MaxHeight="140" VerticalScrollBarVisibility="Auto" Margin="0,2,0,0">
+                                <TextBlock Text="{Binding SelectedCustomerNoteOrEmpty}" FontSize="14" TextWrapping="Wrap" LineHeight="20"/>
                             </ScrollViewer>
                         </StackPanel>
                     </Border>
+                    <Button Command="{Binding CloseCustomerInfoModalCommand}" Style="{StaticResource BtnSecondary}" Margin="0,18,0,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Yopish" VerticalAlignment="Center"/>
+                            <TextBlock Text="Esc" Style="{StaticResource Kbd}"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Border>
+        </Border>
 
-                    <Button Content="Yopish (Esc)" Command="{Binding CloseCustomerInfoModalCommand}"
-                            Style="{StaticResource RoundedActionButton}" Background="{DynamicResource Accent}" Foreground="White" FontWeight="Bold" Padding="14,10" HorizontalAlignment="Stretch"/>
+        <!-- ================= 3.7 MIJOZNI BLOKLASH (TASDIQ) ================= -->
+        <Border Background="{DynamicResource Scrim}" Panel.ZIndex="200"
+                Visibility="{Binding IsBlockConfirmOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Border Style="{StaticResource ModalCard}" Width="460" Padding="24">
+                <StackPanel>
+                    <DockPanel>
+                        <Border Width="44" Height="44" CornerRadius="12" Background="{DynamicResource WarnSoft}" VerticalAlignment="Top" Margin="0,0,14,0">
+                            <Viewbox Width="22" Height="22">
+                                <Path Style="{StaticResource Ic}" Stroke="{DynamicResource Warn}" Data="M6 11h12a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1z M8 11V8a4 4 0 0 1 8 0v3"/>
+                            </Viewbox>
+                        </Border>
+                        <StackPanel>
+                            <TextBlock Text="{Binding BlockConfirmTitle}" FontSize="18" FontWeight="Bold" TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding SelectedCustomer.Name}" FontSize="14" Foreground="{DynamicResource Ink2}" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </DockPanel>
+                    <Border Background="{DynamicResource Surface2}" CornerRadius="10" Padding="12,10" Margin="0,14,0,0">
+                        <TextBlock Text="Bloklangan mijozning mavjud qarzlari saqlanib qoladi va ularga to'lov qabul qilish mumkin, biroq yangi nasiya ochib bo'lmaydi."
+                                   FontSize="13" Foreground="{DynamicResource Ink2}" TextWrapping="Wrap" LineHeight="19"/>
+                    </Border>
+                    <Grid Margin="0,18,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="10"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Command="{Binding CancelToggleArchiveCommand}" Style="{StaticResource BtnSecondary}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Bekor" VerticalAlignment="Center"/>
+                                <TextBlock Text="Esc" Style="{StaticResource Kbd}"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Grid.Column="2" Command="{Binding ConfirmToggleArchiveCommand}" Style="{StaticResource BtnDanger}" Content="{Binding BlockConfirmButtonText}"/>
+                    </Grid>
                 </StackPanel>
             </Border>
         </Border>

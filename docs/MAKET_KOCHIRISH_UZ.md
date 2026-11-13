@@ -82,14 +82,14 @@ Ranglar ustuni: A+B bosqichidan keyin hammasi tokenda, lekin yorug' temada ekran
 | 2.11 | Omborlararo ko'chirish | `InventoryView.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan: 560px karta, Qayerdan ⇄ Qayerga qutilari, tovar, miqdor, "140 → 100" natija qatorlari, tugmada miqdor. VM'ga faqat ko'rsatish xossalari va almashtirish (⇄) buyrug'i qo'shildi; ko'chirish logikasi o'zgarmadi. Maketdagi tovar qidiruvi o'rnida ochiluvchi ro'yxat (avvalgidek) |
 | 2.12 | Yangi ombor | `InventoryView.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan: 440px karta, nom maydoni, "Asosiy ombor qilish" kartasi (hozirgi asosiy ombor nomi bilan) |
 | 2.13 | Kategoriya qo'shish / tahrirlash | `InventoryView.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan: 480px karta, nom maydoni, tahrirlashda "N ta tovar". Maketdagi kategoriya rasmi tanlash va "O'chirish" yo'q — dasturda kategoriya rasmi ham, kategoriyani o'chirish ham mavjud emas |
-| 3.1 | Mijozlar va nasiya cheklari | `Views/DebtsView.xaml` | ⬜ | |
-| 3.2 | Qarz to'lovini qabul qilish | `DebtsView.xaml` | ⬜ | |
-| 3.3 | To'lovlar tarixi | `DebtsView.xaml` | ⬜ | |
-| 3.4 | Yangi mijoz / tahrirlash | `DebtsView.xaml` | ⬜ | |
-| 3.5 | Ortiqcha pulni qaytarish | `DebtsView.xaml` | ⬜ | |
-| 3.6 | Mijoz haqida ma'lumot | `DebtsView.xaml` | ⬜ | |
-| 3.7 | Mijozni bloklash (tasdiq) | `DebtsView.xaml` | ⬜ | |
-| 3.8 | Mijoz ko'chirmasi (chop etish) | `DebtsView.xaml` | ⬜ | |
+| 3.1 | Mijozlar va nasiya cheklari | `Views/DebtsView.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan: 4 ta KPI karta, chapda 380px mijozlar ro'yxati (qidiruv, "Mijoz" tugmasi, filtr belgilari, bosh harfli qatorlar), o'ngda mijoz kartasi va tablar. Filtrlar dasturdagi beshtasi (Hammasi, Qarzdor, Muddati o'tgan, Yopilgan, Haqdor) — maketdagi "Bloklangan" filtri va belgilardagi sonlar yo'q (logikasi yo'q). "Eng yaqin muddat"da "3 kun o'tdi" yo'q. Chek jadvalidagi "To'langan" ustuni "Qoplangan" deb nomlandi (qaytarishlar ham kiradi) |
+| 3.2 | Qarz to'lovini qabul qilish | `DebtsView.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan: 520px karta, joriy qarz, Naqd/Karta/Aralash segmenti, katta summa maydoni, taqsimot qutisi. Maketdagi "To'liq" va "Eski chekni yopish" tez tugmalari hamda tugmadagi summa yo'q (logikasi yo'q) |
+| 3.3 | To'lovlar tarixi | `DebtsView.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan: jadval: sana, turi (rangli belgi), summa, usul, tafsilot, bekor qilish tugmasi. Maketdagi "Kassir" ustuni yo'q (ma'lumot saqlanmaydi); "Qaysi chekka" o'rnida mavjud tafsilot matni |
+| 3.4 | Yangi mijoz / tahrirlash | `DebtsView.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan: 440px karta (maket K-YangiMijoz): ism, telefon, izoh |
+| 3.5 | Ortiqcha pulni qaytarish | `DebtsView.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan: alohida maketi yo'q — to'lov oynasi uslubida qurildi (naqd / karta maydonlari) |
+| 3.6 | Mijoz haqida ma'lumot | `DebtsView.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan: alohida maketi yo'q — umumiy uslubda; "Boshqa amallar" (⋯) menyusidan ochiladi |
+| 3.7 | Mijozni bloklash (tasdiq) | `DebtsView.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan: alohida maketi yo'q — 2.4 o'chirish tasdig'i uslubida ekran ichidagi oyna (avval tizim MessageBox'i edi); bloklash amali o'zgarmadi |
+| 3.8 | Mijoz ko'chirmasi (chop etish) | `DebtsView.xaml` | ⬜ | Tegilmadi: alohida maketi yo'q, ko'chirma chek printeriga matn sifatida ketadi, natija tizim xabari bilan ko'rsatiladi |
 | 4.1 | Hisobotlar · umumiy ko'rinish | `Views/ReportsView.xaml` | ⬜ | |
 | 4.2 | Chek tafsiloti | `Views/SaleDetailDialog.xaml` | ⬜ | |
 | 4.3 | Admin PIN so'rovi | `Views/AdminPinDialogs.cs` | ⬜ | |
@@ -136,7 +136,8 @@ Ranglar ustuni: A+B bosqichidan keyin hammasi tokenda, lekin yorug' temada ekran
 - 2.8/2.9 stiker jarayoni: `MainWindow`dagi oyna va vidjet maket tuzilishida; `LabelPrintService` o'zgarmadi.
 - Test eslatmasi: `ReportsViewModelSearchTests.Search_lists_newest_first...` yarim tundan keyingi 3 soat ichida yiqiladi ("bugun, 3 soat oldin" kechagi kunga tushadi) — dizaynga aloqasi yo'q, testning o'zidagi kamchilik.
 - 2.10–2.13: buyurtma ro'yxati oynasi va Ombordagi uchta modal (ko'chirish, yangi ombor, kategoriya) maket tuzilishida. Ombor bo'limi (2.x) to'liq ko'chirildi.
-- **Keyingi qadam:** Qarzlar (3.x).
+- 3.1–3.7 Qarzlar: `DebtsView` to'liq maket tuzilishida. VM'da faqat bloklash tasdig'i ekran ichidagi oynaga ko'chdi; DTO'ga ikkita ko'rsatish xossasi (`PaidUz`, `MethodDisplay`) qo'shildi. To'lov, qaytarish, o'tkazish logikasi o'zgarmadi.
+- **Keyingi qadam:** Hisobotlar (4.x).
 
 **2026-11-13 (Claude Code), 2-qadam — Kassa ekrani qayta qurildi:**
 - Egasi fikri: yorug' rang eski joylashuv ustiga tortilgani noto'g'ri, maket **tuzilishi** ko'chirilishi kerak (qoida 5).
