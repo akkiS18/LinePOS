@@ -382,19 +382,19 @@
                                           VerticalScrollBarVisibility="Hidden"
                                           VerticalAlignment="Center"
                                           TextElement.Foreground="{DynamicResource Ink}"/>
-                            <ContentControl x:Name="PART_Watermark"
+                            <TextBlock x:Name="UzWatermark"
                                             Focusable="False"
                                             IsHitTestVisible="False"
                                             Opacity="0.5"
                                             VerticalAlignment="Center"
-                                            Content="Sana tanlang..."
+                                            Text="Sanani tanlang"
                                             Foreground="{DynamicResource Ink2}"
                                             Margin="6,0,0,0"
                                             Visibility="Collapsed"/>
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="Text" Value="">
-                                <Setter TargetName="PART_Watermark" Property="Visibility" Value="Visible"/>
+                                <Setter TargetName="UzWatermark" Property="Visibility" Value="Visible"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -404,6 +404,7 @@
 
         <!-- Zamonaviy Qora DatePicker Stili -->
         <Style TargetType="{x:Type DatePicker}">
+            <Setter Property="Language" Value="uz-Latn-UZ"/>
             <Setter Property="Foreground" Value="{DynamicResource Ink}"/>
             <Setter Property="Background" Value="{DynamicResource Bg}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource Line}"/>

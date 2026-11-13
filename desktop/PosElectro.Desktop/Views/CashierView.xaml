@@ -1329,22 +1329,22 @@
 
                         <!-- Chegirma tugmalari (narx maydonini to'ldiradi) -->
                         <TextBlock Style="{StaticResource FieldLabel}" Text="Chegirma" Margin="0,16,0,6"/>
-                        <StackPanel Orientation="Horizontal">
-                            <Button Style="{StaticResource ChoiceChip}" Height="40" Margin="0,0,8,0" Content="Yo'q"
+                        <WrapPanel>
+                            <Button Style="{StaticResource ChoiceChip}" Height="40" Margin="0,0,8,6" Content="Yo'q"
                                     Command="{Binding EditApplyDiscountCommand}" CommandParameter="none"
                                     Tag="{Binding EditActiveDiscount, Converter={StaticResource EqualsConverter}, ConverterParameter=none}"/>
-                            <Button Style="{StaticResource ChoiceChip}" Height="40" Margin="0,0,8,0" Content="−3%"
+                            <Button Style="{StaticResource ChoiceChip}" Height="40" Margin="0,0,8,6" Content="−3%"
                                     Command="{Binding EditApplyDiscountCommand}" CommandParameter="p3"
                                     Tag="{Binding EditActiveDiscount, Converter={StaticResource EqualsConverter}, ConverterParameter=p3}"/>
-                            <Button Style="{StaticResource ChoiceChip}" Height="40" Margin="0,0,8,0" Content="−5 000"
+                            <Button Style="{StaticResource ChoiceChip}" Height="40" Margin="0,0,8,6" Content="−5 000"
                                     Command="{Binding EditApplyDiscountCommand}" CommandParameter="m5000"
                                     Tag="{Binding EditActiveDiscount, Converter={StaticResource EqualsConverter}, ConverterParameter=m5000}"/>
-                            <Button Style="{StaticResource ChoiceChip}" Height="40" Margin="0,0,8,0" Content="−10%"
+                            <Button Style="{StaticResource ChoiceChip}" Height="40" Margin="0,0,8,6" Content="−10%"
                                     Command="{Binding EditApplyDiscountCommand}" CommandParameter="p10"
                                     Tag="{Binding EditActiveDiscount, Converter={StaticResource EqualsConverter}, ConverterParameter=p10}"/>
-                            <Button Style="{StaticResource ChoiceChip}" Height="40" Content="Boshqa…" Foreground="{DynamicResource Ink2}"
+                            <Button Style="{StaticResource ChoiceChip}" Height="40" Margin="0,0,0,6" Content="Boshqa…" Foreground="{DynamicResource Ink2}"
                                     Click="EditOtherDiscount_Click" ToolTip="Narxni o'zingiz yozing"/>
-                        </StackPanel>
+                        </WrapPanel>
 
                         <!-- Izoh -->
                         <Border Margin="0,16,0,0" Padding="12,10" CornerRadius="10" Background="{DynamicResource Surface2}">
@@ -1572,13 +1572,13 @@
                                 <CheckBox Margin="0,14,0,0" IsChecked="{Binding IsDebtSale, Mode=TwoWay}" Cursor="Hand" Focusable="False">
                                     <CheckBox.Template>
                                         <ControlTemplate TargetType="CheckBox">
-                                            <StackPanel Orientation="Horizontal" Background="Transparent">
+                                            <WrapPanel Background="Transparent">
                                                 <Border x:Name="track" Width="36" Height="20" CornerRadius="10" Background="{DynamicResource LineStrong}" VerticalAlignment="Center">
                                                     <Ellipse x:Name="knob" Width="16" Height="16" Fill="{DynamicResource OnAccent}" HorizontalAlignment="Left" Margin="2,0"/>
                                                 </Border>
                                                 <TextBlock Text="Nasiyaga yozish" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource Ink}" Margin="12,0,0,0" VerticalAlignment="Center"/>
                                                 <TextBlock Text="mijoz, avans va muddat" FontSize="13" Foreground="{DynamicResource Ink3}" Margin="12,0,0,0" VerticalAlignment="Center"/>
-                                            </StackPanel>
+                                            </WrapPanel>
                                             <ControlTemplate.Triggers>
                                                 <Trigger Property="IsChecked" Value="True">
                                                     <Setter TargetName="track" Property="Background" Value="{DynamicResource Accent}"/>
@@ -1675,14 +1675,14 @@
 
                                 <!-- Chek turi -->
                                 <TextBlock Style="{StaticResource FieldLabel}" Text="Chek" Margin="0,16,0,8"/>
-                                <StackPanel Orientation="Horizontal">
-                                    <Button Style="{StaticResource ChoiceChip}" Margin="0,0,6,0" Content="58 mm chek"
+                                <WrapPanel>
+                                    <Button Style="{StaticResource ChoiceChip}" Margin="0,0,6,6" Content="58 mm chek"
                                             Command="{Binding SelectReceiptOptionCommand}" CommandParameter="1" Tag="{Binding Is58mmPreview}"/>
-                                    <Button Style="{StaticResource ChoiceChip}" Margin="0,0,6,0" Content="A4 hisob-faktura"
+                                    <Button Style="{StaticResource ChoiceChip}" Margin="0,0,6,6" Content="A4 hisob-faktura"
                                             Command="{Binding SelectReceiptOptionCommand}" CommandParameter="2" Tag="{Binding IsA4Preview}"/>
-                                    <Button Style="{StaticResource ChoiceChip}" Content="Cheksiz"
+                                    <Button Style="{StaticResource ChoiceChip}" Margin="0,0,0,6" Content="Cheksiz"
                                             Command="{Binding SelectReceiptOptionCommand}" CommandParameter="0" Tag="{Binding IsNoReceiptPreview}"/>
-                                </StackPanel>
+                                </WrapPanel>
                                 <!-- 58 mm printer tanlash -->
                                 <ComboBox Style="{StaticResource FieldCombo}" Margin="0,8,0,0" Height="40" Tag="Chek printerini tanlang…"
                                           Visibility="{Binding Is58mmPreview, Converter={StaticResource BooleanToVisibilityConverter}}"
@@ -2005,15 +2005,15 @@
                     <TextBox x:Name="TxtHoldCartName" Style="{StaticResource FieldBox}" Height="48" FontSize="16"
                              Text="{Binding HoldCartName, UpdateSourceTrigger=PropertyChanged}"/>
 
-                    <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
-                        <TextBlock Text="Tez:" FontSize="12" Foreground="{DynamicResource Ink3}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <Button Style="{StaticResource ChoiceChip}" Height="32" Padding="10,0" Margin="0,0,6,0" Background="{DynamicResource Surface2}"
+                    <WrapPanel Margin="0,14,0,0">
+                        <TextBlock Text="Tez:" FontSize="12" Foreground="{DynamicResource Ink3}" VerticalAlignment="Center" Margin="0,0,8,6"/>
+                        <Button Style="{StaticResource ChoiceChip}" Height="32" Padding="10,0" Margin="0,0,6,6" Background="{DynamicResource Surface2}"
                                 Content="Pul olib keladi" Command="{Binding SetHoldNameCommand}" CommandParameter="Pul olib keladi"/>
-                        <Button Style="{StaticResource ChoiceChip}" Height="32" Padding="10,0" Margin="0,0,6,0" Background="{DynamicResource Surface2}"
+                        <Button Style="{StaticResource ChoiceChip}" Height="32" Padding="10,0" Margin="0,0,6,6" Background="{DynamicResource Surface2}"
                                 Content="Tanlayapti" Command="{Binding SetHoldNameCommand}" CommandParameter="Tanlayapti"/>
-                        <Button Style="{StaticResource ChoiceChip}" Height="32" Padding="10,0" Background="{DynamicResource Surface2}"
+                        <Button Style="{StaticResource ChoiceChip}" Height="32" Padding="10,0" Margin="0,0,0,6" Background="{DynamicResource Surface2}"
                                 Content="Telefon qiladi" Command="{Binding SetHoldNameCommand}" CommandParameter="Telefon qiladi"/>
-                    </StackPanel>
+                    </WrapPanel>
 
                     <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
                         <Viewbox Width="14" Height="14"><Path Style="{StaticResource Ic}" Stroke="{DynamicResource Ink3}" Data="M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0 M12 7v5l3 2"/></Viewbox>

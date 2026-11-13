@@ -32,6 +32,12 @@
    SVG `rect`/`circle` → yo'lga aylantiriladi (`a` yoy buyrug'i bilan).
 8. Ekran rasmini olish (ilovani ochmasdan): `scratchpad`dagi `Render` loyihasi kabi kichik .NET 8 dastur
    `CashierView`/`MainWindow`ni test bazasi nusxasida yuklab `RenderTargetBitmap` bilan PNG saqlaydi.
+9. **Til:** hozir hamma matn o'zbekcha (lotin), inglizcha qoldiq bo'lmasin. Keyin dastur ko'p tilli bo'ladi
+   (o'zbek lotin, o'zbek kirill, rus) — matnlar uchun joy qoldiring: matnli tugma/chiplarni qat'iy kenglikka
+   sig'dirmang, chip qatorlari `WrapPanel`, uzun yozuvlar `TextTrimming`/`TextWrapping` bilan.
+10. **Tema:** maketda faqat yorug' tema chizilgan. Keyin yorug'/qorong'i almashtirish qo'shiladi, qorong'i
+   ranglarni agent maketga mos qilib o'zi tanlaydi. Shuning uchun har bir rang faqat token
+   (`DynamicResource`) orqali va yangi token ikkala fayl (`Theme.Light.xaml`, `Theme.Dark.xaml`)ga qo'shiladi.
 
 ## Umumiy bosqichlar
 
@@ -51,7 +57,7 @@ Ranglar ustuni: A+B bosqichidan keyin hammasi tokenda, lekin yorug' temada ekran
 | Maket | Ekran | Kodda | Joylashuv | Izoh |
 |-------|-------|-------|-----------|------|
 | TopBar | Yuqori panel | `MainWindow.xaml` | 🟡 | Qayta qurildi: "S" logotip, chiziqli ikonkalar, Wi-Fi soni (yashil, faqat ulanishda), admin belgisi, soat, ⚙. Rasm olinib maket bilan solishtirildi; egasi ekranda ko'rmagan. "Kassa 1" nomi yo'q (dasturda kassa raqami tushunchasi yo'q) — faqat soat |
-| 1.1 | Kassa (asosiy) | `Views/CashierView.xaml` | 🟡 | Qayta qurildi: qidiruv (48px, halqa, "Enter — savatga"), plitka/ro'yxat tugmalari, kategoriya chiplari (soni bilan, endi filtrlaydi), plitkalar 176px/212px, savat sarlavhasi + 4 asbob, kutishdagi savat chiplari, savat qatori (2 qator, stepper 40px), bo'sh savat, to'lov paneli (xil·birlik, chegirma, Jami 30px, Naqd 56px, Karta/Aralash). Rasm olinib solishtirildi; egasi ekranda ko'rmagan |
+| 1.1 | Kassa (asosiy) | `Views/CashierView.xaml` | ✅ | Qayta qurildi: qidiruv (48px, halqa, "Enter — savatga"), plitka/ro'yxat tugmalari, kategoriya chiplari (soni bilan, endi filtrlaydi), plitkalar 176px/212px, savat sarlavhasi + 4 asbob, kutishdagi savat chiplari, savat qatori (2 qator, stepper 40px), bo'sh savat, to'lov paneli (xil·birlik, chegirma, Jami 30px, Naqd 56px, Karta/Aralash). Rasm olinib solishtirildi; egasi ekranda ko'rmagan |
 | 1.2 | To'lov · Naqd (qaytim) | `CashierView.xaml` (to'lov oynasi) | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan: 920×712, chapda to'lov, o'ngda 340px chek. "Mijoz berdi" + tezkor summalar + Qaytim — faqat ko'rsatish (savdoga yozilmaydi). Chek matni endi oq qog'ozda qora (avval oq ustida oq edi) |
 | 1.3 | Ro'yxat rejimi, ⚙ menyu, bo'sh savat | `CashierView.xaml`, `MainWindow.xaml` | 🟡 | Hammasi qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan. ⚙ menyu: maketdagi nomlar va chiziqli ikonkalar, karta solig'i foizi qatorda, "Admin bo'limi · PIN" sarlavhasi. Maketdagi "Mavzu (Yorug'/Qorong'i)" va "Tugma belgilari" qatorlari qo'yilmadi — dasturda bunday sozlama yo'q (soxta tugma bo'lib qolardi) |
 | 1.4 | To'lov · Karta | `CashierView.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan |
@@ -112,6 +118,7 @@ Ranglar ustuni: A+B bosqichidan keyin hammasi tokenda, lekin yorug' temada ekran
 - Yangi: `Views/EqualsConverter.cs`; tokenlar `PaperBg/PaperInk/PaperRule`, `ToastBg/ToastFg/ToastBtnBg/ToastBtnFg`.
 - Build o'tdi, 37 test o'tdi. Har bir oyna test bazasi nusxasida rasmga olinib maket bilan solishtirildi.
 - Keyin: 1.12 tovar rasmi oynasi va ⚙ menyu qatorlari (`MainWindow.xaml`) maketga keltirildi. `MainViewModel.ShowImage` ga qo'shimcha variant (meta, narx, "Savatga +1"); eski chaqiruv o'zgarmagan.
+- Egasi 1.x ni ko'rib chiqdi: "qolgani hammasini to'g'ri qilgansan". Tuzatildi: sana tanlagichdagi inglizcha "Select a date" → "Sanani tanlang" (`App.xaml`, butun dastur), oy nomlari o'zbekcha; Kassa oynalaridagi chip qatorlari uzun matn uchun o'raladigan (qoida 9).
 - **Keyingi qadam:** 2.x Ombor (`InventoryView.xaml`).
 
 **2026-11-13 (Claude Code), 2-qadam — Kassa ekrani qayta qurildi:**
@@ -125,7 +132,7 @@ Ranglar ustuni: A+B bosqichidan keyin hammasi tokenda, lekin yorug' temada ekran
 
 ## Ma'lum muammolar
 
-- Raqamlar formati: maketda `12 000` (bo'sh joy), dasturda `12,000` (WPF binding `en-US` tilida). Butun dastur uchun bitta joyda hal qilish kerak (`FrameworkElement.Language` + `CurrentCulture`), bir ekranda emas.
+- Raqamlar formati: maketda `12 000` (bo'sh joy), dasturda `12,000` (WPF binding `en-US` tilida). Butun dastur uchun bitta joyda hal qilish kerak (`FrameworkElement.Language` + `CurrentCulture`), bir ekranda emas. Sana ham shunga bog'liq: sana tanlagich o'zbekcha (`uz-Latn-UZ`: "Sanani tanlang", oy nomlari), lekin format `11/12/2026`; maketdagi `11.12.2026` shu umumiy sozlama bilan birga hal qilinadi. Ko'p tillilik (qoida 9) bilan birga qilish ma'qul.
 - Oyna sarlavha qatori qorong'i (`WindowStyleHelper.ApplyDarkTheme`). App to'liq yorug' temaga o'tganda yorug'ga almashtirish kerak.
 
 - `ReportsViewModelSearchTests.Search_lists_newest_first...` testi soat 03:00 gacha yiqiladi: "3 soat oldin" sotuv kechagi kunga tushadi. Kod xatosi emas, testni vaqtga bog'liq bo'lmaydigan qilish kerak.
