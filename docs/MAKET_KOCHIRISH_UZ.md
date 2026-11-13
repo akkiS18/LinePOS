@@ -90,10 +90,10 @@ Ranglar ustuni: A+B bosqichidan keyin hammasi tokenda, lekin yorug' temada ekran
 | 3.6 | Mijoz haqida ma'lumot | `DebtsView.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan: alohida maketi yo'q — umumiy uslubda; "Boshqa amallar" (⋯) menyusidan ochiladi |
 | 3.7 | Mijozni bloklash (tasdiq) | `DebtsView.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan: alohida maketi yo'q — 2.4 o'chirish tasdig'i uslubida ekran ichidagi oyna (avval tizim MessageBox'i edi); bloklash amali o'zgarmadi |
 | 3.8 | Mijoz ko'chirmasi (chop etish) | `DebtsView.xaml` | ⬜ | Tegilmadi: alohida maketi yo'q, ko'chirma chek printeriga matn sifatida ketadi, natija tizim xabari bilan ko'rsatiladi |
-| 4.1 | Hisobotlar · umumiy ko'rinish | `Views/ReportsView.xaml` | ⬜ | |
+| 4.1 | Hisobotlar · umumiy ko'rinish | `Views/ReportsView.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan. Filtrlar qatori, 4 KPI kartasi (foyda PIN ortida), soatlik tushum grafigi, eng ko'p sotilgan 5 tovar, cheklar jadvali. Grafik, top-5 va karta ostidagi izohlar (`O'rtacha chek`, `N xil tovar`) `ReportsViewModel`da mavjud hisobot satrlaridan faqat ko'rsatish uchun yig'iladi — hisob-kitob o'zgarmadi. Raqam formati (`344,366`) ilova bo'yicha keyin `344 366`ga o'tkaziladi |
 | 4.2 | Chek tafsiloti | `Views/SaleDetailDialog.xaml` | ⬜ | |
 | 4.3 | Admin PIN so'rovi | `Views/AdminPinDialogs.cs` | ⬜ | |
-| 4.4 | Sana oralig'ini tanlash | `ReportsView.xaml` | ⬜ | |
+| 4.4 | Sana oralig'ini tanlash | `ReportsView.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan. Tez tanlov + ikki oy yonma-yon; kun ranglari endi tokenlardan (avval `CalendarDayItem`dagi qattiq to'q ranglar edi — ular ishlatilmaydi, lekin model o'zgarmadi) |
 | 4.5 | Tovarni qaytarish | `Views/ReturnDialog.cs` | ⬜ | Eski kalitlar (`BgDark`, `TextPrimary`...) shu yerdan o'qiladi |
 | 4.6 | Chekni oldindan ko'rish (58 mm / A4) | `Views/ReceiptPreviewDialog.xaml` | ⬜ | Chek qog'ozi ataylab oq |
 | 4.7 | Qaytarishni bekor qilish | `Views/ReturnReversalDialog.cs` | ⬜ | Eski kalitlar shu yerdan ham o'qiladi |
@@ -137,7 +137,7 @@ Ranglar ustuni: A+B bosqichidan keyin hammasi tokenda, lekin yorug' temada ekran
 - Test eslatmasi: `ReportsViewModelSearchTests.Search_lists_newest_first...` yarim tundan keyingi 3 soat ichida yiqiladi ("bugun, 3 soat oldin" kechagi kunga tushadi) — dizaynga aloqasi yo'q, testning o'zidagi kamchilik.
 - 2.10–2.13: buyurtma ro'yxati oynasi va Ombordagi uchta modal (ko'chirish, yangi ombor, kategoriya) maket tuzilishida. Ombor bo'limi (2.x) to'liq ko'chirildi.
 - 3.1–3.7 Qarzlar: `DebtsView` to'liq maket tuzilishida. VM'da faqat bloklash tasdig'i ekran ichidagi oynaga ko'chdi; DTO'ga ikkita ko'rsatish xossasi (`PaidUz`, `MethodDisplay`) qo'shildi. To'lov, qaytarish, o'tkazish logikasi o'zgarmadi.
-- **Keyingi qadam:** Hisobotlar (4.x).
+- **Keyingi qadam:** Hisobotlar 4.2 (chek tafsiloti), 4.3 (Admin PIN), 4.5–4.7.
 
 **2026-11-13 (Claude Code), 2-qadam — Kassa ekrani qayta qurildi:**
 - Egasi fikri: yorug' rang eski joylashuv ustiga tortilgani noto'g'ri, maket **tuzilishi** ko'chirilishi kerak (qoida 5).

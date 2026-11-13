@@ -540,8 +540,82 @@ namespace PosElectro.Desktop.ViewModels
           }
         }
 
+        // ---- Maket 4.1: grafik, eng ko'p sotilganlar va karta izohlari (faqat ko'rsatish; hisob-kitob o'zgarmagan) ----
+        public sealed record HourBar(string Hour, double Height, bool IsPeak, string PeakLabel, string Tip);
+        public sealed record TopProduct(string Name, string SumText, double Ratio);
+
+        /// <summary>Ustunlar chiziladigan maydon balandligi (px).</summary>
+        public double ChartPlotHeight => 108;
+        public IReadOnlyList<HourBar> HourBars { get; private set; } = Array.Empty<HourBar>();
+        public IReadOnlyList<string> ChartAxisLabels { get; private set; } = new[] { "3", "2", "1" };
+        public string ChartUnitText { get; private set; } = "ming so'm";
+        public IReadOnlyList<TopProduct> TopProducts { get; private set; } = Array.Empty<TopProduct>();
+        public bool HasTopProducts => TopProducts.Count > 0;
+        public string SalesSubText { get; private set; } = string.Empty;
+        public string ItemsSubText { get; private set; } = string.Empty;
+
+        private void RebuildReportVisuals()
+        {
+            var lines = _reportLines.Where(i => !i.ProfitOnly).ToList();
+
+            // Soatlar bo'yicha tushum
+            var byHour = lines.GroupBy(i => i.DateTime.Hour).ToDictionary(g => g.Key, g => Math.Max(0, g.Sum(x => x.TotalPrice)));
+            int from = 9, to = 20;
+            if (byHour.Count > 0) { from = Math.Min(from, byHour.Keys.Min()); to = Math.Max(to, byHour.Keys.Max()); }
+            double max = byHour.Count > 0 ? byHour.Values.Max() : 0;
+            double unit = max >= 1_000_000 ? 1_000_000 : 1_000;
+            ChartUnitText = unit >= 1_000_000 ? "mln so'm" : "ming so'm";
+            double rawStep = max / unit / 3.0;
+            double step = 1;
+            if (rawStep > 0)
+            {
+                double pow = Math.Pow(10, Math.Floor(Math.Log10(rawStep)));
+                double frac = rawStep / pow;
+                step = (frac <= 1 ? 1 : frac <= 2 ? 2 : frac <= 2.5 ? 2.5 : frac <= 5 ? 5 : 10) * pow;
+            }
+            double top = step * 3 * unit;
+            ChartAxisLabels = new[] { (step * 3).ToString("0.##"), (step * 2).ToString("0.##"), step.ToString("0.##") };
+            var bars = new List<HourBar>();
+            for (int h = from; h <= to; h++)
+            {
+                byHour.TryGetValue(h, out var v);
+                bool peak = max > 0 && v == max;
+                bars.Add(new HourBar(h.ToString(), top > 0 ? Math.Round(v / top * ChartPlotHeight) : 0, peak,
+                    (v / unit).ToString("0.#"), $"{h:00}:00 — {v:N0} so'm"));
+            }
+            // Bir xil cho'qqi bir nechta bo'lsa, yozuv faqat birinchisida
+            bool seen = false;
+            for (int i = 0; i < bars.Count; i++)
+                if (bars[i].IsPeak) { if (seen) bars[i] = bars[i] with { IsPeak = false }; seen = true; }
+            HourBars = bars;
+
+            // Eng ko'p sotilganlar (tushum bo'yicha)
+            var tops = lines.Where(i => !i.IsReturn && !i.IsBrak)
+                .GroupBy(i => i.ProductName)
+                .Select(g => new { Name = g.Key, Sum = g.Sum(x => x.TotalPrice) })
+                .Where(x => x.Sum > 0).OrderByDescending(x => x.Sum).Take(5).ToList();
+            double topMax = tops.Count > 0 ? tops[0].Sum : 0;
+            TopProducts = tops.Select(x => new TopProduct(x.Name, $"{x.Sum:N0}", topMax > 0 ? x.Sum / topMax : 0)).ToList();
+
+            // KPI kartalari ostidagi izohlar
+            int returns = lines.Where(i => i.IsReturn).Select(i => i.SaleId).Distinct().Count();
+            var avg = TotalSalesCount > 0 ? TotalRevenue / TotalSalesCount : 0;
+            SalesSubText = $"O'rtacha chek {avg:N0}" + (returns > 0 ? $" · {returns} ta qaytarish" : string.Empty);
+            int kinds = lines.Where(i => !i.IsReturn && !i.IsBrak).Select(i => i.ProductId).Distinct().Count();
+            ItemsSubText = $"{kinds} xil tovar";
+
+            OnPropertyChanged(nameof(HourBars));
+            OnPropertyChanged(nameof(ChartAxisLabels));
+            OnPropertyChanged(nameof(ChartUnitText));
+            OnPropertyChanged(nameof(TopProducts));
+            OnPropertyChanged(nameof(HasTopProducts));
+            OnPropertyChanged(nameof(SalesSubText));
+            OnPropertyChanged(nameof(ItemsSubText));
+        }
+
         public void RecalculateSummary()
         {
+            RebuildReportVisuals();
             OnPropertyChanged(nameof(BrakSummary));
             OnPropertyChanged(nameof(TotalRevenue));
             OnPropertyChanged(nameof(TotalCost));
