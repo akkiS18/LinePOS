@@ -11,6 +11,18 @@ namespace PosElectro.Desktop.Views
             InitializeComponent();
         }
 
+        /// <summary>Manzilni (ip:port) almashish xotirasiga nusxalaydi (faqat qulaylik).</summary>
+        private void CopyAddress_Click(object sender, System.Windows.RoutedEventArgs e)
+        {
+            if (DataContext is not SyncViewModel vm) return;
+            try
+            {
+                System.Windows.Clipboard.SetText($"{vm.ServerIp}:{vm.ServerPort}");
+                if (sender is Button b) b.Content = "Nusxalandi";
+            }
+            catch { }
+        }
+
         private void SyncView_PreviewKeyDown(object sender, KeyEventArgs e)
         {
             if (DataContext is SyncViewModel vm && vm.IsHelpModalOpen)
