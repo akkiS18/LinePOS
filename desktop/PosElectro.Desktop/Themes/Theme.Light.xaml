@@ -58,13 +58,4 @@
 
     <!-- Modal orqa fon: rgba(15,27,33,0.45) -->
     <SolidColorBrush x:Key="Scrim"       Color="#730F1B21"/>
-
-    <!-- Eski kalitlar (ReturnDialog.cs / ReturnReversalDialog.cs kodidan o'qiladi).
-         Nomlari "Dark" bo'lsa ham, qiymati shu temaning sirtlari. Dialoglar qayta chizilganda olib tashlanadi. -->
-    <SolidColorBrush x:Key="BgDark"          Color="#F2F4F6"/>
-    <SolidColorBrush x:Key="CardDark"        Color="#FFFFFF"/>
-    <SolidColorBrush x:Key="BorderDark"      Color="#E1E6EA"/>
-    <SolidColorBrush x:Key="TextPrimary"     Color="#0F1B21"/>
-    <SolidColorBrush x:Key="TextSecondary"   Color="#4F5F68"/>
-    <SolidColorBrush x:Key="AccentTealLight" Color="#0B6477"/>
 </ResourceDictionary>

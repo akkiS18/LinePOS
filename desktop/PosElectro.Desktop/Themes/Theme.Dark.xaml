@@ -58,13 +58,4 @@
 
     <!-- Modal orqa fon -->
     <SolidColorBrush x:Key="Scrim"       Color="#99000000"/>
-
-    <!-- Eski kalitlar (ReturnDialog.cs / ReturnReversalDialog.cs kodidan o'qiladi).
-         Shu dialoglar qayta chizilganda olib tashlanadi. -->
-    <SolidColorBrush x:Key="BgDark"         Color="#0B1215"/>
-    <SolidColorBrush x:Key="CardDark"       Color="#121B1F"/>
-    <SolidColorBrush x:Key="BorderDark"     Color="#24323A"/>
-    <SolidColorBrush x:Key="TextPrimary"    Color="#E7EEF1"/>
-    <SolidColorBrush x:Key="TextSecondary"  Color="#A1B1BA"/>
-    <SolidColorBrush x:Key="AccentTealLight" Color="#5CC4D6"/>
 </ResourceDictionary>

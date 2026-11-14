@@ -43,6 +43,8 @@ namespace PosElectro.Desktop.Views
 
         private void LoadSaleData()
         {
+            TxtTitle.Text = $"Chek {_sale.ReceiptNumber} · oldindan ko'rish";
+
             // 1. 58mm Matnli ko'rinish
             Txt58mmContent.Text = PrinterService.BuildReceiptText(_sale);
 
@@ -50,7 +52,7 @@ namespace PosElectro.Desktop.Views
             TxtA4ChekNum.Text = $"Hujjat: Chek #{_sale.ReceiptNumber}" + (string.IsNullOrEmpty(_sale.OriginalReceiptNumber) ? "" : "\nAsl chek: " + _sale.OriginalReceiptNumber);
             TxtA4Date.Text = $"Sana: {_sale.CreatedDateTime:dd.MM.yyyy HH:mm}";
             TxtA4Payment.Text = $"To'lov: {_sale.PaymentTypeDisplay}";
-            TxtA4Total.Text = $"{_sale.TotalAmount:N0} SO'M";
+            TxtA4Total.Text = $"{_sale.TotalAmount:N0} so'm";
 
             int idx = 1;
             var rows = new List<A4PreviewItemRow>();
@@ -99,21 +101,51 @@ namespace PosElectro.Desktop.Views
 
         private void UpdateViewFormat()
         {
-            if (Rb58mm.IsChecked == true)
+            // Maket 4.6: ikkala qog'oz yonma-yon; tanlangani hoshiya bilan, ikkinchisi xiraroq
+            bool is58 = Rb58mm.IsChecked == true;
+            Mark(Border58mm, Panel58mm, is58);
+            Mark(BorderA4, PanelA4, !is58);
+            Cap58mm.Text = is58 ? "58 mm (tanlangan)" : "58 mm";
+            CapA4.Text = is58 ? "A4" : "A4 (tanlangan)";
+            PrinterPanel.Visibility = is58 ? Visibility.Visible : Visibility.Hidden;
+            TxtSubtitle.Text = is58 ? "Lenta cheki ko'rinishi (termo printer)" : "A4 hisob-faktura qog'ozi ko'rinishi";
+            BtnPrint.Content = is58 ? "Chek chiqarish" : "A4 chop etish";
+        }
+
+        private static void Mark(Border paper, FrameworkElement panel, bool selected)
+        {
+            if (selected) paper.SetResourceReference(Border.BorderBrushProperty, "Accent");
+            else paper.BorderBrush = System.Windows.Media.Brushes.Transparent;
+            panel.Opacity = selected ? 1 : 0.55;
+        }
+
+        private void Paper58_Click(object sender, System.Windows.Input.MouseButtonEventArgs e) => Rb58mm.IsChecked = true;
+        private void PaperA4_Click(object sender, System.Windows.Input.MouseButtonEventArgs e) => RbA4.IsChecked = true;
+
+        private void ShowStatus(string text, string brushKey)
+        {
+            TxtPreviewStatus.Text = text;
+            TxtPreviewStatus.SetResourceReference(TextBlock.ForegroundProperty, brushKey);
+        }
+
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            // Oyna egasini to'liq qoplaydi; egasi o'zi ham qoplama bo'lsa fon ikki marta xiralashmaydi
+            if (Owner != null)
             {
-                Border58mm.Visibility = Visibility.Visible;
-                BorderA4.Visibility = Visibility.Collapsed;
-                CmbReceiptPrinters.Visibility = Visibility.Visible;
-                TxtSubtitle.Text = "Lenta cheki ko'rinishi (Termo printer)";
-                BtnPrint.Content = "🖨️ Chek chiqarish";
-            }
-            else
-            {
-                Border58mm.Visibility = Visibility.Collapsed;
-                BorderA4.Visibility = Visibility.Visible;
-                CmbReceiptPrinters.Visibility = Visibility.Collapsed;
-                TxtSubtitle.Text = "A4 standart hisob-faktura qog'ozi ko'rinishi";
-                BtnPrint.Content = "📄 A4 Printerga chiqarish";
+                if (Owner.AllowsTransparency)
+                    RootLayer.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(1, 0, 0, 0));
+                SizeToContent = SizeToContent.Manual;
+                if (Owner.WindowState == WindowState.Maximized)
+                {
+                    Left = Owner.Left; Top = Owner.Top;
+                    WindowState = WindowState.Maximized;
+                }
+                else if (Owner.ActualWidth > ActualWidth && Owner.ActualHeight > ActualHeight)
+                {
+                    Left = Owner.Left; Top = Owner.Top;
+                    Width = Owner.ActualWidth; Height = Owner.ActualHeight;
+                }
             }
         }
 
@@ -123,30 +155,14 @@ namespace PosElectro.Desktop.Views
             {
                 string? targetPrinter = CmbReceiptPrinters.SelectedItem as string ?? _printerService.FindReceiptPrinter();
                 bool printed = _printerService.PrintReceipt(_sale, targetPrinter);
-                if (printed)
-                {
-                    TxtPreviewStatus.Text = "✅ Chek printerga chiqarildi!";
-                    TxtPreviewStatus.Foreground = System.Windows.Media.Brushes.MediumSpringGreen;
-                }
-                else
-                {
-                    TxtPreviewStatus.Text = "❌ Chek printeri topilmadi!";
-                    TxtPreviewStatus.Foreground = System.Windows.Media.Brushes.Tomato;
-                }
+                if (printed) ShowStatus("Chek printerga chiqarildi", "Ok");
+                else ShowStatus("Chek printeri topilmadi", "Bad");
             }
             else
             {
                 bool printed = _printerService.PrintInvoiceA4(_sale, this);
-                if (printed)
-                {
-                    TxtPreviewStatus.Text = "✅ A4 hujjat printerga yuborildi!";
-                    TxtPreviewStatus.Foreground = System.Windows.Media.Brushes.MediumSpringGreen;
-                }
-                else
-                {
-                    TxtPreviewStatus.Text = "ℹ️ Chop etish bekor qilindi yoki printer tanlanmadi.";
-                    TxtPreviewStatus.Foreground = System.Windows.Media.Brushes.SkyBlue;
-                }
+                if (printed) ShowStatus("A4 hujjat printerga yuborildi", "Ok");
+                else ShowStatus("Chop etish bekor qilindi yoki printer tanlanmadi", "Ink2");
             }
         }
 

@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using PosElectro.Desktop.Data;
 using PosElectro.Desktop.Debt;
 using PosElectro.Desktop.Models;
@@ -30,18 +31,9 @@ public sealed class ReturnDialog : Window
     public ReturnDialog(DatabaseContext database, Sale sale)
     {
         db = database; store = new ReturnStore(db.DatabaseFilePath); store.Install(); quote = store.Quote(sale.Guid);
-        Title = "Mahsulot qaytarish — " + sale.ReceiptNumber;
-        Width = 780; Height = 680; WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        var bgDark = (System.Windows.Media.Brush?)Application.Current?.Resources["BgDark"] ?? System.Windows.Media.Brushes.Navy;
-        var cardDark = (System.Windows.Media.Brush?)Application.Current?.Resources["CardDark"] ?? System.Windows.Media.Brushes.DarkSlateGray;
-        var textPrimary = (System.Windows.Media.Brush?)Application.Current?.Resources["TextPrimary"] ?? System.Windows.Media.Brushes.White;
-        var textSecondary = (System.Windows.Media.Brush?)Application.Current?.Resources["TextSecondary"] ?? System.Windows.Media.Brushes.LightGray;
-        var btnStyle = (Style?)Application.Current?.Resources["ModernButton"];
-        var txtStyle = (Style?)Application.Current?.Resources["ModernTextBox"];
-        var successBtnStyle = (Style?)Application.Current?.Resources["SuccessButton"];
-
-        Background = bgDark;
-        Foreground = textPrimary;
+        // ---- Maket 4.5: ko'rinish. Maydonlar (rows, reason, cash, card, fee, total, confirm) va mantiq o'zgarmagan. ----
+        var cardBox = ModalKit.Setup(this, "Tovarni qaytarish — " + sale.ReceiptNumber, 760);
+        cardBox.MaxHeight = 680;
 
         PreviewKeyDown += (s, e) => {
             if (e.Key == System.Windows.Input.Key.Escape) {
@@ -50,57 +42,142 @@ public sealed class ReturnDialog : Window
             }
         };
 
-        var panel = new StackPanel { Margin = new Thickness(24) }; Content = new ScrollViewer { Content = panel };
-        panel.Children.Add(new TextBlock { Text = "Asl narx bo‘yicha qaytarish. Nuqsonli tovar sotiladigan qoldiqqa kirmaydi.", Foreground = textSecondary, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 16) });
+        var layout = new DockPanel(); cardBox.Child = layout;
+
+        // Sarlavha
+        var head = new Border { Padding = new Thickness(22, 16, 22, 16), BorderThickness = new Thickness(0, 0, 0, 1) };
+        ModalKit.Res(head, Border.BorderBrushProperty, "LineSoft");
+        var headPanel = new StackPanel();
+        headPanel.Children.Add(ModalKit.Text("Qaytarish · chek " + sale.ReceiptNumber, 18, "Ink", FontWeights.Bold, wrap: false));
+        var headSub = ModalKit.Text($"{sale.CreatedDateTime:dd.MM.yyyy · HH:mm} · {(sale.PaymentType == PaymentType.SPLIT ? "Aralash" : sale.PaymentTypeDisplay)}", 13, "Ink3");
+        headSub.Margin = new Thickness(0, 2, 0, 0); headPanel.Children.Add(headSub);
+        head.Child = headPanel; DockPanel.SetDock(head, Dock.Top); layout.Children.Add(head);
+
+        // Pastki qism: jami va tugmalar
+        var foot = new Border { Padding = new Thickness(22, 14, 22, 14), BorderThickness = new Thickness(0, 1, 0, 0) };
+        ModalKit.Res(foot, Border.BorderBrushProperty, "LineSoft");
+        var footPanel = new DockPanel();
+        var btnCancel = ModalKit.Button(this, "Bekor", "BtnSecondary");
+        btnCancel.IsCancel = true; btnCancel.Padding = new Thickness(18, 0, 18, 0); btnCancel.Margin = new Thickness(12, 0, 10, 0);
+        btnCancel.VerticalAlignment = VerticalAlignment.Bottom;
+        btnCancel.Click += (_, _) => Close();
+        confirm.Content = "Qaytarishni tasdiqlash";
+        confirm.Style = (Style)FindResource("BtnPrimary");
+        confirm.Height = 48; confirm.Padding = new Thickness(22, 0, 22, 0);
+        confirm.VerticalAlignment = VerticalAlignment.Bottom;
+        confirm.IsDefault = true;
+        confirm.Click += Confirm;
+        DockPanel.SetDock(confirm, Dock.Right); footPanel.Children.Add(confirm);
+        DockPanel.SetDock(btnCancel, Dock.Right); footPanel.Children.Add(btnCancel);
+        total.Margin = new Thickness(0); total.FontSize = 15; total.FontWeight = FontWeights.Bold;
+        total.TextWrapping = TextWrapping.Wrap; total.VerticalAlignment = VerticalAlignment.Center;
+        ModalKit.Res(total, TextBlock.ForegroundProperty, "Ink");
+        footPanel.Children.Add(total);
+        foot.Child = footPanel; DockPanel.SetDock(foot, Dock.Bottom); layout.Children.Add(foot);
+
+        var panel = new StackPanel { Margin = new Thickness(22, 0, 22, 16) };
+        layout.Children.Add(new ScrollViewer { Content = panel, VerticalScrollBarVisibility = ScrollBarVisibility.Auto });
+
+        Grid RowGrid()
+        {
+            var g = new Grid();
+            g.ColumnDefinitions.Add(new ColumnDefinition());
+            g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(150) });
+            g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(190) });
+            g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(90) });
+            return g;
+        }
+        var cols = RowGrid(); cols.Height = 38;
+        void Head(string t, int c, HorizontalAlignment a)
+        {
+            var h = ModalKit.Text(t, 12, "Ink3", FontWeights.SemiBold, wrap: false);
+            h.VerticalAlignment = VerticalAlignment.Center; h.HorizontalAlignment = a;
+            Grid.SetColumn(h, c); cols.Children.Add(h);
+        }
+        Head("TOVAR", 0, HorizontalAlignment.Left); Head("QAYTARILADI", 1, HorizontalAlignment.Center);
+        Head("QAYSI OMBORGA", 2, HorizontalAlignment.Left); Head("BRAK", 3, HorizontalAlignment.Center);
+        panel.Children.Add(cols);
+
         var warehouses = db.GetWarehouses();
         foreach (var line in quote.Lines)
         {
-            var label = new TextBlock { Text = LineText(line), Foreground = textPrimary, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 12, 0, 6), TextWrapping = TextWrapping.Wrap };
-            lineLabels.Add(line.Guid, label); panel.Children.Add(label);
-            var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 8) };
-            var qty = new TextBox { Text = "0", Width = 100, Height = 38, VerticalContentAlignment = VerticalAlignment.Center, Padding = new Thickness(8, 0, 8, 0), Margin = new Thickness(0, 0, 12, 0) };
-            if (txtStyle != null) qty.Style = txtStyle;
-            var wh = new ComboBox { ItemsSource = warehouses, DisplayMemberPath = "Name", SelectedValuePath = "Guid", SelectedValue = line.WarehouseGuid, Width = 260, Height = 38, VerticalContentAlignment = VerticalAlignment.Center };
+            var rowBorder = new Border { BorderThickness = new Thickness(0, 1, 0, 0), Padding = new Thickness(0, 8, 0, 8), MinHeight = 56 };
+            ModalKit.Res(rowBorder, Border.BorderBrushProperty, "LineSoft");
+            var row = RowGrid(); rowBorder.Child = row;
+
+            var label = new TextBlock { Text = LineText(line), FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap,
+                                        VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 12, 0) };
+            lineLabels.Add(line.Guid, label); row.Children.Add(label);
+
+            // Miqdor: − [son] +
+            var qty = new TextBox { Text = "0", Width = 54, Height = 40, BorderThickness = new Thickness(0), FontSize = 15, FontWeight = FontWeights.Bold,
+                                    TextAlignment = TextAlignment.Center, VerticalContentAlignment = VerticalAlignment.Center, Padding = new Thickness(0),
+                                    Background = Brushes.Transparent };
+            ModalKit.Res(qty, Control.ForegroundProperty, "Ink");
+            var stepper = new Border { BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(10), HorizontalAlignment = HorizontalAlignment.Center,
+                                       VerticalAlignment = VerticalAlignment.Center, ClipToBounds = true };
+            ModalKit.Res(stepper, Border.BorderBrushProperty, "LineStrong");
+            var stepPanel = new StackPanel { Orientation = Orientation.Horizontal };
+            Button Step(string sign, decimal delta)
+            {
+                var b = new Button { Content = sign, Width = 40, Height = 40, FontSize = 18, Focusable = false, BorderThickness = new Thickness(0),
+                                     Cursor = System.Windows.Input.Cursors.Hand, Padding = new Thickness(0) };
+                ModalKit.Res(b, Control.BackgroundProperty, "Surface2");
+                ModalKit.Res(b, Control.ForegroundProperty, "Ink");
+                b.SetBinding(UIElement.IsEnabledProperty, new System.Windows.Data.Binding(nameof(IsEnabled)) { Source = qty });
+                b.Click += (_, _) =>
+                {
+                    // Faqat qulaylik: maydondagi sonni 1 ga o'zgartiradi (0 dan kam emas, qolgandan ko'p emas)
+                    decimal.TryParse(qty.Text.Trim().Replace(',', '.'), NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var cur);
+                    var current = rows.Find(r => ReferenceEquals(r.Quantity, qty)).Line ?? line;
+                    var next = Math.Max(0, Math.Min(cur + delta, current.Sold - current.Returned));
+                    qty.Text = next.ToString(CultureInfo.InvariantCulture);
+                };
+                return b;
+            }
+            stepPanel.Children.Add(Step("−", -1)); stepPanel.Children.Add(qty); stepPanel.Children.Add(Step("+", 1));
+            stepper.Child = stepPanel; Grid.SetColumn(stepper, 1); row.Children.Add(stepper);
+
+            var wh = new ComboBox { ItemsSource = warehouses, DisplayMemberPath = "Name", SelectedValuePath = "Guid", SelectedValue = line.WarehouseGuid,
+                                    Style = (Style)FindResource("FieldCombo"), Height = 40, VerticalAlignment = VerticalAlignment.Center };
             if (wh.SelectedIndex < 0) wh.SelectedIndex = 0;
-            var damaged = new CheckBox { Content = "Nuqsonli (brak)", Foreground = textPrimary, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(14, 0, 0, 0) };
-            row.Children.Add(qty); row.Children.Add(wh); row.Children.Add(damaged); panel.Children.Add(row);
+            Grid.SetColumn(wh, 2); row.Children.Add(wh);
+
+            var damaged = new CheckBox { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center,
+                                         ToolTip = "Nuqsonli (brak): tovar sotiladigan qoldiqqa qaytmaydi" };
+            Grid.SetColumn(damaged, 3); row.Children.Add(damaged);
+
+            panel.Children.Add(rowBorder);
             rows.Add((line, qty, wh, damaged)); qty.TextChanged += (_, _) => Preview();
         }
-        void Field(string label, TextBox field) {
-            panel.Children.Add(new TextBlock { Text = label, Foreground = textSecondary, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 12, 0, 4) });
-            field.Height = 38; field.VerticalContentAlignment = VerticalAlignment.Center; field.Padding = new Thickness(10, 0, 10, 0);
-            if (txtStyle != null) field.Style = txtStyle;
-            panel.Children.Add(field);
+
+        // Brak izohi (maketdagi qizil karta)
+        var brak = new Border { BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(12), Padding = new Thickness(14, 10, 14, 10), Margin = new Thickness(0, 6, 0, 0) };
+        ModalKit.Res(brak, Border.BorderBrushProperty, "BadLine"); ModalKit.Res(brak, Border.BackgroundProperty, "BadSoft");
+        var brakPanel = new StackPanel();
+        brakPanel.Children.Add(ModalKit.Text("Brak — omborga qaytmaydi", 14, "Bad", FontWeights.SemiBold));
+        var brakSub = ModalKit.Text("Belgilanmasa, tovar tanlangan omborga qaytib, qoldiq oshadi. Qaytarish asl sotuv narxi bo‘yicha hisoblanadi.", 13, "Ink2");
+        brakSub.Margin = new Thickness(0, 2, 0, 0); brakPanel.Children.Add(brakSub);
+        brak.Child = brakPanel; panel.Children.Add(brak);
+
+        FrameworkElement Field(string label, TextBox field, string? suffix = null)
+        {
+            var sp = new StackPanel { Margin = new Thickness(0, 14, 0, 0) };
+            sp.Children.Add(ModalKit.Label(this, label));
+            field.Style = (Style)FindResource("FieldBox");
+            if (suffix != null) field.Tag = suffix;
+            sp.Children.Add(field);
+            return sp;
         }
-        Field("Qaytarish sababi", reason);
-        total.Foreground = (System.Windows.Media.Brush?)Application.Current?.Resources["AccentTealLight"] ?? System.Windows.Media.Brushes.Cyan;
-        total.FontWeight = FontWeights.Bold;
-        panel.Children.Add(total);
-        Field("Naqd qaytarish (so‘m)", cash); Field("Karta qaytarish (so‘m)", card);
-        Field("Haqiqatan qaytarilgan karta xarajati (odatda 0)", fee);
-        panel.Children.Add(new TextBlock { Text = "Tasdiqlash bank orqali avtomatik pul o‘tkazmaydi.", Foreground = textSecondary, Margin = new Thickness(0, 14, 0, 14) });
-
-        var btnGrid = new Grid { Margin = new Thickness(0, 14, 0, 10) };
-        btnGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        btnGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(14) });
-        btnGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(2, GridUnitType.Star) });
-
-        var btnCancel = new Button { Content = "Yopish (Esc)", Height = 42, IsCancel = true };
-        if (btnStyle != null) btnCancel.Style = btnStyle;
-        btnCancel.Click += (_, _) => Close();
-        Grid.SetColumn(btnCancel, 0);
-        btnGrid.Children.Add(btnCancel);
-
-        confirm.Content = "↩️ Qaytarishni tasdiqlash (Enter)";
-        confirm.Height = 42;
-        confirm.IsDefault = true;
-        if (successBtnStyle != null) confirm.Style = successBtnStyle;
-        else if (btnStyle != null) confirm.Style = btnStyle;
-        confirm.Click += Confirm;
-        Grid.SetColumn(confirm, 2);
-        btnGrid.Children.Add(confirm);
-
-        panel.Children.Add(btnGrid);
+        panel.Children.Add(Field("Qaytarish sababi", reason));
+        var money = new Grid();
+        money.ColumnDefinitions.Add(new ColumnDefinition()); money.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(14) }); money.ColumnDefinitions.Add(new ColumnDefinition());
+        money.Children.Add(Field("Naqd qaytariladi", cash, "so‘m"));
+        var cardField = Field("Kartaga qaytariladi", card, "so‘m"); Grid.SetColumn(cardField, 2); money.Children.Add(cardField);
+        panel.Children.Add(money);
+        panel.Children.Add(Field("Haqiqatan qaytarilgan karta xarajati (odatda 0)", fee, "so‘m"));
+        var bankNote = ModalKit.Text("Tasdiqlash bank orqali avtomatik pul o‘tkazmaydi.", 13, "Ink3");
+        bankNote.Margin = new Thickness(0, 12, 0, 0); panel.Children.Add(bankNote);
         Preview();
         var draft=store.DesktopDraft(sale.Guid);
         if(draft.Request != null) {
@@ -124,7 +201,7 @@ public sealed class ReturnDialog : Window
             throw new ArgumentException("Miqdor va pul maydonlariga musbat son yoki 0 kiriting.");
         return n;
     }
-    static string LineText(ReturnLine line) => $"{line.ProductName} • Sotilgan: {line.Sold} • Qaytgan: {line.Returned} • Qolgan: {line.Sold-line.Returned}";
+    static string LineText(ReturnLine line) => $"{line.ProductName}\nSotilgan: {line.Sold:0.###} · Qaytgan: {line.Returned:0.###} · Qolgan: {line.Sold-line.Returned:0.###}";
     void SetEditable(bool editable)
     {
         foreach (var row in rows) row.Quantity.IsEnabled = row.Warehouse.IsEnabled = row.Damaged.IsEnabled = editable;
@@ -174,20 +251,21 @@ public sealed class ReturnDialog : Window
     }
     bool ConfirmAmounts(string text)
     {
-        var dialog = new Window { Owner=this, Title="Qaytarish", Width=390,
-            SizeToContent=SizeToContent.Height, ResizeMode=ResizeMode.NoResize,
-            WindowStartupLocation=WindowStartupLocation.CenterOwner,
-            Background=Background, Foreground=Foreground };
-        var panel = new StackPanel { Margin=new Thickness(20) };
-        panel.Children.Add(new TextBlock { Text=text, TextWrapping=TextWrapping.Wrap,
-            FontSize=16, Margin=new Thickness(0,0,0,18) });
-        var buttons = new StackPanel { Orientation=Orientation.Horizontal, HorizontalAlignment=HorizontalAlignment.Right };
-        var no = new Button { Content="Yo‘q", IsCancel=true, MinWidth=80, Padding=new Thickness(12,8,12,8), Margin=new Thickness(0,0,8,0) };
-        var yes = new Button { Content="Ha, qaytarish", MinWidth=120, Padding=new Thickness(12,8,12,8) };
+        // Maket uslubidagi tasdiq oynasi (faqat ko'rinish)
+        var dialog = new Window { Owner = this };
+        var box = ModalKit.Setup(dialog, "Qaytarish", 440, keepScrim: true);
+        box.Padding = new Thickness(24);
+        var panel = new StackPanel(); box.Child = panel;
+        panel.Children.Add(ModalKit.Text("Qaytarishni tasdiqlaysizmi?", 18, "Ink", FontWeights.Bold));
+        var body = ModalKit.Text(text, 15, "Ink2"); body.Margin = new Thickness(0, 8, 0, 20); body.LineHeight = 22;
+        panel.Children.Add(body);
+        var buttons = new Grid();
+        buttons.ColumnDefinitions.Add(new ColumnDefinition()); buttons.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(10) }); buttons.ColumnDefinitions.Add(new ColumnDefinition());
+        var no = ModalKit.Button(dialog, "Yo‘q", "BtnSecondary"); no.IsCancel = true;
+        var yes = ModalKit.Button(dialog, "Ha, qaytarish", "BtnPrimary"); yes.IsDefault = true;
         no.Click += (_,_) => dialog.DialogResult=false;
         yes.Click += (_,_) => dialog.DialogResult=true;
-        buttons.Children.Add(no); buttons.Children.Add(yes); panel.Children.Add(buttons);
-        dialog.Content=panel;
+        Grid.SetColumn(yes, 2); buttons.Children.Add(no); buttons.Children.Add(yes); panel.Children.Add(buttons);
         return dialog.ShowDialog()==true;
     }
     void Confirm(object sender, RoutedEventArgs args)
