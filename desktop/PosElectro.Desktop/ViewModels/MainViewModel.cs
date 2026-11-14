@@ -224,7 +224,7 @@ namespace PosElectro.Desktop.ViewModels
             {
                 if (string.IsNullOrWhiteSpace(PinInputText))
                 {
-                    PinErrorMessage = "Iltimos, PIN kodni kiriting";
+                    PinErrorMessage = "Aktivatsiya parolini kiriting.";
                     return;
                 }
 
@@ -236,7 +236,7 @@ namespace PosElectro.Desktop.ViewModels
                 }
                 else
                 {
-                    PinErrorMessage = "❌ PIN kod noto'g'ri (yoki internet yo'q)!";
+                    PinErrorMessage = "Parol noto'g'ri yoki internet yo'q. Qayta urinib ko'ring.";
                 }
             });
 
@@ -374,6 +374,30 @@ namespace PosElectro.Desktop.ViewModels
             };
         }
 
+        // ---- Maket 6.6: "Zaxira nusxa saqlandi" bildirishnomasi (faqat ko'rsatish) ----
+        private string _backupToastPath = string.Empty;
+        private bool _isBackupToastVisible;
+        public bool IsBackupToastVisible { get => _isBackupToastVisible; set => SetProperty(ref _isBackupToastVisible, value); }
+        private string _backupToastText = string.Empty;
+        public string BackupToastText { get => _backupToastText; set => SetProperty(ref _backupToastText, value); }
+        private ICommand? _closeBackupToastCommand;
+        public ICommand CloseBackupToastCommand => _closeBackupToastCommand ??= new RelayCommand(() => IsBackupToastVisible = false);
+        private ICommand? _openBackupFolderCommand;
+        public ICommand OpenBackupFolderCommand => _openBackupFolderCommand ??= new RelayCommand(() =>
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = $"/select,\"{_backupToastPath}\"",
+                    UseShellExecute = true
+                });
+            }
+            catch { }
+            IsBackupToastVisible = false;
+        });
+
         public void PerformDatabaseBackup()
         {
             try
@@ -391,24 +415,10 @@ namespace PosElectro.Desktop.ViewModels
                     var fi = new FileInfo(sfd.FileName);
                     var sizeKb = fi.Exists ? (fi.Length / 1024.0) : 0;
 
-                    var res = MessageBox.Show(
-                        $"✅ Baza nusxasi muvaffaqiyatli saqlandi!\n\n" +
-                        $"Fayl joylashuvi:\n{sfd.FileName}\n\n" +
-                        $"Hajmi: {sizeKb:N1} KB\n\n" +
-                        $"Fayl saqlangan papkani ochishni xohlaysizmi?",
-                        "Zaxira nusxa olindi",
-                        MessageBoxButton.YesNo,
-                        MessageBoxImage.Information);
-
-                    if (res == MessageBoxResult.Yes)
-                    {
-                        Process.Start(new ProcessStartInfo
-                        {
-                            FileName = "explorer.exe",
-                            Arguments = $"/select,\"{sfd.FileName}\"",
-                            UseShellExecute = true
-                        });
-                    }
+                    // Maket 6.6: natija pastdagi bildirishnomada (avval MessageBox edi). Zaxiralashning o'zi o'zgarmagan.
+                    _backupToastPath = sfd.FileName;
+                    BackupToastText = $"{sfd.FileName} · {(sizeKb >= 1024 ? $"{sizeKb / 1024:N1} MB" : $"{sizeKb:N1} KB")}";
+                    IsBackupToastVisible = true;
                 }
             }
             catch (Exception ex)

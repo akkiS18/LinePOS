@@ -100,13 +100,13 @@ Ranglar ustuni: A+B bosqichidan keyin hammasi tokenda, lekin yorug' temada ekran
 | 5.1 | Wi-Fi Sinxron | `Views/SyncView.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi (soxta ma'lumot bilan — render paytida haqiqiy server yoqilmadi); egasi ekranda ko'rmagan. Chapda 420px karta: holat belgisi, QR, manzil + `Nusxalash`, 3 qadam, `Yangi telefon uchun QR`, qo'shimcha sozlamalar (ulanish kodi, Firewall, ruxsatni bekor qilish), `Serverni to'xtatish`. O'ngda qurilmalar kartalari va jurnal (tur belgisi: SINXRON / MA'LUMOT / OGOH / XATO). Maketdan farqi: qurilma roli (`Kassir telefoni`) va `Faqat xatolar` filtri yo'q — dasturda bunday ma'lumot/amal mavjud emas; `oxirgi faollik` o'rniga ulangan vaqti |
 | 5.2 | Ulanish yo'riqnomasi | `SyncView.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan. 640px oyna: 4 qadam, sariq `Ulanmasa` izohi, `Tushunarli` (Esc/Enter). Matnlar dasturdagi haqiqiy amallarga moslandi (manzil jonli ko'rsatiladi) |
 | 5.3 | Server to'xtatilgan, qurilma yo'q | `SyncView.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan. Uzuq chiziqli katak, `Server to'xtatilgan`, `Serverni ishga tushirish`; qurilmalar va jurnalning bo'sh holatlari. Maketdagi `Dastur ochilganda avtomatik yoqilsin` tugmachasi yo'q: bunday sozlama dasturda mavjud emas (server har doim avtomatik yoqiladi) |
-| 6.1 | Dastur yopiq — aktivatsiya | `MainWindow.xaml` | ⬜ | |
-| 6.2 | Aktivatsiya paroli (xato holati) | `MainWindow.xaml` | ⬜ | |
-| 6.3 | ⚙ Karta solig'i | `MainWindow.xaml` | ⬜ | |
-| 6.4 | ⚙ Bazani zaxiradan tiklash | `Views/RestoreConfirmDialog.cs` | ⬜ | |
-| 6.5 | ⚙ Dasturchi bilan bog'lanish | `MainWindow.xaml` | ⬜ | |
-| 6.6 | ⚙ Zaxira nusxa saqlandi | `MainWindow.xaml` | ⬜ | |
-| 6.7 | ⚙ Admin PIN · yashirin ma'lumotlar | `Views/AdminPinDialogs.cs` | ⬜ | |
+| 6.1 | Dastur yopiq — aktivatsiya | `MainWindow.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan. Butun oynani qoplaydigan sahifa: brend, 540px karta (qulf belgisi, model, Qurilma ID + `Nusxa`, masofaviy ruxsat holati, `Aktivatsiya paroli bilan ochish`, `Dasturchi bilan bog'lanish`). Logoga 3 marta bosish amali saqlandi |
+| 6.2 | Aktivatsiya paroli (xato holati) | `MainWindow.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan. 460px oyna: parol maydoni (xatoda qizil hoshiya), ko'rsatish/yashirish tugmasi, xato qatori, `Bekor` / `Ochish Enter`. Tekshirish mantig'i o'zgarmadi; faqat ikkita xato matni emojisiz qilib yozildi |
+| 6.3 | ⚙ Karta solig'i | `MainWindow.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan. 480px oyna: katta foiz maydoni, tayyor tugmalar (1%, 1.8%, 2%, 3% — maydonga yozadi, saqlash `Saqlash`da), `Admin rejimi ochiq` belgisi. Maketdagi izoh («narxga qo'shiladi», «1 020 000 so'm» misoli) olinmadi: dasturda bu foiz narxga qo'shilmaydi, karta tushumidan xarajat sifatida ushlanadi — matn shunga mos |
+| 6.4 | ⚙ Bazani zaxiradan tiklash | `Views/RestoreConfirmDialog.cs` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan. 540px oyna (ModalKit): qizil chiziq, fayl ma'lumoti, nima yo'qolishi, avtomatik zaxira izohi, `TIKLASH` deb yozish, `Bekor` / `Tiklash`. Tasdiqlash sharti o'zgarmadi. Maketdagi `Boshqa fayl` tugmasi yo'q: fayl oynadan oldin tanlanadi |
+| 6.5 | ⚙ Dasturchi bilan bog'lanish | `MainWindow.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan. 420px oyna: Telegram, telefon (+ `Nusxa`), `Telegramda ochish`, pastda Qurilma ID. Maketdan farqi: telefon qatori saqlandi (dasturda bor edi); versiya raqami ko'rsatilmaydi |
+| 6.6 | ⚙ Zaxira nusxa saqlandi | `MainWindow.xaml` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan. Pastda 560px bildirishnoma: fayl yo'li va hajmi, `Papkani ochish`, ✕ (avval tizim MessageBox'i edi; zaxiralashning o'zi o'zgarmadi). Maketdagi «oxirgi zaxira N kun oldin» eslatmasi yo'q: dastur oxirgi zaxira sanasini saqlamaydi |
+| 6.7 | ⚙ Admin PIN · yashirin ma'lumotlar | `Views/AdminPinDialogs.cs` | 🟡 | Qayta qurildi, rasm olinib solishtirildi; egasi ekranda ko'rmagan. 520px oyna (ModalKit): yoqish/o'chirish tugmachasi, PIN so'raladigan joylar, PIN va takrori, `Bekor` / `Saqlash`. Saqlash mantig'i o'zgarmadi. Maketdan farqi: PIN 4 ta alohida katakda emas, bitta maydonda. Eski `DialogKit` olib tashlandi |
 | Keyin | Kassa qorong'i tema | `Themes/Theme.Dark.xaml` | ⏭ | Tokenlar tayyor; tema almashtirish tugmasi yo'q |
 | Keyin | Kassa 1920×1080 | — | ⏭ | |
 
@@ -137,7 +137,7 @@ Ranglar ustuni: A+B bosqichidan keyin hammasi tokenda, lekin yorug' temada ekran
 - Test eslatmasi: `ReportsViewModelSearchTests.Search_lists_newest_first...` yarim tundan keyingi 3 soat ichida yiqiladi ("bugun, 3 soat oldin" kechagi kunga tushadi) — dizaynga aloqasi yo'q, testning o'zidagi kamchilik.
 - 2.10–2.13: buyurtma ro'yxati oynasi va Ombordagi uchta modal (ko'chirish, yangi ombor, kategoriya) maket tuzilishida. Ombor bo'limi (2.x) to'liq ko'chirildi.
 - 3.1–3.7 Qarzlar: `DebtsView` to'liq maket tuzilishida. VM'da faqat bloklash tasdig'i ekran ichidagi oynaga ko'chdi; DTO'ga ikkita ko'rsatish xossasi (`PaidUz`, `MethodDisplay`) qo'shildi. To'lov, qaytarish, o'tkazish logikasi o'zgarmadi.
-- **Keyingi qadam:** Sozlamalar va aktivatsiya (6.x).
+- **Keyingi qadam:** maketdagi barcha ekranlar ko'chirildi (🟡). Egasi ekranda ko'rib chiqadi → ✅. Keyin: to'q tema ranglari, ko'p tillilik, raqam formati (`12 000`), 3.8 hisob-kitob varaqasi.
 
 **2026-11-13 (Claude Code), 2-qadam — Kassa ekrani qayta qurildi:**
 - Egasi fikri: yorug' rang eski joylashuv ustiga tortilgani noto'g'ri, maket **tuzilishi** ko'chirilishi kerak (qoida 5).

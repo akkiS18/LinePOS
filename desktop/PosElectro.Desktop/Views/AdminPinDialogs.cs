@@ -9,73 +9,6 @@ using PosElectro.Desktop.Services;
 
 namespace PosElectro.Desktop.Views;
 
-internal static class DialogKit
-{
-    public static Brush B(string key, Brush fallback) => (Application.Current?.TryFindResource(key) as Brush) ?? fallback;
-
-    public static void SetupWindow(Window w, string title, double width)
-    {
-        w.Title = title;
-        w.Width = width;
-        w.SizeToContent = SizeToContent.Height;
-        w.ResizeMode = ResizeMode.NoResize;
-        w.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        w.Background = B("Surface", Brushes.Black);
-        w.Foreground = B("Ink", Brushes.White);
-        w.FontSize = 14;
-        w.ShowInTaskbar = false;
-    }
-
-    public static TextBlock Title(string text) => new() { Text = text, FontSize = 19, FontWeight = FontWeights.Bold };
-
-    public static TextBlock Muted(string text, double top = 4, double bottom = 0) => new()
-    {
-        Text = text, Foreground = B("Ink2", Brushes.LightGray), FontSize = 13,
-        TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, top, 0, bottom)
-    };
-
-    public static PasswordBox PinBox()
-    {
-        var pb = new PasswordBox
-        {
-            MaxLength = 4, Height = 52, FontSize = 26, HorizontalContentAlignment = HorizontalAlignment.Center,
-            VerticalContentAlignment = VerticalAlignment.Center, PasswordChar = '●'
-        };
-        if (Application.Current?.TryFindResource("ModernPasswordBox") is Style s) pb.Style = s;
-        // Faqat raqamlar
-        pb.PreviewTextInput += (_, e) => { if (!e.Text.All(char.IsDigit)) e.Handled = true; };
-        DataObject.AddPastingHandler(pb, (_, e) => e.CancelCommand());
-        return pb;
-    }
-
-    public static Grid Buttons(Button left, Button right)
-    {
-        var g = new Grid { Margin = new Thickness(0, 20, 0, 0) };
-        g.ColumnDefinitions.Add(new ColumnDefinition());
-        g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(12) });
-        g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(2, GridUnitType.Star) });
-        g.Children.Add(left);
-        Grid.SetColumn(right, 2);
-        g.Children.Add(right);
-        return g;
-    }
-
-    public static Button SecondaryButton(string text)
-    {
-        var b = new Button { Content = text, Height = 48 };
-        if (Application.Current?.TryFindResource("ModernButton") is Style s) b.Style = s;
-        b.Background = B("Line", Brushes.Gray);
-        return b;
-    }
-
-    public static Button PrimaryButton(string text)
-    {
-        var b = new Button { Content = text, Height = 48, FontWeight = FontWeights.Bold };
-        if (Application.Current?.TryFindResource("ModernButton") is Style s) b.Style = s;
-        return b;
-    }
-}
-
 /// <summary>Maxfiy ma'lumotni ochish uchun Admin PIN so'rash (maket 4.3: 4 katak + raqamli klaviatura).</summary>
 public sealed class AdminPinPromptDialog : Window
 {
@@ -240,49 +173,65 @@ public sealed class AdminPinPromptDialog : Window
     }
 }
 
-/// <summary>⚙ → "Admin PIN · yashirin ma'lumotlar": himoyani yoqish/o'chirish va PIN o'rnatish.</summary>
+/// <summary>⚙ → "Admin PIN · yashirin ma'lumotlar": himoyani yoqish/o'chirish va PIN o'rnatish (maket 6.7).</summary>
 public sealed class AdminPinSettingsDialog : Window
 {
+    private static PasswordBox PinBox(Window w)
+    {
+        var pb = new PasswordBox
+        {
+            MaxLength = 4, HorizontalContentAlignment = HorizontalAlignment.Center, PasswordChar = '●',
+            Style = (Style)w.FindResource("FieldPassword")
+        };
+        // Faqat raqamlar
+        pb.PreviewTextInput += (_, e) => { if (!e.Text.All(char.IsDigit)) e.Handled = true; };
+        DataObject.AddPastingHandler(pb, (_, e) => e.CancelCommand());
+        return pb;
+    }
+
     public AdminPinSettingsDialog()
     {
-        DialogKit.SetupWindow(this, "Admin PIN", 540);
+        var card = ModalKit.Setup(this, "Admin PIN", 520);
         var gate = AdminGate.Current;
-        var panel = new StackPanel { Margin = new Thickness(24) };
-        Content = panel;
+        var outer = new StackPanel(); card.Child = outer;
 
-        panel.Children.Add(DialogKit.Title("Admin PIN · yashirin ma'lumotlar"));
-        panel.Children.Add(DialogKit.Muted("Dasturni ochish paroli emas — faqat maxfiy raqamlarni kassirdan yashiradi.", 4, 16));
+        // Sarlavha
+        var head = new Border { Padding = new Thickness(24, 20, 24, 14), BorderThickness = new Thickness(0, 0, 0, 1) };
+        ModalKit.Res(head, Border.BorderBrushProperty, "LineSoft");
+        var headPanel = new StackPanel();
+        headPanel.Children.Add(ModalKit.Text("Admin PIN · yashirin ma'lumotlar", 18, "Ink", FontWeights.Bold));
+        var headSub = ModalKit.Text("Dasturni ochish paroli emas — faqat maxfiy raqamlarni kassirdan yashiradi", 13, "Ink3");
+        headSub.Margin = new Thickness(0, 3, 0, 0); headPanel.Children.Add(headSub);
+        head.Child = headPanel; outer.Children.Add(head);
+
+        var panel = new StackPanel { Margin = new Thickness(24, 16, 24, 16) };
+        outer.Children.Add(panel);
 
         // Yoqish/o'chirish
-        var toggleCard = new Border
-        {
-            BorderBrush = DialogKit.B("Accent", Brushes.Teal), BorderThickness = new Thickness(1.5),
-            CornerRadius = new CornerRadius(12), Padding = new Thickness(14), Background = DialogKit.B("Surface2", Brushes.Black)
-        };
-        var tg = new Grid();
-        tg.ColumnDefinitions.Add(new ColumnDefinition());
-        tg.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        var toggleCard = new Border { BorderThickness = new Thickness(1.5), CornerRadius = new CornerRadius(12), Padding = new Thickness(14) };
+        ModalKit.Res(toggleCard, Border.BorderBrushProperty, "Accent");
+        ModalKit.Res(toggleCard, Border.BackgroundProperty, "AccentSoft");
+        var tg = new DockPanel();
+        var toggle = new CheckBox { IsChecked = gate.IsEnabled, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(14, 0, 0, 0),
+                                    Style = (Style)FindResource("Switch"), ToolTip = "Himoyani yoqish yoki o'chirish" };
+        DockPanel.SetDock(toggle, Dock.Right); tg.Children.Add(toggle);
         var tgText = new StackPanel();
-        tgText.Children.Add(new TextBlock { Text = "Yashirin ma'lumotlarni himoyalash", FontWeight = FontWeights.Bold });
-        var stateText = DialogKit.Muted("", 2);
-        tgText.Children.Add(stateText);
+        tgText.Children.Add(ModalKit.Text("Yashirin ma'lumotlarni himoyalash", 14, "Ink", FontWeights.Bold));
+        var stateText = ModalKit.Text("", 13, "Ink2");
+        stateText.Margin = new Thickness(0, 2, 0, 0); tgText.Children.Add(stateText);
         tg.Children.Add(tgText);
-        var toggle = new CheckBox { IsChecked = gate.IsEnabled, VerticalAlignment = VerticalAlignment.Center, Content = "Yoqish" };
-        Grid.SetColumn(toggle, 1);
-        tg.Children.Add(toggle);
         toggleCard.Child = tg;
         panel.Children.Add(toggleCard);
 
-        panel.Children.Add(new TextBlock { Text = "Yoqilganda PIN so'raladi:", FontWeight = FontWeights.SemiBold, Foreground = DialogKit.B("Ink2", Brushes.LightGray), FontSize = 13, Margin = new Thickness(0, 16, 0, 6) });
+        var chipsLabel = ModalKit.Label(this, "Yoqilganda PIN so'raladi:"); chipsLabel.Margin = new Thickness(0, 16, 0, 6);
+        panel.Children.Add(chipsLabel);
         var chips = new WrapPanel();
         foreach (var t in new[] { "Foyda (hisobotlar)", "Tan narx (ombor)", "Karta foizi", "Excel hisobotlar", "Bazani tiklash" })
         {
-            chips.Children.Add(new Border
-            {
-                Background = DialogKit.B("Surface2", Brushes.Black), CornerRadius = new CornerRadius(8),
-                Padding = new Thickness(10, 6, 10, 6), Margin = new Thickness(0, 0, 6, 6),
-                Child = new TextBlock { Text = t, FontSize = 13 }
-            });
+            var chip = new Border { CornerRadius = new CornerRadius(8), Padding = new Thickness(10, 6, 10, 6), Margin = new Thickness(0, 0, 6, 6),
+                                    Child = ModalKit.Text(t, 13, "Ink") };
+            ModalKit.Res(chip, Border.BackgroundProperty, "Surface2");
+            chips.Children.Add(chip);
         }
         panel.Children.Add(chips);
 
@@ -291,28 +240,36 @@ public sealed class AdminPinSettingsDialog : Window
         pinArea.ColumnDefinitions.Add(new ColumnDefinition());
         pinArea.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(14) });
         pinArea.ColumnDefinitions.Add(new ColumnDefinition());
-        var p1 = DialogKit.PinBox();
-        var p2 = DialogKit.PinBox();
+        var p1 = PinBox(this);
+        var p2 = PinBox(this);
         var c1 = new StackPanel();
-        c1.Children.Add(new TextBlock { Text = gate.IsEnabled ? "Yangi PIN (4 raqam)" : "PIN (4 raqam)", FontSize = 13, FontWeight = FontWeights.SemiBold, Foreground = DialogKit.B("Ink2", Brushes.LightGray), Margin = new Thickness(0, 0, 0, 6) });
+        c1.Children.Add(ModalKit.Label(this, gate.IsEnabled ? "Yangi PIN (4 raqam)" : "PIN (4 raqam)"));
         c1.Children.Add(p1);
         var c2 = new StackPanel();
-        c2.Children.Add(new TextBlock { Text = "Takrorlang", FontSize = 13, FontWeight = FontWeights.SemiBold, Foreground = DialogKit.B("Ink2", Brushes.LightGray), Margin = new Thickness(0, 0, 0, 6) });
+        c2.Children.Add(ModalKit.Label(this, "Takrorlang"));
         c2.Children.Add(p2);
         Grid.SetColumn(c2, 2);
         pinArea.Children.Add(c1);
         pinArea.Children.Add(c2);
         panel.Children.Add(pinArea);
 
-        var hint = DialogKit.Muted("", 10);
+        var hint = ModalKit.Text("", 12, "Ink3");
+        hint.Margin = new Thickness(0, 12, 0, 0); hint.LineHeight = 18;
         panel.Children.Add(hint);
-        var error = new TextBlock { Foreground = DialogKit.B("Bad", Brushes.IndianRed), FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 6, 0, 0), Visibility = Visibility.Collapsed };
+        var error = ModalKit.Text("", 13, "Bad", FontWeights.SemiBold);
+        error.Margin = new Thickness(0, 6, 0, 0); error.Visibility = Visibility.Collapsed;
         panel.Children.Add(error);
 
-        var cancel = DialogKit.SecondaryButton("Bekor");
+        var buttons = new Grid { Margin = new Thickness(24, 0, 24, 20) };
+        buttons.ColumnDefinitions.Add(new ColumnDefinition());
+        buttons.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(10) });
+        buttons.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(2, GridUnitType.Star) });
+        var cancel = ModalKit.Button(this, "Bekor", "BtnSecondary");
         cancel.IsCancel = true;
-        var save = DialogKit.PrimaryButton("Saqlash");
-        panel.Children.Add(DialogKit.Buttons(cancel, save));
+        var save = ModalKit.Button(this, "Saqlash", "BtnPrimary");
+        Grid.SetColumn(save, 2);
+        buttons.Children.Add(cancel); buttons.Children.Add(save);
+        outer.Children.Add(buttons);
 
         void Refresh()
         {

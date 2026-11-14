@@ -94,6 +94,12 @@ namespace PosElectro.Desktop
             }
         }
 
+        /// <summary>Karta solig'i oynasidagi tayyor foiz tugmalari: maydonga qiymat yozadi (saqlash — "Saqlash" tugmasida).</summary>
+        private void CardTaxPreset_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button b && b.Tag is string v) _viewModel.CardTaxRateInput = v;
+        }
+
         private void PinPasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
         {
             if (_isUpdatingPin) return;
