@@ -266,16 +266,17 @@ namespace PosElectro.Desktop
                     {
                         var key = e.Key == Key.System ? e.SystemKey : e.Key;
                         
-                        // Space tugmasi faqat matn maydonida bo'lmagandagina naqd to'lovni ochadi.
-                        // Agar matn maydoni (SearchBox yoki boshqa) fokusda bo'lsa, matn ichida probel yozilishiga ruxsat beriladi.
+                        // Space = Naqd to'lash (F8 kabi). Kassada qidiruv maydoni doim fokusda turadi, shuning uchun
+                        // maydon BO'SH bo'lsa ham Space to'lovni ochadi. Maydonda matn bo'lsa probel odatdagidek yoziladi
+                        // ("kabel vvg" kabi ikki so'zli qidiruv buzilmasin).
                         if (key == Key.Space)
                         {
-                            if (isTextInput)
+                            if (!Views.CashierView.SpaceShouldPay(Keyboard.FocusedElement))
                             {
                                 return;
                             }
-                            cvm.OpenPaymentModal(0);
-                            e.Handled = true;
+                            e.Handled = true;          // ushlab turilgan Space ham maydonga yozilmasin
+                            if (!e.IsRepeat) cvm.OpenPaymentModal(0);
                             return;
                         }
 

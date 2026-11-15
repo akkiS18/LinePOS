@@ -274,6 +274,18 @@ namespace PosElectro.Desktop.Views
             HeldCartsScrollViewer.ScrollToHorizontalOffset(HeldCartsScrollViewer.HorizontalOffset + 120);
         }
 
+        /// <summary>
+        /// Kassada Space "Naqd to'lash"ni ochishi kerakmi? Matn maydonida bo'lmasa — ha. Bo'sh matn maydonida ham — ha
+        /// (qidiruv maydoni doim fokusda turadi, bo'sh maydonga probel yozishning ma'nosi yo'q).
+        /// Maydonda matn bo'lsa — yo'q, probel odatdagidek yoziladi. Parol maydonida hech qachon.
+        /// </summary>
+        public static bool SpaceShouldPay(object? focused)
+        {
+            if (focused is PasswordBox) return false;
+            if (focused is TextBox tb) return string.IsNullOrEmpty(tb.Text);
+            return true;
+        }
+
         private void UserControl_PreviewKeyDown(object sender, KeyEventArgs e)
         {
             if (DataContext is CashierViewModel vm)
@@ -402,15 +414,14 @@ namespace PosElectro.Desktop.Views
                 if (!vm.IsPaymentModalOpen && !vm.IsEditModalOpen && !vm.IsUnrecognizedBarcodeModalOpen && !vm.IsHoldModalOpen && !vm.IsBrakModalOpen && vm.HasCartItems)
                 {
                     var actualKey = e.Key == Key.System ? e.SystemKey : e.Key;
-                    var isInput = Keyboard.FocusedElement is TextBox || Keyboard.FocusedElement is PasswordBox;
 
-                    // Space: faqat biror matn maydonida bo'lmagandagina naqd to'lov
+                    // Space: matn maydonida bo'lmasa yoki maydon bo'sh bo'lsa naqd to'lov (F8 kabi)
                     if (actualKey == Key.Space)
                     {
-                        if (!isInput)
+                        if (SpaceShouldPay(Keyboard.FocusedElement))
                         {
-                            vm.OpenPaymentModal(0);
                             e.Handled = true;
+                            if (!e.IsRepeat) vm.OpenPaymentModal(0);
                             return;
                         }
                     }

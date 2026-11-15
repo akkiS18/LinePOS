@@ -314,7 +314,7 @@
                                                                 <Setter Property="Text" Value="MA'LUMOT"/>
                                                                 <Style.Triggers>
                                                                     <DataTrigger Binding="{Binding Type}" Value="success">
-                                                                        <Setter Property="Text" Value="SINXRON"/>
+                                                                        <Setter Property="Text" Value="BAJARILDI"/>
                                                                     </DataTrigger>
                                                                     <DataTrigger Binding="{Binding Type}" Value="warning">
                                                                         <Setter Property="Text" Value="OGOH"/>
