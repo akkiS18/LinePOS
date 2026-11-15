@@ -112,6 +112,13 @@ Ranglar ustuni: A+B bosqichidan keyin hammasi tokenda, lekin yorug' temada ekran
 
 ## Oxirgi qadam
 
+**2026-11-15 (Claude Code) — Hisobotlar (4.1): statistika qismi yig'iladi:**
+- Egasi talabi (maketda yo'q): ko'rsatkich kartalari, soatlik grafik va "Eng ko'p sotilganlar" bitta `Statistika` sarlavhasi ostiga yig'iladi, cheklar jadvali bo'shagan joyni oladi (1366×768 da 2–3 qator o'rniga 11 qator).
+- Sarlavha 28px; yig'ilganda yonida `Jami tushum · N ta chek · Sotilgan` bir qatorda qoladi (foyda ko'rsatilmaydi — u Admin PIN ostida).
+- Animatsiya 240 ms: balandlik 0 ga tushadi, ichidagilar pastga yopishgani uchun yuqoriga chiqib ketadi (`ReportsView.xaml.cs` → `ApplyStatsState`).
+- Holat `app_settings` da `reports_stats_collapsed` kaliti bilan saqlanadi (`ReportsViewModel.IsStatsCollapsed`), dastur qayta ochilganda animatsiyasiz tiklanadi.
+- 46 test o'tdi; render'da ochiq / yig'ilgan / qayta ochilgan holatlar tekshirildi. Animatsiyaning silliqligi faqat haqiqiy ekranda ko'rinadi.
+
 **2026-11-15 (Claude Code) — Ombor kartasidagi `Tan narxi` (2.1):**
 - Kartada `Tan narxi` yozuvi ostida qoldiq × **sotish narxi** chiqayotgan edi (eski versiyada bu son `Qiymati` deb yozilgan). Egasi Excel hisoboti bilan solishtirib topdi: 17 651 000 (ekran) va 12 048 200 (Excel).
 - Endi `Warehouse.TotalStockCost` = qoldiq × tan narxi, dollarli tovarlar joriy kurs bo'yicha — Excel `Ombor tan narxi` hisoboti bilan bir xil formula (manfiy qoldiqlar ham kiradi). `TotalStockValue` (sotuv qiymati) saqlandi, lekin ekranda ishlatilmaydi.

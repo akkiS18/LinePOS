@@ -149,10 +149,28 @@ namespace PosElectro.Desktop.ViewModels
 
 
 
+        // Statistika qismi (ko'rsatkichlar, grafik, eng ko'p sotilganlar) yig'ilganmi — dastur yopilib ochilganda ham saqlanadi.
+        private const string StatsCollapsedSettingKey = "reports_stats_collapsed";
+        private bool _isStatsCollapsed;
+        public bool IsStatsCollapsed
+        {
+            get => _isStatsCollapsed;
+            set
+            {
+                if (!SetProperty(ref _isStatsCollapsed, value)) return;
+                try { _db.SetSetting(StatsCollapsedSettingKey, value ? "1" : "0"); }
+                catch { /* sozlamani saqlab bo'lmasa ham ekran ishlashda davom etadi */ }
+            }
+        }
+        public ICommand ToggleStatsCommand => _toggleStatsCommand ??= new RelayCommand(() => IsStatsCollapsed = !IsStatsCollapsed);
+        private ICommand? _toggleStatsCommand;
+
         public ReportsViewModel(DatabaseContext db, CurrencyService currencyService)
         {
             _db = db;
             _currencyService = currencyService;
+            try { _isStatsCollapsed = _db.GetSetting(StatsCollapsedSettingKey, "0") == "1"; }
+            catch { _isStatsCollapsed = false; }
 
             _currencyService.RateUpdated += _ =>
             {
