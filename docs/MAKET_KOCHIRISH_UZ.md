@@ -112,6 +112,12 @@ Ranglar ustuni: A+B bosqichidan keyin hammasi tokenda, lekin yorug' temada ekran
 
 ## Oxirgi qadam
 
+**2026-11-15 (Claude Code) — Kassa: Space = Naqd to'lash; Sinxron jurnali belgisi:**
+- Tugmada `Space · F8` yozilgan, lekin Space hech qachon ishlamas edi: qidiruv maydoni doim fokusda, Space esa faqat matn maydonidan tashqarida ishlardi. Endi qidiruv maydoni **bo'sh** bo'lsa Space naqd to'lovni ochadi; maydonda matn bo'lsa probel odatdagidek yoziladi (`CashierView.SpaceShouldPay`, `MainWindow.xaml.cs`). Ushlab turilgan Space takrorlanmaydi.
+- Sinxron jurnali: `success` yozuvlar `SINXRON` deb belgilanar edi, aslida ular Firewall ruxsati va zaxira nusxa haqida — `BAJARILDI` ga o'zgartirildi.
+- Ma'lum cheklov: jurnal telefon sinxronini jonli ko'rsatmaydi. Server faqat ishga tushganini va ishga tushish xatosini yozadi; qolgan yozuvlar — QR xatosi, Firewall, zaxira. Egasining qarori kutilmoqda (olib tashlash yoki haqiqiy voqealarni yozish).
+- 4 ta yangi test (`CashierSpaceShortcutTests`), jami 50 o'tdi. Klaviatura bilan haqiqiy ekranda sinalmagan.
+
 **2026-11-15 (Claude Code) — Hisobotlar (4.1): statistika qismi yig'iladi:**
 - Egasi talabi (maketda yo'q): ko'rsatkich kartalari, soatlik grafik va "Eng ko'p sotilganlar" bitta `Statistika` sarlavhasi ostiga yig'iladi, cheklar jadvali bo'shagan joyni oladi (1366×768 da 2–3 qator o'rniga 11 qator).
 - Sarlavha 28px; yig'ilganda yonida `Jami tushum · N ta chek · Sotilgan` bir qatorda qoladi (foyda ko'rsatilmaydi — u Admin PIN ostida).
