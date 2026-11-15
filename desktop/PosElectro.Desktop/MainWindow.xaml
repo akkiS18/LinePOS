@@ -7,7 +7,7 @@
         xmlns:vm="clr-namespace:PosElectro.Desktop.ViewModels"
         xmlns:services="clr-namespace:PosElectro.Desktop.Services"
         mc:Ignorable="d"
-        Title="SMART kassa" 
+        Title="Line kassa" 
         Icon="Assets/app_logo.png"
         Height="750" Width="1200" MinHeight="650" MinWidth="1000"
         WindowStartupLocation="CenterScreen"
@@ -148,14 +148,9 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Logotip: 32px "S" plitka + SMART -->
-                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,24,0">
-                    <Border Width="32" Height="32" CornerRadius="8" Background="{DynamicResource Accent}" VerticalAlignment="Center">
-                        <TextBlock Text="S" Foreground="{DynamicResource OnAccent}" FontWeight="ExtraBold" FontSize="15"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Border>
-                    <TextBlock Text="SMART" Foreground="{DynamicResource Ink}" FontSize="17" FontWeight="ExtraBold" Margin="10,0,0,0" VerticalAlignment="Center"/>
-                </StackPanel>
+                <!-- Logotip: Line kassa belgisi (yozuvsiz) -->
+                <Image Grid.Column="0" Source="Assets/app_logo.png" Width="34" Height="34" VerticalAlignment="Center" Margin="0,0,24,0"
+                       RenderOptions.BitmapScalingMode="HighQuality" ToolTip="Line kassa"/>
 
                 <!-- Bo'limlar -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
@@ -387,7 +382,7 @@
                         </Border.InputBindings>
                         <Image Source="Assets/app_logo.png" Width="36" Height="36" RenderOptions.BitmapScalingMode="HighQuality"/>
                     </Border>
-                    <TextBlock Text="SMART kassa" FontSize="20" FontWeight="ExtraBold" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                    <TextBlock Text="Line kassa" FontSize="20" FontWeight="ExtraBold" VerticalAlignment="Center" Margin="10,0,0,0"/>
                 </StackPanel>
 
                 <Border Width="540" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="20" Padding="40,32,40,26">
@@ -602,7 +597,7 @@
                             </StackPanel>
                         </Button>
                         <TextBlock FontSize="12" Foreground="{DynamicResource Ink3}" TextAlignment="Center" TextWrapping="Wrap" Margin="0,12,0,0">
-                            <Run Text="SMART kassa · Qurilma ID"/> <Run Text="{Binding DeviceId, Mode=OneWay}"/>
+                            <Run Text="Line kassa · Qurilma ID"/> <Run Text="{Binding DeviceId, Mode=OneWay}"/>
                         </TextBlock>
                     </StackPanel>
                 </Grid>

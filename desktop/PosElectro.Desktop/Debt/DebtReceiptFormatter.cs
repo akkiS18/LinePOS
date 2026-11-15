@@ -9,7 +9,7 @@ public static class DebtReceiptFormatter
     public static string BuildReceiptText(Sale sale)
     {
         var sb = new StringBuilder();
-        sb.AppendLine("          SMART KASSA           ");
+        sb.AppendLine("           LINE KASSA           ");
         sb.AppendLine("    Elektr jihozlari do'koni    ");
         sb.AppendLine("--------------------------------");
         sb.AppendLine($"Chek: #{sale.ReceiptNumber}");
@@ -65,7 +65,7 @@ public static class DebtReceiptFormatter
     public static string BuildCustomerStatementText(DebtCustomerDetailDto customer)
     {
         var sb = new StringBuilder();
-        sb.AppendLine("          SMART KASSA           ");
+        sb.AppendLine("           LINE KASSA           ");
         sb.AppendLine("      MIJOZ QARZ KO'CHIRMASI    ");
         sb.AppendLine("--------------------------------");
         sb.AppendLine($"Mijoz: {customer.Customer.Name}");

@@ -99,7 +99,7 @@
                                 </DockPanel>
                                 <DockPanel Margin="0,10,0,0">
                                     <Border Style="{StaticResource StepNum}"><TextBlock Text="2" Style="{StaticResource StepNumText}"/></Border>
-                                    <TextBlock Text="Telefondagi SMART kassa ilovasida Sinxron bo'limini oching" Style="{StaticResource StepText}"/>
+                                    <TextBlock Text="Telefondagi Line kassa ilovasida Sinxron bo'limini oching" Style="{StaticResource StepText}"/>
                                 </DockPanel>
                                 <DockPanel Margin="0,10,0,0">
                                     <Border Style="{StaticResource StepNum}"><TextBlock Text="3" Style="{StaticResource StepNumText}"/></Border>
@@ -239,7 +239,7 @@
                             </Border>
                             <TextBlock Text="Hali hech qanday telefon ulanmagan" FontSize="17" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,12,0,0"
                                        TextWrapping="Wrap" TextAlignment="Center"/>
-                            <TextBlock Text="Serverni yoqing, keyin telefondagi SMART kassa ilovasidan QR kodni skanerlang."
+                            <TextBlock Text="Serverni yoqing, keyin telefondagi Line kassa ilovasidan QR kodni skanerlang."
                                        Foreground="{DynamicResource Ink2}" TextWrapping="Wrap" TextAlignment="Center" LineHeight="21" MaxWidth="400" Margin="0,6,0,0"/>
                         </StackPanel>
                     </StackPanel>
@@ -380,7 +380,7 @@
                             <DockPanel>
                                 <Border Style="{StaticResource StepNum}" Width="32" Height="32" CornerRadius="16" Margin="0,0,14,0"><TextBlock Text="2" Style="{StaticResource StepNumText}" FontSize="14" FontWeight="ExtraBold"/></Border>
                                 <StackPanel>
-                                    <TextBlock Text="Telefonda SMART kassa → Sinxron" FontWeight="Bold" TextWrapping="Wrap"/>
+                                    <TextBlock Text="Telefonda Line kassa → Sinxron" FontWeight="Bold" TextWrapping="Wrap"/>
                                     <TextBlock Text="Android ilovada Sinxron bo'limini oching va QR skanerlashni tanlang." Style="{StaticResource StepText}" Margin="0,3,0,0"/>
                                 </StackPanel>
                             </DockPanel>

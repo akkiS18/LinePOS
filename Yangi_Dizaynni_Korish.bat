@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-title SMART kassa - yangi dizayn (TEST)
+title Line kassa - yangi dizayn (TEST)
 rem Koddagi eng oxirgi o'zgarishlarni ko'rish uchun: dasturni koddan yig'adi va ALOHIDA test bazasi bilan ochadi.
 rem Haqiqiy ishchi baza (%LOCALAPPDATA%\PosElectro\pos_desktop.db) faqat bir marta NUSXA olinadi, o'zi o'zgarmaydi.
 rem Ishchi kassa uchun esa avvalgidek Ishga_Tushirish.bat ishlatiladi.

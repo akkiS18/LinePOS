@@ -353,9 +353,9 @@ namespace PosElectro.Desktop.ViewModels
             {
                 var sfd = new Microsoft.Win32.SaveFileDialog
                 {
-                    Title = "SMART Kassa ma'lumotlar bazasini saqlash (Zaxira nusxa)",
+                    Title = "Line kassa ma'lumotlar bazasini saqlash (Zaxira nusxa)",
                     Filter = "SQLite Baza fayli (*.db)|*.db|Barcha fayllar (*.*)|*.*",
-                    FileName = $"SMARTKassa_Baza_{DateTime.Now:yyyy-MM-dd_HHmm}.db"
+                    FileName = $"LineKassa_Baza_{DateTime.Now:yyyy-MM-dd_HHmm}.db"
                 };
 
                 if (sfd.ShowDialog() == true)

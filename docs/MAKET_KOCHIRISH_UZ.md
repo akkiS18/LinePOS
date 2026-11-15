@@ -112,6 +112,13 @@ Ranglar ustuni: A+B bosqichidan keyin hammasi tokenda, lekin yorug' temada ekran
 
 ## Oxirgi qadam
 
+**2026-11-15 (Claude Code) — egasi ko'rib chiqqandan keyingi tuzatishlar:**
+- Tovar formasi (2.3): `dona / metr / kg` tanlovi bosilganda o'zgarmas edi. Sabab: `SegItem` uslubida `Focusable=False` — WPF `ListBoxItem` fokus ololmasa bosishni tanlov deb hisoblamaydi. Olib tashlandi. Shu uslubdagi boshqa tanlov yo'q (qolgan `Focusable=False` joylar tugma, belgi yoki tanlovsiz ro'yxatlar).
+- Dastur nomi **Line kassa**: yuqori panelda `S` plitka va `SMART` yozuvi o'rniga logo rasmi (`LOGO/logos/4_windows` → `Assets/app_logo.png`, `.ico`); oyna sarlavhasi, aktivatsiya sahifasi, sinxron matnlari, zaxira fayl nomi (`LineKassa_Baza_…`), chek va qarz ko'chirmasi sarlavhasi (`LINE KASSA`).
+- O'zgartirilmadi: QR ichidagi `name = "SMART Kassa"` va Firewall qoidasi nomlari (sinxron mantig'i), Android ilova.
+- Kassa savati: to'lov paneli och kulrang fon (`Surface2`), tepasida 2px `LineStrong` chiziq va ro'yxat ostida soya.
+- Egasi fikri: dizayn ma'qul, boshqa xato ko'rmadi. Build va 37 test o'tdi; render'da tekshirildi, haqiqiy ekranda hali ko'rilmagan.
+
 **2026-11-13 (Claude Code), 3-qadam — Kassa modal oynalari qayta qurildi:**
 - 1.2/1.4/1.5/1.6 To'lov, 1.7 Tezkor mijoz, 1.8 Narx/miqdor, 1.9 Shtrix-kod topilmadi, 1.10 Brak, 1.11 Kutish va bildirishnoma (pastda markazda; "Bekor qilish" amali bo'lsa to'q fon) maket tuzilishida yozildi.
 - Logika o'zgarmadi: barcha buyruqlar, nomlar (`PaymentConfirmBtn`, `TxtHoldCartName` va h.k.), klaviatura ishlovchilari, Esc/Enter avvalgidek. ViewModel'ga faqat ko'rsatish uchun yordamchilar qo'shildi (`QuickCashOptions`, `ChangeAmount`, `EditLineTotal`, `EditActiveDiscount`, `SetHoldNameCommand`, `ConfirmSaleLabel`, `DebtCustomerItemDto.Initials`). Chegirma/miqdor tugmalari faqat maydonlarni to'ldiradi.

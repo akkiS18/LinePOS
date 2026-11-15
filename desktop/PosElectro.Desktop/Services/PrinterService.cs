@@ -297,7 +297,7 @@ namespace PosElectro.Desktop.Services
             var lines = new List<string>();
 
             // Markazlashtirilgan sarlavha (32 belgi)
-            lines.Add(CenterText("SMART KASSA", 32));
+            lines.Add(CenterText("LINE KASSA", 32));
             lines.Add(CenterText("Elektr jihozlari do'koni", 32));
             lines.Add(new string('-', 32));
 
@@ -684,7 +684,7 @@ namespace PosElectro.Desktop.Services
             };
 
             // 1. Sarlavha
-            var titlePara = new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run("SMART POS — TOVAR CHEKI / HISOB-FAKTURA"))
+            var titlePara = new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run("LINE KASSA — TOVAR CHEKI / HISOB-FAKTURA"))
             {
                 FontSize = 18,
                 FontWeight = FontWeights.Bold,

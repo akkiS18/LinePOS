@@ -997,7 +997,7 @@
                         <Setter Property="FontSize" Value="14"/>
                         <Setter Property="FontWeight" Value="Medium"/>
                         <Setter Property="Cursor" Value="Hand"/>
-                        <Setter Property="Focusable" Value="False"/>
+                        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
                         <Setter Property="Template">
                             <Setter.Value>
                                 <ControlTemplate TargetType="ListBoxItem">
