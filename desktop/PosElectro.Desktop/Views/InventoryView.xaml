@@ -551,7 +551,8 @@
                 <!-- Qidiruv va filtrlar -->
                 <Grid Grid.Row="1" Margin="0,12,0,12">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="420"/>
+                        <!-- Tor oynada qidiruv qisqaradi, filtrlar sig'adi -->
+                        <ColumnDefinition Width="3*" MinWidth="220" MaxWidth="420"/>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
@@ -690,7 +691,7 @@
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
                         <Grid.Resources>
-                            <!-- Ustun kengliklari (sarlavha va qatorlar uchun bir xil) -->
+                            <!-- Ustun kengliklari (sarlavha va qatorlar uchun bir xil). Nisbiy: tor oynada ham "Amallar" ko'rinib turadi -->
                             <Style x:Key="TableCols" TargetType="Grid">
                                 <Setter Property="Margin" Value="12,0"/>
                             </Style>
@@ -703,12 +704,12 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="28"/>
                                     <ColumnDefinition Width="56"/>
-                                    <ColumnDefinition Width="*" MinWidth="150"/>
-                                    <ColumnDefinition Width="162"/>
-                                    <ColumnDefinition Width="122"/>
-                                    <ColumnDefinition Width="162"/>
-                                    <ColumnDefinition Width="132"/>
-                                    <ColumnDefinition Width="182"/>
+                                    <ColumnDefinition Width="2*" MinWidth="150"/>
+                                    <ColumnDefinition Width="1.2*" MinWidth="112"/>
+                                    <ColumnDefinition Width="0.9*" MinWidth="100"/>
+                                    <ColumnDefinition Width="1.1*" MinWidth="100"/>
+                                    <ColumnDefinition Width="*" MinWidth="104"/>
+                                    <ColumnDefinition Width="1.3*"/>
                                     <ColumnDefinition Width="132"/>
                                 </Grid.ColumnDefinitions>
                                 <CheckBox Style="{StaticResource SmallCheck}" VerticalAlignment="Center" ToolTip="Barchasini tanlash / bekor qilish"
@@ -726,7 +727,7 @@
                                 </StackPanel>
                                 <TextBlock Grid.Column="5" Text="SOTISH NARXI" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0"/>
                                 <TextBlock Grid.Column="6" Text="QOLDIQ" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                                <TextBlock Grid.Column="7" Text="IZOH (ZAKAZ UCHUN)" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="7" Text="IZOH (ZAKAZ UCHUN)" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,12,0" ToolTip="Izoh (zakaz uchun)"/>
                                 <TextBlock Grid.Column="8" Text="AMALLAR" HorizontalAlignment="Right" VerticalAlignment="Center"/>
                             </Grid>
                         </Border>
@@ -747,12 +748,12 @@
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="28"/>
                                                 <ColumnDefinition Width="56"/>
-                                                <ColumnDefinition Width="*" MinWidth="150"/>
-                                                <ColumnDefinition Width="162"/>
-                                                <ColumnDefinition Width="122"/>
-                                                <ColumnDefinition Width="162"/>
-                                                <ColumnDefinition Width="132"/>
-                                                <ColumnDefinition Width="182"/>
+                                                <ColumnDefinition Width="2*" MinWidth="150"/>
+                                                <ColumnDefinition Width="1.2*" MinWidth="112"/>
+                                                <ColumnDefinition Width="0.9*" MinWidth="100"/>
+                                                <ColumnDefinition Width="1.1*" MinWidth="100"/>
+                                                <ColumnDefinition Width="*" MinWidth="104"/>
+                                                <ColumnDefinition Width="1.3*"/>
                                                 <ColumnDefinition Width="132"/>
                                             </Grid.ColumnDefinitions>
                                             <CheckBox Style="{StaticResource SmallCheck}" VerticalAlignment="Center"

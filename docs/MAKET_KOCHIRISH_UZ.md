@@ -112,6 +112,13 @@ Ranglar ustuni: A+B bosqichidan keyin hammasi tokenda, lekin yorug' temada ekran
 
 ## Oxirgi qadam
 
+**2026-11-15 (Claude Code) — Turli oyna o'lchamlari (responsive):**
+- Eng kichik oyna (1000×650) va katta ekran (1920×1080) da barcha bo'limlar render qilib tekshirildi.
+- Ombor jadvali: ustunlar endi nisbiy (`*` + `MinWidth`) — tor oynada "Amallar" ustuni (tahrirlash, stiker, …) ekrandan chiqib ketmaydi; qidiruv maydoni ham torayadi (220–420px).
+- Qarzlar: mijozlar ro'yxati 280–380px oralig'ida moslashadi; nasiya cheklari jadvalidagi summa ustunlari endi yo'qolib qolmaydi (MinWidth); "Joriy holat", "Jami savdo", "To'langan" summalari "..." bilan kesilmaydi — joy yetmasa biroz kichrayadi.
+- Hisobotlar: filtrlar tor oynada ikkinchi qatorga o'tadi (oldin oxirgi filtr kesilib qolardi).
+- Kassa, Sinxron, to'lov oynasi o'zgarishsiz yaxshi ishlaydi (to'lov oynasi past ekranda aylantiriladi).
+
 **2026-11-15 (Claude Code) — Qorong'i tema (D bosqichi):**
 - Har bir ekran `Theme.Light.xaml` ni o'ziga majburan ulagani uchun tema almashmas edi. 23 ta mahalliy ulanish olib tashlandi; tema endi faqat `App.Resources` da, `Services/ThemeManager.cs` almashtiradi (ekranlar `DynamicResource` bilan darhol qayta bo'yaladi).
 - Sozlamalar menyusi → `Ko'rinish`: Yorug' / Qorong'i / Windows (tizim bo'yicha, o'zgarsa darhol almashadi). Tanlov `app_settings.ui_theme`; standart — yorug'.

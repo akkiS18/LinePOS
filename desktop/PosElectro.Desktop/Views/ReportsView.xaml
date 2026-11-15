@@ -63,7 +63,7 @@
             <Style x:Key="FilterCombo" TargetType="ComboBox" BasedOn="{StaticResource FieldCombo}">
                 <Setter Property="MinWidth" Value="150"/>
                 <Setter Property="MaxWidth" Value="210"/>
-                <Setter Property="Margin" Value="8,0,0,0"/>
+                <Setter Property="Margin" Value="8,8,0,0"/>
                 <Setter Property="FontWeight" Value="Medium"/>
             </Style>
 
@@ -206,7 +206,7 @@
             <!-- ============ FILTRLAR ============ -->
             <DockPanel Margin="0,0,0,12">
                 <!-- O'ng: kurs, Excel, yangilash -->
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="8,0,0,0">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="8,0,0,0" VerticalAlignment="Top">
                     <Button Command="{Binding RefreshUsdRateCommand}" Style="{StaticResource ToolBtn}" FontSize="13" FontWeight="Normal"
                             Foreground="{DynamicResource Ink2}" ToolTip="Markaziy bank kursini yangilash">
                         <TextBlock Text="{Binding UsdRateText}"/>
@@ -228,9 +228,10 @@
                     </Button>
                 </StackPanel>
 
-                <StackPanel Orientation="Horizontal">
+                <!-- Tor oynada filtrlar ikkinchi qatorga o'tadi (kesilib qolmaydi) -->
+                <WrapPanel Orientation="Horizontal" Margin="0,-8,0,0">
                     <!-- Sana oralig'i -->
-                    <Button x:Name="BtnDateRangeDropdown" Command="{Binding ToggleDatePickerCommand}" Style="{StaticResource ToolBtn}" Padding="14,0"
+                    <Button x:Name="BtnDateRangeDropdown" Command="{Binding ToggleDatePickerCommand}" Style="{StaticResource ToolBtn}" Padding="14,0" Margin="0,8,0,0"
                             BorderBrush="{DynamicResource Accent}" BorderThickness="1.5">
                         <StackPanel Orientation="Horizontal">
                             <Viewbox Width="17" Height="17" Margin="0,0,10,0">
@@ -357,7 +358,7 @@
                               Style="{StaticResource FilterCombo}" ToolTip="Kategoriya bo'yicha filtr"/>
                     <ComboBox ItemsSource="{Binding RecordKinds}" SelectedItem="{Binding SelectedRecordKind}"
                               Style="{StaticResource FilterCombo}" MinWidth="130" ToolTip="Amal turi bo'yicha filtr"/>
-                </StackPanel>
+                </WrapPanel>
             </DockPanel>
 
             <!-- ============ STATISTIKA SARLAVHASI (yig'ish / ochish) ============ -->
