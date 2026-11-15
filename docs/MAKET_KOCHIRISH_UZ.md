@@ -112,6 +112,11 @@ Ranglar ustuni: A+B bosqichidan keyin hammasi tokenda, lekin yorug' temada ekran
 
 ## Oxirgi qadam
 
+**2026-11-15 (Claude Code) — Ombor kartasidagi `Tan narxi` (2.1):**
+- Kartada `Tan narxi` yozuvi ostida qoldiq × **sotish narxi** chiqayotgan edi (eski versiyada bu son `Qiymati` deb yozilgan). Egasi Excel hisoboti bilan solishtirib topdi: 17 651 000 (ekran) va 12 048 200 (Excel).
+- Endi `Warehouse.TotalStockCost` = qoldiq × tan narxi, dollarli tovarlar joriy kurs bo'yicha — Excel `Ombor tan narxi` hisoboti bilan bir xil formula (manfiy qoldiqlar ham kiradi). `TotalStockValue` (sotuv qiymati) saqlandi, lekin ekranda ishlatilmaydi.
+- 2 ta yangi test (`WarehouseStockCostTests`), jami 46 o'tdi.
+
 **2026-11-15 (Claude Code) — Kam qolgan tovarlar: kategoriya bo'yicha filtr (2.2):**
 - Eski versiyada (1.0.1) bu tugma bor edi, lekin ViewModel qismi yozilmagani uchun ishlamas edi; `hotfix/lowstock-filter-1.0.2` da tuzatildi va shu yerga ko'chirildi. Maketda bunday tugma yo'q — qoldiq filtri (`Hammasi / Kam qolgan / Tugagan`) yoniga maket uslubida qo'shildi.
 - `InventoryViewModel`: `LowStockCategoryFilters`, `IsCategoryFilterDropdownOpen`, `SelectedCategoriesFilterText`, `HasLowStockCategoryFilter`, `ClearCategoryFiltersCommand`.

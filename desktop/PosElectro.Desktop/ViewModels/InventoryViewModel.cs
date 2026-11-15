@@ -1607,8 +1607,11 @@ namespace PosElectro.Desktop.ViewModels
         {
             Warehouses.Clear();
             var whList = _db.GetWarehouses();
+            var usdRate = _currencyService.GetCachedUsdRate();
+            if (usdRate <= 0) usdRate = CurrencyService.DEFAULT_USD_RATE;
             foreach (var w in whList)
             {
+                w.TotalStockCost = w.StockCostUzs + w.StockCostUsd * usdRate;
                 Warehouses.Add(w);
             }
 

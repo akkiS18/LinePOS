@@ -734,6 +734,26 @@ namespace PosElectro.Desktop.Data
                     INNER JOIN products p ON p.guid = ps.product_guid
                     WHERE ps.warehouse_guid = @wh_guid AND p.is_deleted = 0 AND ps.quantity > 0;
                 ";
+                // Tan narxi: Excel "Ombor tan narxi" hisoboti bilan bir xil — barcha qoldiqlar (manfiylari ham), valyuta bo'yicha alohida.
+                using (var costCmd = conn.CreateCommand())
+                {
+                    costCmd.CommandText = @"
+                        SELECT
+                            COALESCE(SUM(CASE WHEN UPPER(COALESCE(p.cost_currency, 'UZS')) = 'USD' THEN 0 ELSE ps.quantity * p.cost_price END), 0) AS cost_uzs,
+                            COALESCE(SUM(CASE WHEN UPPER(COALESCE(p.cost_currency, 'UZS')) = 'USD' THEN ps.quantity * p.cost_price ELSE 0 END), 0) AS cost_usd
+                        FROM product_stocks ps
+                        INNER JOIN products p ON p.guid = ps.product_guid
+                        WHERE ps.warehouse_guid = @wh_guid AND p.is_deleted = 0;
+                    ";
+                    costCmd.Parameters.AddWithValue("@wh_guid", wh.Guid);
+                    using var costReader = costCmd.ExecuteReader();
+                    if (costReader.Read())
+                    {
+                        wh.StockCostUzs = Convert.ToDouble(costReader["cost_uzs"]);
+                        wh.StockCostUsd = Convert.ToDouble(costReader["cost_usd"]);
+                        wh.TotalStockCost = wh.StockCostUzs; // dollar qismi kursni biladigan joyda qo'shiladi
+                    }
+                }
                 statsCmd.Parameters.AddWithValue("@wh_guid", wh.Guid);
                 using var statReader = statsCmd.ExecuteReader();
                 if (statReader.Read())
