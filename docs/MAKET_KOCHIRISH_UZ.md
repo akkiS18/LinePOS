@@ -112,6 +112,15 @@ Ranglar ustuni: A+B bosqichidan keyin hammasi tokenda, lekin yorug' temada ekran
 
 ## Oxirgi qadam
 
+**2026-11-15 (Claude Code) — Qorong'i tema (D bosqichi):**
+- Har bir ekran `Theme.Light.xaml` ni o'ziga majburan ulagani uchun tema almashmas edi. 23 ta mahalliy ulanish olib tashlandi; tema endi faqat `App.Resources` da, `Services/ThemeManager.cs` almashtiradi (ekranlar `DynamicResource` bilan darhol qayta bo'yaladi).
+- Sozlamalar menyusi → `Ko'rinish`: Yorug' / Qorong'i / Windows (tizim bo'yicha, o'zgarsa darhol almashadi). Tanlov `app_settings.ui_theme`; standart — yorug'.
+- Sarlavha qatori (`WindowStyleHelper.ApplyTitleBar`) temaga mos: rangi `Surface`, matni `Ink`.
+- Windows tizim ranglari (`SystemColors.*BrushKey`) ikkala temada tokenlarga bog'landi — standart ro'yxat/scrollbar elementlari qorong'ida qora matn bilan qolmaydi. Sinxron ekranidagi kengaytirgich o'z shablonini oldi (oq doira o'rniga strelka).
+- Chek qog'ozi (58 mm va A4 ko'rinishi) ikkala temada ataylab oq.
+- Barcha ekran va modallar qorong'ida render qilib ko'rildi; 61 test o'tdi. Haqiqiy oynada (sarlavha qatori, tizim bo'yicha almashish) hali ko'rilmagan.
+- **Render harness eslatmasi:** `App.xaml` dagi `StartupUri` fonda `MainWindow` ochadi; `LINEPOS_DB_PATH` berilmasa u **ishchi bazani** ochadi. Harness endi o'zi `LINEPOS_DB_PATH` ni sinov nusxasiga qo'yadi.
+
 **2026-11-15 (Claude Code) — Kassa: Space = Naqd to'lash; Sinxron jurnali belgisi:**
 - Tugmada `Space · F8` yozilgan, lekin Space hech qachon ishlamas edi: qidiruv maydoni doim fokusda, Space esa faqat matn maydonidan tashqarida ishlardi. Endi qidiruv maydoni **bo'sh** bo'lsa Space naqd to'lovni ochadi; maydonda matn bo'lsa probel odatdagidek yoziladi (`CashierView.SpaceShouldPay`, `MainWindow.xaml.cs`). Ushlab turilgan Space takrorlanmaydi.
 - Sinxron jurnali: `success` yozuvlar `SINXRON` deb belgilanar edi, aslida ular Firewall ruxsati va zaxira nusxa haqida — `BAJARILDI` ga o'zgartirildi.

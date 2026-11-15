@@ -17,7 +17,6 @@
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/PosElectro.Desktop;component/Themes/Theme.Light.xaml"/>
             </ResourceDictionary.MergedDictionaries>
 
             <!-- 24×24 chiziqli ikonka (maketdagi SVG'lar bilan bir xil koordinatalar). Viewbox ichida o'lchanadi. -->

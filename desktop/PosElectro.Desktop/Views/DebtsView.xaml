@@ -11,7 +11,6 @@
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/PosElectro.Desktop;component/Themes/Theme.Light.xaml"/>
                 <ResourceDictionary Source="/PosElectro.Desktop;component/Themes/SmartControls.xaml"/>
             </ResourceDictionary.MergedDictionaries>
 

@@ -9,7 +9,6 @@
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/PosElectro.Desktop;component/Themes/Theme.Light.xaml"/>
                 <ResourceDictionary Source="/PosElectro.Desktop;component/Themes/SmartControls.xaml"/>
             </ResourceDictionary.MergedDictionaries>
 
@@ -122,7 +121,7 @@
                                             <DropShadowEffect Color="#0F1B21" BlurRadius="10" ShadowDepth="2" Direction="270" Opacity="0.15"/>
                                         </Border.Effect>
                                         <StackPanel>
-                                            <TextBlock Text="LINE POS — TOVAR CHEKI / HISOB-FAKTURA" Foreground="{StaticResource PaperInk}" FontSize="15" FontWeight="Bold"
+                                            <TextBlock Text="LINE KASSA — TOVAR CHEKI / HISOB-FAKTURA" Foreground="{StaticResource PaperInk}" FontSize="15" FontWeight="Bold"
                                                        HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" Margin="0,0,0,2"/>
                                             <TextBlock Text="Elektr jihozlari va uskunalari do'koni" Foreground="{StaticResource PaperMuted}" FontSize="11"
                                                        HorizontalAlignment="Center" Margin="0,0,0,16"/>

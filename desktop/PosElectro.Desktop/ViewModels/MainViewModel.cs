@@ -91,10 +91,21 @@ namespace PosElectro.Desktop.ViewModels
         public ICommand CloseCardTaxModalCommand { get; }
         public ICommand SaveCardTaxCommand { get; }
 
+        // ---- Ko'rinish: yorug' / qorong'i / tizim bo'yicha ----
+        /// <summary>"light", "dark" yoki "system" — sozlamalar menyusidagi tanlov.</summary>
+        public string ThemeModeSetting => Services.ThemeManager.ToSetting(Services.ThemeManager.Mode);
+        public ICommand SetThemeCommand => _setThemeCommand ??= new RelayCommand<object>(p =>
+        {
+            Services.ThemeManager.Apply(Services.ThemeManager.Parse(p?.ToString()));
+            OnPropertyChanged(nameof(ThemeModeSetting));
+        });
+        private ICommand? _setThemeCommand;
+
         public MainViewModel()
         {
             Instance = this;
             Database = new DatabaseContext();
+            Services.ThemeManager.Initialize(Database);
             Services.AdminGate.Current.Initialize(Database);
             ProductService = new ProductService(Database);
             CurrencyService = new CurrencyService(Database);

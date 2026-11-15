@@ -25,7 +25,6 @@ public sealed class AdminPinPromptDialog : Window
         SizeToContent = SizeToContent.WidthAndHeight;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         FontSize = 14;
-        Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("/PosElectro.Desktop;component/Themes/Theme.Light.xaml", UriKind.Relative) });
         Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("/PosElectro.Desktop;component/Themes/SmartControls.xaml", UriKind.Relative) });
 
         var root = new Grid();

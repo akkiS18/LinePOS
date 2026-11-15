@@ -137,7 +137,7 @@
             <Border.Resources>
                 <ResourceDictionary>
                     <ResourceDictionary.MergedDictionaries>
-                        <ResourceDictionary Source="/PosElectro.Desktop;component/Themes/Theme.Light.xaml"/>
+                        <ResourceDictionary Source="/PosElectro.Desktop;component/Themes/SmartControls.xaml"/>
                     </ResourceDictionary.MergedDictionaries>
                 </ResourceDictionary>
             </Border.Resources>
@@ -246,6 +246,32 @@
                                 <DropShadowEffect BlurRadius="40" ShadowDepth="16" Direction="270" Opacity="0.18" Color="#0F1B21"/>
                             </Border.Effect>
                             <StackPanel>
+                                <!-- Ko'rinish: yorug' / qorong'i / Windows bo'yicha. Tanlov bazada saqlanadi. -->
+                                <Grid Margin="10,6,6,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Viewbox Width="18" Height="18" VerticalAlignment="Center">
+                                        <Path Style="{StaticResource NavIc}" Stroke="{DynamicResource Ink2}" Data="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>
+                                    </Viewbox>
+                                    <TextBlock Grid.Column="1" Text="Ko'rinish" Margin="12,0,0,0" VerticalAlignment="Center" FontSize="14" Foreground="{DynamicResource Ink}"/>
+                                </Grid>
+                                <Border Margin="6,0,6,6" Padding="3" CornerRadius="10" Background="{DynamicResource Surface2}">
+                                    <UniformGrid Rows="1">
+                                        <Button Style="{StaticResource SegTab}" Height="34" FontSize="13" Content="Yorug'"
+                                                Command="{Binding SetThemeCommand}" CommandParameter="light"
+                                                Tag="{Binding ThemeModeSetting, Converter={StaticResource EqualsConverter}, ConverterParameter=light}"/>
+                                        <Button Style="{StaticResource SegTab}" Height="34" FontSize="13" Content="Qorong'i"
+                                                Command="{Binding SetThemeCommand}" CommandParameter="dark"
+                                                Tag="{Binding ThemeModeSetting, Converter={StaticResource EqualsConverter}, ConverterParameter=dark}"/>
+                                        <Button Style="{StaticResource SegTab}" Height="34" FontSize="13" Content="Windows"
+                                                ToolTip="Windows sozlamasiga qarab o'zi almashadi"
+                                                Command="{Binding SetThemeCommand}" CommandParameter="system"
+                                                Tag="{Binding ThemeModeSetting, Converter={StaticResource EqualsConverter}, ConverterParameter=system}"/>
+                                    </UniformGrid>
+                                </Border>
+                                <Border Height="1" Margin="6,2,6,6" Background="{DynamicResource LineSoft}"/>
                                 <Button Style="{StaticResource MenuRowButton}" Command="{Binding ExportWarehouseCostReportCommand}" Click="SettingsMenuItem_Click">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
@@ -367,7 +393,6 @@
             <Grid.Resources>
                 <ResourceDictionary>
                     <ResourceDictionary.MergedDictionaries>
-                        <ResourceDictionary Source="/PosElectro.Desktop;component/Themes/Theme.Light.xaml"/>
                         <ResourceDictionary Source="/PosElectro.Desktop;component/Themes/SmartControls.xaml"/>
                     </ResourceDictionary.MergedDictionaries>
                 </ResourceDictionary>
@@ -548,7 +573,6 @@
             <Grid.Resources>
                 <ResourceDictionary>
                     <ResourceDictionary.MergedDictionaries>
-                        <ResourceDictionary Source="/PosElectro.Desktop;component/Themes/Theme.Light.xaml"/>
                         <ResourceDictionary Source="/PosElectro.Desktop;component/Themes/SmartControls.xaml"/>
                     </ResourceDictionary.MergedDictionaries>
                 </ResourceDictionary>
@@ -613,7 +637,6 @@
             <Grid.Resources>
                 <ResourceDictionary>
                     <ResourceDictionary.MergedDictionaries>
-                        <ResourceDictionary Source="/PosElectro.Desktop;component/Themes/Theme.Light.xaml"/>
                         <ResourceDictionary Source="/PosElectro.Desktop;component/Themes/SmartControls.xaml"/>
                     </ResourceDictionary.MergedDictionaries>
                 </ResourceDictionary>
@@ -675,7 +698,6 @@
             <Border.Resources>
                 <ResourceDictionary>
                     <ResourceDictionary.MergedDictionaries>
-                        <ResourceDictionary Source="/PosElectro.Desktop;component/Themes/Theme.Light.xaml"/>
                         <ResourceDictionary Source="/PosElectro.Desktop;component/Themes/SmartControls.xaml"/>
                     </ResourceDictionary.MergedDictionaries>
                 </ResourceDictionary>
@@ -722,7 +744,6 @@
             <Border.Resources>
                 <ResourceDictionary>
                     <ResourceDictionary.MergedDictionaries>
-                        <ResourceDictionary Source="/PosElectro.Desktop;component/Themes/Theme.Light.xaml"/>
                         <ResourceDictionary Source="/PosElectro.Desktop;component/Themes/SmartControls.xaml"/>
                     </ResourceDictionary.MergedDictionaries>
                     <!-- Vidjet ichidagi kichik tugma (to'q fonda) -->
@@ -835,7 +856,6 @@
             <Grid.Resources>
                 <ResourceDictionary>
                     <ResourceDictionary.MergedDictionaries>
-                        <ResourceDictionary Source="/PosElectro.Desktop;component/Themes/Theme.Light.xaml"/>
                         <ResourceDictionary Source="/PosElectro.Desktop;component/Themes/SmartControls.xaml"/>
                     </ResourceDictionary.MergedDictionaries>
                 </ResourceDictionary>
@@ -994,7 +1014,6 @@
             <Grid.Resources>
                 <ResourceDictionary>
                     <ResourceDictionary.MergedDictionaries>
-                        <ResourceDictionary Source="/PosElectro.Desktop;component/Themes/Theme.Light.xaml"/>
                     </ResourceDictionary.MergedDictionaries>
                 </ResourceDictionary>
             </Grid.Resources>

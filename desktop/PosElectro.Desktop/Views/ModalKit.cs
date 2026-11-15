@@ -24,7 +24,6 @@ internal static class ModalKit
         w.SizeToContent = SizeToContent.WidthAndHeight;
         w.WindowStartupLocation = WindowStartupLocation.CenterOwner;
         w.FontSize = 14;
-        w.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("/PosElectro.Desktop;component/Themes/Theme.Light.xaml", UriKind.Relative) });
         w.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("/PosElectro.Desktop;component/Themes/SmartControls.xaml", UriKind.Relative) });
 
         var root = new Grid();
