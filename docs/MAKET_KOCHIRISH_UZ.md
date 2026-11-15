@@ -112,6 +112,12 @@ Ranglar ustuni: A+B bosqichidan keyin hammasi tokenda, lekin yorug' temada ekran
 
 ## Oxirgi qadam
 
+**2026-11-15 (Claude Code) — Kam qolgan tovarlar: kategoriya bo'yicha filtr (2.2):**
+- Eski versiyada (1.0.1) bu tugma bor edi, lekin ViewModel qismi yozilmagani uchun ishlamas edi; `hotfix/lowstock-filter-1.0.2` da tuzatildi va shu yerga ko'chirildi. Maketda bunday tugma yo'q — qoldiq filtri (`Hammasi / Kam qolgan / Tugagan`) yoniga maket uslubida qo'shildi.
+- `InventoryViewModel`: `LowStockCategoryFilters`, `IsCategoryFilterDropdownOpen`, `SelectedCategoriesFilterText`, `HasLowStockCategoryFilter`, `ClearCategoryFiltersCommand`.
+- Jadval sarlavhasidagi "hammasini belgilash" katakchasi ham ishlamas edi (`IsAllLowStockSelected` yo'q edi) — qo'shildi, faqat ko'rinib turgan qatorlarni belgilaydi.
+- 7 ta yangi test (`LowStockCategoryFilterTests`), jami 44 o'tdi. Render'da tekshirildi, egasi hali ko'rmagan.
+
 **2026-11-15 (Claude Code) — egasi ko'rib chiqqandan keyingi tuzatishlar:**
 - Tovar formasi (2.3): `dona / metr / kg` tanlovi bosilganda o'zgarmas edi. Sabab: `SegItem` uslubida `Focusable=False` — WPF `ListBoxItem` fokus ololmasa bosishni tanlov deb hisoblamaydi. Olib tashlandi. Shu uslubdagi boshqa tanlov yo'q (qolgan `Focusable=False` joylar tugma, belgi yoki tanlovsiz ro'yxatlar).
 - Dastur nomi **Line kassa**: yuqori panelda `S` plitka va `SMART` yozuvi o'rniga logo rasmi (`LOGO/logos/4_windows` → `Assets/app_logo.png`, `.ico`); oyna sarlavhasi, aktivatsiya sahifasi, sinxron matnlari, zaxira fayl nomi (`LineKassa_Baza_…`), chek va qarz ko'chirmasi sarlavhasi (`LINE KASSA`).

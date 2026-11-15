@@ -586,6 +586,101 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- Kam qolgan tovarlar: kategoriya bo'yicha filtr (bir nechta kategoriyani belgilash mumkin) -->
+                    <Grid Grid.Column="2" Margin="10,0,0,0" HorizontalAlignment="Left"
+                          Visibility="{Binding IsLowStockCategorySelected, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ToggleButton x:Name="CategoryFilterBtn" Height="44" Cursor="Hand" Focusable="False"
+                                      IsChecked="{Binding IsCategoryFilterDropdownOpen, Mode=TwoWay}"
+                                      ToolTip="Kam qolgan tovarlarni kategoriya bo'yicha saralash">
+                            <ToggleButton.Template>
+                                <ControlTemplate TargetType="ToggleButton">
+                                    <Border x:Name="bd" CornerRadius="10" Padding="14,0" Background="{DynamicResource Surface}"
+                                            BorderBrush="{DynamicResource Line}" BorderThickness="1">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Viewbox Width="16" Height="16">
+                                                <Path Style="{StaticResource Ic}" Stroke="{DynamicResource Ink2}" Data="M4 5h16l-6 8v6l-4-2v-4z"/>
+                                            </Viewbox>
+                                            <TextBlock Text="{Binding SelectedCategoriesFilterText}" Margin="8,0,0,0" FontSize="14" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource Ink}" VerticalAlignment="Center" MaxWidth="260" TextTrimming="CharacterEllipsis"/>
+                                            <Viewbox Width="14" Height="14" Margin="8,0,0,0">
+                                                <Path Style="{StaticResource Ic}" Stroke="{DynamicResource Ink3}" StrokeThickness="2.2" Data="M6 9l6 6l6-6"/>
+                                            </Viewbox>
+                                        </StackPanel>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource LineStrong}"/>
+                                        </Trigger>
+                                        <Trigger Property="IsChecked" Value="True">
+                                            <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource Accent}"/>
+                                        </Trigger>
+                                        <DataTrigger Binding="{Binding HasLowStockCategoryFilter}" Value="True">
+                                            <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentSoft}"/>
+                                            <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource Accent}"/>
+                                        </DataTrigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </ToggleButton.Template>
+                        </ToggleButton>
+                        <Popup IsOpen="{Binding IsCategoryFilterDropdownOpen, Mode=TwoWay}" PlacementTarget="{Binding ElementName=CategoryFilterBtn}"
+                               Placement="Bottom" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade">
+                            <Border Width="300" MaxHeight="380" Margin="0,4,16,20" Padding="6" CornerRadius="12" Background="{DynamicResource Surface}"
+                                    BorderBrush="{DynamicResource Line}" BorderThickness="1">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="40" ShadowDepth="16" Direction="270" Opacity="0.18" Color="#0F1B21"/>
+                                </Border.Effect>
+                                <DockPanel>
+                                    <Grid DockPanel.Dock="Top" Margin="10,6,4,6">
+                                        <TextBlock Text="KATEGORIYALAR" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource Ink3}" VerticalAlignment="Center"/>
+                                        <Button Style="{StaticResource LinkBtn}" HorizontalAlignment="Right" Content="Tozalash" FontSize="13" Height="28"
+                                                Command="{Binding ClearCategoryFiltersCommand}"
+                                                Visibility="{Binding HasLowStockCategoryFilter, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                    </Grid>
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                        <ItemsControl ItemsSource="{Binding LowStockCategoryFilters}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <ToggleButton IsChecked="{Binding IsSelected, Mode=TwoWay}" Cursor="Hand" Focusable="False">
+                                                        <ToggleButton.Template>
+                                                            <ControlTemplate TargetType="ToggleButton">
+                                                                <Border x:Name="row" CornerRadius="8" Padding="10,0" MinHeight="40" Background="Transparent">
+                                                                    <DockPanel VerticalAlignment="Center">
+                                                                        <Border x:Name="box" DockPanel.Dock="Left" Width="18" Height="18" CornerRadius="5"
+                                                                                Background="{DynamicResource Surface}" BorderBrush="{DynamicResource LineStrong}" BorderThickness="1.5">
+                                                                            <Viewbox x:Name="tick" Width="12" Height="12" Visibility="Collapsed">
+                                                                                <Path Data="M5 12l5 5l9-10" Width="24" Height="24" Stretch="None" Stroke="{DynamicResource OnAccent}"
+                                                                                      StrokeThickness="3.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
+                                                                            </Viewbox>
+                                                                        </Border>
+                                                                        <Border DockPanel.Dock="Right" Padding="8,2" CornerRadius="999" Background="{DynamicResource Surface2}" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                                            <TextBlock Text="{Binding Count}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource Ink2}"/>
+                                                                        </Border>
+                                                                        <TextBlock Text="{Binding Name}" Margin="10,0,0,0" FontSize="14" Foreground="{DynamicResource Ink}"
+                                                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                                    </DockPanel>
+                                                                </Border>
+                                                                <ControlTemplate.Triggers>
+                                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                                        <Setter TargetName="row" Property="Background" Value="{DynamicResource Surface2}"/>
+                                                                    </Trigger>
+                                                                    <Trigger Property="IsChecked" Value="True">
+                                                                        <Setter TargetName="box" Property="Background" Value="{DynamicResource Accent}"/>
+                                                                        <Setter TargetName="box" Property="BorderThickness" Value="0"/>
+                                                                        <Setter TargetName="tick" Property="Visibility" Value="Visible"/>
+                                                                    </Trigger>
+                                                                </ControlTemplate.Triggers>
+                                                            </ControlTemplate>
+                                                        </ToggleButton.Template>
+                                                    </ToggleButton>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </DockPanel>
+                            </Border>
+                        </Popup>
+                    </Grid>
+
                 </Grid>
 
                 <!-- Jadval -->

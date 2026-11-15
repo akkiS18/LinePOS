@@ -51,6 +51,40 @@ namespace PosElectro.Desktop.ViewModels
         }
     }
 
+    /// <summary>"Kam qolgan tovarlar" ro'yxatidagi kategoriya filtri qatori (belgilash katakchasi).</summary>
+    public class LowStockCategoryFilterItem : ViewModelBase
+    {
+        private readonly Action _onChanged;
+        public LowStockCategoryFilterItem(string name, int count, bool isSelected, Action onChanged)
+        {
+            Name = name;
+            Count = count;
+            _isSelected = isSelected;
+            _onChanged = onChanged;
+        }
+
+        public string Name { get; }
+        public int Count { get; }
+
+        private bool _isSelected;
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set
+            {
+                if (SetProperty(ref _isSelected, value)) _onChanged();
+            }
+        }
+
+        /// <summary>Qayta chizishni chaqirmasdan belgini o'zgartirish ("Tozalash" uchun).</summary>
+        public void SetSilently(bool value)
+        {
+            if (_isSelected == value) return;
+            _isSelected = value;
+            OnPropertyChanged(nameof(IsSelected));
+        }
+    }
+
     public enum InventoryViewState
     {
         WarehousesGrid,
@@ -438,6 +472,12 @@ namespace PosElectro.Desktop.ViewModels
                 OnPropertyChanged(nameof(SelectedLowStockCount));
                 OnPropertyChanged(nameof(HasSelectedLowStock));
                 OnPropertyChanged(nameof(ReorderButtonText));
+                ApplyFilter();
+            });
+
+            ClearCategoryFiltersCommand = new RelayCommand(() =>
+            {
+                ClearLowStockCategoryFilters();
                 ApplyFilter();
             });
 
@@ -960,6 +1000,8 @@ namespace PosElectro.Desktop.ViewModels
                     _stockFilter = 0;
                     OnPropertyChanged(nameof(StockFilter));
                     _isOnlySelectedFilterActive = false;
+                    ClearLowStockCategoryFilters();
+                    IsCategoryFilterDropdownOpen = false;
                     OnPropertyChanged(nameof(IsOnlySelectedFilterActive));
                     OnPropertyChanged(nameof(IsLowStockCategorySelected));
                     OnPropertyChanged(nameof(CurrentCategoryTitle));
@@ -1014,6 +1056,92 @@ namespace PosElectro.Desktop.ViewModels
         public int CategoryAllCount { get; private set; }
         public int CategoryLowCount { get; private set; }
         public int CategoryOutCount { get; private set; }
+
+        // ===== Kam qolgan tovarlar: kategoriya bo'yicha filtr =====
+        private const string NoCategoryFilterName = "Kategoriyasiz";
+        private static string LowStockFilterKey(Product p) =>
+            string.IsNullOrWhiteSpace(p.Category) ? NoCategoryFilterName : p.Category.Trim();
+
+        public ObservableCollection<LowStockCategoryFilterItem> LowStockCategoryFilters { get; } = new();
+        public ICommand ClearCategoryFiltersCommand { get; }
+
+        private bool _isCategoryFilterDropdownOpen;
+        public bool IsCategoryFilterDropdownOpen
+        {
+            get => _isCategoryFilterDropdownOpen;
+            set => SetProperty(ref _isCategoryFilterDropdownOpen, value);
+        }
+
+        public string SelectedCategoriesFilterText
+        {
+            get
+            {
+                var selected = LowStockCategoryFilters.Where(f => f.IsSelected).ToList();
+                if (selected.Count == 0) return "Kategoriya: barchasi";
+                if (selected.Count == 1) return selected[0].Name;
+                return $"Kategoriya: {selected.Count} ta";
+            }
+        }
+
+        public bool HasLowStockCategoryFilter => LowStockCategoryFilters.Any(f => f.IsSelected);
+
+        private void OnLowStockCategoryFilterChanged()
+        {
+            OnPropertyChanged(nameof(SelectedCategoriesFilterText));
+            OnPropertyChanged(nameof(HasLowStockCategoryFilter));
+            ApplyFilter();
+        }
+
+        private void ClearLowStockCategoryFilters()
+        {
+            foreach (var f in LowStockCategoryFilters) f.SetSilently(false);
+            OnPropertyChanged(nameof(SelectedCategoriesFilterText));
+            OnPropertyChanged(nameof(HasLowStockCategoryFilter));
+        }
+
+        /// <summary>Filtr ro'yxatini joriy ombordagi kam qolgan tovarlardan qayta tuzadi; belgilanganlar saqlanadi.</summary>
+        private void RebuildLowStockCategoryFilters()
+        {
+            var previouslySelected = new HashSet<string>(
+                LowStockCategoryFilters.Where(f => f.IsSelected).Select(f => f.Name), StringComparer.OrdinalIgnoreCase);
+
+            LowStockCategoryFilters.Clear();
+            var groups = _cachedDisplayProducts
+                .Where(p => p.IsLowStock)
+                .GroupBy(LowStockFilterKey, StringComparer.OrdinalIgnoreCase)
+                .OrderBy(g => g.Key, StringComparer.CurrentCultureIgnoreCase);
+            foreach (var g in groups)
+            {
+                LowStockCategoryFilters.Add(new LowStockCategoryFilterItem(
+                    g.Key, g.Count(), previouslySelected.Contains(g.Key), OnLowStockCategoryFilterChanged));
+            }
+            OnPropertyChanged(nameof(SelectedCategoriesFilterText));
+            OnPropertyChanged(nameof(HasLowStockCategoryFilter));
+        }
+
+        // Jadval sarlavhasidagi katakcha: ekranda ko'rinib turgan kam qolgan tovarlarning hammasini belgilaydi / bekor qiladi.
+        private bool _isBulkSelecting;
+        public bool IsAllLowStockSelected
+        {
+            get => IsLowStockCategorySelected && Products.Count > 0 && Products.All(p => p.IsSelected);
+            set
+            {
+                _isBulkSelecting = true;
+                try
+                {
+                    foreach (var p in Products) p.IsSelected = value;
+                }
+                finally
+                {
+                    _isBulkSelecting = false;
+                }
+                OnPropertyChanged(nameof(SelectedLowStockCount));
+                OnPropertyChanged(nameof(HasSelectedLowStock));
+                OnPropertyChanged(nameof(ReorderButtonText));
+                if (IsOnlySelectedFilterActive) ApplyFilter();
+                else OnPropertyChanged(nameof(IsAllLowStockSelected));
+            }
+        }
 
         public string CurrentCategoryTitle => SelectedCategory == ProductService.CATEGORY_ALL ? "Barcha tovarlar" : SelectedCategory;
         public string ProductsCountHeader => $"({Products.Count} ta tovar)";
@@ -1560,6 +1688,7 @@ namespace PosElectro.Desktop.ViewModels
 
             OnPropertyChanged(nameof(GridCategoryCards));
             OnPropertyChanged(nameof(LowStockCard));
+            RebuildLowStockCategoryFilters();
             ApplyFilter();
         }
 
@@ -1570,6 +1699,12 @@ namespace PosElectro.Desktop.ViewModels
             if (SelectedCategory == ProductService.CATEGORY_LOW_STOCK)
             {
                 list = list.Where(p => p.IsLowStock).ToList();
+                var categoryFilter = new HashSet<string>(
+                    LowStockCategoryFilters.Where(f => f.IsSelected).Select(f => f.Name), StringComparer.OrdinalIgnoreCase);
+                if (categoryFilter.Count > 0)
+                {
+                    list = list.Where(p => categoryFilter.Contains(LowStockFilterKey(p))).ToList();
+                }
                 if (IsOnlySelectedFilterActive)
                 {
                     list = list.Where(p => p.IsSelected).ToList();
@@ -1619,12 +1754,15 @@ namespace PosElectro.Desktop.ViewModels
             OnPropertyChanged(nameof(TotalLowStockCount));
             OnPropertyChanged(nameof(HasSelectedLowStock));
             OnPropertyChanged(nameof(ReorderButtonText));
+            OnPropertyChanged(nameof(IsAllLowStockSelected));
         }
 
         private void OnProductItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
             if (e.PropertyName == nameof(Product.IsSelected))
             {
+                if (_isBulkSelecting) return;
+                OnPropertyChanged(nameof(IsAllLowStockSelected));
                 OnPropertyChanged(nameof(SelectedLowStockCount));
                 OnPropertyChanged(nameof(HasSelectedLowStock));
                 OnPropertyChanged(nameof(ReorderButtonText));
