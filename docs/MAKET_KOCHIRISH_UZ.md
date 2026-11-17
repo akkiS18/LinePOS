@@ -112,6 +112,14 @@ Ranglar ustuni: A+B bosqichidan keyin hammasi tokenda, lekin yorug' temada ekran
 
 ## Oxirgi qadam
 
+**2026-11-17 (Claude Code) — 1.0.3 (fondagi COM skaner + tray) yangi dizaynga ko'chirildi, versiya 1.1.0:**
+- `hotfix/scanner-tray-1.0.3` (f352306) cherry-pick qilindi: COM skanerni fonda o'qish, X → tray, bitta nusxa. Faqat o'rnatuvchi versiyasida to'qnashuv bo'ldi → `Line_kassa_Setup.iss` 1.1.0 (mijozda 1.0.3 bor edi, yangi dizaynda 1.0.1 qolib ketgan edi).
+- Yangi dizayndagi "Tezkor mijoz" oynasi ochiq paytda skaner kodi savatga tushmaydi (signal beradi). Tray matnlari "Line kassa".
+- Yarim tundan keyin yiqiladigan hisobot testi tuzatishi ham shu commit bilan keldi.
+- 67 test o'tdi; sinov bazasi bilan ishga tushirildi: oyna ochiladi, ikkinchi nusxa ochilmaydi, X bosilganda trayda qoladi. Haqiqiy skaner bilan sinalmagan.
+- Egasi: Backspace → Brak yorlig'i yangi dizaynda ataylab olib tashlangan (qaytarilmaydi).
+- Eski versiyadan farq (egasi hal qiladi): ombor kartochkasida eski "Qiymati" (sotish narxi bo'yicha) o'rniga tan narxi qiymati.
+
 **2026-11-15 (Claude Code) — Turli oyna o'lchamlari (responsive):**
 - Eng kichik oyna (1000×650) va katta ekran (1920×1080) da barcha bo'limlar render qilib tekshirildi.
 - Ombor jadvali: ustunlar endi nisbiy (`*` + `MinWidth`) — tor oynada "Amallar" ustuni (tahrirlash, stiker, …) ekrandan chiqib ketmaydi; qidiruv maydoni ham torayadi (220–420px).

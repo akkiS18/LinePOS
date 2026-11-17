@@ -1,6 +1,6 @@
 ; Script generated for Inno Setup 7
 #define MyAppName "SMART kassa"
-#define MyAppVersion "1.0.1"
+#define MyAppVersion "1.1.0"
 #define MyAppPublisher "Line Soft"
 #define MyAppExeName "PosElectro.Desktop.exe"
 

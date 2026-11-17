@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -26,6 +27,128 @@ namespace PosElectro.Desktop
             }
             _viewModel.PropertyChanged += ViewModel_PropertyChanged;
             DataContext = _viewModel;
+            InitBackgroundScanner();
+        }
+
+        // ===== 1.0.3: tray + fondagi skaner (USB Serial / COM rejim) =====
+        private Services.TrayService? _tray;
+        private Services.SerialScannerService? _serialScanner;
+        private bool _reallyExit;
+
+        private void InitBackgroundScanner()
+        {
+            try
+            {
+                _tray = new Services.TrayService();
+                _tray.OpenRequested += () => Dispatcher.BeginInvoke(new Action(ShowFromTray));
+                _tray.ExitRequested += () => Dispatcher.BeginInvoke(new Action(ExitApplication));
+            }
+            catch (Exception ex)
+            {
+                _tray = null;
+                System.Diagnostics.Debug.WriteLine("Tray: " + ex.Message);
+            }
+
+            var db = _viewModel.Database;
+            _serialScanner = new Services.SerialScannerService(
+                () => db.GetSetting(Services.SerialScannerService.SettingKey, ""),
+                port => Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    try { db.SetSetting(Services.SerialScannerService.SettingKey, port); } catch { }
+                })));
+            _serialScanner.BarcodeScanned += code => Dispatcher.BeginInvoke(new Action(() => OnBackgroundBarcode(code)));
+            _serialScanner.StatusChanged += () => Dispatcher.BeginInvoke(new Action(UpdateTrayTooltip));
+            _serialScanner.Start();
+            UpdateTrayTooltip();
+
+            if (Application.Current != null)
+                Application.Current.SessionEnding += (_, _) => ExitApplication();
+        }
+
+        private void UpdateTrayTooltip()
+        {
+            if (_tray == null || _serialScanner == null) return;
+            var port = _serialScanner.ActivePort;
+            _tray.SetTooltip(!string.IsNullOrEmpty(port)
+                ? $"Line kassa · skaner ulangan ({port})"
+                : "Line kassa");
+        }
+
+        /// <summary>Trayda yoki boshqa oyna ortida turgan kassani oldinga chiqaradi.</summary>
+        public void ShowFromTray()
+        {
+            Services.WindowActivator.BringToFront(this);
+        }
+
+        /// <summary>Haqiqiy chiqish (tray menyusi yoki Windows o'chayotganda).</summary>
+        public void ExitApplication()
+        {
+            if (_reallyExit) return;
+            _reallyExit = true;
+            try { Close(); } catch { }
+            Application.Current?.Shutdown();
+        }
+
+        /// <summary>
+        /// COM skanerdan kod keldi. Qoidalar:
+        /// 1) Kassa dasturi faol va kursor matn maydonida (tovar formasidagi shtrix-kod, qidiruv, summa) —
+        ///    kod o'sha maydonga yoziladi va Enter beriladi (klaviatura rejimidagi bilan bir xil).
+        /// 2) Dasturda boshqa dialog oynasi ochiq — o'sha oyna oldinga chiqadi, savat o'zgartirilmaydi.
+        /// 3) Qolgan hamma holat (Telegram faol, dastur trayda, boshqa bo'lim) — kassa oynasi oldinga chiqadi,
+        ///    Kassa bo'limiga o'tadi va tovar savatga tushadi (topilmasa — "topilmadi" oynasi).
+        /// </summary>
+        private void OnBackgroundBarcode(string code)
+        {
+            if (_viewModel.IsDeviceLocked)
+            {
+                ShowFromTray();
+                return;
+            }
+
+            var dialog = Application.Current?.Windows.OfType<Window>()
+                .FirstOrDefault(w => w != this && w.IsVisible);
+            bool appActive = IsActive || (dialog?.IsActive ?? false);
+
+            if (appActive && Keyboard.FocusedElement is TextBox tb && tb.IsEnabled && !tb.IsReadOnly)
+            {
+                TypeIntoTextBox(tb, code);
+                return;
+            }
+
+            if (dialog != null)
+            {
+                Services.WindowActivator.BringToFront(dialog);
+                System.Media.SystemSounds.Beep.Play();
+                return;
+            }
+
+            ShowFromTray();
+            if (_viewModel.CurrentView != _viewModel.CashierVM)
+                _viewModel.NavigateCashierCommand.Execute(null);
+
+            var cvm = _viewModel.CashierVM;
+            if (cvm.IsPaymentModalOpen || cvm.IsUnrecognizedBarcodeModalOpen || cvm.IsHoldModalOpen || cvm.IsBrakModalOpen || cvm.IsEditModalOpen || cvm.IsQuickCustomerModalOpen)
+            {
+                // To'lov yoki boshqa oyna ochiq paytda savat jimgina o'zgarmasin
+                System.Media.SystemSounds.Beep.Play();
+                return;
+            }
+            cvm.HandleBarcodeScanned(code);
+        }
+
+        private static void TypeIntoTextBox(TextBox tb, string code)
+        {
+            tb.SelectedText = code;
+            tb.CaretIndex = tb.SelectionStart + tb.SelectionLength;
+            tb.SelectionLength = 0;
+
+            var source = PresentationSource.FromVisual(tb);
+            if (source == null) return;
+            var preview = new KeyEventArgs(Keyboard.PrimaryDevice, source, 0, Key.Enter) { RoutedEvent = Keyboard.PreviewKeyDownEvent };
+            tb.RaiseEvent(preview);
+            if (preview.Handled) return;
+            var down = new KeyEventArgs(Keyboard.PrimaryDevice, source, 0, Key.Enter) { RoutedEvent = Keyboard.KeyDownEvent };
+            tb.RaiseEvent(down);
         }
 
         // Menyuni ⚙ tugmasining o'ng chetiga tekislaydi (Windows'ning "menyu tekislash" sozlamasidan qat'i nazar)
@@ -305,9 +428,28 @@ namespace PosElectro.Desktop
 
         protected override void OnClosing(CancelEventArgs e)
         {
+            // X bosilsa — trayga yashirinadi, skaner tinglanishda davom etadi
+            if (!_reallyExit && _tray != null)
+            {
+                e.Cancel = true;
+                Hide();
+                _tray.ShowHiddenHintOnce();
+                return;
+            }
+
             base.OnClosing(e);
             _viewModel.SyncServer.Stop();
             _viewModel.LicensingService.Dispose();
+            _serialScanner?.Dispose();
+            _tray?.Dispose();
+            _tray = null;
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            base.OnClosed(e);
+            // Tray bo'lmasa (yaratib bo'lmagan holatda) oddiy yopilish dasturni to'xtatadi
+            Application.Current?.Shutdown();
         }
     }
 }

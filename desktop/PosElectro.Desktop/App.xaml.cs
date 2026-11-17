@@ -18,9 +18,34 @@ namespace PosElectro.Desktop
             catch { /* Logging must not replace the original error. */ }
         }
 
+        private const string InstanceMutexName = @"Local\SMARTkassa_PosElectro_SingleInstance";
+        private const string ShowEventName = @"Local\SMARTkassa_PosElectro_ShowWindow";
+        private static System.Threading.Mutex? _instanceMutex;
+        private static System.Threading.EventWaitHandle? _showEvent;
+
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
+
+            // Faqat bitta nusxa: dastur trayda turganda ikonkasi qayta bosilsa, yangisi ochilmaydi —
+            // mavjud oyna oldinga chiqadi (ikki nusxa bitta bazaga yozmasligi uchun).
+            _instanceMutex = new System.Threading.Mutex(true, InstanceMutexName, out bool isFirst);
+            if (!isFirst)
+            {
+                try { System.Threading.EventWaitHandle.OpenExisting(ShowEventName).Set(); } catch { }
+                Shutdown();
+                return;
+            }
+            _showEvent = new System.Threading.EventWaitHandle(false, System.Threading.EventResetMode.AutoReset, ShowEventName);
+            var listener = new System.Threading.Thread(() =>
+            {
+                while (true)
+                {
+                    try { _showEvent.WaitOne(); } catch { return; }
+                    Dispatcher.BeginInvoke(new Action(() => (MainWindow as MainWindow)?.ShowFromTray()));
+                }
+            }) { IsBackground = true, Name = "SingleInstanceListener" };
+            listener.Start();
 
             try
             {
@@ -82,6 +107,10 @@ namespace PosElectro.Desktop
                         MessageBoxImage.Error);
                 }
             };
+
+            var main = new MainWindow();
+            MainWindow = main;
+            main.Show();
         }
     }
 }

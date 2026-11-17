@@ -46,10 +46,12 @@ namespace PosElectro.Desktop.Tests
         [Fact]
         public void Search_lists_newest_first_across_history_and_clearing_restores_period_list()
         {
-            var todayMorning = AddSale(_now - 3 * 3_600_000, _cable);   // bugun, 3 soat oldin
-            var todayLatest = AddSale(_now - 60_000, _cable);           // bugun, eng oxirgi
+            // Times stay inside today even when the test runs just after midnight
+            long dayStart = new DateTimeOffset(DateTime.Today).ToUnixTimeMilliseconds();
+            var todayMorning = AddSale(Math.Max(_now - 3 * 3_600_000, dayStart + 1_000), _cable);   // bugun, 3 soat oldin
+            var todayLatest = AddSale(Math.Max(_now - 60_000, dayStart + 2_000), _cable);           // bugun, eng oxirgi
             var lastWeek = AddSale(_now - 7L * 24 * 3_600_000, _cable); // 7 kun oldin (id eng kichik emas, keyin kiritilgan)
-            var lamp = AddSale(_now - 30_000, _db.GetAllProducts().First(p => p.Name.StartsWith("Lampa")));
+            var lamp = AddSale(Math.Max(_now - 30_000, dayStart + 3_000), _db.GetAllProducts().First(p => p.Name.StartsWith("Lampa")));
 
             var vm = new ReportsViewModel(_db, new CurrencyService(_db));   // standart davr: Bugun
             Assert.Equal(new[] { lamp.Id, todayLatest.Id, todayMorning.Id }, vm.Sales.Select(s => s.Id).ToArray());

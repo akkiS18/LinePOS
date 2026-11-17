@@ -7,6 +7,8 @@
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <UseWPF>true</UseWPF>
+    <!-- Tray ikonkasi (NotifyIcon) uchun -->
+    <UseWindowsForms>true</UseWindowsForms>
     <ApplicationIcon>Assets\app_logo.ico</ApplicationIcon>
     <!-- Intel Celeron va past quvvatli kompyuterlar uchun optimizatsiyalar -->
     <TieredCompilation>true</TieredCompilation>
@@ -27,6 +29,8 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <!-- QR Kod generatsiyasi (Lokal Wi-Fi ulash uchun) -->
     <PackageReference Include="QRCoder" Version="1.6.0" />
+    <!-- Skaner "USB Serial" (COM) rejimi: fonda o'qish -->
+    <PackageReference Include="System.IO.Ports" Version="8.0.0" />
   </ItemGroup>
 
 </Project>
