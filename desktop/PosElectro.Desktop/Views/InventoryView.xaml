@@ -1245,7 +1245,17 @@
                                 </Grid.ColumnDefinitions>
                                 <StackPanel>
                                     <TextBlock Text="Rasm" Style="{StaticResource FieldLabel}"/>
-                                    <Grid Width="120" Height="120">
+                                    <Grid Width="120" Height="120" AllowDrop="True" Background="Transparent"
+                                          DragOver="FormImage_DragOver" Drop="FormImage_Drop"
+                                          ToolTip="Fayldan tanlang, rasmni shu yerga sudrab tashlang yoki nusxalangan rasmni Ctrl+V bilan qo'ying">
+                                        <Grid.ContextMenu>
+                                            <ContextMenu>
+                                                <MenuItem Header="Rasmni qo'yish" InputGestureText="Ctrl+V" Command="{Binding PasteFormImageCommand}"/>
+                                                <MenuItem Header="Fayldan tanlash…" Command="{Binding PickFormImageCommand}"/>
+                                                <MenuItem Header="Rasmni o'chirish" Command="{Binding RemoveFormImageCommand}"
+                                                          Visibility="{Binding FormHasImage, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                            </ContextMenu>
+                                        </Grid.ContextMenu>
                                         <!-- Rasm yo'q: punktir chegarali tugma -->
                                         <Button Command="{Binding PickFormImageCommand}" Cursor="Hand"
                                                 Visibility="{Binding FormHasImage, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
@@ -1261,6 +1271,8 @@
                                                             </Viewbox>
                                                             <TextBlock Text="Rasm qo'shish" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource Ink2}"
                                                                        Margin="6,6,6,0" TextAlignment="Center" TextWrapping="Wrap"/>
+                                                            <TextBlock Text="yoki Ctrl+V" FontSize="11" Foreground="{DynamicResource Ink3}"
+                                                                       Margin="6,2,6,0" TextAlignment="Center"/>
                                                         </StackPanel>
                                                     </Grid>
                                                     <ControlTemplate.Triggers>
@@ -1428,6 +1440,15 @@
             <Border Grid.Row="2" MinHeight="72" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0" Padding="24,12">
                 <DockPanel>
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Command="{Binding AddFormToCartCommand}" Style="{StaticResource BtnSecondary}" Height="46" Padding="18,0" Margin="0,0,10,0"
+                                ToolTip="Tovarni kassa savatiga qo'shib, kassaga o'tish (o'zgarishlar bo'lsa avval saqlanadi)">
+                            <StackPanel Orientation="Horizontal">
+                                <Viewbox Width="18" Height="18" Margin="0,0,8,0">
+                                    <Path Style="{StaticResource Ic}" Data="M3 4h2l2.4 11h10.2L20 8H6.2 M9 20h.01 M17 20h.01 M12 9v4 M10 11h4"/>
+                                </Viewbox>
+                                <TextBlock Text="Savatga qo'shish" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
                         <Button Command="{Binding CancelAddEditCommand}" IsCancel="True" Style="{StaticResource BtnSecondary}" Height="46" Padding="18,0">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="Bekor qilish" VerticalAlignment="Center"/>

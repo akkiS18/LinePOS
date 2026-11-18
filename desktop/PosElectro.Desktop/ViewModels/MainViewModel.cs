@@ -146,6 +146,16 @@ namespace PosElectro.Desktop.ViewModels
                 });
             };
 
+            // Tovar formasidagi "Savatga qo'shish": tovar kassa savatiga tushadi va kassa ochiladi
+            InventoryVM.RequestAddToCart += product =>
+            {
+                App.Current?.Dispatcher.Invoke(() =>
+                {
+                    CashierVM.AddToCart(product);
+                    CurrentView = CashierVM;
+                });
+            };
+
             ReportsVM = new ReportsViewModel(Database, CurrencyService);
             DebtsVM = new DebtsViewModel(Database);
             DebtsVM.RequestOpenCashierForCustomer += customer =>

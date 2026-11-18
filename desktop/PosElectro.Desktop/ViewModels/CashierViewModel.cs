@@ -1265,10 +1265,13 @@ namespace PosElectro.Desktop.ViewModels
             if (existing != null)
             {
                 existing.Quantity += qty;
+                // Oxirgi qo'shilgan tovar savatning eng tepasida turadi
+                var idx = CartItems.IndexOf(existing);
+                if (idx > 0) CartItems.Move(idx, 0);
             }
             else
             {
-                CartItems.Add(new CartItemModel(
+                CartItems.Insert(0, new CartItemModel(
                     product, 
                     qty, 
                     product.SellingPrice, 

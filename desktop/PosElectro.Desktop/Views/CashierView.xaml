@@ -1038,7 +1038,7 @@
                     </ScrollViewer>
 
                     <!-- Savat qatorlari -->
-                    <ListBox Grid.Row="2" Margin="0,8"
+                    <ListBox x:Name="CartListBox" Grid.Row="2" Margin="0,8"
                              ItemsSource="{Binding CartItems}"
                              Visibility="{Binding HasCartItems, Converter={StaticResource BooleanToVisibilityConverter}}"
                              Background="Transparent" BorderThickness="0" Padding="0" Focusable="False"

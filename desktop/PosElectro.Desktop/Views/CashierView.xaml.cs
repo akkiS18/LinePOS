@@ -11,6 +11,25 @@ namespace PosElectro.Desktop.Views
         public CashierView()
         {
             InitializeComponent();
+            DataContextChanged += (_, e) =>
+            {
+                if (e.OldValue is CashierViewModel oldVm) oldVm.CartItems.CollectionChanged -= CartItems_CollectionChanged;
+                if (e.NewValue is CashierViewModel newVm) newVm.CartItems.CollectionChanged += CartItems_CollectionChanged;
+            };
+        }
+
+        /// <summary>Yangi qo'shilgan tovar tepaga tushadi — savat ro'yxatini tepaga aylantiramiz.</summary>
+        private void CartItems_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            if ((e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add
+                 || e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Move)
+                && e.NewStartingIndex == 0 && CartListBox.Items.Count > 0)
+            {
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    if (CartListBox.Items.Count > 0) CartListBox.ScrollIntoView(CartListBox.Items[0]);
+                }), System.Windows.Threading.DispatcherPriority.Background);
+            }
         }
 
         private void ProductList_ScrollChanged(object sender, ScrollChangedEventArgs e)

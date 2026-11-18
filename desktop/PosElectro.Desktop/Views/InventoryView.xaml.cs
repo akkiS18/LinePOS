@@ -130,6 +130,16 @@ namespace PosElectro.Desktop.Views
             // 5. Tovar qo'shish / tahrirlash formasi
             if (vm.IsAddEditFormVisible)
             {
+                // Ctrl+V: buferda rasm bo'lsa — tovar rasmiga qo'yiladi. Matn maydonida matn qo'yish avvalgidek ishlaydi.
+                if (e.Key == System.Windows.Input.Key.V
+                    && (System.Windows.Input.Keyboard.Modifiers & System.Windows.Input.ModifierKeys.Control) != 0)
+                {
+                    bool inTextBox = System.Windows.Input.Keyboard.FocusedElement is TextBox;
+                    if (inTextBox && Clipboard.ContainsText()) return;
+                    if (vm.TryPasteFormImage()) e.Handled = true;
+                    return;
+                }
+
                 if (e.Key == System.Windows.Input.Key.Escape)
                 {
                     if (vm.CancelAddEditCommand.CanExecute(null))
@@ -154,6 +164,25 @@ namespace PosElectro.Desktop.Views
                 }
             }
         }
+
+        private void FormImage_DragOver(object sender, DragEventArgs e)
+        {
+            e.Effects = DroppedImage(e) != null ? DragDropEffects.Copy : DragDropEffects.None;
+            e.Handled = true;
+        }
+
+        private void FormImage_Drop(object sender, DragEventArgs e)
+        {
+            if (DataContext is not InventoryViewModel vm) return;
+            var file = DroppedImage(e);
+            if (file != null) vm.SetFormImageFromFile(file);
+            e.Handled = true;
+        }
+
+        private static string? DroppedImage(DragEventArgs e) =>
+            e.Data.GetDataPresent(DataFormats.FileDrop) && e.Data.GetData(DataFormats.FileDrop) is string[] files
+                ? Array.Find(files, InventoryViewModel.IsImageFile)
+                : null;
 
         private void PriceTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {

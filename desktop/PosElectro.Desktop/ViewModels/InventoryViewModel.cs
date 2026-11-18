@@ -351,6 +351,148 @@ namespace PosElectro.Desktop.ViewModels
         }
         public bool FormHasImage => !string.IsNullOrWhiteSpace(FormImagePath) && System.IO.File.Exists(FormImagePath);
 
+        /// <summary>Formadagi tovarni kassa savatiga qo'shish so'rovi (MainViewModel kassaga o'tkazadi).</summary>
+        public event Action<Product>? RequestAddToCart;
+        private ICommand? _addFormToCartCommand;
+        public ICommand AddFormToCartCommand => _addFormToCartCommand ??= new RelayCommand(AddFormToCart);
+        private ICommand? _pasteFormImageCommand;
+        public ICommand PasteFormImageCommand => _pasteFormImageCommand ??= new RelayCommand(() =>
+        {
+            if (!TryPasteFormImage())
+                FormErrorMessage = "Xotirada (bufer) rasm yo'q. Rasmni nusxalab (Copy image), keyin Ctrl+V bosing.";
+        });
+
+        private string _formSnapshot = string.Empty;
+        private Product? _lastSavedProduct;
+
+        private string FormFingerprint() => string.Join("\u0001",
+            FormName, FormBarcode, FormCategory, FormCostPrice, FormIsUsd, FormSellingPrice, FormSellingPrice2,
+            FormStockQuantity, FormUnitTypeIndex, FormMinStockAlert, FormNote, FormImagePath);
+
+        /// <summary>
+        /// "Savatga qo'shish": formada o'zgarish bo'lsa avval oddiy "Saqlash" bajariladi (xato bo'lsa to'xtaydi),
+        /// o'zgarish bo'lmasa saqlamasdan forma yopiladi. Keyin tovar savatga tushadi va kassa ochiladi.
+        /// </summary>
+        public void AddFormToCart()
+        {
+            Product? product;
+            if (_editingProduct == null || FormFingerprint() != _formSnapshot)
+            {
+                _lastSavedProduct = null;
+                SaveProductForm();
+                if (HasFormError || _lastSavedProduct == null) return;
+                product = _lastSavedProduct;
+            }
+            else
+            {
+                product = _editingProduct;
+                CancelAddEdit();
+            }
+            RequestAddToCart?.Invoke(product);
+        }
+
+        /// <summary>Buferdagi rasmni (Telegram "Copy image", brauzer, skrinshot yoki nusxalangan fayl) formaga qo'yadi.</summary>
+        public bool TryPasteFormImage()
+        {
+            try
+            {
+                var data = Clipboard.GetDataObject();
+                if (data == null) return false;
+
+                // 1) Nusxalangan rasm fayli (Explorer / Telegram'dan fayl sifatida)
+                if (data.GetDataPresent(DataFormats.FileDrop) && data.GetData(DataFormats.FileDrop) is string[] files)
+                {
+                    var img = files.FirstOrDefault(IsImageFile);
+                    if (img != null) return SetFormImageFromFile(img);
+                }
+
+                // 2) PNG oqimi (Telegram, Chrome — shaffoflik saqlanadi)
+                if (data.GetDataPresent("PNG") && data.GetData("PNG") is System.IO.Stream png)
+                {
+                    var decoded = System.Windows.Media.Imaging.BitmapDecoder.Create(png,
+                        System.Windows.Media.Imaging.BitmapCreateOptions.PreservePixelFormat,
+                        System.Windows.Media.Imaging.BitmapCacheOption.OnLoad).Frames[0];
+                    return SetFormImageFromBitmap(decoded);
+                }
+
+                // 3) Oddiy rasm (DIB / Bitmap)
+                if (Clipboard.ContainsImage())
+                {
+                    var bmp = Clipboard.GetImage();
+                    if (bmp != null) return SetFormImageFromBitmap(bmp);
+                }
+            }
+            catch (Exception ex)
+            {
+                FormErrorMessage = $"Rasmni qo'yib bo'lmadi: {ex.Message}";
+                return true; // xabar ko'rsatildi
+            }
+            return false;
+        }
+
+        public static bool IsImageFile(string path)
+        {
+            var ext = System.IO.Path.GetExtension(path).ToLowerInvariant();
+            return ext is ".jpg" or ".jpeg" or ".png" or ".webp" or ".bmp" or ".gif";
+        }
+
+        /// <summary>Faylni (sudrab tashlash yoki nusxalash) formaga rasm qilib qo'yadi — "Rasm qo'shish" bilan bir xil joyga.</summary>
+        public bool SetFormImageFromFile(string sourcePath)
+        {
+            try
+            {
+                var ext = System.IO.Path.GetExtension(sourcePath);
+                var destPath = NewFormImagePath(ext);
+                System.IO.File.Copy(sourcePath, destPath, overwrite: true);
+                FormImagePath = destPath;
+                FormErrorMessage = string.Empty;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                FormErrorMessage = $"Rasmni qo'yib bo'lmadi: {ex.Message}";
+                return true;
+            }
+        }
+
+        private bool SetFormImageFromBitmap(System.Windows.Media.Imaging.BitmapSource src)
+        {
+            if (src.PixelWidth <= 0 || src.PixelHeight <= 0) return false;
+            // Shaffof joylar oq fonga, juda katta rasm 1600 px gacha kichraytiriladi; JPEG sifatida saqlanadi.
+            double scale = Math.Min(1.0, 1600.0 / Math.Max(src.PixelWidth, src.PixelHeight));
+            System.Windows.Media.Imaging.BitmapSource scaled = scale < 1.0
+                ? new System.Windows.Media.Imaging.TransformedBitmap(src, new System.Windows.Media.ScaleTransform(scale, scale))
+                : src;
+            var bgra = new System.Windows.Media.Imaging.FormatConvertedBitmap(scaled, System.Windows.Media.PixelFormats.Bgra32, null, 0);
+            int w = bgra.PixelWidth, h = bgra.PixelHeight, stride = w * 4;
+            var px = new byte[stride * h];
+            bgra.CopyPixels(px, stride, 0);
+            var rgb = new byte[w * 3 * h];
+            for (int i = 0, j = 0; i < px.Length; i += 4, j += 3)
+            {
+                int a = px[i + 3];
+                rgb[j] = (byte)((px[i] * a + 255 * (255 - a)) / 255);
+                rgb[j + 1] = (byte)((px[i + 1] * a + 255 * (255 - a)) / 255);
+                rgb[j + 2] = (byte)((px[i + 2] * a + 255 * (255 - a)) / 255);
+            }
+            var flat = System.Windows.Media.Imaging.BitmapSource.Create(w, h, 96, 96, System.Windows.Media.PixelFormats.Bgr24, null, rgb, w * 3);
+            var encoder = new System.Windows.Media.Imaging.JpegBitmapEncoder { QualityLevel = 90 };
+            encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(flat));
+            var destPath = NewFormImagePath(".jpg");
+            using (var fs = System.IO.File.Create(destPath)) encoder.Save(fs);
+            FormImagePath = destPath;
+            FormErrorMessage = string.Empty;
+            return true;
+        }
+
+        private string NewFormImagePath(string ext)
+        {
+            var imagesDir = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "product_images");
+            if (!System.IO.Directory.Exists(imagesDir)) System.IO.Directory.CreateDirectory(imagesDir);
+            var guid = _editingProduct?.Guid ?? Guid.NewGuid().ToString();
+            return System.IO.Path.Combine(imagesDir, $"prod_{guid}_{DateTime.Now.Ticks}{ext}");
+        }
+
         private string _transferErrorMessage = string.Empty;
         public string TransferErrorMessage
         {
@@ -1349,6 +1491,7 @@ namespace PosElectro.Desktop.ViewModels
             FormImagePath = null;
             FormErrorMessage = string.Empty;
             UpdateCostConversion();
+            _formSnapshot = FormFingerprint();
 
             CurrentViewState = InventoryViewState.AddEditForm;
         }
@@ -1386,6 +1529,7 @@ namespace PosElectro.Desktop.ViewModels
             FormImagePath = p.ImagePath;
             FormErrorMessage = string.Empty;
             UpdateCostConversion();
+            _formSnapshot = FormFingerprint();
 
             CurrentViewState = InventoryViewState.AddEditForm;
         }
@@ -1545,6 +1689,7 @@ namespace PosElectro.Desktop.ViewModels
             try
             {
                 _db.SaveProduct(product);
+                _lastSavedProduct = product;
                 Refresh();
 
                 // Oldingi holatga qaytish: agar ProductsList da bo'lsa, o'sha kategoriyaga qaytamiz
