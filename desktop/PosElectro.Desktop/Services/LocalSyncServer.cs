@@ -179,7 +179,7 @@ namespace PosElectro.Desktop.Services
                 string token=Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
                 using var db=store.Open(); WifiSyncStore.Exec(db,null,"INSERT INTO sync_devices(token_hash,device_id,device_name) VALUES(@hash,@id,@name)",("@hash",Hash(token)),("@id",id),("@name",name));
                 pairingCode="";
-                return new JObject { ["token"]=token,["serverId"]=store.ServerId,["protocol"]=2,["capabilities"]=new JArray{ DebtWire.Capability, DebtRepository.CustomerEditCapability, DebtExtendedWire.Capability, "debtStockWatermarkV1" },["storeGuid"]=_debtStoreGuid,["historyEpoch"]=_debtHistoryEpoch };
+                return new JObject { ["token"]=token,["serverId"]=store.ServerId,["protocol"]=2,["capabilities"]=new JArray{ DebtWire.Capability, DebtRepository.CustomerEditCapability, DebtExtendedWire.Capability, "debtStockWatermarkV1", ProductImageSync.Capability },["storeGuid"]=_debtStoreGuid,["historyEpoch"]=_debtHistoryEpoch };
             }
         }
         private async Task MonitorClients(CancellationToken token)
@@ -212,7 +212,7 @@ namespace PosElectro.Desktop.Services
                         // Never allow legacy unauthenticated writes to bypass V2 invariants.
                         var deviceId = Authenticate(request.Headers,(client.Client.RemoteEndPoint as IPEndPoint)?.Address.ToString()??"");
                         if(path=="/api/ping" && request.Method=="GET")
-                        {await Reply(stream,200,new JObject{["protocol"]=2,["serverId"]=store.ServerId,["name"]="Line kassa",["productsCount"]=_db.GetActiveProductsCount(),["salesCount"]=_db.GetTotalSalesCount(),["capabilities"]=new JArray{ DebtWire.Capability, DebtRepository.CustomerEditCapability, DebtExtendedWire.Capability, "debtStockWatermarkV1" },["storeGuid"]=_debtStoreGuid,["historyEpoch"]=_debtHistoryEpoch},timeout.Token);return;}
+                        {await Reply(stream,200,new JObject{["protocol"]=2,["serverId"]=store.ServerId,["name"]="Line kassa",["productsCount"]=_db.GetActiveProductsCount(),["salesCount"]=_db.GetTotalSalesCount(),["capabilities"]=new JArray{ DebtWire.Capability, DebtRepository.CustomerEditCapability, DebtExtendedWire.Capability, "debtStockWatermarkV1", ProductImageSync.Capability },["storeGuid"]=_debtStoreGuid,["historyEpoch"]=_debtHistoryEpoch},timeout.Token);return;}
                         // Bind V2 requests to the paired database before any mutation occurs.
                         if(path.StartsWith("/api/v2/",StringComparison.Ordinal) &&
                            (!request.Headers.TryGetValue("X-LinePOS-Server-Id",out var expectedServer) || expectedServer!=store.ServerId))
@@ -395,6 +395,25 @@ namespace PosElectro.Desktop.Services
                             var reply=new JObject{["protocol"]=2,["serverId"]=store.ServerId,["storeGuid"]=_debtStoreGuid,["historyEpoch"]=_debtHistoryEpoch,["cursor"]=returnedCursor,["envelopes"]=envelopes,["sequences"]=sequences,["customers"]=customersArray};
                             await Reply(stream,200,reply,timeout.Token);
                             return;
+                        }
+                        if(path.StartsWith("/api/v2/images/",StringComparison.Ordinal))
+                        {
+                            var images=new ProductImageSync(_db.DatabaseFilePath);
+                            if(path=="/api/v2/images/manifest" && request.Method=="GET") { await Reply(stream,200,images.Manifest(),timeout.Token);return; }
+                            if(path=="/api/v2/images/get" && request.Method=="GET")
+                            { var query=uri.Query.TrimStart('?').Split('&').Select(x=>x.Split('=',2)).Where(x=>x.Length==2).ToDictionary(x=>x[0],x=>Uri.UnescapeDataString(x[1]));
+                              await Reply(stream,200,images.Get(query.TryGetValue("guid",out var g)?g:""),timeout.Token);return; }
+                            if(path=="/api/v2/images/put" && request.Method=="POST")
+                            { var body=JObject.Parse(request.Body);
+                              var result=images.Put(WifiSyncStore.Required(body,"guid"),(string?)body["data"]??throw new ArgumentException("Rasm yo'q."));
+                              ActivityLogged?.Invoke("info","Telefondan tovar rasmi qabul qilindi");
+                              try { DataSynced?.Invoke(); } catch { }
+                              await Reply(stream,200,result,timeout.Token);return; }
+                            if(path=="/api/v2/images/delete" && request.Method=="POST")
+                            { images.Delete(WifiSyncStore.Required(JObject.Parse(request.Body),"guid"));
+                              ActivityLogged?.Invoke("info","Telefonda tovar rasmi olib tashlandi");
+                              try { DataSynced?.Invoke(); } catch { }
+                              await Reply(stream,200,new JObject{["success"]=true},timeout.Token);return; }
                         }
                         if(path=="/api/v2/push" && request.Method=="POST")
                         {var reply=store.Push((JArray?)JObject.Parse(request.Body)["operations"]??throw new ArgumentException("Amallar yo'q."));DataSynced?.Invoke();await Reply(stream,200,reply,timeout.Token);return;}

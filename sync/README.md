@@ -25,6 +25,24 @@ code are unchanged. Both applications must be upgraded together; V1 sync writes 
 * Catalog conflicts compare journal revisions, not phone clocks. The Wi-Fi dialog offers
   **Telefon tahriri / Kompyuter tahriri**. Stock operations are retained in either choice.
 
+## Product photos (`productImagesV1`)
+
+* Photos are synced separately from the catalog journal. The desktop keeps a photo as
+  `products.image_path` (a file in `product_images\`); the phone keeps `files/rasmlar/<guid>.jpg`.
+  `image_path`/`updated_at` are not in the `sync_products_update` trigger, so a photo change
+  never creates a product journal entry, revision bump or catalog conflict. Catalog upserts
+  from the phone do not include `image_path`, so phone edits never clear a desktop photo.
+* Endpoints (authenticated, `X-LinePOS-Server-Id` required):
+  `GET /api/v2/images/manifest` → `{images:[{guid,hash,modifiedAt}], missing:[guid]}`;
+  `GET /api/v2/images/get?guid=` → JPEG ≤600 px, base64, plus the source file hash;
+  `POST /api/v2/images/put {guid,data}` (≤4 MB, must decode as an image, product must exist);
+  `POST /api/v2/images/delete {guid}` (unlinks; the file is kept, as in the desktop UI).
+* The phone stores, per product, the last agreed pair (phone hash, desktop hash) and decides
+  three-way: only one side changed → copy it; both changed → the side that still has a photo
+  wins, otherwise the newer one. Desktop rows whose file is missing are reported as `missing`
+  and never delete the phone copy. At most 20 transfers per round; manifest every 30 s or
+  immediately after a local photo change. Photo failures never change the sync status.
+
 ## First upgrade and connection
 
 1. Back up both existing databases before upgrading. Upgrade the desktop and Android together.
