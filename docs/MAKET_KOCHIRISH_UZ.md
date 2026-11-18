@@ -117,6 +117,7 @@ Ranglar ustuni: A+B bosqichidan keyin hammasi tokenda, lekin yorug' temada ekran
 - Tovar formasi (2.3) pastki panelida "Savatga qo'shish": formada o'zgarish bo'lsa avval oddiy Saqlash (xato bo'lsa to'xtaydi), o'zgarish bo'lmasa saqlamaydi; tovar kassa savatiga tushadi va Kassa ochiladi (`InventoryViewModel.RequestAddToCart` → `MainViewModel`).
 - Rasm joyi: Ctrl+V (buferdagi rasm — Telegram "Copy image", brauzer, skrinshot yoki nusxalangan fayl), o'ng tugma menyusi (Rasmni qo'yish / Fayldan tanlash / O'chirish), rasm faylini sudrab tashlash. Matn maydonida Ctrl+V matnni avvalgidek qo'yadi. Buferdagi rasm oq fonda JPEG (≤1600 px) bo'lib `product_images`ga saqlanadi.
 - Build o'tdi, 72 test o'tdi. Ekranda hali ko'rilmagan.
+- O'rnatish fayli 1.1.1: `desktop/Output/Line_kassa_Desktop_Setup_1.1.1.exe` (shu o'zgarishlar bilan; 1.1.0 yonida saqlangan).
 
 **2026-11-17 (Claude Code) — 1.0.3 (fondagi COM skaner + tray) yangi dizaynga ko'chirildi, versiya 1.1.0:**
 - `hotfix/scanner-tray-1.0.3` (f352306) cherry-pick qilindi: COM skanerni fonda o'qish, X → tray, bitta nusxa. Faqat o'rnatuvchi versiyasida to'qnashuv bo'ldi → `Line_kassa_Setup.iss` 1.1.0 (mijozda 1.0.3 bor edi, yangi dizaynda 1.0.1 qolib ketgan edi).
