@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<title>LinePOS Instagram karusel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=block" rel="stylesheet">
+<style>
+:root{
+  --bg:#0B1215; --surface:#121B1F; --surface2:#182328; --line:#24323A; --line-soft:#1C282E;
+  --ink:#E7EEF1; --ink2:#A1B1BA; --ink3:#8A9BA4;
+  --accent:#0E7A8F; --accent-ink:#5CC4D6; --accent-soft:#11313A;
+  --deep:#084658; --deep2:#0B6477;
+  --ok:#5BD38A; --ok-soft:#12291C; --warn:#F2B35A; --warn-soft:#2B2112; --bad:#F58A8A; --bad-soft:#301819;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#000}
+body{font-family:Manrope,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+.slide{width:1080px;height:1350px;position:relative;overflow:hidden;display:none}
+.slide.show{display:block}
+body.all .slide{display:block;margin-bottom:24px}
+
+/* ---------- backgrounds ---------- */
+.light{background:linear-gradient(135deg,#FFFFFF 0%,#E4F2F5 40%,#B9DEE7 75%,#6FB8CA 100%);color:var(--deep)}
+.dark{background:radial-gradient(900px 700px at 85% 8%,rgba(14,122,143,.35),transparent 60%),
+                 radial-gradient(700px 600px at 0% 100%,rgba(14,122,143,.18),transparent 60%),var(--bg);color:var(--ink)}
+.dark::before{content:"";position:absolute;inset:0;
+  background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);
+  background-size:54px 54px;mask-image:linear-gradient(180deg,#000 0%,transparent 70%)}
+
+/* ---------- header ---------- */
+.hdr{position:absolute;top:64px;left:80px;right:80px;display:flex;align-items:center;justify-content:space-between;z-index:5}
+.brand{display:flex;align-items:center;gap:18px;font-weight:800;font-size:38px;letter-spacing:-.02em}
+.mark{width:72px;height:72px;border-radius:20px;background:linear-gradient(135deg,#fff 0%,#CDE8EE 55%,#52A9BF 100%);display:grid;place-items:center;box-shadow:0 6px 20px rgba(8,70,88,.18)}
+.mark svg{width:56px;height:56px}
+.dark .mark{box-shadow:0 0 0 1px rgba(255,255,255,.08)}
+.pg{font-size:26px;font-weight:700;letter-spacing:.06em;opacity:.6}
+
+/* ---------- type ---------- */
+.copy{position:absolute;left:80px;right:80px;top:190px;z-index:4}
+.kicker{display:inline-flex;align-items:center;gap:12px;font-size:26px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-ink);margin-bottom:26px}
+.kicker i{width:36px;height:3px;background:currentColor;border-radius:2px}
+.light .kicker{color:var(--deep2)}
+h1{font-size:84px;line-height:1.02;font-weight:800;letter-spacing:-.035em}
+h1 em{font-style:normal;color:var(--accent-ink)}
+.light h1 em{color:var(--deep2)}
+.sub{margin-top:28px;font-size:33px;line-height:1.38;font-weight:500;color:var(--ink2);max-width:880px}
+.light .sub{color:#2F5D69}
+
+.chips{position:absolute;left:80px;right:80px;bottom:72px;display:flex;flex-wrap:nowrap;gap:12px;z-index:4}
+.chip{display:inline-flex;align-items:center;gap:10px;padding:13px 20px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);font-size:22px;font-weight:700;color:var(--ink)}
+.chip{white-space:nowrap;flex:none}
+.chip b{width:12px;height:12px;border-radius:50%;background:var(--accent-ink);flex:none}
+
+/* ---------- generic card ---------- */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:28px;box-shadow:0 40px 80px rgba(0,0,0,.45)}
+
+/* ---------- mini app (kassa) ---------- */
+.app{width:1280px;height:760px;background:var(--bg);color:var(--ink);font-size:17px;display:flex;flex-direction:column;transform-origin:0 0}
+.app .top{height:56px;background:var(--surface);border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 18px;gap:6px}
+.app .top .lg{display:flex;align-items:center;gap:10px;font-weight:800;margin-right:22px}
+.app .top .lg span{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#fff,#52A9BF);display:grid;place-items:center}
+.app .tab{padding:9px 16px;border-radius:10px;color:var(--ink2);font-weight:600}
+.app .tab.on{background:var(--accent-soft);color:var(--accent-ink)}
+.app .body{flex:1;display:flex;gap:14px;padding:14px}
+.app .left{flex:1;display:flex;flex-direction:column;gap:12px}
+.app .search{height:46px;border-radius:12px;background:var(--surface);border:1px solid var(--line);display:flex;align-items:center;padding:0 16px;color:var(--ink3);gap:10px}
+.app .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.app .tile{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.app .tile .img{height:96px;border-radius:10px;display:grid;place-items:center}
+.app .tile .nm{font-weight:600;font-size:15px;line-height:1.25;height:38px;overflow:hidden}
+.app .tile .pr{font-weight:800;color:var(--accent-ink)}
+.app .tile .st{font-size:13px;color:var(--ink3)}
+.app .right{width:430px;background:var(--surface);border:1px solid var(--line);border-radius:16px;display:flex;flex-direction:column;padding:16px}
+.app .ch{display:flex;justify-content:space-between;font-weight:800;font-size:19px;margin-bottom:10px}
+.row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line-soft)}
+.row .th{width:42px;height:42px;border-radius:10px;flex:none;display:grid;place-items:center}
+.row .t{flex:1;min-width:0}
+.row .t div:first-child{font-weight:700}
+.row .t div:last-child{color:var(--ink3);font-size:14px;margin-top:2px}
+.row .s{font-weight:800}
+.app .tot{margin-top:auto;padding-top:14px}
+.app .tot .l{color:var(--ink2);font-size:15px}
+.app .tot .v{font-size:38px;font-weight:800;letter-spacing:-.02em}
+.pay{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.pay div{height:48px;border-radius:12px;display:grid;place-items:center;font-weight:800;background:var(--surface2);border:1px solid var(--line)}
+.pay .main{grid-column:1/-1;height:60px;background:var(--accent);border:none;color:#fff;font-size:20px}
+
+/* tints for product thumbs */
+.t1{background:#11313A}.t2{background:#2B2112}.t3{background:#12291C}.t4{background:#2A1A33}.t5{background:#301819}.t6{background:#1B2540}
+
+/* ---------- laptop / phone frames ---------- */
+.laptop{position:absolute}
+.laptop .scr{background:#05090B;border-radius:26px 26px 0 0;padding:18px 18px 22px;box-shadow:0 50px 90px rgba(8,70,88,.35)}
+.laptop .scr .vp{overflow:hidden;border-radius:6px}
+.laptop .base{height:30px;margin:0 -60px;background:linear-gradient(180deg,#D5DEE2,#A9B6BC);border-radius:0 0 26px 26px;position:relative}
+.laptop .base::after{content:"";position:absolute;left:50%;top:0;width:160px;height:12px;transform:translateX(-50%);background:#97A5AB;border-radius:0 0 12px 12px}
+.phone{position:absolute;width:290px;height:560px;background:#05090B;border-radius:48px;padding:12px;box-shadow:0 40px 80px rgba(8,40,50,.45)}
+.phone .ps{width:100%;height:100%;border-radius:38px;background:var(--bg);overflow:hidden;color:var(--ink);font-size:15px;display:flex;flex-direction:column}
+.phone .notch{width:90px;height:24px;background:#05090B;border-radius:0 0 14px 14px;margin:0 auto}
+
+/* ---------- receipt ---------- */
+.receipt{position:absolute;width:330px;background:#fff;color:#111;font-family:"Consolas","Courier New",monospace;font-size:19px;padding:30px 26px 40px;box-shadow:0 30px 60px rgba(0,0,0,.5);
+  -webkit-mask:linear-gradient(#000,#000) top/100% calc(100% - 14px) no-repeat,radial-gradient(circle at 10px 0,transparent 9px,#000 10px) bottom/20px 14px repeat-x}
+.receipt .c{text-align:center}
+.receipt hr{border:none;border-top:2px dashed #999;margin:14px 0}
+.receipt .r{display:flex;justify-content:space-between;gap:10px;margin:6px 0}
+.receipt .big{font-weight:700;font-size:24px}
+
+/* ---------- table card ---------- */
+.tbl .th{display:grid;grid-template-columns:72px 1fr 150px 170px 170px;gap:16px;padding:18px 28px;color:var(--ink3);font-size:21px;font-weight:700;border-bottom:1px solid var(--line)}
+.tbl .tr{display:grid;grid-template-columns:72px 1fr 150px 170px 170px;gap:16px;align-items:center;padding:14px 28px;border-bottom:1px solid var(--line-soft);font-size:24px}
+.tbl .tr:last-child{border-bottom:none}
+.tbl .im{width:64px;height:64px;border-radius:14px;display:grid;place-items:center}
+.tbl .nm{font-weight:700}
+.tbl .nm small{display:block;color:var(--ink3);font-weight:600;font-size:18px;margin-top:4px;font-family:Consolas,monospace}
+.tbl .num{font-weight:800;text-align:right}
+.pill{display:inline-block;padding:7px 16px;border-radius:999px;font-size:19px;font-weight:800;text-align:center}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}.pill.warn{background:var(--warn-soft);color:var(--warn)}.pill.bad{background:var(--bad-soft);color:var(--bad)}
+
+/* ---------- debts ---------- */
+.debt{display:flex;align-items:center;gap:22px;padding:24px 30px;border-bottom:1px solid var(--line-soft)}
+.debt:last-child{border-bottom:none}
+.av{width:72px;height:72px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:26px;flex:none}
+.debt .who{flex:1}
+.debt .who div:first-child{font-size:28px;font-weight:800}
+.debt .who div:last-child{font-size:21px;color:var(--ink3);margin-top:4px}
+.debt .amt{text-align:right}
+.debt .amt div:first-child{font-size:30px;font-weight:800}
+.debt .amt div:last-child{margin-top:8px}
+
+/* ---------- report ---------- */
+.kpis{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px}
+.kpi{padding:28px;border-radius:24px;background:var(--surface);border:1px solid var(--line)}
+.kpi .l{font-size:22px;color:var(--ink2);font-weight:700}
+.kpi .v{font-size:44px;font-weight:800;letter-spacing:-.02em;margin-top:10px}
+.kpi .d{font-size:20px;font-weight:800;margin-top:8px;color:var(--ok)}
+.bars{display:flex;align-items:flex-end;gap:22px;height:250px;padding:0 6px}
+.bars div{flex:1;border-radius:12px 12px 4px 4px;background:linear-gradient(180deg,#2A8EA2,#11313A);position:relative}
+.bars div.on{background:linear-gradient(180deg,#7FE0EF,#0E7A8F)}
+.bars div span{position:absolute;bottom:-40px;left:0;right:0;text-align:center;font-size:20px;color:var(--ink3);font-weight:700}
+
+/* ---------- swipe ---------- */
+.swipe{position:absolute;right:80px;bottom:44px;display:flex;align-items:center;gap:14px;padding:18px 28px;border-radius:999px;background:var(--deep);color:#fff;font-size:27px;font-weight:800;z-index:6;box-shadow:0 14px 30px rgba(8,70,88,.35)}
+</style>
+</head>
+<body>
+
+<!-- reusable logo wave -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <linearGradient id="wg" x1="0" x2="1"><stop offset="0" stop-color="#0B6477"/><stop offset="1" stop-color="#084658"/></linearGradient>
+    <symbol id="wave" viewBox="200 300 624 424"><path d="M264,512 C320,412 352,374 388,374 C430,374 470,440 512,512 C554,584 594,650 636,650 C672,650 704,612 760,512" fill="none" stroke="url(#wg)" stroke-width="76" stroke-linecap="round"/></symbol>
+    <!-- product glyphs -->
+    <symbol id="g-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1.1 2V16h5v-.2c.1-.8.5-1.5 1.1-2A6 6 0 0 0 12 3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="g-plug" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="12" r="1.5" fill="currentColor"/><circle cx="15" cy="12" r="1.5" fill="currentColor"/></symbol>
+    <symbol id="g-cable" viewBox="0 0 24 24"><path d="M4 18c3 0 3-4 6-4s3 4 6 4 3-4 4-4M7 6h4M7 6V3M11 6V3M9 6v4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="g-bolt" viewBox="0 0 24 24"><path d="M13 2 5 13h6l-1 9 8-11h-6l1-9z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+    <symbol id="g-switch" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="9" y="7" width="6" height="10" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+    <symbol id="g-ext" viewBox="0 0 24 24"><rect x="2" y="9" width="14" height="6" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="6" cy="12" r="1" fill="currentColor"/><circle cx="10" cy="12" r="1" fill="currentColor"/><path d="M16 12h3c1.5 0 2 1 2 2v3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="g-spot" viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="11.5" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 20h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="g-tape" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+    <symbol id="g-scan" viewBox="0 0 24 24"><path d="M3 7V4h3M21 7V4h-3M3 17v3h3M21 17v3h-3M7 8v8M10 8v8M13 8v8M16 8v8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  </defs>
+</svg>
+
+<!-- ======================= 1. COVER ======================= -->
+<section class="slide light" id="s1">
+  <div class="hdr">
+    <div class="brand"><div class="mark"><svg><use href="#wave"/></svg></div>LinePOS</div>
+    <div class="pg">KASSA DASTURI</div>
+  </div>
+  <div class="copy">
+    <h1 style="font-size:92px">Do‘kon hisobi<br>daftarda emas —<br><em>LinePOS</em>’da</h1>
+    <p class="sub">Kassa, ombor, nasiya va foyda hisobi bitta dasturda. Kompyuter va telefonda, internetsiz ham ishlaydi.</p>
+  </div>
+
+  <div class="laptop" style="left:70px;top:680px;width:820px">
+    <div class="scr"><div class="vp" style="width:784px;height:466px">
+      <div class="app" style="transform:scale(.6125)">
+        <div class="top"><div class="lg"><span><svg width="20" height="20"><use href="#wave"/></svg></span>LinePOS</div>
+          <div class="tab on">Kassa</div><div class="tab">Ombor</div><div class="tab">Qarzlar</div><div class="tab">Hisobotlar</div><div class="tab">Sinxron</div></div>
+        <div class="body">
+          <div class="left">
+            <div class="search"><svg width="20" height="20" style="color:var(--ink3)"><use href="#g-scan"/></svg>Shtrix-kod yoki tovar nomi…</div>
+            <div class="grid">
+              <div class="tile"><div class="img t1" style="color:#5CC4D6"><svg width="48" height="48"><use href="#g-bulb"/></svg></div><div class="nm">LED lampa 12W E27</div><div class="pr">9 500</div><div class="st">Qoldiq: 140</div></div>
+              <div class="tile"><div class="img t2" style="color:#F2B35A"><svg width="48" height="48"><use href="#g-plug"/></svg></div><div class="nm">Rozetka 2-li, oq</div><div class="pr">18 000</div><div class="st">Qoldiq: 36</div></div>
+              <div class="tile"><div class="img t3" style="color:#5BD38A"><svg width="48" height="48"><use href="#g-cable"/></svg></div><div class="nm">Kabel 3×2,5 (1 m)</div><div class="pr">11 000</div><div class="st">Qoldiq: 820 m</div></div>
+              <div class="tile"><div class="img t4" style="color:#C9A2F0"><svg width="48" height="48"><use href="#g-bolt"/></svg></div><div class="nm">Avtomat 25A</div><div class="pr">32 000</div><div class="st">Qoldiq: 24</div></div>
+              <div class="tile"><div class="img t6" style="color:#8FB4FF"><svg width="48" height="48"><use href="#g-switch"/></svg></div><div class="nm">Viklyuchatel 1-li</div><div class="pr">14 000</div><div class="st">Qoldiq: 51</div></div>
+              <div class="tile"><div class="img t5" style="color:#F58A8A"><svg width="48" height="48"><use href="#g-ext"/></svg></div><div class="nm">Uzaytirgich 5 m</div><div class="pr">45 000</div><div class="st">Qoldiq: 12</div></div>
+              <div class="tile"><div class="img t1" style="color:#5CC4D6"><svg width="48" height="48"><use href="#g-spot"/></svg></div><div class="nm">Projektor LED 50W</div><div class="pr">85 000</div><div class="st">Qoldiq: 9</div></div>
+              <div class="tile"><div class="img t2" style="color:#F2B35A"><svg width="48" height="48"><use href="#g-tape"/></svg></div><div class="nm">Izolenta, qora</div><div class="pr">4 000</div><div class="st">Qoldiq: 200</div></div>
+            </div>
+          </div>
+          <div class="right">
+            <div class="ch"><span>Savat</span><span style="color:var(--ink3);font-weight:600">3 ta tovar</span></div>
+            <div class="row"><div class="th t1" style="color:#5CC4D6"><svg width="24" height="24"><use href="#g-bulb"/></svg></div><div class="t"><div>LED lampa 12W E27</div><div>4 × 9 500</div></div><div class="s">38 000</div></div>
+            <div class="row"><div class="th t3" style="color:#5BD38A"><svg width="24" height="24"><use href="#g-cable"/></svg></div><div class="t"><div>Kabel 3×2,5</div><div>10 m × 11 000</div></div><div class="s">110 000</div></div>
+            <div class="row"><div class="th t2" style="color:#F2B35A"><svg width="24" height="24"><use href="#g-plug"/></svg></div><div class="t"><div>Rozetka 2-li, oq</div><div>2 × 18 000</div></div><div class="s">36 000</div></div>
+            <div class="tot"><div class="l">Jami</div><div class="v">184 000 so‘m</div>
+              <div class="pay"><div class="main">Naqd · F8</div><div>Karta</div><div>Aralash</div></div></div>
+          </div>
+        </div>
+      </div>
+    </div></div>
+    <div class="base"></div>
+  </div>
+
+  <div class="phone" style="right:74px;top:612px;transform:rotate(4deg)">
+    <div class="ps">
+      <div class="notch"></div>
+      <div style="padding:14px 18px 8px;display:flex;justify-content:space-between;align-items:center"><b style="font-size:20px">Kassa</b><span style="color:var(--accent-ink);font-weight:800">3</span></div>
+      <div style="margin:0 14px;height:120px;border-radius:18px;background:#05090B;display:grid;place-items:center;position:relative;border:1px solid var(--line)">
+        <svg width="90" height="90" style="color:var(--accent-ink)"><use href="#g-scan"/></svg>
+        <div style="position:absolute;left:30px;right:30px;top:59px;height:3px;background:#F58A8A;box-shadow:0 0 12px #F58A8A"></div>
+      </div>
+      <div style="padding:6px 14px">
+        <div class="row" style="padding:10px 0"><div class="th t1" style="width:36px;height:36px;color:#5CC4D6"><svg width="20" height="20"><use href="#g-bulb"/></svg></div><div class="t"><div style="font-size:14px">LED lampa 12W</div><div style="font-size:12px">4 × 9 500</div></div><div class="s" style="font-size:14px">38 000</div></div>
+        <div class="row" style="padding:10px 0"><div class="th t3" style="width:36px;height:36px;color:#5BD38A"><svg width="20" height="20"><use href="#g-cable"/></svg></div><div class="t"><div style="font-size:14px">Kabel 3×2,5</div><div style="font-size:12px">10 m</div></div><div class="s" style="font-size:14px">110 000</div></div>
+        <div class="row" style="padding:10px 0;border:none"><div class="th t2" style="width:36px;height:36px;color:#F2B35A"><svg width="20" height="20"><use href="#g-plug"/></svg></div><div class="t"><div style="font-size:14px">Rozetka 2-li</div><div style="font-size:12px">2 × 18 000</div></div><div class="s" style="font-size:14px">36 000</div></div>
+      </div>
+      <div style="margin-top:auto;padding:16px">
+        <div style="color:var(--ink2);font-size:13px">Jami</div>
+        <div style="font-size:28px;font-weight:800;margin-bottom:10px">184 000 so‘m</div>
+        <div style="height:52px;border-radius:14px;background:var(--accent);display:grid;place-items:center;font-weight:800;color:#fff">To‘lov</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="swipe">Varaqlang <svg width="30" height="30" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+</section>
+
+<!-- ======================= 2. KASSA ======================= -->
+<section class="slide dark" id="s2">
+  <div class="hdr"><div class="brand"><div class="mark"><svg><use href="#wave"/></svg></div>LinePOS</div><div class="pg">02 / 07</div></div>
+  <div class="copy">
+    <div class="kicker"><i></i>Kassa</div>
+    <h1>Skanerladingiz —<br><em>sotildi.</em></h1>
+    <p class="sub">Shtrix-kod skaner yoki telefon kamerasi: tovar bir soniyada savatga tushadi, chek o‘zi chiqadi.</p>
+  </div>
+
+  <div class="card" style="position:absolute;left:80px;top:585px;width:560px;padding:26px 30px;z-index:3">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <b style="font-size:30px">Savat</b>
+      <span class="pill ok" style="font-size:20px">+ skanerlandi</span>
+    </div>
+    <div class="row" style="padding:13px 0"><div class="th t1" style="width:54px;height:54px;color:#5CC4D6"><svg width="32" height="32"><use href="#g-bulb"/></svg></div><div class="t"><div style="font-size:24px">LED lampa 12W E27</div><div style="font-size:20px">4 × 9 500</div></div><div class="s" style="font-size:25px">38 000</div></div>
+    <div class="row" style="padding:13px 0"><div class="th t3" style="width:54px;height:54px;color:#5BD38A"><svg width="32" height="32"><use href="#g-cable"/></svg></div><div class="t"><div style="font-size:24px">Kabel 3×2,5</div><div style="font-size:20px">10 m × 11 000</div></div><div class="s" style="font-size:25px">110 000</div></div>
+    <div class="row" style="padding:13px 0;border:none"><div class="th t2" style="width:54px;height:54px;color:#F2B35A"><svg width="32" height="32"><use href="#g-plug"/></svg></div><div class="t"><div style="font-size:24px">Rozetka 2-li, oq</div><div style="font-size:20px">2 × 18 000</div></div><div class="s" style="font-size:25px">36 000</div></div>
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-top:10px">
+      <div><div style="color:var(--ink2);font-size:21px">Jami</div><div style="font-size:48px;font-weight:800;letter-spacing:-.02em;line-height:1.1">184 000 so‘m</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:10px;margin-top:18px">
+      <div style="height:64px;border-radius:14px;background:var(--accent);display:grid;place-items:center;font-weight:800;font-size:24px">Naqd</div>
+      <div style="height:64px;border-radius:14px;background:var(--surface2);border:1px solid var(--line);display:grid;place-items:center;font-weight:800;font-size:21px">Karta</div>
+      <div style="height:64px;border-radius:14px;background:var(--surface2);border:1px solid var(--line);display:grid;place-items:center;font-weight:800;font-size:21px">Aralash</div>
+    </div>
+  </div>
+
+  <div class="receipt" style="left:650px;top:615px;transform:rotate(5deg);z-index:2">
+    <div class="c big">DO‘KON NOMI</div>
+    <div class="c" style="font-size:16px;margin-top:4px">Chek №1042 · 19.11.2026 14:32</div>
+    <hr>
+    <div class="r"><span>LED lampa 12W ×4</span><span>38 000</span></div>
+    <div class="r"><span>Kabel 3×2,5 ×10</span><span>110 000</span></div>
+    <div class="r"><span>Rozetka 2-li ×2</span><span>36 000</span></div>
+    <hr>
+    <div class="r big"><span>JAMI</span><span>184 000</span></div>
+    <div class="r"><span>Naqd</span><span>200 000</span></div>
+    <div class="r"><span>Qaytim</span><span>16 000</span></div>
+    <hr>
+    <div class="c" style="font-size:16px">Xaridingiz uchun rahmat!</div>
+    <div style="height:56px;margin-top:16px;background:repeating-linear-gradient(90deg,#111 0 3px,#fff 3px 5px,#111 5px 6px,#fff 6px 10px,#111 10px 14px,#fff 14px 16px)"></div>
+  </div>
+
+  <div class="chips">
+    <span class="chip"><b></b>Chek 58 / 80 mm</span>
+    <span class="chip"><b></b>Chakana va ulgurji narx</span>
+    <span class="chip"><b></b>Bir nechta xaridor</span>
+  </div>
+</section>
+
+<!-- ======================= 3. OMBOR ======================= -->
+<section class="slide dark" id="s3">
+  <div class="hdr"><div class="brand"><div class="mark"><svg><use href="#wave"/></svg></div>LinePOS</div><div class="pg">03 / 07</div></div>
+  <div class="copy">
+    <div class="kicker"><i></i>Ombor</div>
+    <h1>Nima qolganini<br><em>bir qarashda</em> ko‘rasiz</h1>
+    <p class="sub">Har bir tovarning qoldig‘i, narxi va rasmi. Kam qolganini dastur o‘zi eslatadi.</p>
+  </div>
+  <div class="card tbl" style="position:absolute;left:80px;right:80px;top:595px;z-index:3">
+    <div class="th"><span>Rasm</span><span>Tovar</span><span style="text-align:right">Qoldiq</span><span style="text-align:right">Narx</span><span style="text-align:center">Holat</span></div>
+    <div class="tr"><div class="im t1" style="color:#5CC4D6"><svg width="36" height="36"><use href="#g-bulb"/></svg></div><div class="nm">LED lampa 12W E27<small>4780012340017</small></div><div class="num">140 dona</div><div class="num">9 500</div><div style="text-align:center"><span class="pill ok">Yetarli</span></div></div>
+    <div class="tr"><div class="im t2" style="color:#F2B35A"><svg width="36" height="36"><use href="#g-plug"/></svg></div><div class="nm">Rozetka 2-li, oq<small>4780012340024</small></div><div class="num">36 dona</div><div class="num">18 000</div><div style="text-align:center"><span class="pill ok">Yetarli</span></div></div>
+    <div class="tr"><div class="im t5" style="color:#F58A8A"><svg width="36" height="36"><use href="#g-ext"/></svg></div><div class="nm">Uzaytirgich 5 m<small>4780012340031</small></div><div class="num">3 dona</div><div class="num">45 000</div><div style="text-align:center"><span class="pill warn">Kam qoldi</span></div></div>
+    <div class="tr"><div class="im t4" style="color:#C9A2F0"><svg width="36" height="36"><use href="#g-bolt"/></svg></div><div class="nm">Avtomat 25A<small>4780012340048</small></div><div class="num">24 dona</div><div class="num">32 000</div><div style="text-align:center"><span class="pill ok">Yetarli</span></div></div>
+    <div class="tr"><div class="im t1" style="color:#5CC4D6"><svg width="36" height="36"><use href="#g-spot"/></svg></div><div class="nm">Projektor LED 50W<small>4780012340055</small></div><div class="num">0 dona</div><div class="num">85 000</div><div style="text-align:center"><span class="pill bad">Tugadi</span></div></div>
+  </div>
+  <div class="chips">
+    <span class="chip"><b></b>Shtrix-kod stiker chop etish</span>
+    <span class="chip"><b></b>Excel hisobot</span>
+    <span class="chip"><b></b>Dollar kursida narx</span>
+  </div>
+</section>
+
+<!-- ======================= 4. NASIYA ======================= -->
+<section class="slide dark" id="s4">
+  <div class="hdr"><div class="brand"><div class="mark"><svg><use href="#wave"/></svg></div>LinePOS</div><div class="pg">04 / 07</div></div>
+  <div class="copy">
+    <div class="kicker"><i></i>Nasiya</div>
+    <h1>Nasiya daftari<br>endi <em>yo‘qolmaydi</em></h1>
+    <p class="sub">Kim qancha qarzdor, qachon to‘lashi kerak — hammasi bitta ro‘yxatda. Muddati o‘tganlar qizil bilan ajraladi.</p>
+  </div>
+  <div class="card" style="position:absolute;left:80px;right:80px;top:600px;z-index:3;overflow:hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:26px 30px;border-bottom:1px solid var(--line);background:var(--surface2)">
+      <span style="font-size:24px;color:var(--ink2);font-weight:700">Jami nasiya</span>
+      <span style="font-size:38px;font-weight:800">4 750 000 so‘m</span>
+    </div>
+    <div class="debt"><div class="av" style="background:#11313A;color:#5CC4D6">AK</div><div class="who"><div>Akmal aka</div><div>+998 •• ••• •• 41 · usta</div></div><div class="amt"><div>1 840 000</div><div><span class="pill bad">Muddati o‘tgan</span></div></div></div>
+    <div class="debt"><div class="av" style="background:#2B2112;color:#F2B35A">DO</div><div class="who"><div>Dilshod (qurilish)</div><div>+998 •• ••• •• 07 · 3 ta savdo</div></div><div class="amt"><div>2 310 000</div><div><span class="pill warn">25-noyabrgacha</span></div></div></div>
+    <div class="debt"><div class="av" style="background:#12291C;color:#5BD38A">SN</div><div class="who"><div>Sardor N.</div><div>+998 •• ••• •• 93 · qisman to‘ladi</div></div><div class="amt"><div>600 000</div><div><span class="pill ok">To‘lov keldi</span></div></div></div>
+  </div>
+  <div class="chips">
+    <span class="chip"><b></b>Kassadan bir bosishda nasiyaga</span>
+    <span class="chip"><b></b>Qisman to‘lov</span>
+    <span class="chip"><b></b>Har bir mijoz tarixi</span>
+  </div>
+</section>
+
+<!-- ======================= 5. HISOBOT ======================= -->
+<section class="slide dark" id="s5">
+  <div class="hdr"><div class="brand"><div class="mark"><svg><use href="#wave"/></svg></div>LinePOS</div><div class="pg">05 / 07</div></div>
+  <div class="copy">
+    <div class="kicker"><i></i>Hisobot</div>
+    <h1>Bugun qancha<br><em>foyda</em> qildingiz?</h1>
+    <p class="sub">Tushum, sof foyda, naqd va karta — kun oxirida hisoblab o‘tirmaysiz, dastur tayyor qilib beradi.</p>
+  </div>
+  <div style="position:absolute;left:80px;right:80px;top:595px;z-index:3">
+    <div class="kpis">
+      <div class="kpi"><div class="l">Tushum</div><div class="v">3 480 000</div><div class="d">▲ 12% kechagidan</div></div>
+      <div class="kpi" style="background:linear-gradient(160deg,#0E7A8F,#0B4F5E);border-color:transparent"><div class="l" style="color:#CDEFF5">Sof foyda</div><div class="v">712 000</div><div class="d" style="color:#CDEFF5">so‘m · bugun</div></div>
+      <div class="kpi"><div class="l">Savdolar</div><div class="v">46 ta</div><div class="d" style="color:var(--ink2)">o‘rtacha 75 600</div></div>
+    </div>
+    <div class="kpi" style="margin-top:18px;padding:28px 34px 58px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:30px"><span class="l" style="font-size:22px;color:var(--ink2);font-weight:700">Hafta bo‘yicha tushum</span><span style="font-size:22px;font-weight:800;color:var(--accent-ink)">Naqd 64% · Karta 36%</span></div>
+      <div class="bars" style="height:185px">
+        <div style="height:55%"><span>Du</span></div><div style="height:72%"><span>Se</span></div><div style="height:48%"><span>Ch</span></div>
+        <div style="height:80%"><span>Pa</span></div><div style="height:66%"><span>Ju</span></div><div style="height:92%"><span>Sh</span></div><div class="on" style="height:100%"><span>Bugun</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="chips">
+    <span class="chip"><b></b>Kunlik va oylik</span>
+    <span class="chip"><b></b>Brak va qaytarishlar</span>
+    <span class="chip"><b></b>Foyda PIN bilan yashirin</span>
+  </div>
+</section>
+
+<!-- ======================= 6. OFLAYN ======================= -->
+<section class="slide dark" id="s6">
+  <div class="hdr"><div class="brand"><div class="mark"><svg><use href="#wave"/></svg></div>LinePOS</div><div class="pg">06 / 07</div></div>
+  <div class="copy">
+    <div class="kicker"><i></i>Ishonchli</div>
+    <h1>Internet o‘chsa ham<br>savdo <em>to‘xtamaydi</em></h1>
+    <p class="sub">Hamma ma’lumot o‘z kompyuteringizda. Kompyuter va telefon do‘kondagi Wi-Fi orqali o‘zaro yangilanib turadi.</p>
+  </div>
+
+  <!-- sync diagram -->
+  <div style="position:absolute;left:80px;right:80px;top:660px;height:330px;z-index:3">
+    <div class="card" style="position:absolute;left:0;top:20px;width:330px;height:300px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px">
+      <svg width="120" height="100" viewBox="0 0 24 20" style="color:var(--accent-ink)"><rect x="2" y="1" width="20" height="13" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8 19h8M12 14v5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+      <b style="font-size:28px">Kompyuter</b><span style="color:var(--ink3);font-size:21px;margin-top:-10px">Windows kassa</span>
+    </div>
+    <div style="position:absolute;left:340px;right:340px;top:130px;height:80px">
+      <svg width="100%" height="80" viewBox="0 0 240 80" preserveAspectRatio="none"><path d="M6 40 H234" stroke="#5CC4D6" stroke-width="3" stroke-dasharray="8 8"/><path d="M220 30 l12 10 -12 10M20 30 l-12 10 12 10" fill="none" stroke="#5CC4D6" stroke-width="3"/></svg>
+      <div style="position:absolute;left:50%;top:-74px;transform:translateX(-50%);width:96px;height:96px;border-radius:50%;background:var(--accent-soft);border:1px solid #1F5A66;display:grid;place-items:center">
+        <svg width="54" height="54" viewBox="0 0 24 24" style="color:#5CC4D6"><path d="M2 9a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="19.5" r="1.4" fill="currentColor"/></svg>
+      </div>
+      <div style="position:absolute;left:0;right:0;top:66px;text-align:center;font-size:22px;font-weight:800;color:var(--accent-ink)">Wi-Fi sinxron</div>
+    </div>
+    <div class="card" style="position:absolute;right:0;top:20px;width:330px;height:300px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px">
+      <svg width="70" height="100" viewBox="0 0 14 20" style="color:var(--accent-ink)"><rect x="1" y="1" width="12" height="18" rx="2.4" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M5.5 16.5h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      <b style="font-size:28px">Telefon</b><span style="color:var(--ink3);font-size:21px;margin-top:-10px">Android kassa</span>
+    </div>
+  </div>
+
+  <div style="position:absolute;left:80px;right:80px;top:1060px;display:grid;grid-template-columns:repeat(3,1fr);gap:18px;z-index:3">
+    <div class="kpi" style="padding:34px 28px"><div class="v" style="font-size:44px;margin:0;color:var(--accent-ink)">100%</div><div class="l" style="margin-top:8px;color:var(--ink)">oflayn ishlaydi</div></div>
+    <div class="kpi" style="padding:34px 28px"><div class="v" style="font-size:44px;margin:0;color:var(--accent-ink)">1 tugma</div><div class="l" style="margin-top:8px;color:var(--ink)">Telegram’ga zaxira</div></div>
+    <div class="kpi" style="padding:34px 28px"><div class="v" style="font-size:44px;margin:0;color:var(--accent-ink)">0 so‘m</div><div class="l" style="margin-top:8px;color:var(--ink)">internet uchun</div></div>
+  </div>
+</section>
+
+<!-- ======================= 7. CTA ======================= -->
+<section class="slide light" id="s7">
+  <div class="hdr">
+    <div class="brand"><div class="mark"><svg><use href="#wave"/></svg></div>LinePOS</div>
+    <div class="pg">07 / 07</div>
+  </div>
+  <div class="copy" style="top:230px">
+    <h1 style="font-size:96px">Do‘koningizni<br><em>tartibga</em><br>keltiramiz</h1>
+    <p class="sub">Elektr va qurilish mollari, xo‘jalik do‘konlari, chakana va ulgurji savdo uchun. O‘rnatib, sozlab, o‘rgatib beramiz.</p>
+  </div>
+
+  <div style="position:absolute;left:80px;right:80px;top:760px;display:flex;flex-direction:column;gap:18px;z-index:3">
+    <div style="display:flex;align-items:center;gap:26px;padding:30px 34px;border-radius:28px;background:#fff;box-shadow:0 20px 50px rgba(8,70,88,.15)">
+      <div style="width:84px;height:84px;border-radius:24px;background:#229ED9;display:grid;place-items:center;flex:none">
+        <svg width="48" height="48" viewBox="0 0 24 24"><path d="M21.5 4.5 2.8 11.7c-1 .4-1 1.6.1 1.9l4.7 1.5 1.8 5.6c.3.8 1.3 1 1.9.4l2.6-2.5 4.8 3.5c.7.5 1.7.1 1.9-.7l3-14.7c.2-1.2-.9-2-2.1-1.2zM9.6 14.6l8.6-7.7-6.7 9.3-.3 2.9-1.6-4.5z" fill="#fff"/></svg>
+      </div>
+      <div><div style="font-size:24px;font-weight:700;color:#3E6B77">Telegram</div><div style="font-size:46px;font-weight:800;letter-spacing:-.02em">@S18_2003</div></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:26px;padding:30px 34px;border-radius:28px;background:#fff;box-shadow:0 20px 50px rgba(8,70,88,.15)">
+      <div style="width:84px;height:84px;border-radius:24px;background:var(--deep2);display:grid;place-items:center;flex:none">
+        <svg width="44" height="44" viewBox="0 0 24 24"><path d="M6.6 10.8a15 15 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1l-2.3 2.2z" fill="#fff"/></svg>
+      </div>
+      <div><div style="font-size:24px;font-weight:700;color:#3E6B77">Telefon</div><div style="font-size:46px;font-weight:800;letter-spacing:-.02em">+998 95 720 88 33</div></div>
+    </div>
+  </div>
+
+  <div style="position:absolute;left:80px;right:80px;bottom:80px;display:flex;align-items:center;justify-content:space-between;z-index:3">
+    <div style="padding:22px 34px;border-radius:999px;background:var(--deep);color:#fff;font-size:30px;font-weight:800;box-shadow:0 14px 30px rgba(8,70,88,.35)">Direktga “KASSA” deb yozing</div>
+    <div style="font-size:26px;font-weight:800;color:var(--deep);opacity:.75">Windows · Android</div>
+  </div>
+</section>
+
+<script>
+  const q = new URLSearchParams(location.search).get('s');
+  if (q) document.getElementById('s' + q).classList.add('show');
+  else document.body.classList.add('all');
+</script>
+</body>
+</html>

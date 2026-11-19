@@ -1,0 +1,1 @@
+Android: mipmap-* papkalarini app/src/main/res/ ichiga ko'chiring. AndroidManifest.xml da: android:icon="@mipmap/ic_launcher" va android:roundIcon="@mipmap/ic_launcher_round". play_store_512.png Google Play Console uchun.
