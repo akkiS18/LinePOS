@@ -27,8 +27,8 @@ android {
         applicationId = "uz.pos.electro"
         minSdk = 26
         targetSdk = 36
-        versionCode = 6
-        versionName = "1.0.4"
+        versionCode = 5
+        versionName = "2.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -42,7 +42,7 @@ android {
         ksp {
             arg("room.schemaLocation", "$projectDir/schemas")
         }
-        manifestPlaceholders["appLabel"] = "SMART kassa"
+        manifestPlaceholders["appLabel"] = "Elektromarket"
     }
 
     lint {
@@ -54,11 +54,10 @@ android {
         debug {
             applicationIdSuffix = ".test"
             versionNameSuffix = "-test"
-            manifestPlaceholders["appLabel"] = "SMART kassa (Test)"
+            manifestPlaceholders["appLabel"] = "Elektromarket (Test)"
         }
         release {
-            applicationIdSuffix = ".test"
-            manifestPlaceholders["appLabel"] = "SMART kassa"
+            manifestPlaceholders["appLabel"] = "Elektromarket"
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(

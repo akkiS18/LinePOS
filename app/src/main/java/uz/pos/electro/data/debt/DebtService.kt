@@ -98,6 +98,11 @@ data class DebtEventItemDto(
     }
     val canReverse: Boolean get() = kind == "payment" && !isReversed
     val totalPaymentUz: Double get() = (cashMinor + cardMinor) / 100.0
+    val debtOffsetUz: Double get() = if (lines.isNotEmpty()) Math.abs(lines.sumOf { it.debtDeltaMinor }) / 100.0 else 0.0
+    val amountUz: Double get() = when (kind) {
+        "return_offset", "return_reversal", "credit_refund", "credit_transfer" -> debtOffsetUz
+        else -> if (totalPaymentUz != 0.0) totalPaymentUz else (if (debtOffsetUz != 0.0 && kind != "sale_open") debtOffsetUz else 0.0)
+    }
 }
 
 data class DebtEventLineDto(

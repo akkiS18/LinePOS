@@ -515,15 +515,6 @@ data class CashierSearchResult(
                     saleGuid = saleGuid
                 )
 
-                _lastCompletedSale.value = CompletedSaleState(
-                    saleId = saleId,
-                    receiptNumber = "LP-" + saleGuid.replace("-", "").uppercase(java.util.Locale.ROOT),
-                    items = items,
-                    totalAmount = total,
-                    paymentType = paymentType,
-                    timestamp = System.currentTimeMillis()
-                )
-
                 _isCheckoutDialogVisible.value = false
                 _cartItems.value = emptyList()
                 _toastEvent.emit("Savdo muvaffaqiyatli amalga oshirildi!")
@@ -575,15 +566,6 @@ data class CashierSearchResult(
                     saleSnapshot = snapshot,
                     dueDate = dueDate,
                     userId = 1L
-                )
-
-                _lastCompletedSale.value = CompletedSaleState(
-                    saleId = 0L,
-                    receiptNumber = "LP-" + saleGuid.replace("-", "").uppercase(java.util.Locale.ROOT),
-                    items = items,
-                    totalAmount = totalAmount,
-                    paymentType = PaymentType.DEBT,
-                    timestamp = snapshot.occurredAt
                 )
 
                 _isCheckoutDialogVisible.value = false

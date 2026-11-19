@@ -49,7 +49,7 @@ class WarehouseRepository @Inject constructor(
                 val totalQty = positiveStocks.sumOf { it.quantity }
                 val totalVal = positiveStocks.sumOf { s ->
                     val prod = productsByGuid[s.productGuid]
-                    (prod?.costPrice ?: 0.0) * s.quantity
+                    (prod?.sellingPrice ?: 0.0) * s.quantity
                 }
 
                 WarehouseWithStats(

@@ -8,15 +8,18 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -159,14 +162,23 @@ fun DebtsScreen(
 
                 // 2. Qidiruv va Yangi mijoz tugmasi
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(IntrinsicSize.Min),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     OutlinedTextField(
                         value = searchQuery,
                         onValueChange = { viewModel.onSearchQueryChanged(it) },
-                        placeholder = { Text("Mijoz ismi yoki telefon...", fontSize = 14.sp) },
+                        placeholder = {
+                            Text(
+                                text = "Ism yoki tel...",
+                                fontSize = 14.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        },
                         leadingIcon = {
                             Icon(imageVector = Icons.Default.Search, contentDescription = null, tint = LinePrimary)
                         },
@@ -178,15 +190,19 @@ fun DebtsScreen(
                             }
                         },
                         singleLine = true,
+                        maxLines = 1,
                         shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
                     )
 
                     Button(
                         onClick = { viewModel.openCreateCustomerDialog() },
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = LinePrimary),
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 14.dp)
+                        contentPadding = PaddingValues(horizontal = 14.dp),
+                        modifier = Modifier.fillMaxHeight()
                     ) {
                         Icon(imageVector = Icons.Default.PersonAdd, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(6.dp))
@@ -961,12 +977,13 @@ private fun EventItemCard(event: DebtEventItemDto) {
                 }
 
                 Text(
-                    text = "${numberFormat.format(event.totalPaymentUz)} so'm",
+                    text = "${numberFormat.format(event.amountUz)} so'm",
                     fontWeight = FontWeight.Black,
                     style = MaterialTheme.typography.titleSmall,
                     color = when (event.kind) {
-                        "sale_open" -> Color(0xFFDC2626)
+                        "sale_open", "payment_reversal", "return_reversal" -> Color(0xFFDC2626)
                         "payment" -> Color(0xFF16A34A)
+                        "return_offset" -> Color(0xFF0284C7)
                         else -> MaterialTheme.colorScheme.onSurface
                     }
                 )
@@ -975,7 +992,11 @@ private fun EventItemCard(event: DebtEventItemDto) {
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = dateFormat.format(Date(event.occurredAt)) + " • Naqd: ${numberFormat.format(event.cashMinor / 100.0)} so'm, Karta: ${numberFormat.format(event.cardMinor / 100.0)} so'm",
+                text = if (event.kind == "return_offset") {
+                    dateFormat.format(Date(event.occurredAt)) + " • Qaytarish hisobidan chegirildi (${event.lines.size} ta chek)"
+                } else {
+                    dateFormat.format(Date(event.occurredAt)) + " • Naqd: ${numberFormat.format(event.cashMinor / 100.0)} so'm, Karta: ${numberFormat.format(event.cardMinor / 100.0)} so'm"
+                },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

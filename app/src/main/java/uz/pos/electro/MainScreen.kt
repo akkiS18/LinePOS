@@ -92,9 +92,6 @@ fun MainScreen(
     val isAddEditOpen by productViewModel.isAddEditOpen.collectAsState()
     val haptic = LocalHapticFeedback.current
 
-    // Wi-Fi lokal sinxronizatsiya dialogi holati
-    var isWifiSyncOpen by remember { mutableStateOf(false) }
-
     // 1. Agar qurilma hali faollashtirilmagan bo'lsa -> Faqat Aktivatsiya ekrani ko'rsatiladi
     if (!isActivated) {
         ActivationScreen(
@@ -143,64 +140,16 @@ fun MainScreen(
 
                             Text(
                                 text = when (selectedTab) {
-                                    0 -> "SMART — Kassa"
-                                    1 -> "SMART — Ombor"
-                                    2 -> "SMART — Qarz daftari"
-                                    3 -> "SMART — Hisobotlar"
-                                    else -> "SMART — Sozlamalar"
+                                    0 -> "Elektromarket — Kassa"
+                                    1 -> "Elektromarket — Ombor"
+                                    2 -> "Elektromarket — Qarz daftari"
+                                    3 -> "Elektromarket — Hisobotlar"
+                                    else -> "Elektromarket — Sozlamalar"
                                 },
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 20.sp,
                                 color = MaterialTheme.colorScheme.primary
                             )
-                        }
-                    },
-                    actions = {
-                        // Jonli Wi-Fi sinxron holati ko'rsatkichi (Pill)
-                        val liveSyncStatus by syncManager.liveSyncStatus.collectAsState()
-                        Surface(
-                            onClick = { isWifiSyncOpen = true },
-                            shape = CircleShape,
-                            color = when (liveSyncStatus) {
-                                LiveSyncStatus.CONNECTED -> Color(0xFF16A34A).copy(alpha = 0.15f)
-                                LiveSyncStatus.CONFLICT, LiveSyncStatus.CONNECTING -> Color(0xFFF59E0B).copy(alpha = 0.15f)
-                                LiveSyncStatus.OFFLINE -> MaterialTheme.colorScheme.surfaceVariant
-                            },
-                            modifier = Modifier.padding(end = 8.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(8.dp)
-                                        .clip(CircleShape)
-                                        .background(
-                                            when (liveSyncStatus) {
-                                                LiveSyncStatus.CONNECTED -> Color(0xFF16A34A)
-                                                LiveSyncStatus.CONFLICT, LiveSyncStatus.CONNECTING -> Color(0xFFF59E0B)
-                                                LiveSyncStatus.OFFLINE -> Color.Gray
-                                            }
-                                        )
-                                    )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = when (liveSyncStatus) {
-                                        LiveSyncStatus.CONNECTED -> "Jonli"
-                                        LiveSyncStatus.CONNECTING -> "Ulanmoqda"
-                                        LiveSyncStatus.CONFLICT -> "Tahrirni tanlang"
-                                        LiveSyncStatus.OFFLINE -> "Oflayn"
-                                    },
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = when (liveSyncStatus) {
-                                        LiveSyncStatus.CONNECTED -> Color(0xFF16A34A)
-                                        LiveSyncStatus.CONFLICT, LiveSyncStatus.CONNECTING -> Color(0xFFF59E0B)
-                                        LiveSyncStatus.OFFLINE -> MaterialTheme.colorScheme.onSurfaceVariant
-                                    }
-                                )
-                            }
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
@@ -350,13 +299,6 @@ fun MainScreen(
             }
         }
 
-        // Wi-Fi Lokal Sinxronizatsiya Dialogi (Navbar pill orqali ochilganda)
-        if (isWifiSyncOpen) {
-            uz.pos.electro.ui.sync.WifiSyncDialog(
-                syncManager = syncManager,
-                onDismiss = { isWifiSyncOpen = false }
-            )
-        }
     }
 }
 

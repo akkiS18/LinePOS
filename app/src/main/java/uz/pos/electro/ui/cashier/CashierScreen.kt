@@ -103,7 +103,6 @@ fun CashierScreen(
     val searchQuery by viewModel.searchQuery.collectAsState()
     val searchResults by viewModel.searchResults.collectAsState()
     val selectedItemIndex by viewModel.selectedCartItemIndex.collectAsState()
-    val completedSale by viewModel.lastCompletedSale.collectAsState()
     val isCompletingSale by viewModel.isCompletingSale.collectAsState()
     val isCheckoutDialogVisible by viewModel.isCheckoutDialogVisible.collectAsState()
     val cardTaxRate by viewModel.cardTaxRate.collectAsState()
@@ -746,13 +745,7 @@ fun CashierScreen(
             )
         }
 
-        // Yakunlangan Savdo Cheki
-        completedSale?.let { saleState ->
-            ReceiptDialog(
-                state = saleState,
-                onDismissRequest = { viewModel.dismissCompletedSaleDialog() }
-            )
-        }
+
 
         // Kamera Skaneri
         if (isCameraScannerOpen) {
