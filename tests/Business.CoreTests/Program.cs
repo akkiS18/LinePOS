@@ -2,6 +2,8 @@ using PosElectro.Desktop.Data;
 using PosElectro.Desktop.Models;
 using Microsoft.Data.Sqlite;
 
+if (args.Contains("--backup")) { DailyBackupTests.Run(); return; }
+
 // Focused returns regression: avoid unrelated report/accounting suites.
 if (args.Contains("--returns")) {
     ReturnAccountingTests.Run();
@@ -25,6 +27,7 @@ ReturnStoreTests.Run();
 DebtReturnAndReversalTests.Run();
 DebtReportTests.Run();
 DebtBackupRestoreTests.Run();
+DailyBackupTests.Run();
 
 var path = Path.Combine(Path.GetTempPath(), "LinePOS_business_" + Guid.NewGuid() + ".db");
 void Check(bool condition, string message) { if (!condition) throw new Exception(message); }

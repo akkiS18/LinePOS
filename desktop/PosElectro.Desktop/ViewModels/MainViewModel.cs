@@ -13,6 +13,7 @@ namespace PosElectro.Desktop.ViewModels
         private ViewModelBase _currentView = null!;
 
         public DatabaseContext Database { get; }
+        private readonly System.Threading.Timer _dailyBackupTimer;
         public ProductService ProductService { get; }
         public CurrencyService CurrencyService { get; }
         public BarcodeScannerService ScannerService { get; }
@@ -178,6 +179,15 @@ namespace PosElectro.Desktop.ViewModels
 
             // Orqa fonda Markaziy bank kursini yangilash
             _ = CurrencyService.FetchLatestUsdRateAsync();
+
+            // Kunlik avtomatik zaxira (oxirgi 14 kun, .zip): ishga tushgandan 2 daqiqa keyin, so'ng har soatda
+            // tekshiriladi — dastur tunda ham yopilmasa (tray), sana o'zgarganda yangi kunning zaxirasi olinadi.
+            _dailyBackupTimer = new System.Threading.Timer(_ =>
+            {
+                try { Database.CompactSyncJournal(); } catch (Exception ex) { try { Debug.WriteLine("Jurnal tozalash xatosi: " + ex.Message); } catch { } }
+                try { Database.DailyBackup(); }
+                catch (Exception ex) { try { Debug.WriteLine("Kunlik zaxira xatosi: " + ex.Message); } catch { } }
+            }, null, TimeSpan.FromMinutes(2), TimeSpan.FromHours(1));
 
             // Standart boshlang'ich oyna: Har doim KASSA bo'lib ochiladi!
             CurrentView = CashierVM;
@@ -458,12 +468,15 @@ namespace PosElectro.Desktop.ViewModels
                 var ofd = new Microsoft.Win32.OpenFileDialog
                 {
                     Title = "Line kassa ma'lumotlar bazasini tiklash (Zaxira fayldan)",
-                    Filter = "SQLite Baza fayli (*.db)|*.db|Barcha fayllar (*.*)|*.*"
+                    Filter = "Zaxira fayli (*.db, *.zip)|*.db;*.zip|Barcha fayllar (*.*)|*.*",
+                    InitialDirectory = Directory.Exists(Database.BackupsDirectory) ? Database.BackupsDirectory : null
                 };
 
-                if (ofd.ShowDialog() == true)
+                if (ofd.ShowDialog() != true) return;
+                var (restorePath, restoreIsTemp) = DatabaseContext.PrepareBackupForRestore(ofd.FileName);
+                try
                 {
-                    var (backupLastSale, lostSales, lostAmount) = Database.PreviewRestoreLoss(ofd.FileName);
+                    var (backupLastSale, lostSales, lostAmount) = Database.PreviewRestoreLoss(restorePath);
                     var dlg = new Views.RestoreConfirmDialog(ofd.FileName, backupLastSale, lostSales, lostAmount)
                     {
                         Owner = Application.Current?.MainWindow
@@ -473,7 +486,7 @@ namespace PosElectro.Desktop.ViewModels
                     var wasRunning=SyncServer.IsRunning;
                     try {
                         await SyncServer.StopAndWaitAsync();
-                        Database.RestoreDatabase(ofd.FileName);
+                        Database.RestoreDatabase(restorePath);
                         CashierVM.ReloadDebtDatabase();
                         DebtsVM.ReloadDebtDatabase();
                         Services.AdminGate.Current.Reload();
@@ -493,6 +506,10 @@ namespace PosElectro.Desktop.ViewModels
                         "Muvaffaqiyatli tiklandi",
                         MessageBoxButton.OK,
                         MessageBoxImage.Information);
+                }
+                finally
+                {
+                    if (restoreIsTemp) try { File.Delete(restorePath); } catch { }
                 }
             }
             catch (Exception ex)

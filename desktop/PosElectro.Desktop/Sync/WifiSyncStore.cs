@@ -25,6 +25,10 @@ public sealed class WifiSyncStore
         using var reader = new StreamReader(schema);
         foreach (var statement in reader.ReadToEnd().Split("-- statement")) Exec(db, tx, statement);
         Exec(db, tx, "CREATE TABLE IF NOT EXISTS sync_devices (token_hash TEXT PRIMARY KEY, device_id TEXT NOT NULL, device_name TEXT NOT NULL)");
+        // Revision() (har bir tovar/ombor uchun) va qarz guruhlari jurnalni entity/guruh bo'yicha qidiradi —
+        // indekssiz yillar o'tib har bir so'rov butun jurnalni o'qib chiqardi.
+        Exec(db, tx, "CREATE INDEX IF NOT EXISTS idx_sync_journal_entity ON sync_journal(kind, entity_guid, seq)");
+        Exec(db, tx, "CREATE INDEX IF NOT EXISTS idx_sync_journal_group ON sync_journal(group_id)");
         Exec(db, tx, "INSERT OR IGNORE INTO sync_meta(key,value) VALUES('server_id',@value)", ("@value", Guid.NewGuid().ToString()));
         tx.Commit();
     }
@@ -96,7 +100,9 @@ public sealed class WifiSyncStore
         {
             string id=Required(op,"id"), kind=Required(op,"kind"), guid=Required(op,"guid");
             var previous=Scalar(db,tx,"SELECT seq FROM sync_journal WHERE op_id=@id",("@id",id));
-            if(previous!=null) { var stored=(string?)Scalar(db,tx,"SELECT payload FROM sync_journal WHERE op_id=@id",("@id",id)); if(stored!=op.ToString(Formatting.None))throw new ArgumentException("Amal IDsi boshqa ma'lumot bilan qayta yuborildi."); accepted.Add(new JObject{["id"]=id,["revision"]=Convert.ToInt64(previous),["kind"]=kind,["guid"]=guid}); continue; }
+            // Eski amallarning payloadi joy tejash uchun tozalanadi (CompactJournalPayloads): bunday holda amal ID si
+            // allaqachon qabul qilingan — takroriy yuborish ikki marta qo'llanmaydi, shunchaki qabul qilindi deb javob beriladi.
+            if(previous!=null) { var stored=Scalar(db,tx,"SELECT payload FROM sync_journal WHERE op_id=@id",("@id",id)) as string; if(stored!=null && stored!=op.ToString(Formatting.None))throw new ArgumentException("Amal IDsi boshqa ma'lumot bilan qayta yuborildi."); accepted.Add(new JObject{["id"]=id,["revision"]=Convert.ToInt64(previous),["kind"]=kind,["guid"]=guid}); continue; }
             var data=(JObject?)op["data"] ?? throw new ArgumentException("Amal ma'lumoti yo'q.");
             long revision=Revision(db,tx,kind,guid), expected=(long?)op["baseRevision"]??0;
             bool bootstrap=(bool?)op["bootstrap"]??false;

@@ -328,5 +328,15 @@ try {
             server.RevokeDevices();Assert((int)http.GetAsync("/api/v2/pull").Result.StatusCode==401,"Revoked token still accepted");
         } finally { server.Stop(); }
     });
+    Test("retry of an old operation whose payload was compacted still applies once",()=>{
+        var before=Quantity(store);var op=Stock(-1);store.Push(new JArray(op));
+        using(var c=new SqliteConnection("Data Source="+path)){c.Open();var cmd=c.CreateCommand();cmd.CommandText="UPDATE sync_journal SET payload=NULL WHERE op_id=$id";cmd.Parameters.AddWithValue("$id",(string)op["id"]!);Assert(cmd.ExecuteNonQuery()==1,"Op row missing");}
+        var reply=store.Push(new JArray(op));Assert(Quantity(store)==before-1,"Compacted operation applied twice");Assert(((JArray)reply["accepted"]!).Count==1,"Compacted retry not acknowledged");
+    });
+    Test("journal lookups by entity and group are indexed",()=>{
+        using var c=new SqliteConnection("Data Source="+path);c.Open();var cmd=c.CreateCommand();
+        cmd.CommandText="EXPLAIN QUERY PLAN SELECT COALESCE(MAX(seq),0) FROM sync_journal WHERE kind='product' AND entity_guid='p'";
+        var plan="";using(var r=cmd.ExecuteReader())while(r.Read())plan+=r.GetString(3)+";";Assert(plan.Contains("idx_sync_journal_entity"),"Revision lookup scans journal: "+plan);
+    });
     Console.WriteLine($"{passed} tests passed");
 } finally { SqliteConnection.ClearAllPools();foreach(var file in new[]{path,path+"-wal",path+"-shm"})if(File.Exists(file))File.Delete(file); }

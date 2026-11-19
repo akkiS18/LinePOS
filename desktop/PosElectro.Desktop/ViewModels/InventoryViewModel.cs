@@ -441,10 +441,7 @@ namespace PosElectro.Desktop.ViewModels
         {
             try
             {
-                var ext = System.IO.Path.GetExtension(sourcePath);
-                var destPath = NewFormImagePath(ext);
-                System.IO.File.Copy(sourcePath, destPath, overwrite: true);
-                FormImagePath = destPath;
+                FormImagePath = Services.ProductImageFiles.SaveFromFile(sourcePath, NewFormImagePath(string.Empty));
                 FormErrorMessage = string.Empty;
                 return true;
             }
@@ -458,46 +455,13 @@ namespace PosElectro.Desktop.ViewModels
         private bool SetFormImageFromBitmap(System.Windows.Media.Imaging.BitmapSource src)
         {
             if (src.PixelWidth <= 0 || src.PixelHeight <= 0) return false;
-            // Shaffof joylar oq fonga, juda katta rasm 1600 px gacha kichraytiriladi; JPEG sifatida saqlanadi.
-            double scale = Math.Min(1.0, 1600.0 / Math.Max(src.PixelWidth, src.PixelHeight));
-            System.Windows.Media.Imaging.BitmapSource scaled = scale < 1.0
-                ? new System.Windows.Media.Imaging.TransformedBitmap(src, new System.Windows.Media.ScaleTransform(scale, scale))
-                : src;
-            var bgra = new System.Windows.Media.Imaging.FormatConvertedBitmap(scaled, System.Windows.Media.PixelFormats.Bgra32, null, 0);
-            int w = bgra.PixelWidth, h = bgra.PixelHeight, stride = w * 4;
-            var px = new byte[stride * h];
-            bgra.CopyPixels(px, stride, 0);
-            var rgb = FlattenBgraOnWhite(px);
-            var flat = System.Windows.Media.Imaging.BitmapSource.Create(w, h, 96, 96, System.Windows.Media.PixelFormats.Bgr24, null, rgb, w * 3);
-            var encoder = new System.Windows.Media.Imaging.JpegBitmapEncoder { QualityLevel = 90 };
-            encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(flat));
-            var destPath = NewFormImagePath(".jpg");
-            using (var fs = System.IO.File.Create(destPath)) encoder.Save(fs);
-            FormImagePath = destPath;
+            // Shaffof joylar oq fonga, katta rasm kichraytirilib ixcham JPEG qilib saqlanadi (ProductImageFiles).
+            FormImagePath = Services.ProductImageFiles.SaveFromBitmap(src, NewFormImagePath(string.Empty));
             FormErrorMessage = string.Empty;
             return true;
         }
 
-        /// <summary>
-        /// Bgra32 piksellarni oq fonga aralashtirib Bgr24 qiladi.
-        /// Telegram, brauzer, "Qirqish" kabi dasturlar buferga 32-bitli DIB qo'yadi va alfa baytini 0 qoldiradi;
-        /// WPF uni Bgra32 deb o'qiydi — hamma piksel "to'liq shaffof" bo'lib, rasm oq varaq bo'lib qolardi.
-        /// Shuning uchun alfa hamma joyda 0 bo'lsa, rasm shaffof emas deb hisoblanadi.
-        /// </summary>
-        public static byte[] FlattenBgraOnWhite(byte[] px)
-        {
-            bool hasAlpha = false;
-            for (int i = 3; i < px.Length; i += 4) { if (px[i] != 0) { hasAlpha = true; break; } }
-            var rgb = new byte[px.Length / 4 * 3];
-            for (int i = 0, j = 0; i + 3 < px.Length; i += 4, j += 3)
-            {
-                int a = hasAlpha ? px[i + 3] : 255;
-                rgb[j] = (byte)((px[i] * a + 255 * (255 - a)) / 255);
-                rgb[j + 1] = (byte)((px[i + 1] * a + 255 * (255 - a)) / 255);
-                rgb[j + 2] = (byte)((px[i + 2] * a + 255 * (255 - a)) / 255);
-            }
-            return rgb;
-        }
+        public static byte[] FlattenBgraOnWhite(byte[] px) => Services.ProductImageFiles.FlattenBgraOnWhite(px);
 
         private string NewFormImagePath(string ext)
         {
@@ -778,17 +742,14 @@ namespace PosElectro.Desktop.ViewModels
 
                     if (dlg.ShowDialog() == true)
                     {
-                        var ext = System.IO.Path.GetExtension(dlg.FileName);
                         var imagesDir = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "product_images");
                         if (!System.IO.Directory.Exists(imagesDir))
                         {
                             System.IO.Directory.CreateDirectory(imagesDir);
                         }
 
-                        var destPath = System.IO.Path.Combine(imagesDir, $"prod_{p.Guid}_{DateTime.Now.Ticks}{ext}");
-                        System.IO.File.Copy(dlg.FileName, destPath, overwrite: true);
-
-                        p.ImagePath = destPath;
+                        p.ImagePath = Services.ProductImageFiles.SaveFromFile(dlg.FileName,
+                            System.IO.Path.Combine(imagesDir, $"prod_{p.Guid}_{DateTime.Now.Ticks}"));
                         _db.SaveProduct(p);
                     }
                 }
@@ -1560,7 +1521,6 @@ namespace PosElectro.Desktop.ViewModels
 
                 if (dlg.ShowDialog() == true)
                 {
-                    var ext = System.IO.Path.GetExtension(dlg.FileName);
                     var imagesDir = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "product_images");
                     if (!System.IO.Directory.Exists(imagesDir))
                     {
@@ -1568,10 +1528,8 @@ namespace PosElectro.Desktop.ViewModels
                     }
 
                     var guid = _editingProduct?.Guid ?? Guid.NewGuid().ToString();
-                    var destPath = System.IO.Path.Combine(imagesDir, $"prod_{guid}_{DateTime.Now.Ticks}{ext}");
-                    System.IO.File.Copy(dlg.FileName, destPath, overwrite: true);
-
-                    FormImagePath = destPath;
+                    FormImagePath = Services.ProductImageFiles.SaveFromFile(dlg.FileName,
+                        System.IO.Path.Combine(imagesDir, $"prod_{guid}_{DateTime.Now.Ticks}"));
                 }
             }
             catch (Exception ex)
