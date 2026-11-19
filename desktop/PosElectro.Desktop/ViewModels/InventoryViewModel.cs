@@ -467,14 +467,7 @@ namespace PosElectro.Desktop.ViewModels
             int w = bgra.PixelWidth, h = bgra.PixelHeight, stride = w * 4;
             var px = new byte[stride * h];
             bgra.CopyPixels(px, stride, 0);
-            var rgb = new byte[w * 3 * h];
-            for (int i = 0, j = 0; i < px.Length; i += 4, j += 3)
-            {
-                int a = px[i + 3];
-                rgb[j] = (byte)((px[i] * a + 255 * (255 - a)) / 255);
-                rgb[j + 1] = (byte)((px[i + 1] * a + 255 * (255 - a)) / 255);
-                rgb[j + 2] = (byte)((px[i + 2] * a + 255 * (255 - a)) / 255);
-            }
+            var rgb = FlattenBgraOnWhite(px);
             var flat = System.Windows.Media.Imaging.BitmapSource.Create(w, h, 96, 96, System.Windows.Media.PixelFormats.Bgr24, null, rgb, w * 3);
             var encoder = new System.Windows.Media.Imaging.JpegBitmapEncoder { QualityLevel = 90 };
             encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(flat));
@@ -483,6 +476,27 @@ namespace PosElectro.Desktop.ViewModels
             FormImagePath = destPath;
             FormErrorMessage = string.Empty;
             return true;
+        }
+
+        /// <summary>
+        /// Bgra32 piksellarni oq fonga aralashtirib Bgr24 qiladi.
+        /// Telegram, brauzer, "Qirqish" kabi dasturlar buferga 32-bitli DIB qo'yadi va alfa baytini 0 qoldiradi;
+        /// WPF uni Bgra32 deb o'qiydi — hamma piksel "to'liq shaffof" bo'lib, rasm oq varaq bo'lib qolardi.
+        /// Shuning uchun alfa hamma joyda 0 bo'lsa, rasm shaffof emas deb hisoblanadi.
+        /// </summary>
+        public static byte[] FlattenBgraOnWhite(byte[] px)
+        {
+            bool hasAlpha = false;
+            for (int i = 3; i < px.Length; i += 4) { if (px[i] != 0) { hasAlpha = true; break; } }
+            var rgb = new byte[px.Length / 4 * 3];
+            for (int i = 0, j = 0; i + 3 < px.Length; i += 4, j += 3)
+            {
+                int a = hasAlpha ? px[i + 3] : 255;
+                rgb[j] = (byte)((px[i] * a + 255 * (255 - a)) / 255);
+                rgb[j + 1] = (byte)((px[i + 1] * a + 255 * (255 - a)) / 255);
+                rgb[j + 2] = (byte)((px[i + 2] * a + 255 * (255 - a)) / 255);
+            }
+            return rgb;
         }
 
         private string NewFormImagePath(string ext)

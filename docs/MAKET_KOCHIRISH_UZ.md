@@ -112,6 +112,13 @@ Ranglar ustuni: A+B bosqichidan keyin hammasi tokenda, lekin yorug' temada ekran
 
 ## Oxirgi qadam
 
+**2026-11-19 (Claude Code) — egasi sinovi: Ctrl+V bilan qo'yilgan rasm oq varaq bo'lib qolardi:**
+- Sabab: Telegram, brauzer, "Qirqish" buferga 32-bitli DIB qo'yadi va alfa baytini 0 qoldiradi; WPF `Clipboard.GetImage()` uni Bgra32 deb o'qiydi, kod esa shaffof piksellarni oq fonga aralashtirardi → rasm o'lchamidagi oq varaq. Fayldan tanlash bunga tegmasdi.
+- Tuzatish: `InventoryViewModel.FlattenBgraOnWhite` — alfa hamma pikselda 0 bo'lsa, rasm shaffof emas deb olinadi; haqiqiy shaffof PNG avvalgidek oq fonga aralashadi. Test: `PastedImageAlphaTests` (74 test o'tdi). Takrorlash: alfa=0 DIB buferga qo'yilib WPF `GetImage` dan alfa 0 qaytishi ko'rildi.
+- Taskbar/Start'da eski (ko'k-yashil) logo: 1.0.1 o'rnatuvchisi `{app}\Assets\app_logo.ico`ga eski logoni yozgan, keyingi o'rnatuvchilar `Assets`ni o'rnatmaydi (u `Resource`, publish'ga chiqmaydi), yorliqlar esa shu faylga qarardi. `Line_kassa_Setup.iss`: `Assets\app_logo.ico/png` endi o'rnatiladi (eski fayl ustidan yoziladi), yorliq ikonkasi exe'ning o'zidan (`IconFilename: {app}\PosElectro.Desktop.exe`), `ChangesAssociations=yes` ikonka keshini yangilaydi.
+- O'rnatish fayli 1.1.2: `desktop/Output/Line_kassa_Desktop_Setup_1.1.2.exe`.
+- Telefon: release `PROD/Line_kassa_1.1.0.apk` (`feature/mobile-redesign`, versionCode 7, ishchi 1.0.4 ustidan yangilanadi).
+
 **2026-11-18 (Claude Code) — egasi so'rovi: savat tartibi, formadan savatga, rasmni qo'yish:**
 - Kassa savati: oxirgi qo'shilgan tovar eng tepada (yangi qator `Insert(0)`; bor tovar qayta qo'shilsa miqdori oshib tepaga ko'chadi), ro'yxat tepaga aylanadi. Faqat `AddToCart` tartibi o'zgardi; savdo, chek, kutish logikasi tegilmagan (chekdagi qatorlar ham savatdagi tartibda chiqadi).
 - Tovar formasi (2.3) pastki panelida "Savatga qo'shish": formada o'zgarish bo'lsa avval oddiy Saqlash (xato bo'lsa to'xtaydi), o'zgarish bo'lmasa saqlamaydi; tovar kassa savatiga tushadi va Kassa ochiladi (`InventoryViewModel.RequestAddToCart` → `MainViewModel`).
